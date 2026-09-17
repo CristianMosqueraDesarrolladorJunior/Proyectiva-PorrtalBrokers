@@ -1,0 +1,74 @@
+<section class="calendario" aria-labelledby="calendario-titulo">
+  <header class="calendario__header">
+    <h1 id="calendario-titulo" class="calendario__titulo">Calendario</h1>
+    <p class="calendario__intro">Visualiza eventos y vencimientos de pólizas.</p>
+  </header>
+
+  <div class="calendar-wrapper">
+    <div class="cal-header">
+      <h3>{{ mesTitulo }}</h3>
+      <div class="cal-views" role="group" aria-label="Vista del calendario">
+        @for (vista of vistas; track vista) {
+          <button
+            type="button"
+            class="cal-view-btn"
+            [class.active]="vista === vistaActiva"
+            (click)="seleccionarVista(vista)"
+          >
+            {{ vista }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="cal-grid">
+      @for (dia of diasSemana; track dia) {
+        <div class="cal-day-header">{{ dia }}</div>
+      }
+      @for (dia of dias; track trackDia($index)) {
+        @if (dia.numero === null) {
+          <div class="cal-day cal-day--empty"></div>
+        } @else {
+          <div
+            class="cal-day"
+            [class.cal-day--today]="dia.hoy"
+            [class.cal-day--event]="dia.dots"
+          >
+            {{ dia.numero }}
+            @if (dia.dots) {
+              <span class="cal-dots">
+                @for (color of dia.dots; track color) {
+                  <span class="dot dot--{{ color }}"></span>
+                }
+              </span>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <div class="cal-legend">
+      <span class="dot dot--red"></span> Urgente
+      <span class="dot dot--orange"></span> Próxima
+      <span class="dot dot--blue"></span> Evento
+    </div>
+  </div>
+
+  <!-- Eventos del día seleccionado (Req 33.2) -->
+  <div class="cal-events">
+    <h3 class="cal-events__titulo">Eventos del 15 de Octubre</h3>
+    @for (evento of eventos; track trackEvento($index, evento)) {
+      <div class="event-card" [class.event-card--urgent]="evento.urgente">
+        <span class="badge badge--{{ evento.variante }}">{{ evento.badge }}</span>
+        <h4>{{ evento.cliente }}</h4>
+        <p>{{ evento.detalle }}</p>
+        <small>{{ evento.vence }}</small>
+        @if (evento.gestionable) {
+          <button type="button" class="event-card__btn" (click)="gestionar()">
+            Gestionar →
+          </button>
+        }
+      </div>
+    }
+  </div>
+</section>

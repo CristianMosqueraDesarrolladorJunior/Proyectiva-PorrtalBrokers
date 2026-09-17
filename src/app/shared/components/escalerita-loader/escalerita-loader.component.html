@@ -1,0 +1,8 @@
+<div class="escalerita" role="status" aria-live="polite">
+  <div class="escalerita-barras" aria-hidden="true">
+    @for (barra of barras; track barra) {
+      <span class="escalerita-barra" [style.--escalerita-indice]="barra"></span>
+    }
+  </div>
+  <span class="escalerita-texto">{{ texto }}</span>
+</div>

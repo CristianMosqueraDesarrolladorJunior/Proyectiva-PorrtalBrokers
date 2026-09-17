@@ -1,0 +1,33 @@
+<ul class="doc-list">
+  @for (regla of reglas; track trackRegla($index, regla)) {
+    <li class="doc-item">
+      <span class="doc-icon" aria-hidden="true">{{ regla.icono || '📄' }}</span>
+      <span class="doc-info">
+        <strong>
+          {{ regla.etiqueta }}
+          @if (regla.obligatorio) {
+            <span class="doc-info__req" aria-label="Obligatorio">*</span>
+          }
+        </strong>
+        <small>{{ regla.descripcion }}</small>
+        @if (estaCargado(regla.id)) {
+          <small class="doc-info__cargado">✓ {{ nombreCargado(regla.id) }}</small>
+        }
+      </span>
+
+      <label class="doc-item__upload" [class.doc-item__upload--disabled]="disabled">
+        <span class="doc-item__upload-text">
+          {{ estaCargado(regla.id) ? 'Reemplazar' : '↑ Cargar' }}
+        </span>
+        <input
+          type="file"
+          class="doc-item__input"
+          [accept]="accept"
+          [disabled]="disabled"
+          [attr.aria-label]="'Cargar ' + regla.etiqueta"
+          (change)="onArchivo($event, regla.id)"
+        />
+      </label>
+    </li>
+  }
+</ul>

@@ -1,0 +1,61 @@
+<section class="ayuda" aria-labelledby="ayuda-titulo">
+  <header class="ayuda__header">
+    <h1 id="ayuda-titulo" class="ayuda__titulo">Centro de ayuda</h1>
+    <p class="ayuda__intro">
+      Conecta con soporte, resuelve dudas y accede a canales oficiales.
+    </p>
+  </header>
+
+  <!-- Contactos directos (Req 33.5) -->
+  <h3 class="ayuda__seccion-titulo">Contactos directos</h3>
+  <div class="contact-cards">
+    @for (contacto of contactos; track trackContacto($index, contacto)) {
+      <div class="contact-card">
+        <span class="contact-avatar" aria-hidden="true">{{ contacto.avatar }}</span>
+        <div class="contact-card__cuerpo">
+          <div class="contact-card__cabecera">
+            <strong>{{ contacto.nombre }}</strong>
+            @if (contacto.disponible) {
+              <span class="contact-badge">● Disponible</span>
+            }
+          </div>
+          <p class="contact-card__desc">{{ contacto.descripcion }}</p>
+          <a class="contact-card__enlace" href="#" (click)="$event.preventDefault()">
+            → Conectar ahora
+          </a>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Canales oficiales (Req 33.5) -->
+  <h3 class="ayuda__seccion-titulo">Canales oficiales</h3>
+  <div class="doc-list">
+    <div class="doc-item">
+      <span class="doc-icon" aria-hidden="true">📨</span>
+      <div class="doc-info">
+        <strong>Portal PQRS</strong>
+        <small>Radica peticiones, quejas, reclamos, sugerencias o felicitaciones</small>
+      </div>
+      <a
+        class="doc-btn"
+        [href]="pqrsUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ↗ Abrir portal
+      </a>
+    </div>
+  </div>
+
+  <!-- Preguntas frecuentes (Req 33.6) -->
+  <h3 class="ayuda__seccion-titulo">Preguntas frecuentes de comercialización</h3>
+  <div class="faq-list">
+    @for (faq of faqs; track trackFaq($index, faq)) {
+      <details class="faq">
+        <summary>{{ faq.pregunta }}</summary>
+        <p>{{ faq.respuesta }}</p>
+      </details>
+    }
+  </div>
+</section>

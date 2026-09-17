@@ -1,0 +1,12 @@
+<span
+  class="badge"
+  [class.badge-success]="variante === 'success'"
+  [class.badge-info]="variante === 'info'"
+  [class.badge-warning]="variante === 'warning'"
+  [class.badge-danger]="variante === 'danger'"
+>
+  @if (conPunto) {
+    <span class="dot" aria-hidden="true"></span>
+  }
+  <ng-content></ng-content>
+</span>

@@ -1,0 +1,51 @@
+<!--
+  Shell_Aplicacion (Req 4, 38, 39.5): sidebar + main-content con router-outlet.
+  El Chat_Asistente se monta a nivel del shell (fuera del router-outlet) para
+  permanecer persistente sobre todas las secciones (Req 38.1, 39.5).
+
+  Estrategia responsiva (Req 36.3, 36.5, 36.6): la barra superior con botón de
+  menú y el overlay solo son visibles en tablet/móvil (CSS); alternan el cajón
+  del sidebar conservando toda la navegación. Los breakpoints son Design_Token.
+-->
+<div class="app-wrapper" [class.app-wrapper--sidebar-abierto]="sidebarAbierto()">
+  <!--
+    Barra superior con botón de menú (solo tablet/móvil, Req 36.5). Mantiene foco
+    visible y expone el estado del cajón con aria-expanded/aria-controls (Req 36.6).
+  -->
+  <header class="topbar">
+    <button
+      type="button"
+      class="topbar__menu"
+      aria-label="Abrir o cerrar el menú de navegación"
+      [attr.aria-expanded]="sidebarAbierto()"
+      aria-controls="sidebar-navegacion"
+      (click)="alternarSidebar()"
+    >
+      <span aria-hidden="true">☰</span>
+    </button>
+    <span class="topbar__marca">Proyectiva · Panel Bróker</span>
+  </header>
+
+  <!-- Navegación lateral y perfil del Broker (Req 4). Cajón en tablet/móvil. -->
+  <div id="sidebar-navegacion">
+    <app-sidebar [abierto]="sidebarAbierto()" (cerrar)="cerrarSidebar()" />
+  </div>
+
+  <!--
+    Superposición que pliega el cajón al pulsarla (solo tablet/móvil, Req 36.5).
+    Oculta por CSS en desktop y cuando el cajón está cerrado.
+  -->
+  <div
+    class="sidebar-overlay"
+    (click)="cerrarSidebar()"
+    aria-hidden="true"
+  ></div>
+
+  <!-- Área de contenido: la sección activa se renderiza aquí (Req 4.2). -->
+  <main class="main-content">
+    <router-outlet />
+  </main>
+
+  <!-- Chat_Asistente persistente sobre todas las secciones (Req 38.1, 39.5). -->
+  <app-chat-asistente />
+</div>

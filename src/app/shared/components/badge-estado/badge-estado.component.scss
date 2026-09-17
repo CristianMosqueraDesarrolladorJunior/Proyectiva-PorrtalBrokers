@@ -1,0 +1,61 @@
+// =============================================================================
+// BadgeEstadoComponent — insignias de estado tokenizadas (Req 35.2)
+// Sin valores hardcodeados: color/tamaño/peso/radio/espaciado vía Design_Token.
+// =============================================================================
+
+:host {
+  display: inline-block;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dot {
+  display: inline-block;
+  width: var(--space-1);
+  height: var(--space-1);
+  border-radius: var(--radius-full);
+}
+
+.badge-success {
+  background: var(--color-badge-success-bg);
+  color: var(--color-badge-success-text);
+
+  .dot {
+    background: var(--color-dot-success);
+  }
+}
+
+.badge-info {
+  background: var(--color-badge-info-bg);
+  color: var(--color-badge-info-text);
+
+  .dot {
+    background: var(--color-dot-info);
+  }
+}
+
+.badge-warning {
+  background: var(--color-badge-warning-bg);
+  color: var(--color-badge-warning-text);
+
+  .dot {
+    background: var(--color-dot-warning);
+  }
+}
+
+.badge-danger {
+  background: var(--color-badge-danger-bg);
+  color: var(--color-badge-danger-text);
+
+  .dot {
+    background: var(--color-dot-danger);
+  }
+}

@@ -1,0 +1,10 @@
+<div
+  class="grid"
+  [class.dash-grid]="tipo === 'dash-grid'"
+  [class.kpi-grid]="tipo === 'kpi-grid'"
+  [class.form-grid]="tipo === 'form-grid'"
+  [class.two-col]="tipo === 'two-col'"
+  [class.tracking-cards]="tipo === 'tracking-cards'"
+>
+  <ng-content></ng-content>
+</div>

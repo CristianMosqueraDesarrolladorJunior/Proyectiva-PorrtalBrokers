@@ -1,0 +1,17 @@
+<div class="tabs" role="tablist">
+  @for (tab of tabs; track trackTab($index, tab); let indice = $index) {
+    <button
+      type="button"
+      class="tab"
+      role="tab"
+      [id]="'tab-' + tab.id"
+      [class.active]="tab.id === activa"
+      [attr.aria-selected]="tab.id === activa"
+      [attr.tabindex]="tab.id === activa ? 0 : -1"
+      (click)="seleccionar(tab.id)"
+      (keydown)="onKeydown($event, indice)"
+    >
+      {{ tab.etiqueta }}
+    </button>
+  }
+</div>

@@ -1,0 +1,245 @@
+<section class="cotizador-datos" aria-labelledby="cotizador-datos-titulo">
+  <header class="cotizador-datos__header">
+    <h1 id="cotizador-datos-titulo" class="cotizador-datos__titulo">Cotizador de arrendamiento</h1>
+    <p class="cotizador-datos__subtitulo">
+      Ingresa los datos del inmueble y activa las coberturas para calcular la cotización.
+    </p>
+  </header>
+
+  <form class="cotizador-datos__form" (ngSubmit)="solicitarCalculo()" novalidate>
+    <!-- Datos del inmueble (Req 7.1) -->
+    <app-card variante="form-card">
+      <app-grid-layout tipo="form-grid">
+        <app-form-field
+          label="Departamento"
+          ayuda="Selecciona el departamento del inmueble"
+          [requerido]="true"
+          controlId="cot-departamento"
+        >
+          <select
+            id="cot-departamento"
+            name="departamento"
+            [ngModel]="departamento()"
+            (ngModelChange)="onDepartamentoChange($event)"
+          >
+            <option value="" disabled>Selecciona un departamento</option>
+            @for (opcion of departamentos; track opcion) {
+              <option [value]="opcion">{{ opcion }}</option>
+            }
+          </select>
+        </app-form-field>
+
+        <app-form-field
+          label="Ciudad"
+          [ayuda]="cargandoCiudades() ? 'Cargando ciudades...' : 'Selecciona la ciudad en cobertura'"
+          [requerido]="true"
+          controlId="cot-ciudad"
+        >
+          <select
+            id="cot-ciudad"
+            name="ciudad"
+            [disabled]="cobertura().ciudades.length === 0"
+            [ngModel]="ciudad()"
+            (ngModelChange)="ciudad.set($event)"
+          >
+            <option value="" disabled>
+              {{ departamento().length === 0 ? 'Primero selecciona un departamento' : 'Selecciona una ciudad' }}
+            </option>
+            @for (opcion of cobertura().ciudades; track opcion) {
+              <option [value]="opcion">{{ opcion }}</option>
+            }
+          </select>
+        </app-form-field>
+      </app-grid-layout>
+
+      <app-grid-layout tipo="form-grid">
+        <app-form-field
+          label="Tipo de inmueble"
+          ayuda="Comercio permite asegurar el IVA del canon"
+          [requerido]="true"
+          controlId="cot-tipo"
+        >
+          <select
+            id="cot-tipo"
+            name="tipoInmueble"
+            [ngModel]="tipoInmueble()"
+            (ngModelChange)="onTipoInmuebleChange($event)"
+          >
+            <option value="" disabled>Selecciona un tipo</option>
+            @for (opcion of tiposInmueble; track opcion) {
+              <option [value]="opcion">{{ opcion }}</option>
+            }
+          </select>
+        </app-form-field>
+
+        <app-form-field
+          label="Canon de arrendamiento"
+          ayuda="Valor mensual del canon (mayor a $0)"
+          [requerido]="true"
+          [error]="errorCanon()"
+          controlId="cot-canon"
+        >
+          <input
+            id="cot-canon"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            name="canon"
+            [ngModel]="canon()"
+            (ngModelChange)="canon.set($event)"
+            [attr.aria-invalid]="errorCanon() ? 'true' : null"
+          />
+        </app-form-field>
+
+        <app-form-field
+          label="Cuota de administración"
+          ayuda="Opcional — valor mensual de administración"
+          controlId="cot-administracion"
+        >
+          <input
+            id="cot-administracion"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            name="administracion"
+            [ngModel]="administracion()"
+            (ngModelChange)="administracion.set($event)"
+          />
+        </app-form-field>
+
+        <app-form-field
+          label="Fecha de inicio de vigencia"
+          ayuda="Fecha desde la que inicia la póliza"
+          [requerido]="true"
+          controlId="cot-fecha"
+        >
+          <input
+            id="cot-fecha"
+            type="date"
+            name="fechaInicioVigencia"
+            [ngModel]="fechaInicioVigencia()"
+            (ngModelChange)="fechaInicioVigencia.set($event)"
+          />
+        </app-form-field>
+
+        <app-form-field
+          label="Meses de vigencia"
+          ayuda="Entre 1 y 36 meses"
+          [requerido]="true"
+          controlId="cot-meses"
+        >
+          <input
+            id="cot-meses"
+            type="number"
+            inputmode="numeric"
+            [min]="mesesMin"
+            [max]="mesesMax"
+            name="mesesVigencia"
+            [ngModel]="mesesVigencia()"
+            (ngModelChange)="onMesesChange($event)"
+          />
+        </app-form-field>
+      </app-grid-layout>
+
+      <!-- IVA del canon solo para Comercio (Req 7.4) -->
+      @if (esComercio()) {
+        <div class="cotizador-datos__iva">
+          <app-toggle-switch
+            [checked]="aseguraIva()"
+            (checkedChange)="aseguraIva.set($event)"
+            ariaLabel="Asegurar el IVA del canon (19%)"
+          ></app-toggle-switch>
+          <div class="cotizador-datos__iva-texto">
+            <span class="cotizador-datos__iva-label">Asegurar IVA del canon (19%)</span>
+            @if (aseguraIva()) {
+              <span class="cotizador-datos__iva-valor">IVA estimado: {{ ivaCanonEstimado() }}</span>
+            }
+          </div>
+        </div>
+      }
+    </app-card>
+
+    <!-- Coberturas con toggle y control de monto (Req 7.5, 7.6) -->
+    <section class="cotizador-datos__coberturas" aria-labelledby="cotizador-coberturas-titulo">
+      <h2 id="cotizador-coberturas-titulo" class="cotizador-datos__coberturas-titulo">Coberturas</h2>
+
+      @if (coberturas().length === 0) {
+        <p class="cotizador-datos__coberturas-vacio">No hay coberturas disponibles.</p>
+      } @else {
+        <app-grid-layout tipo="tracking-cards">
+          @for (cobertura of coberturas(); track trackCobertura($index, cobertura)) {
+            <app-card variante="cobertura-card" [activa]="cobertura.activa">
+              <div class="cobertura">
+                <div class="cobertura__cabecera">
+                  <div class="cobertura__texto">
+                    <span class="cobertura__nombre">{{ cobertura.nombre }}</span>
+                    <span class="cobertura__descripcion">{{ cobertura.descripcion }}</span>
+                  </div>
+                  <app-toggle-switch
+                    [checked]="cobertura.activa"
+                    (checkedChange)="alternarCobertura(cobertura.id, $event)"
+                    [ariaLabel]="'Activar cobertura ' + cobertura.nombre"
+                  ></app-toggle-switch>
+                </div>
+
+                @if (cobertura.activa) {
+                  <div class="cobertura__monto">
+                    <app-boton
+                      variante="outline"
+                      ariaLabel="Disminuir monto asegurado"
+                      [disabled]="cobertura.montoAsegurado <= 0"
+                      (clicked)="decrementar(cobertura.id)"
+                    >
+                      −
+                    </app-boton>
+                    <span class="cobertura__monto-valor" aria-live="polite">
+                      {{ cobertura.montoAsegurado }}
+                    </span>
+                    <app-boton
+                      variante="outline"
+                      ariaLabel="Aumentar monto asegurado"
+                      (clicked)="incrementar(cobertura.id)"
+                    >
+                      +
+                    </app-boton>
+                  </div>
+                }
+              </div>
+            </app-card>
+          }
+        </app-grid-layout>
+      }
+    </section>
+
+    @if (errorCalculo()) {
+      <app-alert-banner variante="error" titulo="No se pudo continuar">
+        {{ errorCalculo() }}
+      </app-alert-banner>
+    }
+
+    <div class="cotizador-datos__acciones">
+      <app-boton
+        variante="accent"
+        type="submit"
+        [disabled]="!puedeCalcular() || calculando()"
+      >
+        {{ calculando() ? 'Calculando…' : 'Ver cotización →' }}
+      </app-boton>
+    </div>
+  </form>
+
+  @if (calculando()) {
+    <app-escalerita-loader texto="Calculando cotización..."></app-escalerita-loader>
+  }
+
+  <!-- Resultado de la cotización inline (Req 8, 9) -->
+  @if (resultado()) {
+    <app-cotizador-resultado
+      [resultado]="resultado()"
+      [descargandoPdf]="descargandoPdf()"
+      (descargarPdf)="onDescargarPdf()"
+      (modificarDatos)="onModificarDatos()"
+      (radicarPoliza)="onRadicarPoliza()"
+    ></app-cotizador-resultado>
+  }
+</section>

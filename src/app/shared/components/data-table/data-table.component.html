@@ -1,0 +1,123 @@
+@if (conBusqueda) {
+  <div class="dt-toolbar">
+    <span class="dt-toolbar__icono" aria-hidden="true">🔍</span>
+    <input
+      type="search"
+      class="dt-toolbar__input"
+      [placeholder]="placeholderBusqueda"
+      [ngModel]="busqueda()"
+      (ngModelChange)="busqueda.set($event)"
+      [attr.aria-label]="placeholderBusqueda"
+    />
+  </div>
+}
+
+<div class="table-wrapper">
+  <table class="data-table" [attr.aria-label]="ariaLabel">
+    <thead>
+      <tr>
+        @for (columna of columnas; track trackColumna($index, columna)) {
+          <th
+            scope="col"
+            [class.dt-th--ordenable]="columna.ordenable"
+            [class.dt-th--centro]="columna.alinear === 'centro'"
+            [class.dt-th--derecha]="columna.alinear === 'derecha'"
+            [attr.aria-sort]="
+              columnaOrden() === columna.key
+                ? (direccionOrden() === 'asc' ? 'ascending' : 'descending')
+                : null
+            "
+            (click)="ordenarPor(columna)"
+          >
+            <span class="dt-th__label">
+              {{ columna.header }}
+              @if (columna.ordenable) {
+                <span class="dt-th__sort" aria-hidden="true">{{ iconoOrden(columna) }}</span>
+              }
+            </span>
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (fila of filasVisibles(); track trackFila($index)) {
+        <tr
+          tabindex="0"
+          (click)="onSeleccionarFila(fila)"
+          (keydown.enter)="onSeleccionarFila(fila)"
+          (keydown.space)="onSeleccionarFila(fila); $event.preventDefault()"
+        >
+          @for (columna of columnas; track trackColumna($index, columna)) {
+            <td
+              [class.dt-td--centro]="columna.alinear === 'centro'"
+              [class.dt-td--derecha]="columna.alinear === 'derecha'"
+            >
+              @switch (columna.tipo) {
+                @case ('badge') {
+                  <app-badge-estado
+                    [variante]="varianteBadge(fila, columna)"
+                    [conPunto]="true"
+                  >{{ valorCelda(fila, columna) }}</app-badge-estado>
+                }
+                @case ('accion') {
+                  <span (click)="$event.stopPropagation()">
+                    <app-boton
+                      variante="accent"
+                      [ariaLabel]="(columna.textoAccion || 'Gestionar') + ' fila'"
+                      (clicked)="onAccion(fila, columna)"
+                    >{{ columna.textoAccion || 'Gestionar' }}</app-boton>
+                  </span>
+                }
+                @default {
+                  {{ valorCelda(fila, columna) }}
+                }
+              }
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr>
+          <td class="data-table__empty" [attr.colspan]="columnas.length">
+            No hay registros para mostrar.
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<div class="table-footer">
+  <span class="table-footer__total">Mostrando {{ filasVisibles().length }} de {{ total }}</span>
+  <nav class="pagination" aria-label="Paginación">
+    <button
+      type="button"
+      class="pg pg--nav"
+      [disabled]="paginaActual <= 1"
+      aria-label="Página anterior"
+      (click)="irAPagina(paginaActual - 1)"
+    >
+      ‹
+    </button>
+    @for (pagina of paginas; track pagina) {
+      <button
+        type="button"
+        class="pg"
+        [class.active]="pagina === paginaActual"
+        [attr.aria-current]="pagina === paginaActual ? 'page' : null"
+        [attr.aria-label]="'Página ' + pagina"
+        (click)="irAPagina(pagina)"
+      >
+        {{ pagina }}
+      </button>
+    }
+    <button
+      type="button"
+      class="pg pg--nav"
+      [disabled]="paginaActual >= totalPaginas()"
+      aria-label="Página siguiente"
+      (click)="irAPagina(paginaActual + 1)"
+    >
+      ›
+    </button>
+  </nav>
+</div>

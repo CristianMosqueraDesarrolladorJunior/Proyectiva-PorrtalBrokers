@@ -1,0 +1,69 @@
+// =============================================================================
+// AlertBannerComponent — banner de alerta tokenizado (Req 35.14)
+// Sin valores hardcodeados: color/espaciado/radio/tipografía vía Design_Token.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.alert-banner {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--color-border);
+}
+
+// --- Variante success (verde) ---
+.alert-success {
+  background: var(--color-badge-success-bg);
+  border-color: var(--color-success);
+}
+
+// --- Variante warning (naranja) ---
+.alert-warning {
+  background: var(--color-badge-warning-bg);
+  border-color: var(--color-accent);
+}
+
+// --- Variante error (rojo) ---
+.alert-error {
+  background: var(--color-badge-danger-bg);
+  border-color: var(--color-danger);
+}
+
+.alert-icon {
+  font-size: var(--font-size-5xl);
+  line-height: var(--line-height-tight);
+  flex-shrink: 0;
+}
+
+.alert-body {
+  flex: 1;
+}
+
+.alert-title {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.alert-text {
+  font-size: var(--font-size-2md);
+  color: var(--color-muted);
+  line-height: var(--line-height-tight);
+}
+
+.alert-actions {
+  display: flex;
+  gap: var(--space-2);
+
+  &:empty {
+    display: none;
+  }
+}

@@ -1,0 +1,76 @@
+// =============================================================================
+// GridLayoutComponent — rejillas tokenizadas del prototipo (Req 35.4)
+// Sin valores hardcodeados: espaciado/gaps vía Design_Token; anchos de columna
+// vía tokens de layout. Comportamiento responsivo con los mixins de breakpoint
+// (Estrategia responsiva, Req 36.3, 36.5).
+// =============================================================================
+
+@use '../../styles/mixins' as mx;
+
+:host {
+  display: block;
+}
+
+.grid {
+  display: grid;
+}
+
+// --- dash-grid: contenido principal + panel lateral (.dash-grid) ---
+.dash-grid {
+  grid-template-columns: 1fr var(--grid-dash-side-col);
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+
+  @include mx.respond-to('tablet') {
+    grid-template-columns: 1fr;
+  }
+
+  @include mx.respond-to('mobile') {
+    grid-template-columns: 1fr;
+  }
+}
+
+// --- kpi-grid: tarjetas KPI auto-ajustables (.kpi-grid) ---
+.kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(var(--grid-kpi-min-col), 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+// --- form-grid: dos columnas de formulario (.form-grid) ---
+.form-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+
+  @include mx.respond-to('mobile') {
+    grid-template-columns: 1fr;
+  }
+
+  // Hijo que ocupa el ancho completo (.full del prototipo)
+  ::ng-deep .full {
+    grid-column: 1 / -1;
+  }
+}
+
+// --- two-col: panel lateral fijo + contenido principal (.two-col) ---
+.two-col {
+  grid-template-columns: var(--grid-two-col-side) 1fr;
+  gap: var(--space-5);
+
+  @include mx.respond-to('tablet') {
+    grid-template-columns: 1fr;
+  }
+
+  @include mx.respond-to('mobile') {
+    grid-template-columns: 1fr;
+  }
+}
+
+// --- tracking-cards: fila de tarjetas de seguimiento centradas (.tracking-cards) ---
+.tracking-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+}

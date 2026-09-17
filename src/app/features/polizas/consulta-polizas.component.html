@@ -1,0 +1,61 @@
+<section class="consulta-polizas" aria-labelledby="consulta-polizas-titulo">
+  <header class="consulta-polizas__header">
+    <h1 id="consulta-polizas-titulo" class="consulta-polizas__titulo">Consulta de pólizas</h1>
+    <p class="consulta-polizas__subtitulo">
+      Busca las pólizas de un cliente por su cédula y gestiona su cartera.
+    </p>
+  </header>
+
+  <form class="consulta-polizas__buscador" (ngSubmit)="buscar()">
+    <app-form-field
+      label="Cédula del cliente"
+      ayuda="Solo dígitos, entre 6 y 10 caracteres"
+      [requerido]="true"
+      [error]="errorCedula()"
+      controlId="consulta-polizas-cedula"
+    >
+      <input
+        id="consulta-polizas-cedula"
+        type="text"
+        inputmode="numeric"
+        name="cedula"
+        autocomplete="off"
+        placeholder="Ej: 1020304050"
+        [attr.aria-invalid]="errorCedula() ? 'true' : null"
+        [ngModel]="cedula()"
+        (ngModelChange)="cedula.set($event)"
+      />
+    </app-form-field>
+
+    <app-boton variante="primary" type="submit" [disabled]="consultando()">
+      Buscar pólizas
+    </app-boton>
+  </form>
+
+  @switch (estado()) {
+    @case ('consultando') {
+      <app-escalerita-loader texto="Consultando pólizas..."></app-escalerita-loader>
+    }
+    @case ('error') {
+      <app-alert-banner variante="error" titulo="No se pudieron consultar las pólizas">
+        Ocurrió un problema al consultar las pólizas. Intenta nuevamente.
+      </app-alert-banner>
+    }
+    @case ('resultado') {
+      @if (polizas().length > 0) {
+        <app-data-table
+          [columnas]="columnas"
+          [filas]="filas()"
+          [total]="polizas().length"
+          [tamanoPagina]="polizas().length || 1"
+          ariaLabel="Listado de pólizas del cliente"
+          (accion)="onAccionPoliza($event)"
+        ></app-data-table>
+      } @else {
+        <app-alert-banner variante="warning" titulo="Sin pólizas">
+          No se encontraron pólizas asociadas a la cédula consultada.
+        </app-alert-banner>
+      }
+    }
+  }
+</section>

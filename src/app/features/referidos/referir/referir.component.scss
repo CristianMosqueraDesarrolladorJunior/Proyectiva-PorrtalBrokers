@@ -1,0 +1,125 @@
+// ReferirComponent — Referir cliente (Req 15). Fiel al prototipo: card resumen
+// naranja + form-cards. Sin valores hardcodeados: todo vía Design_Token.
+
+:host {
+  display: block;
+}
+
+.referir {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.referir__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.referir__titulo {
+  font-size: var(--font-size-h1-seccion);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.referir__subtitulo {
+  font-size: var(--font-size-4md);
+  color: var(--color-muted);
+  margin: var(--space-0);
+}
+
+// --- Card resumen (fondo naranja claro del prototipo) ---
+.referir-resumen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-accent-light);
+  border-radius: var(--radius-md);
+}
+
+.referir-resumen__info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.referir-resumen__icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--color-card);
+  font-size: var(--font-size-6xl);
+}
+
+.referir-resumen__texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.referir-resumen__label {
+  font-size: var(--font-size-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-muted);
+}
+
+.referir-resumen__cifra {
+  font-size: var(--font-size-3md);
+  color: var(--color-text);
+
+  strong {
+    font-size: var(--font-size-7xl);
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+.referir-resumen__estados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.referir-resumen__dot--success {
+  color: var(--color-success);
+}
+
+.referir-resumen__dot--accent {
+  color: var(--color-accent);
+}
+
+.referir-resumen__dot--danger {
+  color: var(--color-danger);
+}
+
+// --- Formulario con cards ---
+.referir__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.referir-card__titulo {
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: var(--space-0) var(--space-0) var(--space-3);
+}
+
+.referir__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

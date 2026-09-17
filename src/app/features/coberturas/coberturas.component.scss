@@ -1,0 +1,164 @@
+// =============================================================================
+// CoberturasComponent — sección de gestión de coberturas (Req 14)
+// Sin valores hardcodeados: color/tamaño/peso/radio/espaciado vía Design_Token.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.coberturas {
+  padding: var(--space-6);
+
+  &__titulo {
+    color: var(--color-text);
+    font-size: var(--font-size-h1-seccion);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-2);
+  }
+
+  &__intro {
+    color: var(--color-muted);
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--space-6);
+  }
+
+  &__estado {
+    color: var(--color-muted);
+    font-size: var(--font-size-2xl);
+    padding: var(--space-4) var(--space-0);
+
+    &--error {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      color: var(--color-badge-danger-text);
+    }
+  }
+
+  &__reintentar {
+    background: var(--color-accent);
+    color: var(--color-card);
+    border: none;
+    border-radius: var(--radius-btn-sm);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-accent-hover);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-ring-width) solid var(--color-focus-ring);
+      outline-offset: var(--focus-ring-offset);
+    }
+  }
+
+  &__lista {
+    list-style: none;
+    margin: var(--space-0);
+    padding: var(--space-0);
+  }
+}
+
+.cobertura {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+
+  &__cabecera {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  &__nombre {
+    color: var(--color-text);
+    font-size: var(--font-size-h4);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-1);
+  }
+
+  &__descripcion {
+    color: var(--color-muted);
+    font-size: var(--font-size-lg);
+    line-height: var(--line-height-normal);
+  }
+
+  &__monto {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  &__monto-etiqueta {
+    color: var(--color-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+  }
+
+  &__control {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  &__paso {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--space-7);
+    height: var(--space-7);
+    background: var(--color-accent-light);
+    color: var(--color-accent);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-4xl);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-accent);
+      color: var(--color-card);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-ring-width) solid var(--color-focus-ring);
+      outline-offset: var(--focus-ring-offset);
+    }
+  }
+
+  &__valor {
+    color: var(--color-text);
+    font-size: var(--font-size-valor-cobertura);
+    font-weight: var(--font-weight-valor-cobertura);
+    min-width: var(--grid-kpi-min-col);
+    text-align: center;
+  }
+
+  &__detalle {
+    align-self: flex-start;
+    background: transparent;
+    color: var(--color-accent);
+    border: none;
+    padding: var(--space-0);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    text-decoration: underline;
+
+    &:hover {
+      color: var(--color-accent-hover);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-ring-width) solid var(--color-focus-ring);
+      outline-offset: var(--focus-ring-offset);
+    }
+  }
+}

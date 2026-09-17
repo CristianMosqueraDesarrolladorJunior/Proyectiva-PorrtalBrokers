@@ -1,0 +1,47 @@
+<section class="estado-referidos" aria-labelledby="estado-referidos-titulo">
+  <header class="estado-referidos__header">
+    <h1 id="estado-referidos-titulo" class="estado-referidos__titulo">Estado de mis referidos</h1>
+    <p class="estado-referidos__subtitulo">
+      Seguimiento de todos los clientes que has referido.
+    </p>
+  </header>
+
+  @if (errorCarga()) {
+    <app-alert-banner variante="error" titulo="No se pudieron cargar los referidos">
+      {{ errorCarga() }}
+    </app-alert-banner>
+  }
+
+  <app-grid-layout tipo="kpi-grid">
+    <app-card variante="kpi-card">
+      <span class="kpi__etiqueta">Total</span>
+      <span class="kpi__valor">{{ kpis().total }}</span>
+    </app-card>
+    <app-card variante="kpi-card">
+      <span class="kpi__etiqueta">Aceptadas</span>
+      <span class="kpi__valor">{{ kpis().aceptadas }}</span>
+    </app-card>
+    <app-card variante="kpi-card">
+      <span class="kpi__etiqueta">En proceso</span>
+      <span class="kpi__valor">{{ kpis().enProceso }}</span>
+    </app-card>
+    <app-card variante="kpi-card" [danger]="kpis().rechazadas > 0">
+      <span class="kpi__etiqueta">Rechazadas</span>
+      <span class="kpi__valor">{{ kpis().rechazadas }}</span>
+    </app-card>
+  </app-grid-layout>
+
+  @if (cargando()) {
+    <app-escalerita-loader texto="Cargando referidos..."></app-escalerita-loader>
+  } @else {
+    <app-data-table
+      [columnas]="columnas"
+      [filas]="filas()"
+      [total]="totalBackend()"
+      [tamanoPagina]="filas().length || 1"
+      [conBusqueda]="true"
+      placeholderBusqueda="Buscar por nombre o producto..."
+      ariaLabel="Tabla de referidos"
+    ></app-data-table>
+  }
+</section>

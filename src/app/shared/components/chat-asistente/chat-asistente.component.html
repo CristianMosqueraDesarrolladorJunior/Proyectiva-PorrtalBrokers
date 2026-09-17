@@ -1,0 +1,149 @@
+<!--
+  Chat_Asistente Proyectiva (Req 38, 39.1).
+  El contenido del bot se renderiza con interpolación segura de Angular
+  ({{ }}), que escapa automáticamente el HTML — nunca se usa [innerHTML] sin
+  sanitizar (Req 38.16). La PII se redacta en el componente antes de enviar.
+-->
+
+<!-- Botón flotante (chat-fab): abre/cierra la ventana (Req 38.1, 38.2, 38.3). -->
+<button
+  type="button"
+  class="chat-fab"
+  [attr.aria-expanded]="visible()"
+  aria-haspopup="dialog"
+  aria-label="Abrir el asistente de apoyo para brokers"
+  title="Asistente de apoyo · Proyectiva"
+  (click)="alternarChat()"
+>
+  <svg class="chat-fab__svg" viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path
+      d="M12 3a7 7 0 0 0-7 7v3.5A2.5 2.5 0 0 0 7.5 16H8v-6a4 4 0 0 1 8 0v6h.5A2.5 2.5 0 0 0 19 13.5V10a7 7 0 0 0-7-7Z"
+      fill="currentColor"
+    />
+    <path
+      d="M8 16v.5A2.5 2.5 0 0 0 10.5 19H12"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+    />
+    <circle cx="12" cy="19" r="1.4" fill="currentColor" />
+  </svg>
+  <span class="chat-fab__online" aria-hidden="true"></span>
+</button>
+
+<!-- Ventana del chat (chat-widget) (Req 38.2, 38.14). -->
+@if (visible()) {
+  <section
+    class="chat-widget"
+    role="dialog"
+    aria-modal="false"
+    aria-label="Chat del Asistente Proyectiva"
+  >
+    <!-- Encabezado: avatar, título y estado en línea (Req 38.9). -->
+    <header class="chat-header">
+      <span class="chat-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M12 3a7 7 0 0 0-7 7v3.5A2.5 2.5 0 0 0 7.5 16H8v-6a4 4 0 0 1 8 0v6h.5A2.5 2.5 0 0 0 19 13.5V10a7 7 0 0 0-7-7Z"
+            fill="currentColor"
+          />
+          <path
+            d="M8 16v.5A2.5 2.5 0 0 0 10.5 19H12"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+          <circle cx="12" cy="19" r="1.4" fill="currentColor" />
+        </svg>
+      </span>
+      <div class="chat-header__titulo">
+        <strong>Asistente Proyectiva</strong>
+        <small>
+          <span aria-hidden="true">🟢</span>
+          <span role="status">En línea</span>
+        </small>
+      </div>
+      <button
+        type="button"
+        class="chat-close"
+        aria-label="Cerrar el chat"
+        (click)="alternarChat()"
+      >
+        <span aria-hidden="true">✕</span>
+      </button>
+    </header>
+
+    <!-- Cuerpo: historial de mensajes de la sesión (Req 38.5–38.8, 38.14). -->
+    <div class="chat-body" role="log" aria-live="polite" aria-relevant="additions">
+      @for (mensaje of historial(); track trackMensaje($index)) {
+        <div
+          class="chat-msg"
+          [class.chat-msg--bot]="mensaje.autor === 'asistente'"
+          [class.chat-msg--broker]="mensaje.autor === 'broker'"
+        >
+          @if (mensaje.autor === 'asistente') {
+            <span class="msg-avatar" aria-hidden="true">🤖</span>
+          }
+          <!-- Interpolación segura: Angular escapa el contenido (Req 38.16). -->
+          <p class="msg-bubble">{{ mensaje.contenido }}</p>
+        </div>
+      }
+
+      <!-- Sugerencias rápidas (Req 38.4, 38.8). -->
+      <div class="chat-suggestions">
+        @for (sugerencia of sugerencias; track sugerencia.texto) {
+          <button
+            type="button"
+            class="suggestion-pill"
+            (click)="enviarSugerencia(sugerencia)"
+          >
+            {{ sugerencia.texto }}
+          </button>
+        }
+      </div>
+
+      <!-- Indicador de carga de la respuesta (Req 38.5). -->
+      @if (cargando()) {
+        <p class="chat-estado" role="status">Escribiendo…</p>
+      }
+
+      <!-- Error orientativo con reintento (Req 38.12). -->
+      @if (conError()) {
+        <div class="chat-msg chat-msg--bot">
+          <span class="msg-avatar" aria-hidden="true">🤖</span>
+          <div class="msg-bubble msg-bubble--error" role="alert">
+            <span>{{ mensajeError }}</span>
+            <button type="button" class="chat-retry" (click)="reintentar()">
+              Reintentar
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Entrada de texto y envío (Req 38.5, 38.11, 38.13). -->
+    <div class="chat-input">
+      <input
+        type="text"
+        class="chat-input__campo"
+        placeholder="Escribe tu mensaje aquí..."
+        aria-label="Escribe tu mensaje para el Asistente Proyectiva"
+        [value]="entrada()"
+        (input)="onEntrada($event)"
+        (keydown.enter)="onEnter($event)"
+      />
+      <button
+        type="button"
+        class="send-btn"
+        aria-label="Enviar mensaje"
+        [disabled]="!envioHabilitado"
+        (click)="enviarDesdeEntrada()"
+      >
+        <span aria-hidden="true">➤</span>
+      </button>
+    </div>
+
+    <!-- Aviso orientativo (Req 38.10). -->
+    <small class="chat-disclaimer">{{ disclaimer }}</small>
+  </section>
+}

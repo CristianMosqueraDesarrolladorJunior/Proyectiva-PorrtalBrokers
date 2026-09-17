@@ -1,0 +1,24 @@
+<!--
+  Detalle_Solicitud (Req 34): reutiliza el DrawerDetalleComponent (Req 39.2) con
+  los campos enmascarados y proyecta el TimelineComponent con los hitos del
+  trámite (Req 34.2). El cierre se delega al drawer y se propaga al contenedor.
+-->
+<app-drawer-detalle
+  [abierto]="abierto()"
+  titulo="Detalle de la solicitud"
+  [filas]="filas()"
+  (cerrar)="onCerrar()"
+>
+  @if (cargando()) {
+    <p class="detalle-solicitud__estado" role="status">Cargando detalle…</p>
+  } @else if (error()) {
+    <p class="detalle-solicitud__estado detalle-solicitud__estado--error" role="alert">
+      {{ error() }}
+    </p>
+  } @else {
+    <section class="detalle-solicitud__timeline" aria-label="Avance del trámite">
+      <h4 class="detalle-solicitud__timeline-titulo">Avance del trámite</h4>
+      <app-timeline [hitos]="hitos()"></app-timeline>
+    </section>
+  }
+</app-drawer-detalle>

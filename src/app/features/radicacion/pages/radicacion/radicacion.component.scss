@@ -1,0 +1,155 @@
+// =============================================================================
+// RadicacionComponent — Sección Radicación (Req 10, 11, 12)
+// Replica el layout del prototipo (form-card con secciones separadas, panel
+// SARLAFT, contador de obligatorios). Sin valores hardcodeados: Design_Token.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.radicacion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+.radicacion-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.radicacion-titulo {
+  font-size: var(--font-size-h1-seccion);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.radicacion-subtitulo {
+  font-size: var(--font-size-4md);
+  color: var(--color-muted);
+  line-height: var(--line-height-normal);
+  margin: var(--space-0);
+}
+
+// --- Contenedor tipo form-card del prototipo ---
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+// --- Secciones separadas por línea inferior (como en el prototipo) ---
+
+.rad-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: var(--space-0);
+  }
+}
+
+.rad-seccion--contrato {
+  gap: var(--space-3);
+}
+
+.rad-seccion-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rad-seccion-titulo {
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.rad-obligatorios {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent);
+}
+
+.rad-opcional {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.rad-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.rad-apoderado {
+  margin-top: var(--space-2);
+}
+
+// --- Panel SARLAFT condicional (morado, como el prototipo) ---
+
+.rad-sarlaft-panel {
+  margin-top: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-accent-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.rad-sarlaft-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.rad-sarlaft-texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-4md);
+  color: var(--color-text);
+
+  span {
+    font-size: var(--font-size-xs);
+    color: var(--color-muted);
+    line-height: var(--line-height-normal);
+  }
+}
+
+.rad-contrato-accion {
+  display: flex;
+  margin-top: var(--space-2);
+}
+
+.lista-pendientes {
+  margin: var(--space-2) var(--space-0) var(--space-0);
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-4md);
+}
+
+.radicacion-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}

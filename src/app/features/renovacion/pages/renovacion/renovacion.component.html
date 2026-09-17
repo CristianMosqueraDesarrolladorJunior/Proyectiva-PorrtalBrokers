@@ -1,0 +1,392 @@
+<section class="renovacion" aria-labelledby="renovacion-titulo">
+  <header class="renovacion-header">
+    <h1 id="renovacion-titulo" class="renovacion-titulo">Renovación de póliza</h1>
+    <p class="renovacion-subtitulo">
+      Revisa el detalle de la póliza, elige la modalidad y completa el formulario de renovación.
+    </p>
+  </header>
+
+  @if (envioExitoso()) {
+    <!-- Pantalla de éxito de la Renovacion (Req 21.1, 21.2) -->
+    <app-success-screen
+      titulo="Renovación enviada"
+      mensaje="La renovación se enviará 5 días hábiles después de que la póliza esté vencida si la documentación es correcta."
+      [tarjetas]="tarjetas()"
+      textoVolver="Volver a Renovaciones"
+      (volver)="onVolver()"
+    ></app-success-screen>
+  } @else {
+    <!-- Indicador de pasos del flujo de Renovacion (Req 18.4) -->
+    <app-stepper [pasos]="pasos" [pasoActivo]="pasoActivo()"></app-stepper>
+
+    <!-- Detalle de póliza: valores de referencia del último periodo facturado (Req 18.1) -->
+    @if (valoresReferencia; as ref) {
+      <div class="renovacion-detalle" aria-labelledby="renovacion-detalle-titulo">
+        <h2 id="renovacion-detalle-titulo" class="renovacion-detalle-titulo">
+          Valores del último periodo facturado
+        </h2>
+        <dl class="renovacion-detalle-grid">
+          <div class="renovacion-detalle-item">
+            <dt>Póliza</dt>
+            <dd>{{ ref.numeroPoliza }}</dd>
+          </div>
+          <div class="renovacion-detalle-item">
+            <dt>Canon</dt>
+            <dd>{{ ref.canon | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd>
+          </div>
+          <div class="renovacion-detalle-item">
+            <dt>Prima neta</dt>
+            <dd>{{ ref.primaNeta | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd>
+          </div>
+          <div class="renovacion-detalle-item">
+            <dt>IVA</dt>
+            <dd>{{ ref.iva | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd>
+          </div>
+          <div class="renovacion-detalle-item renovacion-detalle-item--total">
+            <dt>Total</dt>
+            <dd>{{ ref.total | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd>
+          </div>
+        </dl>
+      </div>
+    }
+
+    <!-- Paso 1: Modalidad y tipo de persona (Req 17.1, 18.2, 18.3) -->
+    @if (pasoActivo() === 0) {
+      <div class="renovacion-paso">
+        <div class="renovacion-campo">
+          <app-form-field
+            label="Tipo de propietario"
+            [requerido]="true"
+            controlId="renovacion-tipo-persona"
+          >
+            <app-radio-group
+              [opciones]="opcionesTipoPersona"
+              [valor]="tipoPersona()"
+              (valorChange)="tipoPersona.set($event)"
+              ariaLabel="Tipo de propietario o beneficiario"
+            ></app-radio-group>
+          </app-form-field>
+        </div>
+
+        <div class="renovacion-campo">
+          <app-form-field
+            label="Modalidad de renovación"
+            [requerido]="true"
+            controlId="renovacion-modalidad"
+          >
+            <app-radio-group
+              [opciones]="opcionesModalidad"
+              [valor]="modalidad()"
+              (valorChange)="modalidad.set($event)"
+              ariaLabel="Modalidad de renovación"
+            ></app-radio-group>
+          </app-form-field>
+        </div>
+
+        <div class="renovacion-acciones">
+          <app-boton
+            variante="primary"
+            [disabled]="!modalidadSeleccionada()"
+            (clicked)="continuarDesdeModalidad()"
+          >
+            Continuar
+          </app-boton>
+        </div>
+      </div>
+    }
+
+    <!-- Paso 2: Datos del propietario y de la póliza (Req 17.2, 17.4) -->
+    @if (pasoActivo() === 1) {
+      <div class="renovacion-paso">
+        <div class="renovacion-form-grid">
+          <app-form-field
+            label="Tipo de documento"
+            [requerido]="true"
+            controlId="renovacion-tipo-documento"
+          >
+            <app-radio-group
+              [opciones]="opcionesTipoDocumento"
+              [valor]="tipoDocumentoPropietario()"
+              (valorChange)="tipoDocumentoPropietario.set($event)"
+              ariaLabel="Tipo de documento del propietario"
+            ></app-radio-group>
+          </app-form-field>
+
+          <app-form-field
+            label="Número de documento"
+            [requerido]="true"
+            ayuda="Solo dígitos, entre 6 y 12 caracteres"
+            [error]="errores().numeroDocumentoPropietario"
+            controlId="renovacion-numero-documento"
+          >
+            <input
+              id="renovacion-numero-documento"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              [ngModel]="numeroDocumentoPropietario()"
+              (ngModelChange)="numeroDocumentoPropietario.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Celular"
+            [requerido]="true"
+            ayuda="Solo dígitos, entre 7 y 10 caracteres"
+            [error]="errores().celular"
+            controlId="renovacion-celular"
+          >
+            <input
+              id="renovacion-celular"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              [ngModel]="celular()"
+              (ngModelChange)="celular.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Correo electrónico"
+            [requerido]="true"
+            ayuda="correo@ejemplo.com"
+            [error]="errores().correo"
+            controlId="renovacion-correo"
+          >
+            <input
+              id="renovacion-correo"
+              type="email"
+              autocomplete="off"
+              [ngModel]="correo()"
+              (ngModelChange)="correo.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Dirección de correspondencia"
+            [requerido]="true"
+            [error]="errores().direccionCorrespondencia"
+            controlId="renovacion-direccion"
+          >
+            <input
+              id="renovacion-direccion"
+              type="text"
+              autocomplete="off"
+              [ngModel]="direccionCorrespondencia()"
+              (ngModelChange)="direccionCorrespondencia.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Ciudad de residencia"
+            [requerido]="true"
+            [error]="errores().ciudadResidencia"
+            controlId="renovacion-ciudad"
+          >
+            <input
+              id="renovacion-ciudad"
+              type="text"
+              autocomplete="off"
+              [ngModel]="ciudadResidencia()"
+              (ngModelChange)="ciudadResidencia.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Número de póliza"
+            [requerido]="true"
+            [error]="errores().numeroPoliza"
+            controlId="renovacion-numero-poliza"
+          >
+            <input
+              id="renovacion-numero-poliza"
+              type="text"
+              autocomplete="off"
+              [ngModel]="numeroPoliza()"
+              (ngModelChange)="numeroPoliza.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Fecha de finalización de vigencia"
+            [requerido]="true"
+            [error]="errores().fechaFinVigencia"
+            controlId="renovacion-fecha-fin"
+          >
+            <input
+              id="renovacion-fecha-fin"
+              type="date"
+              [ngModel]="fechaFinVigencia()"
+              (ngModelChange)="fechaFinVigencia.set($event)"
+            />
+          </app-form-field>
+        </div>
+
+        @if (listaErrores().length > 0) {
+          <app-alert-banner variante="error" titulo="Corrige los siguientes datos">
+            <ul class="renovacion-lista-errores">
+              @for (mensaje of listaErrores(); track mensaje) {
+                <li>{{ mensaje }}</li>
+              }
+            </ul>
+          </app-alert-banner>
+        }
+
+        <div class="renovacion-acciones">
+          <app-boton variante="back" ariaLabel="Volver al paso anterior" (clicked)="retroceder()">
+            Atrás
+          </app-boton>
+          <app-boton variante="primary" (clicked)="continuarDesdeDatos()">
+            Continuar
+          </app-boton>
+        </div>
+      </div>
+    }
+
+    <!-- Paso 3: Documentos y comentarios (Req 17.3, 17.5, 19.1, 19.2, 19.3) -->
+    @if (pasoActivo() === 2) {
+      <div class="renovacion-paso">
+        <div class="renovacion-campo">
+          <app-form-field
+            label="Formulario de Renovación"
+            [requerido]="true"
+            ayuda="Adjunta el formulario de renovación diligenciado (PDF, JPG o PNG)."
+            [error]="errorFormularioRenovacion()"
+            controlId="renovacion-formulario"
+          >
+            <app-doc-uploader
+              [reglas]="reglasFormularioRenovacion"
+              [cargados]="cargadosRenovacion()"
+              (archivoSeleccionado)="onFormularioRenovacion($event.archivo)"
+            ></app-doc-uploader>
+          </app-form-field>
+        </div>
+
+        <div class="renovacion-campo">
+          <app-form-field
+            label="Formulario SARLAFT"
+            ayuda="Opcional. Si no lo adjuntas, se enviará al propietario mediante enlace digital."
+            [error]="errorFormularioSarlaft()"
+            controlId="renovacion-sarlaft"
+          >
+            <app-doc-uploader
+              [reglas]="reglasFormularioSarlaft"
+              [cargados]="cargadosSarlaft()"
+              (archivoSeleccionado)="onFormularioSarlaft($event.archivo)"
+            ></app-doc-uploader>
+          </app-form-field>
+        </div>
+
+        <!-- Aviso de envío del SARLAFT por enlace digital cuando está ausente (Req 17.5) -->
+        @if (aviso().mostrar) {
+          <app-alert-banner variante="warning" titulo="Formulario SARLAFT">
+            {{ aviso().mensaje }}
+          </app-alert-banner>
+        }
+
+        <div class="renovacion-campo">
+          <app-form-field
+            label="Comentarios adicionales"
+            ayuda="Opcional: agrega cualquier detalle relevante de la renovación."
+            controlId="renovacion-comentarios"
+          >
+            <textarea
+              id="renovacion-comentarios"
+              rows="4"
+              autocomplete="off"
+              [ngModel]="comentarios()"
+              (ngModelChange)="comentarios.set($event)"
+            ></textarea>
+          </app-form-field>
+        </div>
+
+        <div class="renovacion-acciones">
+          <app-boton variante="back" ariaLabel="Volver al paso anterior" (clicked)="retroceder()">
+            Atrás
+          </app-boton>
+          <app-boton
+            variante="primary"
+            [disabled]="formularioRenovacion() === undefined"
+            (clicked)="continuarDesdeDocumentos()"
+          >
+            Continuar
+          </app-boton>
+        </div>
+      </div>
+    }
+
+    <!-- Paso 4: Confirmación de identidad con aceptación explícita (Req 20) -->
+    @if (pasoActivo() === 3) {
+      <div class="renovacion-paso">
+        <div class="renovacion-resumen" aria-labelledby="renovacion-resumen-titulo">
+          <h2 id="renovacion-resumen-titulo" class="renovacion-resumen-titulo">
+            Resumen de la renovación
+          </h2>
+          <dl class="renovacion-resumen-grid">
+            <div class="renovacion-resumen-item">
+              <dt>Propietario</dt>
+              <dd>{{ etiquetaTipoPersona() }}</dd>
+            </div>
+            <div class="renovacion-resumen-item">
+              <dt>Documento</dt>
+              <dd>{{ numeroDocumentoPropietario() }}</dd>
+            </div>
+            <div class="renovacion-resumen-item">
+              <dt>Póliza</dt>
+              <dd>{{ numeroPoliza() }}</dd>
+            </div>
+            <div class="renovacion-resumen-item">
+              <dt>Fin de vigencia</dt>
+              <dd>{{ fechaFinVigencia() }}</dd>
+            </div>
+            <div class="renovacion-resumen-item">
+              <dt>Modalidad</dt>
+              <dd>{{ etiquetaModalidad() }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="renovacion-campo">
+          <label class="renovacion-aceptacion">
+            <input
+              type="checkbox"
+              [ngModel]="aceptacionExplicita()"
+              (ngModelChange)="aceptacionExplicita.set($event)"
+              [attr.aria-invalid]="errorAceptacion() ? 'true' : null"
+            />
+            <span>
+              Acepto y autorizo la renovación en nombre del broker autenticado.
+            </span>
+          </label>
+          @if (errorAceptacion(); as error) {
+            <p class="renovacion-error" role="alert">{{ error }}</p>
+          }
+        </div>
+
+        @if (enviando()) {
+          <app-escalerita-loader texto="Registrando renovación..."></app-escalerita-loader>
+        }
+
+        @if (errorEnvio(); as error) {
+          <app-alert-banner variante="error" titulo="No se pudo continuar">
+            {{ error }}
+          </app-alert-banner>
+        }
+
+        <div class="renovacion-acciones">
+          <app-boton
+            variante="back"
+            ariaLabel="Volver al paso anterior"
+            [disabled]="enviando()"
+            (clicked)="retroceder()"
+          >
+            Atrás
+          </app-boton>
+          <app-boton variante="primary" [disabled]="enviando()" (clicked)="confirmar()">
+            {{ enviando() ? 'Enviando…' : 'Confirmar renovación' }}
+          </app-boton>
+        </div>
+      </div>
+    }
+  }
+</section>

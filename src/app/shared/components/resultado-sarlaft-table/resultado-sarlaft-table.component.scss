@@ -1,0 +1,61 @@
+// =============================================================================
+// ResultadoSarlaftTableComponent — tabla de resultado SARLAFT (Req 35.14, 3.15)
+// Sin valores hardcodeados: color/espaciado/radio/tipografía vía Design_Token.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.sarlaft-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.sarlaft-caption {
+  padding: var(--space-0);
+  font-size: var(--font-size-2xs);
+  // Oculta visualmente el caption manteniéndolo para lectores de pantalla.
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sarlaft-fila {
+  border-bottom: 1px solid var(--color-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.sarlaft-clave {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  background: var(--color-bg);
+}
+
+.sarlaft-valor {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-2md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  text-align: right;
+}
+
+// Estado "Vigente" resaltado en color de éxito.
+.sarlaft-valor-estado {
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
+}

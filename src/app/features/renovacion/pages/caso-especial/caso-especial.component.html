@@ -1,0 +1,85 @@
+<section class="caso-especial" aria-labelledby="caso-especial-titulo">
+  <header class="caso-especial-header">
+    <h1 id="caso-especial-titulo" class="caso-especial-titulo">Caso especial de renovación</h1>
+    <p class="caso-especial-subtitulo">
+      Tramita un Otro Sí o una Cesión de contrato adjuntando el documento legal correspondiente.
+    </p>
+  </header>
+
+  @if (envioExitoso()) {
+    <app-success-screen
+      titulo="Caso especial registrado"
+      mensaje="Recibimos el documento del caso especial. El equipo continuará con la gestión del trámite."
+      [tarjetas]="tarjetas()"
+      [mostrarVolver]="false"
+    ></app-success-screen>
+  } @else {
+    <!-- Tipo de trámite obligatorio del conjunto definido (Req 23) -->
+    <div class="caso-especial-campo">
+      <app-form-field
+        label="Tipo de trámite"
+        [requerido]="true"
+        [error]="errorTipo()"
+        controlId="caso-especial-tipo"
+      >
+        <app-radio-group
+          [opciones]="opcionesTipo"
+          [valor]="tipo()"
+          (valorChange)="tipo.set($event)"
+          ariaLabel="Tipo de caso especial"
+        ></app-radio-group>
+      </app-form-field>
+    </div>
+
+    <!-- Documento legal del trámite en PDF (Req 23.1, 23.2) -->
+    <div class="caso-especial-campo">
+      <app-form-field
+        label="Documento legal"
+        [requerido]="true"
+        ayuda="Adjunta el documento legal del trámite en formato PDF (máx 10MB)."
+        [error]="errorDocumento()"
+        controlId="caso-especial-documento"
+      >
+        <app-doc-uploader
+          [reglas]="reglasDocumento"
+          [cargados]="cargados()"
+          [disabled]="enviando()"
+          (archivoSeleccionado)="onArchivo($event.archivo)"
+        ></app-doc-uploader>
+      </app-form-field>
+    </div>
+
+    <!-- Observaciones opcionales (Req 23.1) -->
+    <div class="caso-especial-campo">
+      <app-form-field
+        label="Observaciones"
+        ayuda="Opcional: agrega cualquier detalle relevante."
+        controlId="caso-especial-observaciones"
+      >
+        <textarea
+          id="caso-especial-observaciones"
+          rows="4"
+          autocomplete="off"
+          [ngModel]="observaciones()"
+          (ngModelChange)="observaciones.set($event)"
+        ></textarea>
+      </app-form-field>
+    </div>
+
+    @if (enviando()) {
+      <app-escalerita-loader texto="Registrando caso especial..."></app-escalerita-loader>
+    }
+
+    @if (errorEnvio(); as error) {
+      <app-alert-banner variante="error" titulo="No se pudo continuar">
+        {{ error }}
+      </app-alert-banner>
+    }
+
+    <div class="caso-especial-acciones">
+      <app-boton variante="primary" [disabled]="enviando()" (clicked)="enviar()">
+        {{ enviando() ? 'Enviando…' : 'Enviar caso especial' }}
+      </app-boton>
+    </div>
+  }
+</section>

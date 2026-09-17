@@ -1,0 +1,76 @@
+<main class="login" role="main">
+  <section class="login-card" aria-labelledby="login-titulo">
+    <header class="login-header">
+      <h1 class="login-marca">Proyectiva</h1>
+      <h2 id="login-titulo" class="login-titulo">Iniciar sesión</h2>
+      <p class="login-subtitulo">Accede a tu panel de autogestión de brokers</p>
+    </header>
+
+    <form
+      class="login-form"
+      [formGroup]="formulario"
+      (ngSubmit)="iniciarSesion()"
+      novalidate
+    >
+      @if (errorCredenciales()) {
+        <p class="login-error" role="alert">{{ errorCredenciales() }}</p>
+      }
+
+      <app-form-field
+        label="Cédula"
+        ayuda="Ingresa tu número de cédula"
+        controlId="login-cedula"
+        [requerido]="true"
+        [error]="errorCedula"
+      >
+        <input
+          id="login-cedula"
+          class="login-input"
+          type="text"
+          inputmode="numeric"
+          autocomplete="username"
+          formControlName="cedula"
+          [attr.minlength]="cedulaLongitudMin"
+          [attr.maxlength]="cedulaLongitudMax"
+          [attr.aria-invalid]="!!errorCedula"
+          [attr.aria-describedby]="'login-cedula-ayuda'"
+        />
+      </app-form-field>
+
+      <app-form-field
+        label="Contraseña"
+        controlId="login-password"
+        [requerido]="true"
+        [error]="errorPassword"
+      >
+        <input
+          id="login-password"
+          class="login-input"
+          type="password"
+          autocomplete="current-password"
+          formControlName="password"
+          [attr.aria-invalid]="!!errorPassword"
+        />
+      </app-form-field>
+
+      <app-boton
+        variante="primary"
+        type="submit"
+        [disabled]="!formularioValido || enviando()"
+      >
+        {{ enviando() ? 'Ingresando...' : 'Ingresar' }}
+      </app-boton>
+    </form>
+
+    <footer class="login-footer">
+      <p class="login-registro-texto">¿Nuevo broker?</p>
+      <app-boton
+        variante="ghost"
+        ariaLabel="Me interesa vender pólizas: iniciar registro de nuevo broker"
+        (clicked)="irARegistro()"
+      >
+        Me interesa vender pólizas
+      </app-boton>
+    </footer>
+  </section>
+</main>

@@ -1,0 +1,226 @@
+// Centro de ayuda (Req 33.5, 33.6). Fiel al prototipo: contact-cards, canales
+// oficiales (doc-list) y FAQ (details/summary). Sin valores hardcodeados.
+
+:host {
+  display: block;
+}
+
+.ayuda {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.ayuda__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ayuda__titulo {
+  font-size: var(--font-size-h1-seccion);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.ayuda__intro {
+  font-size: var(--font-size-4md);
+  color: var(--color-muted);
+  margin: var(--space-0);
+}
+
+.ayuda__seccion-titulo {
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: var(--space-3) var(--space-0) var(--space-0);
+}
+
+// --- Contactos directos (contact-cards) ---
+.contact-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-3);
+}
+
+.contact-card {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.contact-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-light);
+  font-size: var(--font-size-6xl);
+  flex-shrink: 0;
+}
+
+.contact-card__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.contact-card__cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+
+  strong {
+    font-size: var(--font-size-2md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+  }
+}
+
+.contact-badge {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success);
+  background: #e8f5e9;
+  padding: var(--space-0) var(--space-2);
+  border-radius: var(--radius-xs);
+}
+
+.contact-card__desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  line-height: var(--line-height-normal);
+  margin: var(--space-0);
+}
+
+.contact-card__enlace {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent);
+  text-decoration: none;
+  margin-top: var(--space-1);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// --- Canales oficiales (doc-list reutilizado) ---
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.doc-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.doc-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-size: var(--font-size-4xl);
+  flex-shrink: 0;
+}
+
+.doc-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+
+  strong {
+    font-size: var(--font-size-2md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+  }
+
+  small {
+    font-size: var(--font-size-sm);
+    color: var(--color-muted);
+  }
+}
+
+.doc-btn {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-btn-sm);
+  background: var(--color-card);
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--color-accent);
+    color: var(--color-card);
+  }
+}
+
+// --- FAQ (details/summary) ---
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.faq {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+
+  summary {
+    font-size: var(--font-size-2md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+
+    &::after {
+      content: '▾';
+      color: var(--color-accent);
+      transition: transform 0.15s ease;
+    }
+  }
+
+  &[open] summary::after {
+    transform: rotate(180deg);
+  }
+
+  p {
+    margin: var(--space-3) var(--space-0) var(--space-0);
+    font-size: var(--font-size-sm);
+    color: var(--color-muted);
+    line-height: var(--line-height-normal);
+  }
+}

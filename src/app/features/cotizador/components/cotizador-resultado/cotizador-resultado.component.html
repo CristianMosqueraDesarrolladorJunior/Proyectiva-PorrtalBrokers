@@ -1,0 +1,64 @@
+<section class="resultado-cotizacion" aria-labelledby="resultado-cotizacion-titulo">
+  <h3 id="resultado-cotizacion-titulo" class="resultado-titulo">
+    Resultado de la cotización
+  </h3>
+
+  @if (hayResultado && resultado) {
+    <!-- Alerta al propietario: sin contrato firmado no hay seguro (Req 8.6) -->
+    <app-alert-banner variante="warning" titulo="Importante">
+      Sin contrato firmado no hay seguro.
+    </app-alert-banner>
+
+    <!-- Desglose calculado por el Motor_Tarifas del API_Backend (Req 8.1, 8.7) -->
+    <div class="table-wrapper">
+      <table class="desglose-table" aria-label="Desglose de la cotización">
+        <thead>
+          <tr>
+            @for (columna of columnas; track trackColumna($index, columna)) {
+              <th scope="col">{{ columna.header }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (concepto of resultado.conceptos; track trackConcepto($index)) {
+            <tr>
+              @for (columna of columnas; track trackColumna($index, columna)) {
+                <td [class.celda-numerica]="columna.key !== 'concepto'">
+                  {{ valorCelda(concepto, columna) }}
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="fila-totales">
+            <th scope="row" colspan="5">Totales</th>
+            <td class="celda-numerica">{{ formatearMoneda(resultado.primaNetaTotal) }}</td>
+            <td class="celda-numerica">{{ formatearMoneda(resultado.ivaTotal) }}</td>
+            <td class="celda-numerica celda-total">{{ formatearMoneda(resultado.total) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Acciones sobre el resultado (Req 9) -->
+    <div class="resultado-acciones">
+      <app-boton
+        variante="outline"
+        [disabled]="pdfDeshabilitado"
+        ariaLabel="Descargar cotización en PDF"
+        (clicked)="onDescargarPdf()"
+      >
+        Descargar PDF
+      </app-boton>
+
+      <app-boton variante="ghost" (clicked)="onModificarDatos()">
+        Modificar datos
+      </app-boton>
+
+      <app-boton variante="accent" (clicked)="onRadicarPoliza()">
+        Radicar póliza
+      </app-boton>
+    </div>
+  }
+</section>

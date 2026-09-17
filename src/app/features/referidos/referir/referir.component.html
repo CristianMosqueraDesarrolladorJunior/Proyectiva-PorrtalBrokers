@@ -1,0 +1,180 @@
+<section class="referir" aria-labelledby="referir-titulo">
+  @if (envioExitoso()) {
+    <app-success-screen
+      titulo="Referido enviado"
+      mensaje="Recibimos los datos de tu cliente referido. Nuestro equipo comercial lo contactará."
+      [tarjetas]="[
+        { etiqueta: 'RADICADO', valor: radicado() },
+        { etiqueta: 'ESTADO', valor: '🟡 En proceso' }
+      ]"
+      textoVolver="Referir otro cliente"
+      (volver)="nuevoReferido()"
+    ></app-success-screen>
+  } @else {
+    <header class="referir__header">
+      <h1 id="referir-titulo" class="referir__titulo">Referir cliente</h1>
+      <p class="referir__subtitulo">
+        Comparte los datos de un cliente interesado y nuestro equipo lo contactará.
+      </p>
+    </header>
+
+    <!-- Card resumen de referidos (fiel al prototipo) -->
+    <div class="referir-resumen">
+      <div class="referir-resumen__info">
+        <span class="referir-resumen__icono" aria-hidden="true">👥</span>
+        <div class="referir-resumen__texto">
+          <span class="referir-resumen__label">Total de referidos</span>
+          <span class="referir-resumen__cifra">
+            <strong>18</strong> clientes referidos este año
+          </span>
+          <span class="referir-resumen__estados">
+            <span class="referir-resumen__dot referir-resumen__dot--success">● 10 aceptadas</span>
+            <span class="referir-resumen__dot referir-resumen__dot--accent">● 5 en proceso</span>
+            <span class="referir-resumen__dot referir-resumen__dot--danger">● 3 rechazadas</span>
+          </span>
+        </div>
+      </div>
+      <app-boton variante="ghost" (clicked)="verEstadoReferidos()">
+        Ver estado de referidos →
+      </app-boton>
+    </div>
+
+    <form class="referir__form" (ngSubmit)="enviar()" novalidate>
+      <!-- Datos del cliente -->
+      <app-card variante="form-card">
+        <h3 class="referir-card__titulo">Datos del cliente</h3>
+
+        <app-form-field
+          label="Nombre completo"
+          ayuda="Nombre y apellidos"
+          [requerido]="true"
+          [error]="errorNombre()"
+          controlId="referir-nombre"
+        >
+          <input
+            id="referir-nombre"
+            type="text"
+            name="nombre"
+            autocomplete="name"
+            placeholder="Nombre y apellidos"
+            [ngModel]="nombre()"
+            (ngModelChange)="nombre.set($event)"
+            [attr.aria-invalid]="errorNombre() ? 'true' : null"
+          />
+        </app-form-field>
+
+        <app-grid-layout tipo="form-grid">
+          <app-form-field
+            label="Cédula"
+            [requerido]="true"
+            [error]="errorCedula()"
+            controlId="referir-cedula"
+          >
+            <input
+              id="referir-cedula"
+              type="text"
+              inputmode="numeric"
+              name="cedula"
+              placeholder="· · · · · · · · ·"
+              [ngModel]="cedula()"
+              (ngModelChange)="cedula.set($event)"
+              [attr.aria-invalid]="errorCedula() ? 'true' : null"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Celular"
+            ayuda="300 000 0000"
+            [requerido]="true"
+            [error]="errorCelular()"
+            controlId="referir-celular"
+          >
+            <input
+              id="referir-celular"
+              type="tel"
+              inputmode="tel"
+              name="celular"
+              autocomplete="tel"
+              placeholder="300 000 0000"
+              [ngModel]="celular()"
+              (ngModelChange)="celular.set($event)"
+              [attr.aria-invalid]="errorCelular() ? 'true' : null"
+            />
+          </app-form-field>
+        </app-grid-layout>
+
+        <app-form-field
+          label="Correo electrónico"
+          ayuda="correo@ejemplo.com"
+          controlId="referir-correo"
+        >
+          <input
+            id="referir-correo"
+            type="email"
+            name="correo"
+            autocomplete="email"
+            placeholder="correo@ejemplo.com"
+            [ngModel]="correo()"
+            (ngModelChange)="correo.set($event)"
+          />
+        </app-form-field>
+      </app-card>
+
+      <!-- Producto de interés -->
+      <app-card variante="form-card">
+        <h3 class="referir-card__titulo">Producto de interés</h3>
+
+        <app-form-field
+          label="Producto"
+          [requerido]="true"
+          [error]="errorProducto()"
+          controlId="referir-producto"
+        >
+          <select
+            id="referir-producto"
+            name="producto"
+            [ngModel]="producto()"
+            (ngModelChange)="producto.set($event)"
+            [attr.aria-invalid]="errorProducto() ? 'true' : null"
+          >
+            <option value="" disabled>Selecciona un producto</option>
+            @for (opcion of productos; track opcion) {
+              <option [value]="opcion">{{ opcion }}</option>
+            }
+          </select>
+        </app-form-field>
+
+        <app-form-field
+          label="Comentario (opcional)"
+          controlId="referir-comentario"
+        >
+          <textarea
+            id="referir-comentario"
+            name="comentario"
+            rows="3"
+            placeholder="Contexto adicional sobre el cliente..."
+            [ngModel]="comentario()"
+            (ngModelChange)="comentario.set($event)"
+          ></textarea>
+        </app-form-field>
+      </app-card>
+
+      @if (errorEnvio()) {
+        <app-alert-banner variante="error" titulo="No se pudo enviar">
+          {{ errorEnvio() }}
+        </app-alert-banner>
+      }
+
+      @if (enviando()) {
+        <app-escalerita-loader texto="Enviando referido..."></app-escalerita-loader>
+      } @else {
+        <div class="referir__acciones">
+          <app-boton variante="ghost" (clicked)="cancelar()">Cancelar</app-boton>
+          <app-boton variante="primary" type="submit" [disabled]="!formularioValido()">
+            Enviar referido →
+          </app-boton>
+        </div>
+      }
+    </form>
+  }
+</section>

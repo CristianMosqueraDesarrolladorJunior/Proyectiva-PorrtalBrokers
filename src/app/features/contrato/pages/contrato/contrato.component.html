@@ -1,0 +1,536 @@
+<section class="contrato" aria-labelledby="contrato-titulo">
+  @if (envioExitoso()) {
+    <!-- Confirmación de generación del contrato (Req 30.7) -->
+    <app-success-screen
+      titulo="Contrato generado"
+      mensaje="El contrato de arrendamiento se generó correctamente y quedó asociado a tu radicación."
+      [tarjetas]="tarjetasConfirmacion()"
+      textoVolver="Volver a Radicación"
+      (volver)="volverARadicacion()"
+    ></app-success-screen>
+  } @else {
+    <header class="contrato-header">
+      <h1 id="contrato-titulo" class="contrato-titulo">Crear contrato de arrendamiento</h1>
+      <p class="contrato-subtitulo">
+        Completa los datos en cada paso para generar automáticamente el contrato de
+        arrendamiento.
+      </p>
+    </header>
+
+    <!-- Indicador de pasos (Req 30.1) -->
+    <app-stepper [pasos]="pasos" [pasoActivo]="pasoActual()"></app-stepper>
+
+    <!-- Paso 1: Datos del arrendador (Req 30.2) -->
+    @if (pasoActual() === 0) {
+      <div class="contrato-paso">
+        <h2 class="contrato-paso-titulo">Datos del arrendador</h2>
+        <div class="contrato-grid">
+          <app-form-field label="Nombres" [requerido]="true" controlId="arr-nombres">
+            <input
+              id="arr-nombres"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Juan Pablo"
+              [ngModel]="arrNombres()"
+              (ngModelChange)="arrNombres.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Apellidos" [requerido]="true" controlId="arr-apellidos">
+            <input
+              id="arr-apellidos"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Pérez Gómez"
+              [ngModel]="arrApellidos()"
+              (ngModelChange)="arrApellidos.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Tipo de identificación"
+            [requerido]="true"
+            controlId="arr-tipo-id"
+          >
+            <select
+              id="arr-tipo-id"
+              [ngModel]="arrTipoIdentificacion()"
+              (ngModelChange)="arrTipoIdentificacion.set($event)"
+            >
+              @for (tipo of tiposIdentificacion; track tipo.valor) {
+                <option [value]="tipo.valor">{{ tipo.etiqueta }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          <app-form-field
+            label="Número de identificación"
+            ayuda="Solo dígitos, entre 6 y 12 caracteres"
+            [requerido]="true"
+            controlId="arr-num-id"
+          >
+            <input
+              id="arr-num-id"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Ej: 1095836254"
+              [ngModel]="arrNumeroIdentificacion()"
+              (ngModelChange)="arrNumeroIdentificacion.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Teléfono"
+            ayuda="Entre 7 y 10 dígitos"
+            [requerido]="true"
+            controlId="arr-telefono"
+          >
+            <input
+              id="arr-telefono"
+              type="tel"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Ej: 3001234567"
+              [ngModel]="arrTelefono()"
+              (ngModelChange)="arrTelefono.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Correo electrónico"
+            ayuda="correo@ejemplo.com"
+            [requerido]="true"
+            controlId="arr-correo"
+          >
+            <input
+              id="arr-correo"
+              type="email"
+              autocomplete="off"
+              placeholder="ejemplo@correo.com"
+              [ngModel]="arrCorreo()"
+              (ngModelChange)="arrCorreo.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Dirección de residencia"
+            [requerido]="true"
+            controlId="arr-direccion"
+            class="contrato-grid-full"
+          >
+            <input
+              id="arr-direccion"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Calle 100 #15-30"
+              [ngModel]="arrDireccion()"
+              (ngModelChange)="arrDireccion.set($event)"
+            />
+          </app-form-field>
+        </div>
+      </div>
+    }
+
+    <!-- Paso 2: Datos del arrendatario (Req 30.3) -->
+    @if (pasoActual() === 1) {
+      <div class="contrato-paso">
+        <h2 class="contrato-paso-titulo">Datos del arrendatario</h2>
+        <div class="contrato-grid">
+          <app-form-field label="Nombres" [requerido]="true" controlId="ate-nombres">
+            <input
+              id="ate-nombres"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: María Antonia"
+              [ngModel]="ateNombres()"
+              (ngModelChange)="ateNombres.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Apellidos" [requerido]="true" controlId="ate-apellidos">
+            <input
+              id="ate-apellidos"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Silva Rodríguez"
+              [ngModel]="ateApellidos()"
+              (ngModelChange)="ateApellidos.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Tipo de identificación"
+            [requerido]="true"
+            controlId="ate-tipo-id"
+          >
+            <select
+              id="ate-tipo-id"
+              [ngModel]="ateTipoIdentificacion()"
+              (ngModelChange)="ateTipoIdentificacion.set($event)"
+            >
+              @for (tipo of tiposIdentificacion; track tipo.valor) {
+                <option [value]="tipo.valor">{{ tipo.etiqueta }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          <app-form-field
+            label="Número de identificación"
+            ayuda="Solo dígitos, entre 6 y 12 caracteres"
+            [requerido]="true"
+            controlId="ate-num-id"
+          >
+            <input
+              id="ate-num-id"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Ej: 1098765432"
+              [ngModel]="ateNumeroIdentificacion()"
+              (ngModelChange)="ateNumeroIdentificacion.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Teléfono"
+            ayuda="Entre 7 y 10 dígitos"
+            [requerido]="true"
+            controlId="ate-telefono"
+          >
+            <input
+              id="ate-telefono"
+              type="tel"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Ej: 3009876543"
+              [ngModel]="ateTelefono()"
+              (ngModelChange)="ateTelefono.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Correo electrónico"
+            ayuda="correo@ejemplo.com"
+            [requerido]="true"
+            controlId="ate-correo"
+          >
+            <input
+              id="ate-correo"
+              type="email"
+              autocomplete="off"
+              placeholder="ejemplo@correo.com"
+              [ngModel]="ateCorreo()"
+              (ngModelChange)="ateCorreo.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Ocupación / Actividad"
+            [requerido]="true"
+            controlId="ate-ocupacion"
+            class="contrato-grid-full"
+          >
+            <input
+              id="ate-ocupacion"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Ingeniero, empleado, comerciante..."
+              [ngModel]="ateOcupacion()"
+              (ngModelChange)="ateOcupacion.set($event)"
+            />
+          </app-form-field>
+        </div>
+      </div>
+    }
+
+    <!-- Paso 3: Datos del inmueble (Req 30.4) -->
+    @if (pasoActual() === 2) {
+      <div class="contrato-paso">
+        <h2 class="contrato-paso-titulo">Datos del inmueble</h2>
+        <div class="contrato-grid">
+          <app-form-field label="Tipo de inmueble" [requerido]="true" controlId="inm-tipo">
+            <select
+              id="inm-tipo"
+              [ngModel]="inmTipoInmueble()"
+              (ngModelChange)="inmTipoInmueble.set($event)"
+            >
+              @for (tipo of tiposInmueble; track tipo) {
+                <option [value]="tipo">{{ tipo }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          <app-form-field label="Uso del inmueble" [requerido]="true" controlId="inm-uso">
+            <select
+              id="inm-uso"
+              [ngModel]="inmUso()"
+              (ngModelChange)="inmUso.set($event)"
+            >
+              @for (uso of usosInmueble; track uso) {
+                <option [value]="uso">{{ uso }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          <app-form-field
+            label="Dirección completa del inmueble"
+            [requerido]="true"
+            controlId="inm-direccion"
+            class="contrato-grid-full"
+          >
+            <input
+              id="inm-direccion"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Carrera 15 #93-45 Apto 502, Bogotá D.C."
+              [ngModel]="inmDireccion()"
+              (ngModelChange)="inmDireccion.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Ciudad" [requerido]="true" controlId="inm-ciudad">
+            <input
+              id="inm-ciudad"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Bogotá"
+              [ngModel]="inmCiudad()"
+              (ngModelChange)="inmCiudad.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Matrícula inmobiliaria"
+            [requerido]="true"
+            controlId="inm-matricula"
+          >
+            <input
+              id="inm-matricula"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: 50N-1234567"
+              [ngModel]="inmMatricula()"
+              (ngModelChange)="inmMatricula.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Estrato" [requerido]="true" controlId="inm-estrato">
+            <select
+              id="inm-estrato"
+              [ngModel]="inmEstrato()"
+              (ngModelChange)="inmEstrato.set($event)"
+            >
+              @for (estrato of estratos; track estrato) {
+                <option [ngValue]="estrato">{{ estrato }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          <app-form-field
+            label="Área (m²)"
+            [requerido]="true"
+            controlId="inm-area"
+          >
+            <input
+              id="inm-area"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              placeholder="Ej: 85"
+              [ngModel]="inmArea()"
+              (ngModelChange)="inmArea.set($event)"
+            />
+          </app-form-field>
+        </div>
+      </div>
+    }
+
+    <!-- Paso 4: Condiciones económicas y vigencia (Req 30.5) -->
+    @if (pasoActual() === 3) {
+      <div class="contrato-paso">
+        <h2 class="contrato-paso-titulo">Condiciones económicas y vigencia</h2>
+        <div class="contrato-grid">
+          <app-form-field
+            label="Canon mensual"
+            ayuda="Valor mensual del arrendamiento"
+            [requerido]="true"
+            controlId="con-canon"
+          >
+            <input
+              id="con-canon"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              placeholder="$ 0"
+              [ngModel]="conCanon()"
+              (ngModelChange)="conCanon.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Cuota de administración"
+            ayuda="Ingresa 0 si no aplica"
+            [requerido]="true"
+            controlId="con-administracion"
+          >
+            <input
+              id="con-administracion"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              placeholder="$ 0"
+              [ngModel]="conAdministracion()"
+              (ngModelChange)="conAdministracion.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Duración del contrato"
+            [requerido]="true"
+            controlId="con-duracion"
+          >
+            <select
+              id="con-duracion"
+              [ngModel]="conDuracion()"
+              (ngModelChange)="conDuracion.set($event)"
+            >
+              @for (duracion of duraciones; track duracion) {
+                <option [ngValue]="duracion">{{ duracion }} meses</option>
+              }
+            </select>
+          </app-form-field>
+
+          <app-form-field
+            label="Día de pago mensual"
+            ayuda="Entre 1 y 31"
+            [requerido]="true"
+            controlId="con-dia-pago"
+          >
+            <input
+              id="con-dia-pago"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="31"
+              placeholder="Ej: 5"
+              [ngModel]="conDiaPago()"
+              (ngModelChange)="conDiaPago.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Fecha de inicio"
+            [requerido]="true"
+            controlId="con-fecha-inicio"
+          >
+            <input
+              id="con-fecha-inicio"
+              type="date"
+              [ngModel]="conFechaInicio()"
+              (ngModelChange)="conFechaInicio.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Reajuste anual (%)"
+            [requerido]="true"
+            controlId="con-reajuste"
+          >
+            <input
+              id="con-reajuste"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: IPC + 0%"
+              [ngModel]="conReajuste()"
+              (ngModelChange)="conReajuste.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Servicios incluidos (opcional)"
+            controlId="con-servicios"
+            class="contrato-grid-full"
+          >
+            <input
+              id="con-servicios"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Administración, agua, gas..."
+              [ngModel]="conServicios()"
+              (ngModelChange)="conServicios.set($event)"
+            />
+          </app-form-field>
+        </div>
+
+        <!-- Panel destacado de deudores solidarios (fiel al prototipo) -->
+        <div class="contrato-deudores">
+          <label class="contrato-check">
+            <input
+              type="checkbox"
+              [ngModel]="conDeudoresSolidarios()"
+              (ngModelChange)="conDeudoresSolidarios.set($event)"
+            />
+            <span class="contrato-check__texto">
+              <strong>Incluir deudores solidarios (codeudores)</strong>
+              <small>
+                Los deudores solidarios respaldan el cumplimiento de las obligaciones
+                del contrato. Podrás agregarlos en el siguiente paso.
+              </small>
+            </span>
+          </label>
+        </div>
+      </div>
+    }
+
+    <!-- Aviso de campos incompletos para avanzar/generar (gating, Req 30.6) -->
+    @if (intento() && !pasoActualValido()) {
+      <app-alert-banner variante="warning" titulo="Campos incompletos">
+        Diligencia correctamente todos los campos obligatorios de este paso para continuar.
+      </app-alert-banner>
+    }
+
+    @if (errorMensaje(); as error) {
+      <app-alert-banner variante="error" titulo="No se pudo continuar">
+        {{ error }}
+      </app-alert-banner>
+    }
+
+    @if (enviando()) {
+      <app-escalerita-loader texto="Generando contrato..."></app-escalerita-loader>
+    }
+
+    <!-- Acciones del formulario multipaso (Req 30.6, 30.7, 30.8) -->
+    <div class="contrato-acciones">
+      <app-boton variante="ghost" [disabled]="enviando()" (clicked)="cancelar()">
+        Cancelar
+      </app-boton>
+
+      <div class="contrato-acciones-nav">
+        @if (retrocesoHabilitado()) {
+          <app-boton variante="outline" [disabled]="enviando()" (clicked)="anterior()">
+            Anterior
+          </app-boton>
+        }
+
+        @if (esUltimoPaso()) {
+          <app-boton
+            variante="primary"
+            [disabled]="!generacionHabilitada() || enviando()"
+            (clicked)="generar()"
+          >
+            Generar contrato
+          </app-boton>
+        } @else {
+          <app-boton
+            variante="primary"
+            [disabled]="!avanceHabilitado()"
+            (clicked)="siguiente()"
+          >
+            Siguiente
+          </app-boton>
+        }
+      </div>
+    </div>
+  }
+</section>

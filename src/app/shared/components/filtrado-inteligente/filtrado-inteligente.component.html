@@ -1,0 +1,22 @@
+<div class="filtrado-inteligente" [class.open]="abierto">
+  <button
+    type="button"
+    class="filtrado-header"
+    [attr.aria-expanded]="abierto"
+    [attr.aria-controls]="idCuerpo"
+    (click)="alternar()"
+  >
+    <span class="filtrado-header-info">
+      <span class="filtrado-icono" aria-hidden="true">{{ icono }}</span>
+      <strong class="filtrado-titulo">{{ titulo }}</strong>
+      @if (totalFiltros > 0) {
+        <span class="filtrado-contador">{{ totalFiltros }} filtros</span>
+      }
+    </span>
+    <span class="filtrado-chevron" aria-hidden="true">⌄</span>
+  </button>
+
+  <div [id]="idCuerpo" class="filtrado-body" [hidden]="!abierto">
+    <ng-content></ng-content>
+  </div>
+</div>

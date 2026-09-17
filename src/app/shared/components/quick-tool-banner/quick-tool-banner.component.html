@@ -1,0 +1,17 @@
+<div class="quick-tool-banner">
+  <div class="qtb-left">
+    <span class="qtb-icon" aria-hidden="true">{{ icono }}</span>
+    <div class="qtb-content">
+      <span class="qtb-tag">{{ etiqueta }}</span>
+      @if (titulo) {
+        <h3 class="qtb-titulo">{{ titulo }}</h3>
+      }
+      @if (descripcion) {
+        <p class="qtb-descripcion">{{ descripcion }}</p>
+      }
+    </div>
+  </div>
+  <button type="button" class="qtb-btn" (click)="onAccion()">
+    {{ textoAccion }}
+  </button>
+</div>

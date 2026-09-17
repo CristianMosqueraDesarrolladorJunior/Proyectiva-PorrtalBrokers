@@ -1,0 +1,134 @@
+<section class="seguimiento" aria-labelledby="seg-titulo">
+  <header class="seg-header">
+    <h1 id="seg-titulo" class="seg-titulo">Seguimiento</h1>
+    <p class="seg-subtitulo">Monitorea tus comisiones, KPIs y el estado de tus solicitudes.</p>
+  </header>
+
+  <!-- Banner Herramienta Rápida (Req 5.1, 5.5) -->
+  <app-quick-tool-banner
+    titulo="Cotiza en segundos la póliza ideal para tu cliente"
+    descripcion="Calcula primas, coberturas y comisiones al instante. Comparte la cotización directamente con tu cliente."
+    textoAccion="Ir al cotizador →"
+    (accion)="irAlCotizador()"
+  ></app-quick-tool-banner>
+
+  <!-- Dashboard grid: comisión (izq) + KPIs apilados (der) (Req 5.2, 5.3) -->
+  <div class="dash-grid">
+    <!-- Tarjeta de comisión estimada (Req 5.2) -->
+    <div class="commission-card">
+      <span class="comm-label">Valor de comisión estimada o aproximada</span>
+      <span class="comm-value">
+        {{ comisiones() ? formatearCop(comisiones()!.valorEstimado) : '—' }}
+      </span>
+      @if (comisiones(); as c) {
+        <span class="comm-periodo">{{ c.periodo }} · {{ c.polizasRadicadas }} pólizas radicadas</span>
+        <div class="comm-desglose">
+          @for (item of c.desglose; track item.producto) {
+            <div class="comm-row">
+              <span>{{ item.producto }}</span>
+              <strong>{{ formatearCop(item.valor) }}</strong>
+            </div>
+          }
+        </div>
+      } @else {
+        <span class="comm-periodo">Sin datos de comisión disponibles.</span>
+      }
+    </div>
+
+    <!-- KPIs apilados (Req 5.3, 5.4) -->
+    <div class="dash-kpis-stack">
+      <div class="dash-kpi">
+        <span class="dash-kpi-label">Primas generadas</span>
+        <span class="dash-kpi-value">
+          {{ kpis() ? formatearCop(kpis()!.primasGeneradas) : '—' }}
+        </span>
+      </div>
+      <div class="dash-kpi">
+        <span class="dash-kpi-label">Total radicadas</span>
+        <span class="dash-kpi-value">{{ kpis()?.totalRadicadas ?? '—' }}</span>
+      </div>
+      <div class="dash-kpi">
+        <span class="dash-kpi-label">En revisión</span>
+        <span class="dash-kpi-value dash-kpi-value--accent">{{ kpis()?.enRevision ?? '—' }}</span>
+      </div>
+      <!-- KPI de alerta con estilo danger (Req 5.4) -->
+      <div class="dash-kpi dash-kpi--danger">
+        <span class="dash-kpi-label">Bloqueadas</span>
+        <span class="dash-kpi-value">{{ kpis()?.bloqueadas ?? '—' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtrado inteligente colapsable (Req 6.2) -->
+  <app-filtrado-inteligente [totalFiltros]="5">
+    <div class="seg-filtros-grid">
+      <label class="seg-filtro">
+        <span>Búsqueda</span>
+        <input
+          type="text"
+          placeholder="Nombre, ref o cédula..."
+          [ngModel]="busqueda()"
+          (ngModelChange)="busqueda.set($event)"
+        />
+      </label>
+      <label class="seg-filtro">
+        <span>Producto</span>
+        <select [ngModel]="producto()" (ngModelChange)="producto.set($event)">
+          <option value="">Todos</option>
+          @for (p of productos; track p) {
+            <option [value]="p">{{ p }}</option>
+          }
+        </select>
+      </label>
+      <label class="seg-filtro">
+        <span>Estado</span>
+        <select [ngModel]="estado()" (ngModelChange)="estado.set($event)">
+          <option value="">Todos</option>
+          @for (e of estados; track e.valor) {
+            <option [value]="e.valor">{{ e.etiqueta }}</option>
+          }
+        </select>
+      </label>
+      <label class="seg-filtro">
+        <span>Desde</span>
+        <input type="date" [ngModel]="fechaDesde()" (ngModelChange)="fechaDesde.set($event)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Hasta</span>
+        <input type="date" [ngModel]="fechaHasta()" (ngModelChange)="fechaHasta.set($event)" />
+      </label>
+    </div>
+    <div class="seg-filtros-acciones">
+      <button type="button" class="seg-btn-ghost" (click)="limpiarFiltros()">
+        Limpiar filtros
+      </button>
+      <button type="button" class="seg-btn-accent" (click)="aplicarFiltros()">
+        Aplicar filtros →
+      </button>
+    </div>
+  </app-filtrado-inteligente>
+
+  <!-- Tabla de solicitudes con paginación (Req 6.1, 6.5) -->
+  @if (errorTabla(); as error) {
+    <p class="seg-error" role="alert">{{ error }}</p>
+  }
+  <app-data-table
+    [columnas]="columnas"
+    [filas]="filas()"
+    [total]="total()"
+    [paginaActual]="paginaActual()"
+    [tamanoPagina]="tamanoPagina"
+    [conBusqueda]="true"
+    placeholderBusqueda="Buscar por cliente, referencia o producto..."
+    ariaLabel="Tabla de solicitudes de seguimiento"
+    (cambioPagina)="onCambioPagina($event)"
+    (seleccionFila)="onSeleccionFila($event)"
+    (accion)="onGestionar($event)"
+  ></app-data-table>
+
+  <!-- Detalle de la solicitud seleccionada (drawer) (Req 6.4, 34) -->
+  <app-detalle-solicitud
+    [referencia]="referenciaSeleccionada()"
+    (cerrar)="onCerrarDetalle()"
+  ></app-detalle-solicitud>
+</section>

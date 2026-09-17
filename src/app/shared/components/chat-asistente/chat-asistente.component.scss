@@ -1,0 +1,348 @@
+// ChatAsistenteComponent — chat-fab, chat-widget, header, body, mensajes,
+// sugerencias, entrada y disclaimer. 100% tokenizado (Req 38, 39.3, 25.3, 25.4).
+// Replica la apariencia del prototipo referenciando Design Tokens.
+//
+// Las propiedades controladas por stylelint (font-size, font-weight, line-height,
+// padding/margin/gap, border-radius, box-shadow) usan siempre var(--token).
+
+:host {
+  display: contents;
+
+  // Dimensiones locales del chat (botón circular fijo en esquina inferior derecha).
+  --chat-fab-size: 60px;
+  --chat-widget-width: 360px;
+  --chat-widget-height: 460px;
+  --chat-offset: var(--space-5);
+  --chat-bottom: var(--space-5);
+  --chat-widget-bottom: 92px;
+  --chat-z: 1000;
+}
+
+// ---------------------------------------------------------------------------
+// Botón flotante circular (chat-fab): apoyo a brokers (Req 38.1, 38.13).
+// Esquina inferior derecha, color de marca sólido (sin degradados).
+// ---------------------------------------------------------------------------
+.chat-fab {
+  position: fixed;
+  bottom: var(--chat-bottom);
+  right: var(--chat-offset);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--chat-fab-size);
+  height: var(--chat-fab-size);
+  padding: var(--space-0);
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-card);
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--chat-z);
+  transition: transform 0.18s ease, background 0.18s ease;
+  // Pulso sutil que invita a pedir apoyo.
+  animation: chat-fab-pulse 2.6s ease-in-out infinite;
+
+  &:hover {
+    transform: scale(1.08);
+    background: var(--color-primary-hover, var(--color-primary));
+    animation: none;
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+    animation: none;
+  }
+}
+
+// Ícono (auricular de soporte) centrado en el círculo.
+.chat-fab__svg {
+  display: block;
+  width: 26px;
+  height: 26px;
+}
+
+// Punto verde "en línea" en la esquina superior del círculo.
+.chat-fab__online {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  border: 2px solid var(--color-card);
+}
+
+// Anillo de pulso continuo (indica apoyo disponible).
+@keyframes chat-fab-pulse {
+  0% {
+    box-shadow: var(--shadow-lg), 0 0 0 0 rgba(139, 26, 26, 0.35);
+  }
+  70% {
+    box-shadow: var(--shadow-lg), 0 0 0 12px rgba(139, 26, 26, 0);
+  }
+  100% {
+    box-shadow: var(--shadow-lg), 0 0 0 0 rgba(139, 26, 26, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-fab {
+    animation: none;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Ventana del chat (chat-widget) (Req 38.2). Sale desde abajo a la derecha.
+// ---------------------------------------------------------------------------
+.chat-widget {
+  position: fixed;
+  bottom: var(--chat-widget-bottom);
+  right: var(--chat-offset);
+  width: var(--chat-widget-width);
+  height: var(--chat-widget-height);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--chat-z);
+}
+
+// ---------------------------------------------------------------------------
+// Encabezado (chat-header, chat-avatar, chat-close) (Req 38.9).
+// ---------------------------------------------------------------------------
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-primary);
+  color: var(--color-card);
+
+  strong {
+    font-size: var(--font-size-4md);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  small {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--font-size-2sm);
+    opacity: 0.75;
+  }
+}
+
+.chat-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-card);
+  flex-shrink: 0;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+  }
+}
+
+.chat-header__titulo {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-close {
+  margin-left: auto;
+  padding: var(--space-0);
+  border: none;
+  background: none;
+  color: var(--color-card);
+  font-size: var(--font-size-3xl);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-card);
+    outline-offset: var(--focus-ring-offset);
+    border-radius: var(--radius-xs);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cuerpo y mensajes (chat-body, chat-msg, msg-avatar, msg-bubble) (Req 38.5–38.8).
+// ---------------------------------------------------------------------------
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+}
+
+.chat-msg {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+
+  &--broker {
+    flex-direction: row-reverse;
+  }
+}
+
+.msg-avatar {
+  font-size: var(--font-size-2xl);
+}
+
+.msg-bubble {
+  max-width: 82%;
+  margin: var(--space-0);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+
+  .chat-msg--broker & {
+    background: var(--color-accent-light);
+  }
+
+  &--error {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    background: var(--color-badge-danger-bg);
+    color: var(--color-badge-danger-text);
+  }
+}
+
+.chat-retry {
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  border-radius: var(--radius-btn-sm);
+  background: var(--color-accent);
+  color: var(--color-card);
+  font-size: var(--font-size-2sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+.chat-estado {
+  margin: var(--space-0) var(--space-0) var(--space-3);
+  font-size: var(--font-size-2sm);
+  color: var(--color-muted);
+}
+
+// ---------------------------------------------------------------------------
+// Sugerencias rápidas (chat-suggestions, suggestion-pill) (Req 38.4, 38.8, 38.13).
+// ---------------------------------------------------------------------------
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.suggestion-pill {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: var(--font-size-2sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-accent-light);
+    border-color: var(--color-accent);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Entrada de texto y envío (chat-input, send-btn) (Req 38.5, 38.11, 38.13).
+// ---------------------------------------------------------------------------
+.chat-input {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.chat-input__campo {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: var(--font-size-2md);
+  outline: none;
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+.send-btn {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-card);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Aviso orientativo (chat-disclaimer) (Req 38.10).
+// ---------------------------------------------------------------------------
+.chat-disclaimer {
+  display: block;
+  padding: var(--space-1);
+  text-align: center;
+  font-size: var(--font-size-2xs);
+  color: var(--color-muted);
+}
+
+// ---------------------------------------------------------------------------
+// Estrategia responsiva móvil (< 640px): el widget ocupa el ancho disponible.
+// ---------------------------------------------------------------------------
+@media (width < 640px) {
+  .chat-widget {
+    width: auto;
+    left: var(--chat-offset);
+    right: var(--chat-offset);
+  }
+}

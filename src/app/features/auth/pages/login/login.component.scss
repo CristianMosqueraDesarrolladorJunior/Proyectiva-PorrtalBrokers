@@ -1,0 +1,117 @@
+// =============================================================================
+// Página de login del Broker (Req 1, 2).
+// Estilos únicamente vía Design_Token (Req 25): sin valores hardcodeados de
+// color, radio, espaciado, tipografía o sombra. Preserva la identidad visual
+// del prototipo (primary/accent) y el foco visible accesible (Req 27.3).
+// =============================================================================
+
+.login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-5);
+  // Fondo oscuro sólido (Req 1) para que la tarjeta blanca resalte, fiel al
+  // prototipo (que usa un degradado oscuro). Sin degradados por decisión de diseño.
+  background: var(--color-login-bg);
+}
+
+.login-card {
+  width: 100%;
+  max-width: var(--login-card-width);
+  padding: var(--space-8);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-modal);
+}
+
+.login-header {
+  margin-bottom: var(--space-7);
+  text-align: center;
+}
+
+.login-marca {
+  margin: var(--space-0) var(--space-0) var(--space-2);
+  color: var(--color-accent);
+  font-size: var(--font-size-8xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.login-titulo {
+  margin: var(--space-0) var(--space-0) var(--space-1);
+  color: var(--color-text);
+  font-size: var(--font-size-h2-login);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.login-subtitulo {
+  margin: var(--space-0);
+  color: var(--color-muted);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.login-error {
+  margin: var(--space-0);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-badge-danger-text);
+  font-size: var(--font-size-4md);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  background: var(--color-badge-danger-bg);
+  border-radius: var(--radius-sm);
+}
+
+.login-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+    border-color: var(--color-accent);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--color-danger);
+  }
+}
+
+.login-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.login-registro-texto {
+  margin: var(--space-0);
+  color: var(--color-muted);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+}
+
+@media (width <= 639px) {
+  .login-card {
+    padding: var(--space-6);
+  }
+}

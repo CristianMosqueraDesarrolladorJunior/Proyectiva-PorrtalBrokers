@@ -1,0 +1,59 @@
+// FaqAccordionComponent — faq-list / faq. 100% tokenizado (Req 33.6, 35.17,
+// 25.3, 25.4). Replica la apariencia del prototipo; cada respuesta se conmuta
+// de forma independiente (Property 32).
+
+:host {
+  display: block;
+}
+
+.faq-list {
+  margin-top: var(--space-1);
+}
+
+.faq {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-1);
+  overflow: hidden;
+}
+
+.faq__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: var(--font-size-2md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background: var(--color-bg);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: calc(var(--focus-ring-offset) * -1);
+  }
+}
+
+.faq__chevron {
+  flex: none;
+  font-size: var(--font-size-4xl);
+  line-height: var(--line-height-tight);
+  color: var(--color-accent);
+}
+
+.faq__respuesta {
+  margin: var(--space-0, 0);
+  padding: var(--space-0, 0) var(--space-3) var(--space-3);
+  font-size: var(--font-size-md);
+  color: var(--color-muted);
+  line-height: var(--line-height-normal);
+}

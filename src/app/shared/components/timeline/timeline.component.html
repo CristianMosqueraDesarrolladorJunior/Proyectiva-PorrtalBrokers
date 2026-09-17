@@ -1,0 +1,10 @@
+<ol class="timeline" aria-label="Línea de tiempo de hitos">
+  @for (hito of hitos; track trackHito($index)) {
+    <li class="timeline-item" [class.timeline-item--done]="hito.completado">
+      <span class="timeline-item__dot" aria-hidden="true"></span>
+      <span class="timeline-item__titulo">{{ hito.titulo }}</span>
+      <span class="timeline-item__fecha">{{ hito.fecha }}</span>
+      <span class="sr-only">{{ hito.completado ? 'Hito completado' : 'Hito pendiente' }}</span>
+    </li>
+  }
+</ol>

@@ -1,0 +1,55 @@
+// =============================================================================
+// NoRenovacionComponent — Notificar No Renovación (Req 22)
+// Sin valores hardcodeados: color/tamaño/peso/línea/espaciado/radio vía
+// Design_Token (Req 25.3, 25.4, 37.11, 37.12). Foco visible y ARIA en la plantilla.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.no-renovacion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+.no-renovacion-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.no-renovacion-titulo {
+  font-size: var(--font-size-h1-seccion);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.no-renovacion-subtitulo {
+  font-size: var(--font-size-4md);
+  color: var(--color-muted);
+  line-height: var(--line-height-normal);
+  margin: var(--space-0);
+}
+
+.no-renovacion-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.no-renovacion-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}

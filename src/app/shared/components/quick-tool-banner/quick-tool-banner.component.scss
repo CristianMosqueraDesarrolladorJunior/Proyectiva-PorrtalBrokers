@@ -1,0 +1,89 @@
+// =============================================================================
+// QuickToolBannerComponent — banner "Herramienta Rápida" (Req 35.16)
+// Sin valores hardcodeados de tipografía/espaciado/radio: vía Design_Token.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.quick-tool-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-5);
+}
+
+.qtb-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.qtb-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--color-accent-light);
+  font-size: var(--font-size-8xl);
+  flex-shrink: 0;
+}
+
+.qtb-tag {
+  display: inline-block;
+  margin-bottom: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.5px;
+}
+
+.qtb-titulo {
+  margin: var(--space-0);
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.qtb-descripcion {
+  margin: var(--space-0);
+  font-size: var(--font-size-md);
+  color: var(--color-muted);
+  line-height: var(--line-height-tight);
+}
+
+// Botón de acento tokenizado con foco visible (Req 27.3).
+.qtb-btn {
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  border: none;
+  background: var(--color-accent);
+  color: var(--color-card);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-4md);
+  font-weight: var(--font-weight-semibold);
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--color-accent-hover);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}

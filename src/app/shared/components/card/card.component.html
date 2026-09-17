@@ -1,0 +1,14 @@
+<div
+  class="card"
+  [class.commission-card]="variante === 'commission-card'"
+  [class.dash-kpi]="variante === 'dash-kpi'"
+  [class.kpi-card]="variante === 'kpi-card'"
+  [class.form-card]="variante === 'form-card'"
+  [class.cobertura-card]="variante === 'cobertura-card'"
+  [class.track-card]="variante === 'track-card'"
+  [class.dash-kpi-danger]="danger && variante === 'dash-kpi'"
+  [class.card--danger]="danger"
+  [class.active]="activa"
+>
+  <ng-content></ng-content>
+</div>

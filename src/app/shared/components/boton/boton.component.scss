@@ -1,0 +1,116 @@
+// =============================================================================
+// BotonComponent — variantes tokenizadas del prototipo (Req 35.1)
+// Sin valores hardcodeados: color/tamaño/peso/radio/espaciado vía Design_Token.
+// =============================================================================
+
+:host {
+  display: inline-block;
+}
+
+.boton {
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  // Foco visible accesible (Req 27.3)
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+// --- btn-primary: botón sólido de ancho completo (.btn-primary del prototipo) ---
+.btn-primary {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-card);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+}
+
+// --- btn-accent: pastilla de acción principal (.btn-accent) ---
+.btn-accent {
+  background: var(--color-accent);
+  color: var(--color-card);
+  border: none;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-2md);
+  font-weight: var(--font-weight-semibold);
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+}
+
+// --- btn-ghost: pastilla secundaria con borde (.btn-ghost) ---
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-2md);
+  color: var(--color-text);
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-text);
+  }
+}
+
+// --- btn-outline: botón con borde (.btn-outline) ---
+.btn-outline {
+  background: none;
+  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-2md);
+  color: var(--color-text);
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-text);
+  }
+}
+
+// --- btn-sm: botón compacto para acciones en línea/filtros (.btn-sm) ---
+.btn-sm {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-btn-sm);
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+
+  &.active {
+    background: var(--color-primary);
+    color: var(--color-card);
+    border-color: var(--color-primary);
+  }
+}
+
+// --- btn-back: enlace de retroceso (.btn-back) ---
+.btn-back {
+  background: none;
+  border: none;
+  font-size: var(--font-size-2xl);
+  color: var(--color-muted);
+  margin-bottom: var(--space-2);
+  display: block;
+  padding: var(--space-0);
+
+  &:hover:not(:disabled) {
+    color: var(--color-text);
+  }
+}

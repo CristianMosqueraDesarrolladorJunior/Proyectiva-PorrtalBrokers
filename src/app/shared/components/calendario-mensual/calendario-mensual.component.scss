@@ -1,0 +1,138 @@
+// CalendarioMensualComponent — calendar-wrapper / cal-grid / cal-day. 100%
+// tokenizado (Req 33.1, 33.2, 25.3, 25.4). Replica la apariencia del prototipo
+// (rejilla mensual con días resaltados) y la lista de eventos del día.
+
+:host {
+  display: block;
+}
+
+.calendar-wrapper {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+
+  h3 {
+    margin: var(--space-0, 0);
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+  }
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+}
+
+.cal-day-header {
+  padding: var(--space-2) var(--space-0, 0);
+  text-align: center;
+  font-size: var(--font-size-2sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-muted);
+}
+
+.cal-day {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-2);
+  background: var(--color-bg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-3sm);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+
+  &:hover {
+    background: var(--color-accent-light);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  &.has-event {
+    background: var(--color-accent-light);
+    border-color: var(--color-accent);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  &.selected {
+    border-color: var(--color-primary);
+  }
+}
+
+.cal-day--empty {
+  background: none;
+  border: none;
+  cursor: default;
+  min-height: 44px;
+}
+
+.cal-day__dot {
+  position: absolute;
+  bottom: var(--space-1);
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
+}
+
+.cal-eventos {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.cal-eventos__titulo {
+  margin: var(--space-0, 0) var(--space-0, 0) var(--space-3);
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.cal-eventos__vacio {
+  margin: var(--space-0, 0);
+  font-size: var(--font-size-4md);
+  color: var(--color-muted);
+}
+
+.cal-eventos__lista {
+  margin: var(--space-0, 0);
+  padding: var(--space-0, 0);
+  list-style: none;
+}
+
+.cal-eventos__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-0, 0);
+  border-bottom: 1px solid var(--color-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.cal-eventos__nombre {
+  font-size: var(--font-size-4md);
+  color: var(--color-text);
+}

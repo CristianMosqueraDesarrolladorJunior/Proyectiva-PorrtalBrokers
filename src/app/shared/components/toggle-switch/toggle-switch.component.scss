@@ -1,0 +1,54 @@
+// ToggleSwitchComponent — toggle-switch + toggle-slider. 100% tokenizado
+// (Req 35.6, 25.3, 25.4). Replica la apariencia del prototipo.
+
+:host {
+  display: inline-flex;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: var(--space-8);
+  height: var(--space-6);
+  flex-shrink: 0;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-3xl);
+  }
+
+  &--disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--color-border);
+  border-radius: var(--radius-3xl);
+  transition: background 0.2s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    height: var(--space-5);
+    width: var(--space-5);
+    left: var(--space-1);
+    top: var(--space-1);
+    background: var(--color-card);
+    border-radius: var(--radius-full);
+    transition: transform 0.2s ease;
+  }
+
+  &--on {
+    background: var(--color-accent);
+  }
+
+  &--on::before {
+    transform: translateX(100%);
+  }
+}

@@ -1,0 +1,63 @@
+// =============================================================================
+// EscaleritaLoaderComponent — loader animado "escalerita" (Req 35.14)
+// Sin valores hardcodeados: color/espaciado/tipografía vía Design_Token.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.escalerita {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.escalerita-barras {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  height: var(--space-7);
+}
+
+.escalerita-barra {
+  display: block;
+  width: var(--space-2);
+  height: var(--space-4);
+  border-radius: var(--radius-xs);
+  background: var(--color-accent);
+  animation-name: escalerita-salto;
+  animation-duration: 0.9s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  // Escalona el inicio de cada barra según su índice (efecto escalera).
+  animation-delay: calc(var(--escalerita-indice) * 0.12s);
+}
+
+.escalerita-texto {
+  font-size: var(--font-size-2md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-muted);
+}
+
+@keyframes escalerita-salto {
+  0%,
+  100% {
+    transform: scaleY(0.5);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+// Respeta la preferencia de movimiento reducido (accesibilidad, Req 27).
+@media (prefers-reduced-motion: reduce) {
+  .escalerita-barra {
+    animation: none;
+  }
+}

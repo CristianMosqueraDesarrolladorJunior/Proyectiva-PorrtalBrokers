@@ -1,0 +1,272 @@
+<main class="registro" role="main">
+  @if (registroExitoso()) {
+    <!-- Modal de éxito tras registrar la Solicitud_Registro_Broker (Req 3.24). -->
+    <section class="registro-card" aria-labelledby="registro-exito-titulo">
+      <app-success-screen
+        titulo="Envío Exitoso"
+        mensaje="Todo listo. Su solicitud ha sido enviada correctamente, nos contactaremos con usted lo más pronto posible."
+        [tarjetas]="[{ etiqueta: 'ESTADO', valor: '🟡 Pendiente de aprobación' }]"
+        textoVolver="Volver"
+        (volver)="volverAlLogin()"
+      ></app-success-screen>
+      <p class="registro-nota" role="note">
+        Su solicitud será revisada por el equipo de Proyectiva y nos comunicaremos
+        para iniciar el proceso. El nuevo broker no obtiene acceso inmediato al
+        portal mientras la solicitud permanezca en estado pendiente de aprobación.
+      </p>
+    </section>
+  } @else {
+    <section class="registro-card" aria-labelledby="registro-titulo">
+      <header class="registro-header">
+        <h1 class="registro-marca">Proyectiva</h1>
+        <h2 id="registro-titulo" class="registro-titulo">
+          Solicitud de registro de broker
+        </h2>
+        <p class="registro-subtitulo">
+          Completa tu información, valida tu SARLAFT y adjunta tu documentación.
+        </p>
+      </header>
+
+      <form
+        class="registro-form"
+        [formGroup]="formulario"
+        (ngSubmit)="enviarSolicitud()"
+        novalidate
+      >
+        <!-- ============ Sección Información Personal (Req 3.1–3.5) ============ -->
+        <fieldset class="registro-seccion">
+          <legend class="registro-seccion-titulo">Información Personal</legend>
+
+          <app-form-field
+            label="Nombre completo"
+            ayuda="Ej: Juan Pérez"
+            controlId="reg-nombre"
+            [requerido]="true"
+            [error]="errorNombre"
+          >
+            <input
+              id="reg-nombre"
+              class="registro-input"
+              type="text"
+              autocomplete="name"
+              formControlName="nombreCompleto"
+              [attr.minlength]="nombreLongitudMin"
+              [attr.aria-invalid]="!!errorNombre"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Correo electrónico"
+            ayuda="correo@ejemplo.com"
+            controlId="reg-correo"
+            [requerido]="true"
+            [error]="errorCorreo"
+          >
+            <input
+              id="reg-correo"
+              class="registro-input"
+              type="email"
+              autocomplete="email"
+              formControlName="correo"
+              [attr.aria-invalid]="!!errorCorreo"
+            />
+          </app-form-field>
+
+          <div class="registro-telefono">
+            <app-form-field
+              label="Código"
+              controlId="reg-codigo-pais"
+              [requerido]="true"
+              [error]="errorCodigoPais"
+            >
+              <select
+                id="reg-codigo-pais"
+                class="registro-input registro-select"
+                formControlName="codigoPais"
+                [attr.aria-invalid]="!!errorCodigoPais"
+              >
+                @for (codigo of codigosPais; track codigo) {
+                  <option [value]="codigo">{{ codigo }}</option>
+                }
+              </select>
+            </app-form-field>
+
+            <app-form-field
+              label="Teléfono de contacto"
+              ayuda="300 000 0000"
+              controlId="reg-telefono"
+              [requerido]="true"
+              [error]="errorTelefono"
+            >
+              <input
+                id="reg-telefono"
+                class="registro-input"
+                type="tel"
+                inputmode="numeric"
+                autocomplete="tel-national"
+                formControlName="telefono"
+                [attr.minlength]="telefonoLongitudMin"
+                [attr.maxlength]="telefonoLongitudMax"
+                [attr.aria-invalid]="!!errorTelefono"
+              />
+            </app-form-field>
+          </div>
+
+          <app-form-field
+            label="Ciudad"
+            controlId="reg-ciudad"
+            [requerido]="true"
+            [error]="errorCiudad"
+          >
+            <select
+              id="reg-ciudad"
+              class="registro-input registro-select"
+              formControlName="ciudad"
+              [attr.aria-invalid]="!!errorCiudad"
+            >
+              <option value="" disabled>Selecciona tu ciudad</option>
+              @for (ciudad of ciudades; track ciudad) {
+                <option [value]="ciudad">{{ ciudad }}</option>
+              }
+            </select>
+          </app-form-field>
+        </fieldset>
+
+        <!-- ============ Sección Consulta SARLAFT (Req 3.6–3.15) ============ -->
+        <fieldset class="registro-seccion">
+          <legend class="registro-seccion-titulo">Consulta SARLAFT</legend>
+
+          <app-form-field
+            label="Número de documento"
+            ayuda="Ingresa tu número de identidad"
+            controlId="reg-documento"
+            [requerido]="true"
+            [error]="errorDocumento"
+          >
+            <input
+              id="reg-documento"
+              class="registro-input"
+              type="text"
+              inputmode="numeric"
+              formControlName="documento"
+              [attr.minlength]="documentoLongitudMin"
+              [attr.maxlength]="documentoLongitudMax"
+              [attr.aria-invalid]="!!errorDocumento"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Fecha de expedición"
+            controlId="reg-fecha-expedicion"
+            [requerido]="true"
+            [error]="errorFechaExpedicion"
+          >
+            <input
+              id="reg-fecha-expedicion"
+              class="registro-input"
+              type="date"
+              formControlName="fechaExpedicion"
+              [attr.aria-invalid]="!!errorFechaExpedicion"
+            />
+          </app-form-field>
+
+          @if (clasificacionSarlaft(); as clasificacion) {
+            <app-alert-banner [variante]="varianteAlertaSarlaft()">
+              {{ clasificacion.mensaje }}
+            </app-alert-banner>
+          }
+
+          @if (errorSarlaft()) {
+            <p class="registro-error" role="alert">{{ errorSarlaft() }}</p>
+          }
+
+          @if (consultandoSarlaft()) {
+            <app-escalerita-loader
+              texto="Consultando SARLAFT..."
+            ></app-escalerita-loader>
+          } @else if (resultadoSarlaft() === null) {
+            <app-boton
+              variante="accent"
+              [disabled]="!puedeConsultar()"
+              (clicked)="consultarSarlaft()"
+            >
+              Consultar
+            </app-boton>
+          }
+        </fieldset>
+
+        <!-- ===== Sección Resultado SARLAFT + Documentación Requerida (Req 3.15, 3.16) ===== -->
+        @if (resultadoSarlaft(); as resultado) {
+          <fieldset class="registro-seccion">
+            <legend class="registro-seccion-titulo">Resultado SARLAFT</legend>
+            <div class="registro-sarlaft-exito">
+              <span class="registro-sarlaft-icono" aria-hidden="true">✓</span>
+              <div>
+                <h3 class="registro-sarlaft-subtitulo">
+                  Validación SARLAFT Exitosa
+                </h3>
+                <p class="registro-sarlaft-descripcion">
+                  El documento fue expedido hace menos de 3 años.
+                </p>
+              </div>
+            </div>
+            <app-resultado-sarlaft-table
+              [resultado]="resultado"
+            ></app-resultado-sarlaft-table>
+          </fieldset>
+
+          <fieldset class="registro-seccion">
+            <legend class="registro-seccion-titulo">
+              Documentación Requerida
+            </legend>
+            <app-doc-uploader
+              [reglas]="reglasUploader"
+              [cargados]="cargados()"
+              (archivoSeleccionado)="onArchivoSeleccionado($event)"
+            ></app-doc-uploader>
+
+            @for (regla of reglasUploader; track regla.id) {
+              @if (errorDocumentoCargado(regla.id)) {
+                <p class="registro-error" role="alert">
+                  {{ regla.etiqueta }}: {{ errorDocumentoCargado(regla.id) }}
+                </p>
+              }
+            }
+          </fieldset>
+        }
+
+        <!-- ============ Envío de la solicitud (Req 3.19–3.21) ============ -->
+        @if (errorEnvio()) {
+          <p class="registro-error" role="alert">{{ errorEnvio() }}</p>
+        }
+
+        @if (enviando()) {
+          <app-escalerita-loader
+            texto="Enviando solicitud..."
+          ></app-escalerita-loader>
+        } @else {
+          <div class="registro-envio">
+            <app-boton
+              variante="primary"
+              type="submit"
+              [disabled]="!puedeEnviar()"
+            >
+              Enviar solicitud de registro
+            </app-boton>
+            <p class="registro-legal">{{ textoLegal }}</p>
+          </div>
+        }
+      </form>
+
+      <footer class="registro-footer">
+        <app-boton
+          variante="ghost"
+          ariaLabel="Ya tengo cuenta: ir a la pantalla de inicio de sesión"
+          (clicked)="irALogin()"
+        >
+          Ya tengo cuenta
+        </app-boton>
+      </footer>
+    </section>
+  }
+</main>

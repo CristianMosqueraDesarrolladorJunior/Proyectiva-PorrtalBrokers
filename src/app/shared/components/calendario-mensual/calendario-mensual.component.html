@@ -1,0 +1,53 @@
+<div class="calendar-wrapper">
+  <div class="cal-header">
+    <h3>{{ tituloMes }}</h3>
+  </div>
+
+  <div class="cal-grid" role="grid" [attr.aria-label]="'Calendario de ' + tituloMes">
+    @for (nombre of diasSemana; track nombre) {
+      <div class="cal-day-header" role="columnheader">{{ nombre }}</div>
+    }
+
+    @for (celda of celdas; track trackCelda($index)) {
+      @if (celda.dia === null) {
+        <div class="cal-day cal-day--empty" aria-hidden="true"></div>
+      } @else {
+        <button
+          type="button"
+          class="cal-day"
+          role="gridcell"
+          [class.has-event]="celda.tieneEvento"
+          [class.selected]="celda.fechaIso === diaSeleccionado"
+          [attr.aria-pressed]="celda.fechaIso === diaSeleccionado"
+          [attr.aria-label]="
+            'Día ' + celda.dia + (celda.tieneEvento ? ', con eventos' : ', sin eventos')
+          "
+          (click)="seleccionarDia(celda)"
+        >
+          <span class="cal-day__num">{{ celda.dia }}</span>
+          @if (celda.tieneEvento) {
+            <span class="cal-day__dot" aria-hidden="true"></span>
+          }
+        </button>
+      }
+    }
+  </div>
+</div>
+
+<div class="cal-eventos">
+  <h4 class="cal-eventos__titulo">Eventos del día</h4>
+  @if (eventosDelDia.length === 0) {
+    <p class="cal-eventos__vacio">No hay eventos para el día seleccionado.</p>
+  } @else {
+    <ul class="cal-eventos__lista">
+      @for (evento of eventosDelDia; track trackEvento($index, evento)) {
+        <li class="cal-eventos__item">
+          <span class="cal-eventos__nombre">{{ evento.titulo }}</span>
+          <app-badge-estado [variante]="evento.estado" [conPunto]="true">
+            {{ evento.estado }}
+          </app-badge-estado>
+        </li>
+      }
+    </ul>
+  }
+</div>

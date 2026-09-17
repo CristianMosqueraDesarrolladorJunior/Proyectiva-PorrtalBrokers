@@ -1,0 +1,113 @@
+// =============================================================================
+// ShellComponent — layout del Shell_Aplicacion (Req 4)
+// Estilos tokenizados del prototipo (app-wrapper/main-content) y estrategia
+// responsiva (topbar + overlay + cajón, Req 36.3, 36.5, 36.6). Sin valores
+// hardcodeados: todo vía Design_Token, incluidos los breakpoints (Req 25, 37).
+// =============================================================================
+
+@use '../../shared/styles/mixins' as *;
+
+:host {
+  display: block;
+}
+
+// Contenedor del layout autenticado (prototipo `.app-wrapper`).
+.app-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+// Área de contenido desplazada por el ancho del sidebar fijo (prototipo).
+.main-content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  padding: var(--space-7) var(--space-7);
+  min-height: 100vh;
+}
+
+// --- Barra superior con botón de menú (solo tablet/móvil, Req 36.5) ---------
+// Oculta en desktop: el sidebar fijo hace innecesario el botón de menú.
+.topbar {
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--topbar-height);
+  padding: var(--space-0) var(--space-4);
+  background: var(--color-primary);
+  color: var(--color-sidebar-text-strong);
+  position: fixed;
+  top: var(--space-0);
+  left: var(--space-0);
+  right: var(--space-0);
+  z-index: var(--z-topbar);
+
+  &__menu {
+    width: var(--menu-button-size);
+    height: var(--menu-button-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--color-sidebar-text-strong);
+    font-size: var(--font-size-2md);
+    cursor: pointer;
+    border-radius: var(--radius-btn-sm);
+
+    &:hover {
+      background: var(--color-sidebar-hover-bg);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-ring-width) solid var(--color-focus-ring);
+      outline-offset: var(--focus-ring-offset);
+    }
+  }
+
+  &__marca {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+}
+
+// --- Superposición del cajón (solo tablet/móvil cuando está abierto) ---------
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: var(--space-0);
+  background: var(--color-overlay);
+  z-index: var(--z-sidebar-overlay);
+}
+
+// --- Tablet y móvil: sidebar como cajón, contenido a ancho completo ----------
+@include respond-to('tablet') {
+  .topbar {
+    display: flex;
+  }
+
+  .main-content {
+    margin-left: var(--space-0);
+    padding-top: calc(var(--topbar-height) + var(--space-5));
+  }
+
+  .app-wrapper--sidebar-abierto .sidebar-overlay {
+    display: block;
+  }
+}
+
+@include respond-to('mobile') {
+  .topbar {
+    display: flex;
+  }
+
+  .main-content {
+    margin-left: var(--space-0);
+    padding: calc(var(--topbar-height) + var(--space-4)) var(--space-4)
+      var(--space-4);
+  }
+
+  .app-wrapper--sidebar-abierto .sidebar-overlay {
+    display: block;
+  }
+}

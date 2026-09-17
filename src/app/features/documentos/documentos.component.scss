@@ -1,0 +1,124 @@
+// Seccion_Documentos (Req 33.3, 33.4). Fiel al prototipo: doc-section + doc-list
+// + doc-item (ícono, info, botón). Sin valores hardcodeados: Design_Token.
+
+:host {
+  display: block;
+}
+
+.documentos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+.documentos__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.documentos__titulo {
+  font-size: var(--font-size-h1-seccion);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.documentos__intro {
+  font-size: var(--font-size-4md);
+  color: var(--color-muted);
+  margin: var(--space-0);
+}
+
+.doc-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.doc-section__titulo {
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.doc-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.doc-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-size: var(--font-size-4xl);
+  flex-shrink: 0;
+}
+
+.doc-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+
+  strong {
+    font-size: var(--font-size-2md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+  }
+
+  small {
+    font-size: var(--font-size-sm);
+    color: var(--color-muted);
+  }
+}
+
+// Botón outline pequeño (btn-sm btn-outline del prototipo).
+.doc-btn {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-btn-sm);
+  background: var(--color-card);
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.12s ease, color 0.12s ease;
+
+  &:hover {
+    background: var(--color-accent);
+    color: var(--color-card);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+@media (max-width: 639px) {
+  .doc-item {
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,38 @@
+@if (abierto) {
+  <div class="drawer-overlay" (click)="solicitarCierre()"></div>
+  <div
+    class="drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="drawer-titulo"
+    (keydown)="onKeydown($event)"
+  >
+    <div class="drawer-header">
+      <h3 id="drawer-titulo">{{ titulo }}</h3>
+      <button
+        type="button"
+        class="drawer-header__close"
+        aria-label="Cerrar detalle"
+        (click)="solicitarCierre()"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="drawer-body">
+      @for (fila of filas; track trackFila($index)) {
+        <div class="detail-row">
+          <span class="detail-label">{{ fila.etiqueta }}</span>
+          <span class="detail-value">{{ fila.valor }}</span>
+        </div>
+      }
+      <ng-content></ng-content>
+    </div>
+
+    <div class="drawer-footer">
+      <button type="button" class="drawer-footer__close" (click)="solicitarCierre()">
+        Cerrar
+      </button>
+    </div>
+  </div>
+}

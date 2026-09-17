@@ -1,0 +1,21 @@
+<div
+  class="alert-banner"
+  [class.alert-success]="variante === 'success'"
+  [class.alert-warning]="variante === 'warning'"
+  [class.alert-error]="variante === 'error'"
+  role="alert"
+  [attr.aria-live]="ariaLive"
+>
+  <span class="alert-icon" aria-hidden="true">{{ iconoEfectivo }}</span>
+  <div class="alert-body">
+    @if (titulo) {
+      <strong class="alert-title">{{ titulo }}</strong>
+    }
+    <div class="alert-text">
+      <ng-content></ng-content>
+    </div>
+    <div class="alert-actions">
+      <ng-content select="[alertaAcciones]"></ng-content>
+    </div>
+  </div>
+</div>

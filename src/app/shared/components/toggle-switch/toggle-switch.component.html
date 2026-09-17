@@ -1,0 +1,13 @@
+<span
+  class="toggle-switch"
+  role="switch"
+  [attr.aria-checked]="checked"
+  [attr.aria-label]="ariaLabel"
+  [attr.aria-disabled]="disabled ? true : null"
+  [attr.tabindex]="disabled ? -1 : 0"
+  [class.toggle-switch--disabled]="disabled"
+  (click)="alternar()"
+  (keydown)="onKeydown($event)"
+>
+  <span class="toggle-slider" [class.toggle-slider--on]="checked"></span>
+</span>

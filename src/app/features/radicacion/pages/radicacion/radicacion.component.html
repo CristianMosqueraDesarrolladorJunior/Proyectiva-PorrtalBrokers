@@ -1,0 +1,191 @@
+<section class="radicacion" aria-labelledby="radicacion-titulo">
+  <header class="radicacion-header">
+    <h1 id="radicacion-titulo" class="radicacion-titulo">Nueva radicación de póliza</h1>
+    <p class="radicacion-subtitulo">
+      Sube los documentos requeridos para procesar la póliza.
+    </p>
+  </header>
+
+  @if (radicado(); as numeroRadicado) {
+    <app-alert-banner variante="success" titulo="Radicación registrada">
+      Tu radicación fue enviada correctamente con el radicado
+      <strong>{{ numeroRadicado }}</strong>. El equipo revisará la documentación.
+    </app-alert-banner>
+  } @else {
+    <div class="form-card">
+      <!-- 1. Datos del propietario (Req 10.1) -->
+      <div class="rad-seccion">
+        <h4 class="rad-seccion-titulo">Datos del propietario</h4>
+        <div class="rad-form-grid">
+          <app-form-field
+            label="Tipo de documento"
+            [requerido]="true"
+            controlId="rad-tipo-doc"
+          >
+            <select
+              id="rad-tipo-doc"
+              [ngModel]="tipoDocumentoPropietario()"
+              (ngModelChange)="tipoDocumentoPropietario.set($event)"
+              aria-label="Tipo de documento del propietario"
+            >
+              @for (tipo of tiposDocumento; track tipo) {
+                <option [value]="tipo">{{ etiquetaTipoDocumento[tipo] }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          <app-form-field
+            label="Número de documento"
+            ayuda="Ej: 1095836254"
+            [requerido]="true"
+            controlId="rad-num-doc"
+          >
+            <input
+              id="rad-num-doc"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Ej: 1095836254"
+              [ngModel]="numeroDocumentoPropietario()"
+              (ngModelChange)="numeroDocumentoPropietario.set($event)"
+            />
+          </app-form-field>
+        </div>
+      </div>
+
+      <!-- 2. Estudio de arrendamiento (Req 10.1) -->
+      <div class="rad-seccion">
+        <h4 class="rad-seccion-titulo">Estudio de arrendamiento</h4>
+        <app-form-field
+          label="Número de estudio de inquilino aprobado"
+          ayuda="Ej: EST-2026-001234"
+          [requerido]="true"
+          controlId="rad-num-estudio"
+        >
+          <input
+            id="rad-num-estudio"
+            type="text"
+            autocomplete="off"
+            placeholder="Ej: EST-2026-001234"
+            [ngModel]="numeroEstudioArrendamiento()"
+            (ngModelChange)="numeroEstudioArrendamiento.set($event)"
+          />
+        </app-form-field>
+      </div>
+
+      <!-- 3. ¿Quién firma el contrato? (Req 10.2) -->
+      <div class="rad-seccion">
+        <h4 class="rad-seccion-titulo">¿Quién firma el contrato?</h4>
+        <app-radio-group
+          [opciones]="opcionesFirmante"
+          [valor]="firmante()"
+          (valorChange)="onCambioFirmante($event)"
+          ariaLabel="Quién firma el contrato"
+        ></app-radio-group>
+
+        @if (firmaApoderado()) {
+          <div class="rad-apoderado">
+            <app-doc-uploader
+              [reglas]="reglasApoderado()"
+              [cargados]="archivosCargados()"
+              (archivoSeleccionado)="onArchivo($event)"
+            ></app-doc-uploader>
+          </div>
+        }
+      </div>
+
+      <!-- Tabs Persona Natural / Jurídica (Req 10.3, 10.4) -->
+      <app-tabs
+        [tabs]="tabs"
+        [activa]="tipoPersona()"
+        (activaChange)="onCambioTipoPersona($event)"
+      ></app-tabs>
+
+      <!-- Documentos requeridos según tipo de persona (Req 11.1, 11.2) -->
+      <div class="rad-seccion">
+        <div class="rad-seccion-encabezado">
+          <h4 class="rad-seccion-titulo">Documentos requeridos</h4>
+          <span class="rad-obligatorios">{{ reglasObligatorias().length }} obligatorios</span>
+        </div>
+        <app-doc-uploader
+          [reglas]="reglasObligatorias()"
+          [cargados]="archivosCargados()"
+          (archivoSeleccionado)="onArchivo($event)"
+        ></app-doc-uploader>
+
+        <!-- SARLAFT 4.0 condicional (solo Persona Natural) (Req 12.1, 12.2) -->
+        @if (muestraToggleSarlaft()) {
+          <div class="rad-sarlaft-panel">
+            <div class="rad-sarlaft-check">
+              <app-toggle-switch
+                ariaLabel="La validación SARLAFT 4.0 requiere carga del formulario"
+                [checked]="sarlaftRequiereFormulario()"
+                (checkedChange)="sarlaftRequiereFormulario.set($event)"
+              ></app-toggle-switch>
+              <div class="rad-sarlaft-texto">
+                <strong>¿La validación SARLAFT 4.0 requiere carga del formulario?</strong>
+                <span>
+                  Marque esta opción si el cliente no pudo completar el proceso de
+                  validación digital y debe cargar el formulario SARLAFT manualmente.
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Contrato de arrendamiento (opcional) (Req 11.3, 11.5) -->
+      <div class="rad-seccion rad-seccion--contrato">
+        <div class="rad-seccion-encabezado">
+          <h4 class="rad-seccion-titulo">Contrato de arrendamiento</h4>
+          <span class="rad-opcional">Opcional</span>
+        </div>
+        <app-doc-uploader
+          [reglas]="[reglaOpcional]"
+          [cargados]="archivosCargados()"
+          (archivoSeleccionado)="onArchivo($event)"
+        ></app-doc-uploader>
+
+        <app-info-box icono="ℹ️">
+          ¿Aún no tienes el contrato? Puedes crear uno con nuestra plantilla o
+          solicitar que la aseguradora lo elabore.
+        </app-info-box>
+
+        <div class="rad-contrato-accion">
+          <app-boton variante="accent" (clicked)="crearContrato()">
+            ✎ Crear contrato
+          </app-boton>
+        </div>
+      </div>
+
+      <!-- Documentos pendientes (Req 11.4) -->
+      @if (etiquetasFaltantes().length > 0) {
+        <app-alert-banner variante="warning" titulo="Documentos pendientes">
+          Para enviar la radicación faltan por cargar:
+          <ul class="lista-pendientes">
+            @for (etiqueta of etiquetasFaltantes(); track etiqueta) {
+              <li>{{ etiqueta }}</li>
+            }
+          </ul>
+        </app-alert-banner>
+      }
+
+      @if (errorEnvio(); as error) {
+        <app-alert-banner variante="error" titulo="No se pudo continuar">
+          {{ error }}
+        </app-alert-banner>
+      }
+
+      <!-- Acción de envío (Req 11.4) -->
+      <div class="radicacion-acciones">
+        <app-boton
+          variante="primary"
+          [disabled]="!envioHabilitado() || enviando()"
+          (clicked)="enviar()"
+        >
+          {{ enviando() ? 'Enviando…' : 'Enviar radicación' }}
+        </app-boton>
+      </div>
+    </div>
+  }
+</section>

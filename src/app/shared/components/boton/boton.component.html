@@ -1,0 +1,18 @@
+<button
+  class="boton"
+  [class.btn-primary]="variante === 'primary'"
+  [class.btn-accent]="variante === 'accent'"
+  [class.btn-ghost]="variante === 'ghost'"
+  [class.btn-outline]="variante === 'outline'"
+  [class.btn-sm]="variante === 'sm'"
+  [class.btn-back]="variante === 'back'"
+  [class.active]="activo"
+  [attr.type]="type"
+  [disabled]="disabled"
+  [attr.aria-disabled]="disabled"
+  [attr.aria-pressed]="variante === 'sm' ? activo : null"
+  [attr.aria-label]="ariaLabel"
+  (click)="onClick()"
+>
+  <ng-content></ng-content>
+</button>

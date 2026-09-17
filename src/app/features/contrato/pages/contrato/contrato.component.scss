@@ -1,0 +1,133 @@
+// =============================================================================
+// ContratoComponent — Generador_Contrato de Arrendamiento (Req 30)
+// Sin valores hardcodeados: color/tamaño/peso/radio/espaciado/sombra vía
+// Design_Token (Req 25.3, 25.4, 37.11, 37.12). Foco visible y ARIA en la plantilla.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.contrato {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+.contrato-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.contrato-titulo {
+  font-size: var(--font-size-h1-seccion);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.contrato-subtitulo {
+  font-size: var(--font-size-4md);
+  color: var(--color-muted);
+  line-height: var(--line-height-normal);
+  margin: var(--space-0);
+}
+
+.contrato-paso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.contrato-paso-titulo {
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.contrato-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.contrato-grid-full {
+  grid-column: 1 / -1;
+}
+
+// Panel destacado de deudores solidarios (fondo naranja claro del prototipo).
+.contrato-deudores {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-accent-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.contrato-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+
+  input {
+    margin-top: var(--space-1);
+    flex-shrink: 0;
+  }
+}
+
+.contrato-check__texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-4md);
+  color: var(--color-text);
+
+  small {
+    font-size: var(--font-size-xs);
+    color: var(--color-muted);
+    line-height: var(--line-height-normal);
+  }
+}
+
+.contrato-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+}
+
+.contrato-acciones-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+// Responsivo: una sola columna en móvil (<640px), preservando toda la funcionalidad.
+@media (max-width: 639px) {
+  .contrato-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contrato-acciones {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .contrato-acciones-nav {
+    margin-left: var(--space-0);
+    justify-content: stretch;
+  }
+}

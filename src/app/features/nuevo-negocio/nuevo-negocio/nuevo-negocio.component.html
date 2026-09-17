@@ -1,0 +1,239 @@
+<section class="nuevo-negocio" aria-labelledby="nn-titulo">
+  <header class="nn-header">
+    <h1 id="nn-titulo" class="nn-titulo">Nuevo negocio</h1>
+    <p class="nn-subtitulo">
+      Registra un nuevo negocio, configura sus precios y envía la solicitud con el resumen financiero.
+    </p>
+  </header>
+
+  @if (envioExitoso() && confirmacion(); as conf) {
+    <!-- Paso 3: Confirmación (Req 31.7) -->
+    <app-success-screen
+      titulo="Solicitud enviada"
+      mensaje="Tu solicitud de nuevo negocio fue registrada correctamente."
+      [tarjetas]="[
+        { etiqueta: 'RADICADO', valor: conf.radicado },
+        { etiqueta: 'ESTADO', valor: conf.estado },
+        { etiqueta: 'PRIMA TOTAL', valor: (conf.primaTotal | currency: 'COP' : 'symbol-narrow' : '1.0-0') || '' }
+      ]"
+      textoVolver="Registrar otro negocio"
+      (volver)="nuevoNegocio()"
+    ></app-success-screen>
+  } @else {
+    <!-- Indicador de pasos (Req 31.1) -->
+    <app-stepper [pasos]="pasos" [pasoActivo]="pasoActual()"></app-stepper>
+
+    <!-- Paso 1: Datos del cliente (Req 31.2, 31.3) -->
+    @if (pasoActual() === 0) {
+      <div class="nn-paso">
+        <div class="nn-form-grid">
+          <app-form-field
+            label="Nombre o razón social"
+            [requerido]="true"
+            [error]="errorNombre()"
+            controlId="nn-nombre"
+          >
+            <input
+              id="nn-nombre"
+              type="text"
+              autocomplete="off"
+              [ngModel]="nombreORazonSocial()"
+              (ngModelChange)="nombreORazonSocial.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Identificación"
+            [requerido]="true"
+            [error]="errorIdentificacion()"
+            controlId="nn-identificacion"
+          >
+            <input
+              id="nn-identificacion"
+              type="text"
+              autocomplete="off"
+              [ngModel]="identificacion()"
+              (ngModelChange)="identificacion.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Correo electrónico"
+            [requerido]="true"
+            ayuda="correo@ejemplo.com"
+            [error]="errorCorreo()"
+            controlId="nn-correo"
+          >
+            <input
+              id="nn-correo"
+              type="email"
+              autocomplete="off"
+              [ngModel]="correo()"
+              (ngModelChange)="correo.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Teléfono"
+            [requerido]="true"
+            ayuda="300 000 0000"
+            [error]="errorTelefono()"
+            controlId="nn-telefono"
+          >
+            <input
+              id="nn-telefono"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              [ngModel]="telefono()"
+              (ngModelChange)="telefono.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Dirección" controlId="nn-direccion">
+            <input
+              id="nn-direccion"
+              type="text"
+              autocomplete="off"
+              [ngModel]="direccion()"
+              (ngModelChange)="direccion.set($event)"
+            />
+          </app-form-field>
+        </div>
+
+        @if (borradorGuardado()) {
+          <app-alert-banner variante="success" titulo="Borrador guardado">
+            Se conservaron los datos ingresados. Puedes retomar el registro cuando quieras.
+          </app-alert-banner>
+        }
+
+        <div class="nn-acciones">
+          <app-boton variante="ghost" (clicked)="guardarBorrador()">
+            Guardar Borrador
+          </app-boton>
+          <app-boton variante="primary" (clicked)="avanzarAPrecios()">
+            Continuar
+          </app-boton>
+        </div>
+      </div>
+    }
+
+    <!-- Paso 2: Precios (Req 31.4, 31.5, 31.8) -->
+    @if (pasoActual() === 1) {
+      <div class="nn-paso">
+        <div class="nn-form-grid">
+          <app-form-field label="Prima base" [requerido]="true" controlId="nn-prima-base">
+            <input
+              id="nn-prima-base"
+              type="number"
+              min="0"
+              [ngModel]="primaBase()"
+              (ngModelChange)="primaBase.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field
+            label="Gastos administrativos"
+            [requerido]="true"
+            controlId="nn-gastos"
+          >
+            <input
+              id="nn-gastos"
+              type="number"
+              min="0"
+              [ngModel]="gastosAdministrativos()"
+              (ngModelChange)="gastosAdministrativos.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Descuento (%)" [requerido]="true" controlId="nn-descuento">
+            <input
+              id="nn-descuento"
+              type="number"
+              min="0"
+              max="100"
+              [ngModel]="descuentoPct()"
+              (ngModelChange)="descuentoPct.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Comisión (%)" [requerido]="true" controlId="nn-comision">
+            <input
+              id="nn-comision"
+              type="number"
+              min="0"
+              max="100"
+              [ngModel]="comisionPct()"
+              (ngModelChange)="comisionPct.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Frecuencia de pago" controlId="nn-frecuencia">
+            <select
+              id="nn-frecuencia"
+              [ngModel]="frecuencia()"
+              (ngModelChange)="frecuencia.set($event)"
+            >
+              @for (opcion of frecuencias; track opcion.valor) {
+                <option [value]="opcion.valor">{{ opcion.etiqueta }}</option>
+              }
+            </select>
+          </app-form-field>
+        </div>
+
+        <div class="nn-acciones">
+          <app-boton variante="outline" (clicked)="calcularResumen()" [disabled]="calculando()">
+            {{ calculando() ? 'Calculando…' : 'Calcular resumen' }}
+          </app-boton>
+        </div>
+
+        @if (calculando()) {
+          <app-escalerita-loader texto="Calculando resumen..."></app-escalerita-loader>
+        }
+
+        @if (errorMensaje(); as error) {
+          <app-alert-banner variante="error" titulo="No se pudo continuar">
+            {{ error }}
+          </app-alert-banner>
+        }
+
+        <!-- Resumen recibido del Motor_Precios_NN; el front solo lo muestra (Req 31.5, 31.8) -->
+        @if (resumen(); as res) {
+          <div class="nn-resumen" aria-labelledby="nn-resumen-titulo">
+            <h2 id="nn-resumen-titulo" class="nn-resumen-titulo">Resumen financiero</h2>
+            <dl class="nn-resumen-grid">
+              <div class="nn-resumen-item">
+                <dt>Prima base</dt>
+                <dd>{{ res.primaBase | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd>
+              </div>
+              <div class="nn-resumen-item">
+                <dt>Gastos administrativos</dt>
+                <dd>{{ res.gastosAdministrativos | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd>
+              </div>
+              <div class="nn-resumen-item">
+                <dt>Descuento</dt>
+                <dd>{{ res.descuento | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd>
+              </div>
+              <div class="nn-resumen-item nn-resumen-item--total">
+                <dt>Total</dt>
+                <dd>{{ res.total | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd>
+              </div>
+              <div class="nn-resumen-item">
+                <dt>Comisión del broker</dt>
+                <dd>{{ res.comisionBroker | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</dd>
+              </div>
+            </dl>
+          </div>
+        }
+
+        <div class="nn-acciones">
+          <app-boton variante="back" (clicked)="volverADatosCliente()">Atrás</app-boton>
+          <app-boton variante="ghost" (clicked)="guardarBorrador()">Guardar Borrador</app-boton>
+          <app-boton variante="primary" [disabled]="enviando()" (clicked)="enviar()">
+            {{ enviando() ? 'Enviando…' : 'Enviar solicitud' }}
+          </app-boton>
+        </div>
+      </div>
+    }
+  }
+</section>

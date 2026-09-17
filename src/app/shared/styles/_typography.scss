@@ -1,0 +1,114 @@
+// =============================================================================
+// Design Tokens — Tipografía (Escala_Tipografica, pesos, interlineado, títulos)
+// Portal de Autogestión de Brokers — Proyectiva (Seguros Bolívar — El Libertador)
+//
+// Fuente única de verdad para tamaños de fuente, pesos, interlineado, títulos y
+// valores numéricos destacados (Req 37.1–37.7). Todos los tokens se exponen como
+// CSS custom properties en :root para consumo desde cualquier Componente_Compartido.
+//
+// Property 33 (biyección y orden): existe EXACTAMENTE un token por cada uno de los
+// 20 valores en rem del Req 37.1, y la nomenclatura de escala (font-size-2xs … 10xl)
+// es monótona creciente respecto al valor en rem asociado.
+//
+// _Requirements: 25.1, 25.5, 37.1, 37.2, 37.3, 37.4, 37.5, 37.6, 37.7
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Mapa SCSS de la Escala_Tipografica (apoyo interno / verificación de orden).
+// El orden de las claves refleja la nomenclatura creciente de la tabla del diseño;
+// los valores en rem son estrictamente crecientes (Property 33).
+// La fuente única de verdad para el consumo son las CSS custom properties en :root.
+// -----------------------------------------------------------------------------
+$font-size-scale: (
+  'font-size-2xs': 0.65rem,
+  'font-size-xs': 0.70rem,
+  'font-size-2sm': 0.72rem,
+  'font-size-sm': 0.75rem,
+  'font-size-3sm': 0.78rem,
+  'font-size-md': 0.80rem,
+  'font-size-2md': 0.82rem,
+  'font-size-3md': 0.84rem,
+  'font-size-4md': 0.85rem,
+  'font-size-lg': 0.90rem,
+  'font-size-xl': 0.95rem,
+  'font-size-2xl': 1.00rem,
+  'font-size-3xl': 1.10rem,
+  'font-size-4xl': 1.20rem,
+  'font-size-5xl': 1.30rem,
+  'font-size-6xl': 1.40rem,
+  'font-size-7xl': 1.50rem,
+  'font-size-8xl': 1.80rem,
+  'font-size-9xl': 2.00rem,
+  'font-size-10xl': 2.40rem,
+);
+
+:root {
+  // ---------------------------------------------------------------------------
+  // Escala_Tipografica — 20 tamaños de fuente (Req 37.1, 37.2)
+  // Un token por valor rem, nomenclatura ordenada de menor a mayor.
+  // ---------------------------------------------------------------------------
+  --font-size-2xs: 0.65rem;
+  --font-size-xs: 0.70rem;
+  --font-size-2sm: 0.72rem;
+  --font-size-sm: 0.75rem;
+  --font-size-3sm: 0.78rem;
+  --font-size-md: 0.80rem;
+  --font-size-2md: 0.82rem;
+  --font-size-3md: 0.84rem;
+  --font-size-4md: 0.85rem;
+  --font-size-lg: 0.90rem;
+  --font-size-xl: 0.95rem;
+  --font-size-2xl: 1.00rem;
+  --font-size-3xl: 1.10rem;
+  --font-size-4xl: 1.20rem;
+  --font-size-5xl: 1.30rem;
+  --font-size-6xl: 1.40rem;
+  --font-size-7xl: 1.50rem;
+  --font-size-8xl: 1.80rem;
+  --font-size-9xl: 2.00rem;
+  --font-size-10xl: 2.40rem;
+
+  // ---------------------------------------------------------------------------
+  // Pesos de fuente (Req 37.3)
+  // ---------------------------------------------------------------------------
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  // ---------------------------------------------------------------------------
+  // Interlineado / line-height (Req 37.4)
+  // ---------------------------------------------------------------------------
+  --line-height-tight: 1.35;
+  --line-height-normal: 1.45;
+
+  // ---------------------------------------------------------------------------
+  // Títulos y encabezados (Req 37.5)
+  // h1 de sección, h2 de login (1.5rem), h3 y h4, referenciados por los
+  // Componentes_Compartidos correspondientes.
+  // ---------------------------------------------------------------------------
+  --font-size-h1-seccion: var(--font-size-7xl);   // 1.50rem — título de sección
+  --font-size-h2-login: 1.5rem;                   // 1.50rem — título de login (Req 37.5)
+  --font-size-h3: var(--font-size-4xl);           // 1.20rem
+  --font-size-h4: var(--font-size-3xl);           // 1.10rem
+
+  // ---------------------------------------------------------------------------
+  // Valores numéricos destacados (Req 37.6, 37.7)
+  // Referencian únicamente tokens de la escala/pesos anteriores; sin hardcodeo.
+  // ---------------------------------------------------------------------------
+  // Valor de comisión: 2.4rem, peso 700
+  --font-size-valor-comision: var(--font-size-10xl);
+  --font-weight-valor-comision: var(--font-weight-bold);
+  // Valor de KPI del Dashboard: 1.4rem, peso 700
+  --font-size-valor-kpi-dashboard: var(--font-size-6xl);
+  --font-weight-valor-kpi-dashboard: var(--font-weight-bold);
+  // Valor de KPI card
+  --font-size-valor-kpi-card: var(--font-size-8xl);       // 1.80rem
+  --font-weight-valor-kpi-card: var(--font-weight-bold);
+  // Montos de cobertura
+  --font-size-valor-cobertura: var(--font-size-5xl);      // 1.30rem
+  --font-weight-valor-cobertura: var(--font-weight-semibold);
+  // Celdas monetarias de la tabla de solicitudes
+  --font-size-valor-monetario-tabla: var(--font-size-md); // 0.80rem
+  --font-weight-valor-monetario-tabla: var(--font-weight-semibold);
+}

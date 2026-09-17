@@ -1,0 +1,8 @@
+﻿jest-preset-angular@14.6.2 => 14.6.2
+jest-environment-jsdom@29.7.0 => 29.7.0
+@types/jest@29.5.14 => 29.5.14
+fast-check@4.9.0 => 4.9.0
+axe-core@4.13.0 => 4.13.0
+stylelint@17.15.0 => 17.15.0
+stylelint-config-standard-scss@17.0.0 => 17.0.0
+postcss-scss@4.0.9 => 4.0.9

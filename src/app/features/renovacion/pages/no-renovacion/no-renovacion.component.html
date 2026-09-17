@@ -1,0 +1,71 @@
+<section class="no-renovacion" aria-labelledby="no-renovacion-titulo">
+  <header class="no-renovacion-header">
+    <h1 id="no-renovacion-titulo" class="no-renovacion-titulo">Notificar no renovación</h1>
+    <p class="no-renovacion-subtitulo">
+      Indícanos por qué el cliente no desea renovar su póliza para gestionar la baja.
+    </p>
+  </header>
+
+  @if (envioExitoso()) {
+    <app-success-screen
+      titulo="No renovación registrada"
+      mensaje="Registramos la solicitud de no renovación. El equipo gestionará la baja de la póliza."
+      [tarjetas]="tarjetas()"
+      [mostrarVolver]="false"
+    ></app-success-screen>
+  } @else {
+    <!-- Motivo principal obligatorio del conjunto definido (Req 22.1) -->
+    <div class="no-renovacion-campo">
+      <app-form-field
+        label="Motivo principal"
+        [requerido]="true"
+        [error]="errorMotivo()"
+        controlId="no-renovacion-motivo"
+      >
+        <app-radio-group
+          [opciones]="opcionesMotivo"
+          [valor]="motivo()"
+          (valorChange)="motivo.set($event)"
+          ariaLabel="Motivo de la no renovación"
+        ></app-radio-group>
+      </app-form-field>
+    </div>
+
+    <!-- Observaciones opcionales (Req 22.1) -->
+    <div class="no-renovacion-campo">
+      <app-form-field
+        label="Observaciones"
+        ayuda="Opcional: agrega cualquier detalle relevante."
+        controlId="no-renovacion-observaciones"
+      >
+        <textarea
+          id="no-renovacion-observaciones"
+          rows="4"
+          autocomplete="off"
+          [ngModel]="observaciones()"
+          (ngModelChange)="observaciones.set($event)"
+        ></textarea>
+      </app-form-field>
+    </div>
+
+    @if (enviando()) {
+      <app-escalerita-loader texto="Registrando no renovación..."></app-escalerita-loader>
+    }
+
+    @if (errorEnvio(); as error) {
+      <app-alert-banner variante="error" titulo="No se pudo continuar">
+        {{ error }}
+      </app-alert-banner>
+    }
+
+    <div class="no-renovacion-acciones">
+      <app-boton
+        variante="primary"
+        [disabled]="enviando()"
+        (clicked)="confirmar()"
+      >
+        {{ enviando() ? 'Enviando…' : 'Confirmar no renovación' }}
+      </app-boton>
+    </div>
+  }
+</section>

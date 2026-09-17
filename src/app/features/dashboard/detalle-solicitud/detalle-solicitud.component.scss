@@ -1,0 +1,29 @@
+// DetalleSolicitudComponent — estilos del contenido proyectado dentro del
+// Drawer_Detalle (línea de tiempo y estados de carga/error). 100% tokenizado:
+// color, tipografía y espaciado se referencian solo vía Design_Token (Req 25.3,
+// 25.4). El marcado del drawer lo aporta el Componente_Compartido reutilizado.
+
+:host {
+  display: contents;
+}
+
+.detalle-solicitud__timeline {
+  margin-top: var(--space-5);
+}
+
+.detalle-solicitud__timeline-titulo {
+  margin: var(--space-0, 0) var(--space-0, 0) var(--space-3);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.detalle-solicitud__estado {
+  margin: var(--space-4) var(--space-0, 0);
+  font-size: var(--font-size-4md);
+  color: var(--color-muted);
+}
+
+.detalle-solicitud__estado--error {
+  color: var(--color-danger);
+}

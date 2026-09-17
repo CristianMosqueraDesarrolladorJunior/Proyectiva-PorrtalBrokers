@@ -1,0 +1,196 @@
+// =============================================================================
+// SidebarComponent — barra lateral del Shell_Aplicacion (Req 4)
+// Estilos tokenizados del prototipo (sidebar/sidebar-profile/avatar/sidebar-nav/
+// nav-item/sidebar-footer). Sin valores hardcodeados: todo vía Design_Token
+// (Req 25.3, 25.4, 37.11).
+// =============================================================================
+
+@use '../../../shared/styles/mixins' as *;
+
+:host {
+  display: contents;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--color-primary);
+  color: var(--color-sidebar-text-strong);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: var(--space-0);
+  left: var(--space-0);
+  height: 100vh;
+  z-index: var(--z-sidebar);
+
+  // --- Tablet y móvil: cajón (drawer) fuera de pantalla (Req 36.5) ----------
+  // Se conserva la navegación completa; el cajón entra al abrirse por el botón
+  // de menú del ShellComponent, sin eliminar accesos (Req 4.1, 36.3).
+  @include respond-to('tablet') {
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-drawer);
+
+    &.sidebar--abierto {
+      transform: translateX(0);
+    }
+  }
+
+  @include respond-to('mobile') {
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-drawer);
+
+    &.sidebar--abierto {
+      transform: translateX(0);
+    }
+  }
+}
+
+// --- Control de cierre del cajón (solo tablet/móvil) -------------------------
+.sidebar-close {
+  display: none;
+  margin-left: auto;
+  width: var(--menu-button-size);
+  height: var(--menu-button-size);
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-sidebar-text);
+  font-size: var(--font-size-2md);
+  cursor: pointer;
+  border-radius: var(--radius-btn-sm);
+
+  &:hover {
+    color: var(--color-sidebar-text-strong);
+    background: var(--color-sidebar-hover-bg);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  @include respond-to('tablet') {
+    display: inline-flex;
+  }
+
+  @include respond-to('mobile') {
+    display: inline-flex;
+  }
+}
+
+// --- Perfil del Broker (Req 4.3) -------------------------------------------
+.sidebar-profile {
+  padding: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-sidebar-border);
+
+  .avatar {
+    width: var(--sidebar-avatar-size);
+    height: var(--sidebar-avatar-size);
+    flex-shrink: 0;
+    background: var(--color-accent);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-md);
+    color: var(--color-sidebar-text-strong);
+  }
+
+  strong {
+    font-size: var(--font-size-4md);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  small {
+    color: var(--color-sidebar-muted);
+    font-size: var(--font-size-2sm);
+  }
+}
+
+// --- Navegación (Req 4.1, 4.2) ---------------------------------------------
+.sidebar-nav {
+  flex: 1;
+  padding: var(--space-3) var(--space-0);
+  overflow-y: auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  color: var(--color-sidebar-text);
+  text-decoration: none;
+  font-size: var(--font-size-2md);
+  border-left: 3px solid transparent;
+  transition: all 0.12s;
+
+  &__icono {
+    display: inline-flex;
+    width: var(--space-4);
+    justify-content: center;
+  }
+
+  &:hover {
+    background: var(--color-sidebar-hover-bg);
+    color: var(--color-sidebar-text-strong);
+  }
+
+  // Ítem activo marcado por routerLinkActive (Req 4.2).
+  &.active {
+    background: var(--color-sidebar-active-bg);
+    color: var(--color-accent);
+    border-left-color: var(--color-accent);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  // Foco visible accesible (Req 27.3).
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: calc(-1 * var(--focus-ring-offset));
+  }
+}
+
+// --- Pie del sidebar --------------------------------------------------------
+.sidebar-footer {
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--color-sidebar-footer-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-sidebar-footer-text);
+
+  &__marca {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  &__logo {
+    width: var(--sidebar-logo-size);
+    height: var(--sidebar-logo-size);
+    flex-shrink: 0;
+    background: var(--color-accent);
+    border-radius: var(--radius-btn-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-sidebar-text-strong);
+  }
+
+  strong {
+    font-size: var(--font-size-sm);
+    color: var(--color-sidebar-text-strong);
+  }
+
+  small {
+    font-size: var(--font-size-2xs);
+  }
+}

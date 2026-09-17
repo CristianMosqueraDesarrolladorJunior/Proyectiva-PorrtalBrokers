@@ -1,0 +1,20 @@
+<div class="radio-group" role="radiogroup" [attr.aria-label]="ariaLabel">
+  @for (opcion of opciones; track trackOpcion($index, opcion); let indice = $index) {
+    <div
+      class="radio-card"
+      role="radio"
+      [class.active]="opcion.valor === valor"
+      [class.radio-card--disabled]="disabled"
+      [attr.aria-checked]="opcion.valor === valor"
+      [attr.aria-disabled]="disabled ? true : null"
+      [attr.tabindex]="disabled ? -1 : (esTabulable(indice) ? 0 : -1)"
+      (click)="seleccionar(opcion.valor)"
+      (keydown)="onKeydown($event, indice)"
+    >
+      <span class="radio-card__etiqueta">{{ opcion.etiqueta }}</span>
+      @if (opcion.descripcion) {
+        <span class="radio-card__descripcion">{{ opcion.descripcion }}</span>
+      }
+    </div>
+  }
+</div>

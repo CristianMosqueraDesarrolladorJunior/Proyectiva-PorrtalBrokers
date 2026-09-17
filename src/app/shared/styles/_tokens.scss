@@ -1,0 +1,205 @@
+// =============================================================================
+// Design Tokens — Sistema de estilos (fuente única centralizada)
+// Portal de Autogestión de Brokers — Proyectiva (Seguros Bolívar — El Libertador)
+//
+// Fuente única de verdad para colores, layout, radios, sombras y Escala_Espaciado
+// (Req 25.1, 25.2, 25.5, 37.8, 37.9, 37.10). Todos los tokens se exponen como CSS
+// custom properties en :root; ningún componente debe usar valores hardcodeados
+// (Req 25.3, 25.4, 37.11, 37.12).
+//
+// Este archivo agrega (forward) la Escala_Tipografica definida en _typography.scss
+// para que los tokens tipográficos y de estilo compartan una única entrada.
+//
+// _Requirements: 25.1, 25.2, 25.5, 37.8, 37.9, 37.10
+// =============================================================================
+
+@forward 'typography';
+
+:root {
+  // ---------------------------------------------------------------------------
+  // Familia tipográfica base del prototipo (Req 36.2)
+  // ---------------------------------------------------------------------------
+  --font-family-base: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue',
+    Arial, sans-serif;
+
+  // ---------------------------------------------------------------------------
+  // Colores base del prototipo (Req 25.2, 36.2)
+  // ---------------------------------------------------------------------------
+  --color-primary: #1a1a2e;
+  --color-accent: #f57c00;
+  --color-accent-light: #fff3e0;
+  --color-success: #43a047;
+  --color-danger: #e53935;
+  --color-info: #1976d2;
+  --color-bg: #f5f6fa;
+  --color-card: #fff;
+  --color-border: #e8e8e8;
+  --color-text: #1a1a2e;
+  --color-muted: #666;
+
+  // ---------------------------------------------------------------------------
+  // Estados hover derivados de la paleta (Req 25.2, 36.4)
+  // Tonos de interacción usados por los Componentes_Compartidos; sin hardcodeo
+  // en los componentes (referenciar estos tokens).
+  // ---------------------------------------------------------------------------
+  --color-accent-hover: #e65100;   // hover de btn-primary / btn-accent
+
+  // ---------------------------------------------------------------------------
+  // Colores de insignia de estado (badge) — pares fondo/texto (Req 35.2)
+  // Derivados del prototipo (.badge-success/info/warning/danger).
+  // ---------------------------------------------------------------------------
+  --color-badge-success-bg: #e8f5e9;
+  --color-badge-success-text: #2e7d32;
+  --color-badge-info-bg: #e3f2fd;
+  --color-badge-info-text: #1565c0;
+  --color-badge-warning-bg: #fff3e0;
+  --color-badge-warning-text: #e65100;
+  --color-badge-danger-bg: #ffebee;
+  --color-badge-danger-text: #c62828;
+
+  // Colores del punto (dot) de la insignia (Req 35.2)
+  --color-dot-success: var(--color-success);
+  --color-dot-info: var(--color-info);
+  --color-dot-warning: var(--color-accent);
+  --color-dot-danger: var(--color-danger);
+
+  // Fondo/borde de KPI en estado danger (Req 5.4)
+  --color-kpi-danger-border: #ffcdd2;
+
+  // Anillo de foco accesible (Req 27.3 — foco visible)
+  --color-focus-ring: #f57c00;
+
+  // ---------------------------------------------------------------------------
+  // Sidebar del Shell_Aplicacion (Req 4) — tonos sobre fondo primario
+  // Superposiciones blancas del prototipo tokenizadas para evitar hardcodeo
+  // en SidebarComponent (Req 25.3, 25.4, 37.11).
+  // ---------------------------------------------------------------------------
+  --color-sidebar-text: rgba(255, 255, 255, 0.65);       // nav-item base
+  --color-sidebar-text-strong: #fff;                     // hover / nombre broker
+  --color-sidebar-muted: rgba(255, 255, 255, 0.5);       // rol del broker
+  --color-sidebar-footer-text: rgba(255, 255, 255, 0.35);// texto del footer
+  --color-sidebar-hover-bg: rgba(255, 255, 255, 0.04);   // hover de nav-item
+  --color-sidebar-active-bg: rgba(255, 255, 255, 0.07);  // nav-item activo
+  --color-sidebar-border: rgba(255, 255, 255, 0.1);      // separadores del perfil
+  --color-sidebar-footer-border: rgba(255, 255, 255, 0.08); // borde superior footer
+
+  // ---------------------------------------------------------------------------
+  // Layout (Req 25.2)
+  // ---------------------------------------------------------------------------
+  --sidebar-width: 260px;
+
+  // Ancho máximo del contenedor interno del área de contenido (main-content).
+  // El prototipo no fija un tope; en pantallas muy anchas se centra el contenido
+  // con este ancho amplio para conservar legibilidad y fidelidad visual.
+  --content-max-width: 1200px;
+
+  // Padding vertical/horizontal del área de contenido (prototipo: 1.75rem 2rem).
+  --content-padding-block: var(--space-6);   // 24px ≈ 1.75rem del prototipo
+  --content-padding-inline: var(--space-7);  // 32px = 2rem del prototipo
+
+  // Dimensiones del avatar del perfil y del logo del footer (prototipo)
+  --sidebar-avatar-size: 38px;
+  --sidebar-logo-size: 28px;
+
+  // Ancho máximo de la tarjeta/modal de login del prototipo (Req 1, 25.2)
+  --login-card-width: 420px;
+
+  // Fondo oscuro sólido de la pantalla de login (Req 1). El prototipo usa un
+  // degradado #1a1a2e→#16213e; aquí se usa el tono más oscuro como color sólido
+  // (sin degradados, por decisión de diseño) para que la tarjeta blanca resalte.
+  --color-login-bg: #16213e;
+
+  // Ancho del anillo de foco visible (Req 27.3)
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  // Barra superior responsiva (topbar con botón de menú en tablet/móvil,
+  // Estrategia responsiva, Req 36.5). Sin valores hardcodeados en componentes.
+  --topbar-height: 56px;
+  --menu-button-size: 40px;
+
+  // Capas de apilamiento (z-index) del layout autenticado. Tokenizadas para
+  // preservar el orden: contenido < topbar < overlay < sidebar < chat-fab.
+  // El Chat_Asistente (chat-fab, z 1000) permanece siempre por encima (Req 36.5).
+  --z-topbar: 120;
+  --z-sidebar-overlay: 150;
+  --z-sidebar: 200;
+
+  // Superposición semitransparente para el cajón del sidebar en tablet/móvil
+  // (Estrategia responsiva, Req 36.5) y overlays modales del prototipo.
+  --color-overlay: rgba(0, 0, 0, 0.3);
+
+  // ---------------------------------------------------------------------------
+  // Layout de rejillas del prototipo (GridLayoutComponent, Req 35.4)
+  // Anchos de columna fijos y mínimos derivados del prototipo, tokenizados
+  // para evitar valores literales en los componentes.
+  // ---------------------------------------------------------------------------
+  --grid-dash-side-col: 340px;   // dash-grid: 1fr + panel lateral
+  --grid-two-col-side: 260px;    // two-col: col-side + col-main
+  --grid-kpi-min-col: 160px;     // kpi-grid: minmax por columna
+
+  // ---------------------------------------------------------------------------
+  // Radios (Req 37.9, 25.2 — radio base 10px = --radius-md)
+  // ---------------------------------------------------------------------------
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-full: 50%;
+  --radius-xs: 4px;    // insignias (.badge), paginación (.pg)
+  --radius-btn-sm: 6px; // botón pequeño (.btn-sm)
+  --radius-pill: 25px;  // botones pastilla (.btn-accent / .btn-ghost)
+
+  // ---------------------------------------------------------------------------
+  // Sombras (Req 37.10)
+  // Valores exactos derivados del prototipo (cards, hover, drawer, chat-widget,
+  // fab de acento y modal de login). Ningún componente debe declarar sombras
+  // hardcodeadas: referenciar siempre estos tokens.
+  // ---------------------------------------------------------------------------
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.03);        // data-table
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);        // hover de tarjetas/paneles
+  --shadow-lg: 0 6px 28px rgba(0, 0, 0, 0.14);       // chat-widget
+  --shadow-drawer: -4px 0 20px rgba(0, 0, 0, 0.10);  // drawer lateral
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.30);   // modal de login/registro
+  --shadow-accent-sm: 0 3px 10px rgba(245, 124, 0, 0.08); // hover card de acento
+  --shadow-accent-fab: 0 3px 12px rgba(245, 124, 0, 0.30); // chat-fab
+
+  // ---------------------------------------------------------------------------
+  // Escala_Espaciado (Req 37.8)
+  // Tokens para paddings, márgenes y gaps del prototipo.
+  // ---------------------------------------------------------------------------
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+
+  // ---------------------------------------------------------------------------
+  // Breakpoints responsivos (Estrategia responsiva)
+  // desktop ≥1024px, tablet 640–1023px, móvil <640px.
+  // Expuestos como tokens para documentación y consumo en mixins/lógica.
+  // ---------------------------------------------------------------------------
+  --breakpoint-mobile-max: 639px;
+  --breakpoint-tablet-min: 640px;
+  --breakpoint-tablet-max: 1023px;
+  --breakpoint-desktop-min: 1024px;
+}
+
+// -----------------------------------------------------------------------------
+// Mapa SCSS de breakpoints (apoyo para media queries en mixins/componentes).
+// La fuente única de verdad para el consumo directo son las CSS custom properties.
+// -----------------------------------------------------------------------------
+$breakpoints: (
+  'mobile-max': 639px,
+  'tablet-min': 640px,
+  'tablet-max': 1023px,
+  'desktop-min': 1024px,
+);

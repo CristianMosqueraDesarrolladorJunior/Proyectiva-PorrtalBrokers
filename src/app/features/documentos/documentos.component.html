@@ -1,0 +1,33 @@
+<section class="documentos" aria-labelledby="documentos-titulo">
+  <header class="documentos__header">
+    <h1 id="documentos-titulo" class="documentos__titulo">Documentos</h1>
+    <p class="documentos__intro">
+      Formatos, plantillas, clausulados e instructivos de apoyo.
+    </p>
+  </header>
+
+  @for (seccion of secciones; track trackSeccion($index, seccion)) {
+    <div class="doc-section">
+      <h3 class="doc-section__titulo">{{ seccion.titulo }}</h3>
+      <div class="doc-list">
+        @for (recurso of seccion.recursos; track trackRecurso($index, recurso)) {
+          <div class="doc-item">
+            <span class="doc-icon" aria-hidden="true">{{ recurso.icono }}</span>
+            <div class="doc-info">
+              <strong>{{ recurso.titulo }}</strong>
+              <small>{{ recurso.descripcion }}</small>
+            </div>
+            <button
+              type="button"
+              class="doc-btn"
+              [attr.aria-label]="etiquetaAccion(recurso) + ' ' + recurso.titulo"
+              (click)="abrir(recurso)"
+            >
+              {{ etiquetaAccion(recurso) }}
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</section>

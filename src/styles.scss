@@ -1,0 +1,42 @@
+/* Estilos globales del Portal de Autogestión de Brokers */
+
+/* Sistema de Design Tokens — fuente única centralizada (Req 25.1).
+   _tokens.scss reexporta _typography.scss, por lo que este único @use
+   deja disponibles en :root todos los tokens de color, layout, radio,
+   sombra, espaciado, tipografía, pesos, interlineado y valores numéricos. */
+@use 'app/shared/styles/tokens';
+
+/* Reset base y tipografía global del prototipo (Req 36.1, 36.2).
+   Todos los valores se referencian vía Design_Token (Req 25.3, 25.4). */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 100%;
+}
+
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-4md);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  background: var(--color-bg);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Hereda la familia tipográfica en los controles de formulario,
+   que por defecto no la heredan. */
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}

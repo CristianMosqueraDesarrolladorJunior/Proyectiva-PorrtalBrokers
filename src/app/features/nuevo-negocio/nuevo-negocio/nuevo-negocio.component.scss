@@ -1,0 +1,106 @@
+// =============================================================================
+// NuevoNegocioComponent — Flujo de 3 pasos (Req 31)
+// Sin valores hardcodeados: color/tamaño/peso/espaciado/radio vía Design_Token.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.nuevo-negocio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+.nn-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.nn-titulo {
+  font-size: var(--font-size-h1-seccion);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.nn-subtitulo {
+  font-size: var(--font-size-4md);
+  color: var(--color-muted);
+  line-height: var(--line-height-normal);
+  margin: var(--space-0);
+}
+
+.nn-paso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.nn-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.nn-resumen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.nn-resumen-titulo {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: var(--space-0);
+}
+
+.nn-resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-0);
+}
+
+.nn-resumen-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  dt {
+    font-size: var(--font-size-sm);
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  dd {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    margin: var(--space-0);
+  }
+}
+
+.nn-resumen-item--total {
+  dd {
+    color: var(--color-accent);
+  }
+}
+
+.nn-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}

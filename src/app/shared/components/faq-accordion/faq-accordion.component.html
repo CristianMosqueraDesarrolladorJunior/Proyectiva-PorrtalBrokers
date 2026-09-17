@@ -1,0 +1,27 @@
+<div class="faq-list">
+  @for (item of preguntas; track trackPregunta($index); let indice = $index) {
+    <div class="faq">
+      <button
+        type="button"
+        class="faq__summary"
+        [id]="'faq-summary-' + indice"
+        [attr.aria-expanded]="estaAbierta(indice)"
+        [attr.aria-controls]="'faq-panel-' + indice"
+        (click)="alternar(indice)"
+      >
+        <span class="faq__pregunta">{{ item.pregunta }}</span>
+        <span class="faq__chevron" aria-hidden="true">{{ estaAbierta(indice) ? '−' : '+' }}</span>
+      </button>
+      @if (estaAbierta(indice)) {
+        <p
+          class="faq__respuesta"
+          role="region"
+          [id]="'faq-panel-' + indice"
+          [attr.aria-labelledby]="'faq-summary-' + indice"
+        >
+          {{ item.respuesta }}
+        </p>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,41 @@
+<div class="success-screen" role="status" aria-live="polite">
+  <div
+    class="success-icon"
+    [class.success-icon-accent]="varianteIcono === 'accent'"
+    aria-hidden="true"
+  >
+    {{ icono }}
+  </div>
+
+  @if (titulo) {
+    <h2 class="success-titulo">{{ titulo }}</h2>
+  }
+
+  @if (mensaje) {
+    <p class="success-mensaje">{{ mensaje }}</p>
+  }
+
+  <div class="success-extra">
+    <ng-content></ng-content>
+  </div>
+
+  @if (tarjetas.length > 0) {
+    <div class="tracking-cards">
+      @for (tarjeta of tarjetas; track tarjeta.etiqueta) {
+        <div class="track-card">
+          <small class="track-etiqueta">{{ tarjeta.etiqueta }}</small>
+          <strong class="track-valor">{{ tarjeta.valor }}</strong>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="success-acciones">
+    <ng-content select="[accionesExito]"></ng-content>
+    @if (mostrarVolver) {
+      <button type="button" class="success-volver" (click)="onVolver()">
+        {{ textoVolver }}
+      </button>
+    }
+  </div>
+</div>

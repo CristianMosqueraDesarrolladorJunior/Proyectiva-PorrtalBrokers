@@ -1,0 +1,66 @@
+// =============================================================================
+// FormFieldComponent — campo de formulario tokenizado (Req 35.14)
+// Sin valores hardcodeados: color/tamaño/peso/radio/espaciado vía Design_Token.
+// =============================================================================
+
+:host {
+  display: block;
+  margin-bottom: var(--space-3);
+}
+
+.field-label {
+  display: block;
+  font-size: var(--font-size-3sm);
+  color: var(--color-muted);
+  margin-bottom: var(--space-1);
+  font-weight: var(--font-weight-medium);
+}
+
+.field-obligatorio {
+  color: var(--color-danger);
+  margin-left: var(--space-1);
+}
+
+// Estilo aplicado a los controles proyectados (input/select/textarea)
+// replicando .field input del prototipo, sin sobreescribir su estructura.
+.field-control ::ng-deep input,
+.field-control ::ng-deep select,
+.field-control ::ng-deep textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-4md);
+  outline: none;
+  background: var(--color-card);
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+.field-control ::ng-deep input:focus-visible,
+.field-control ::ng-deep select:focus-visible,
+.field-control ::ng-deep textarea:focus-visible {
+  border-color: var(--color-accent);
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.field--invalido .field-control ::ng-deep input,
+.field--invalido .field-control ::ng-deep select,
+.field--invalido .field-control ::ng-deep textarea {
+  border-color: var(--color-danger);
+}
+
+.field-ayuda {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  line-height: var(--line-height-normal);
+}
+
+.field-error {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  line-height: var(--line-height-normal);
+}

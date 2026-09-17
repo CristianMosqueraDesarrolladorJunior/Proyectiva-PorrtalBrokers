@@ -1,0 +1,84 @@
+// =============================================================================
+// CotizadorResultadoComponent — resultado de la Cotizacion y acciones (Req 8, 9)
+// Sin valores hardcodeados: color/espaciado/radio/tipografía/sombra vía Design_Token.
+// =============================================================================
+
+:host {
+  display: block;
+}
+
+.resultado-cotizacion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.resultado-titulo {
+  margin: var(--space-0);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+// --- Desglose (Req 8.1) ---
+.table-wrapper {
+  overflow-x: auto;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.desglose-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--font-size-md);
+    color: var(--color-text);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  thead th {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-muted);
+    text-transform: uppercase;
+    background: var(--color-bg);
+  }
+}
+
+.celda-numerica {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fila-totales {
+  th,
+  td {
+    font-weight: var(--font-weight-semibold);
+    background: var(--color-bg);
+    border-bottom: none;
+  }
+
+  th {
+    text-align: right;
+  }
+}
+
+.celda-total {
+  font-size: var(--font-size-valor-cobertura);
+  font-weight: var(--font-weight-valor-cobertura);
+  color: var(--color-accent);
+}
+
+// --- Acciones (Req 9) ---
+.resultado-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}

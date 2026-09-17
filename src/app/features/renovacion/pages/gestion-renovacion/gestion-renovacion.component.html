@@ -1,0 +1,980 @@
+<section class="gestion-renovacion">
+  <!-- ══════════════════ PASO 1 — OPCIONES ══════════════════ -->
+  @if (flujo() === 'renovacion' && pasoActivo() === 0) {
+    <div class="opciones">
+      <header class="opciones__header">
+        <h1 class="opciones__titulo">
+          Elige cómo <strong>renovar tu póliza de arrendamiento</strong>
+          <strong>#{{ numeroPoliza() }}</strong>
+        </h1>
+        <p class="opciones__subtitulo">
+          Selecciona la opción que mejor se adapte a tus necesidades y asegura la
+          continuidad de la protección de tu inmueble arrendado.
+        </p>
+      </header>
+
+      <div class="opciones__grid" role="list">
+        <!-- Card 1: Renovación Física -->
+        <article
+          class="card card--recomendado"
+          role="button"
+          tabindex="0"
+          aria-label="Renovación Física - Diligencia el formato físico de renovación"
+          (click)="navegarRenovacionFisica()"
+          (keydown.enter)="navegarRenovacionFisica()"
+          (keydown.space)="navegarRenovacionFisica(); $event.preventDefault()"
+        >
+          <span class="card__badge">RECOMENDADO</span>
+          <div class="card__content">
+            <div class="card__icon card__icon--accent">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+            </div>
+            <div class="card__body">
+              <h3 class="card__title">Renovación Física</h3>
+              <p class="card__description">Diligencia el formato físico de renovación de tu póliza de arrendamiento y cárgalo aquí</p>
+            </div>
+          </div>
+          <span class="card__action" aria-hidden="true">Renovar con formato físico →</span>
+        </article>
+
+        <!-- Card 2: Renovación Digital -->
+        <article
+          class="card"
+          role="button"
+          tabindex="0"
+          aria-label="Renovación Digital - Renueva tu póliza de forma digital"
+          (click)="navegarRenovacionDigital()"
+          (keydown.enter)="navegarRenovacionDigital()"
+          (keydown.space)="navegarRenovacionDigital(); $event.preventDefault()"
+        >
+          <div class="card__content">
+            <div class="card__icon card__icon--primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </div>
+            <div class="card__body">
+              <h3 class="card__title">Renovación Digital</h3>
+              <p class="card__description">Renueva tu póliza de arrendamiento de forma digital ajustando valores y condiciones del inmueble</p>
+            </div>
+          </div>
+          <span class="card__action" aria-hidden="true">Renovar digitalmente →</span>
+        </article>
+
+        <!-- Card 3: Caso Especial -->
+        <article class="card" role="group" aria-label="Caso Especial de Póliza de Arrendamiento">
+          <div class="card__content">
+            <div class="card__icon card__icon--warning">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <div class="card__body">
+              <h3 class="card__title">Caso Especial de Póliza de Arrendamiento</h3>
+              <p class="card__description">Trámites especiales sobre la póliza de arrendamiento de tu inmueble:</p>
+              <ul class="card__sub-items" role="list">
+                <li class="card__sub-item">
+                  <a
+                    class="card__sub-link"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Otro sí de póliza de arrendamiento"
+                    (click)="iniciarCasoEspecial()"
+                    (keydown.enter)="iniciarCasoEspecial()"
+                    (keydown.space)="iniciarCasoEspecial(); $event.preventDefault()"
+                  >• Otro sí de póliza de arrendamiento</a>
+                </li>
+                <li class="card__sub-item">
+                  <a
+                    class="card__sub-link"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Cesión de contrato de arrendamiento"
+                    (click)="iniciarCasoEspecial()"
+                    (keydown.enter)="iniciarCasoEspecial()"
+                    (keydown.space)="iniciarCasoEspecial(); $event.preventDefault()"
+                  >• Cesión de contrato de arrendamiento</a>
+                </li>
+                <li class="card__sub-item card__sub-item--danger">
+                  <a
+                    class="card__sub-link card__sub-link--danger"
+                    role="button"
+                    tabindex="0"
+                    aria-label="No renovar póliza de arrendamiento"
+                    (click)="solicitarNoRenovar()"
+                    (keydown.enter)="solicitarNoRenovar()"
+                    (keydown.space)="solicitarNoRenovar(); $event.preventDefault()"
+                  >• No renovar póliza de arrendamiento</a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <a
+            class="card__action"
+            role="button"
+            tabindex="0"
+            aria-label="Gestionar caso especial de póliza de arrendamiento"
+            (click)="iniciarCasoEspecial()"
+            (keydown.enter)="iniciarCasoEspecial()"
+            (keydown.space)="iniciarCasoEspecial(); $event.preventDefault()"
+          >Gestionar caso especial →</a>
+        </article>
+
+        <!-- Card 4: Corrección de Documentos -->
+        <article
+          class="card"
+          role="button"
+          tabindex="0"
+          aria-label="Corrección de Documentos - Solicita corrección de documentos de tu póliza"
+          (click)="iniciarCorreccion()"
+          (keydown.enter)="iniciarCorreccion()"
+          (keydown.space)="iniciarCorreccion(); $event.preventDefault()"
+        >
+          <div class="card__content">
+            <div class="card__icon card__icon--primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+            </div>
+            <div class="card__body">
+              <h3 class="card__title">Corrección de Documentos</h3>
+              <p class="card__description">Solicita corrección de documentos asociados a tu póliza de arrendamiento</p>
+            </div>
+          </div>
+          <span class="card__action" aria-hidden="true">Corregir documentos →</span>
+        </article>
+      </div>
+
+      <footer class="opciones__footer">
+        <p class="opciones__footer-text">¿Necesitas asesoría personalizada para la renovación de tu póliza de arrendamiento?</p>
+        <a class="opciones__footer-link" role="button" tabindex="0">Hablar con un consultor especializado en renovación →</a>
+      </footer>
+
+      <!-- Diálogo de confirmación para "No renovar" -->
+      @if (mostrarConfirmacionNoRenovar()) {
+        <div class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-titulo">
+          <div class="confirm-dialog">
+            <h2 id="confirm-titulo" class="confirm-dialog__titulo">¿Estás seguro de no renovar tu póliza?</h2>
+            <p class="confirm-dialog__mensaje">
+              Al no renovar tu póliza de arrendamiento, tu inmueble arrendado dejará de contar con la
+              protección una vez finalice la vigencia actual. Esta acción no se puede deshacer fácilmente.
+            </p>
+            <div class="confirm-dialog__acciones">
+              <button type="button" class="btn btn--outline" (click)="cancelarNoRenovar()">Cancelar</button>
+              <button type="button" class="btn btn--danger" (click)="confirmarNoRenovar()">Confirmar no renovación</button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══════════════════ PASO 2 — DETALLES ══════════════════ -->
+  @if (flujo() === 'renovacion' && pasoActivo() === 1) {
+    <div class="detalles">
+      <app-stepper [pasos]="pasos" [pasoActivo]="1" />
+
+      <div class="detalles__contenido">
+        <div class="detalles__main">
+          <h2 class="detalles__titulo">Detalles de tu Póliza de Arrendamiento</h2>
+
+          <div class="detalles__datos">
+            <div class="detalle-item">
+              <span class="detalle-item__label">Número de póliza</span>
+              <span class="detalle-item__valor">{{ poliza().numero }}</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-item__label">Tipo de cobertura</span>
+              <span class="detalle-item__valor">{{ poliza().tipoCobertura }}</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-item__label">Vencimiento</span>
+              <span class="detalle-item__valor">{{ poliza().fechaVencimiento | date: 'dd/MM/yyyy' }}</span>
+            </div>
+          </div>
+
+          <h3 class="detalles__subtitulo">Selecciona la modalidad de renovación de tu póliza de arrendamiento</h3>
+
+          <div class="detalles__modalidades">
+            <article
+              class="modalidad-card"
+              [class.modalidad-card--activa]="modalidadSeleccionada() === 'anterior'"
+              role="button"
+              tabindex="0"
+              [attr.aria-pressed]="modalidadSeleccionada() === 'anterior'"
+              aria-label="Renovar con condiciones actuales"
+              (click)="seleccionarAnterior()"
+              (keydown.enter)="seleccionarAnterior()"
+              (keydown.space)="seleccionarAnterior(); $event.preventDefault()"
+            >
+              <div class="modalidad-card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="1 4 1 10 7 10" />
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                </svg>
+              </div>
+              <div class="modalidad-card__body">
+                <h4 class="modalidad-card__title">Renovar con condiciones actuales</h4>
+                <p class="modalidad-card__description">Mantener las condiciones actuales de la póliza de arrendamiento y continuar protegiendo tu inmueble arrendado</p>
+              </div>
+            </article>
+
+            <article
+              class="modalidad-card"
+              [class.modalidad-card--activa]="modalidadSeleccionada() === 'ajustar'"
+              role="button"
+              tabindex="0"
+              [attr.aria-pressed]="modalidadSeleccionada() === 'ajustar'"
+              aria-label="Ajustar póliza de arrendamiento"
+              (click)="seleccionarAjustar()"
+              (keydown.enter)="seleccionarAjustar()"
+              (keydown.space)="seleccionarAjustar(); $event.preventDefault()"
+            >
+              <div class="modalidad-card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="4" y1="21" x2="4" y2="14" />
+                  <line x1="4" y1="10" x2="4" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12" y2="3" />
+                  <line x1="20" y1="21" x2="20" y2="16" />
+                  <line x1="20" y1="12" x2="20" y2="3" />
+                  <line x1="1" y1="14" x2="7" y2="14" />
+                  <line x1="9" y1="8" x2="15" y2="8" />
+                  <line x1="17" y1="16" x2="23" y2="16" />
+                </svg>
+              </div>
+              <div class="modalidad-card__body">
+                <h4 class="modalidad-card__title">Ajustar póliza de arrendamiento</h4>
+                <p class="modalidad-card__description">Modificar valores y condiciones de la protección de tu inmueble arrendado</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <aside class="detalles__sidebar">
+          <div class="valores-card">
+            <h4 class="valores-card__titulo">Valores Actuales de tu Póliza de Arrendamiento</h4>
+            <div class="valores-card__item">
+              <span>Valor Mensual</span>
+              <strong>{{ poliza().valorMensual | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+            </div>
+            <div class="valores-card__item">
+              <span>Administración</span>
+              <strong>{{ poliza().administracion | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+            </div>
+            <div class="valores-card__item">
+              <span>Servicios públicos</span>
+              <strong>{{ poliza().serviciosPublicos | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+            </div>
+            <div class="valores-card__item">
+              <span>Daños y faltantes</span>
+              <strong>{{ poliza().danosFaltantes | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+            </div>
+            <hr />
+            <div class="valores-card__total">
+              <span>Total Estimado</span>
+              <strong>{{ totalEstimado() | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="detalles__acciones">
+        <button type="button" class="btn btn--outline" (click)="cancelar()">Cancelar</button>
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="!modalidadSeleccionada()"
+          (click)="continuarAlAjuste()"
+        >
+          Continuar al Paso 3
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════ PASO 3 — AJUSTE ══════════════════ -->
+  @if (flujo() === 'renovacion' && pasoActivo() === 2) {
+    <div class="ajuste">
+      <app-stepper [pasos]="pasos" [pasoActivo]="2" />
+
+      <div class="ajuste__header">
+        <div class="ajuste__title-row">
+          <svg class="ajuste__lock-svg" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <h2 class="ajuste__titulo">Ajustes de tu Póliza de Arrendamiento {{ numeroPoliza() }}</h2>
+        </div>
+
+        @if (esBloqueado()) {
+          <div class="ajuste__warning-banner">
+            <div class="ajuste__warning-content">
+              <svg class="ajuste__warning-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>Los valores de esta póliza de arrendamiento ya han sido definidos y no permiten modificaciones manuales.</span>
+            </div>
+            <span class="ajuste__badge-bloqueado">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              VALORES BLOQUEADOS
+            </span>
+          </div>
+        }
+      </div>
+
+      <form [formGroup]="formulario" class="ajuste__form">
+        <!-- KPIs -->
+        <div class="ajuste__kpis">
+          <div class="kpi-card">
+            <span class="kpi-card__label">VALOR CANON</span>
+            <span class="kpi-card__value">{{ formulario.get('valorCanon')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-card__label">ADMINISTRACIÓN</span>
+            <span class="kpi-card__value">{{ formulario.get('administracion')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-card__label">VALOR ASEGURADO SERV.</span>
+            <span class="kpi-card__value">{{ formulario.get('valorAseguradoServicios')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-card__label">VALOR ASEGURADO DYF</span>
+            <span class="kpi-card__value">{{ formulario.get('valorAseguradoDyF')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+        </div>
+
+        <!-- Barra de periodo -->
+        <div class="ajuste__periodo-bar">
+          <div class="periodo-bar__section">
+            <svg class="periodo-bar__icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <div class="periodo-bar__group">
+              <span class="periodo-bar__label">PERIODO ACTUAL</span>
+              <span class="periodo-bar__value">{{ formulario.get('periodoActual')?.value }}</span>
+            </div>
+          </div>
+
+          <div class="periodo-bar__section periodo-bar__section--center">
+            <div class="periodo-bar__group">
+              <span class="periodo-bar__label">Periodo Proyectado</span>
+              <div class="periodo-bar__dates">
+                @if (esBloqueado()) {
+                  <span class="periodo-bar__date-text">{{ formulario.get('periodoProyectado')?.value }}</span>
+                } @else {
+                  <input type="text" formControlName="periodoProyectado" class="periodo-bar__date-input" />
+                }
+                <svg class="periodo-bar__arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+                <span class="periodo-bar__badge-meses">12 MESES</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="periodo-bar__section periodo-bar__section--right">
+            <div class="periodo-bar__group">
+              <span class="periodo-bar__label">IPC APLICADO</span>
+              <div class="periodo-bar__ipc">
+                @if (!esBloqueado()) {
+                  <button type="button" class="ipc-btn" (click)="decrementarIpc()" aria-label="Disminuir IPC">−</button>
+                }
+                <span class="periodo-bar__ipc-value">{{ formulario.get('ipcAplicado')?.value }}%</span>
+                @if (!esBloqueado()) {
+                  <button type="button" class="ipc-btn" (click)="incrementarIpc()" aria-label="Aumentar IPC">+</button>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 columnas de configuración -->
+        <div class="ajuste__columns">
+          <!-- Columna 1: Valores Base -->
+          <div class="config-column config-column--base">
+            <div class="config-column__header">
+              <svg class="config-column__icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+              <h4 class="config-column__title">Valores Base del Inmueble</h4>
+              <span class="config-column__badge config-column__badge--primary">ACTIVO</span>
+            </div>
+            <div class="config-column__body">
+              <div class="config-column__field">
+                <label for="ajuste-valorCanon">Valor Canon</label>
+                <input id="ajuste-valorCanon" type="number" formControlName="valorCanon" />
+              </div>
+              <div class="config-column__field">
+                <label for="ajuste-administracion">Administración</label>
+                <input id="ajuste-administracion" type="number" formControlName="administracion" />
+              </div>
+              <div class="config-column__calc">
+                <div class="config-column__calc-row">
+                  <span>Base Asegurable</span>
+                  <strong>{{ calcularPrimaBase() | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+                </div>
+                <div class="config-column__calc-row config-column__calc-row--highlight">
+                  <span>PRIMA POR PAGAR</span>
+                  <strong>{{ calcularPrimaBase() | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+                </div>
+              </div>
+            </div>
+            @if (esBloqueado()) {
+              <div class="config-column__overlay" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+            }
+          </div>
+
+          <!-- Columna 2: Plan Servicios -->
+          <div class="config-column config-column--servicios">
+            <div class="config-column__header">
+              <svg class="config-column__icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              <h4 class="config-column__title">Plan Servicios</h4>
+              <span class="config-column__badge config-column__badge--info">ESTÁNDAR</span>
+            </div>
+            <div class="config-column__body">
+              <div class="config-column__field">
+                <label for="ajuste-servicios">Valor Asegurado Serv.</label>
+                <input id="ajuste-servicios" type="number" formControlName="valorAseguradoServicios" />
+              </div>
+              <div class="config-column__calc">
+                <div class="config-column__calc-row">
+                  <span>Base Asegurable</span>
+                  <strong>{{ formulario.get('valorAseguradoServicios')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+                </div>
+                <div class="config-column__calc-row config-column__calc-row--highlight">
+                  <span>PRIMA POR PAGAR</span>
+                  <strong>{{ formulario.get('valorAseguradoServicios')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+                </div>
+              </div>
+            </div>
+            @if (esBloqueado()) {
+              <div class="config-column__overlay" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+            }
+          </div>
+
+          <!-- Columna 3: Daños y Faltantes -->
+          <div class="config-column config-column--dyf">
+            <div class="config-column__header">
+              <svg class="config-column__icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+              </svg>
+              <h4 class="config-column__title">Daños y Faltantes</h4>
+              <span class="config-column__badge config-column__badge--warning">OPCIONAL</span>
+            </div>
+            <div class="config-column__body">
+              <div class="config-column__field">
+                <label for="ajuste-dyf">Valor Asegurado DyF</label>
+                <input id="ajuste-dyf" type="number" formControlName="valorAseguradoDyF" />
+              </div>
+              <div class="config-column__calc">
+                <div class="config-column__calc-row">
+                  <span>Base Asegurable</span>
+                  <strong>{{ formulario.get('valorAseguradoDyF')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+                </div>
+                <div class="config-column__calc-row config-column__calc-row--highlight">
+                  <span>PRIMA POR PAGAR</span>
+                  <strong>{{ formulario.get('valorAseguradoDyF')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+                </div>
+              </div>
+            </div>
+            @if (esBloqueado()) {
+              <div class="config-column__overlay" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Sección inferior -->
+        <div class="ajuste__bottom">
+          <div class="resumen-card">
+            <div class="resumen-card__header">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+              <h3>Resumen</h3>
+            </div>
+            <div class="resumen-card__body">
+              <div class="resumen-card__item">
+                <span>Prima Base</span>
+                <strong>{{ calcularPrimaBase() | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+              </div>
+              <div class="resumen-card__item">
+                <span>Plan Servicios Públicos</span>
+                <strong>{{ formulario.get('valorAseguradoServicios')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+              </div>
+              <div class="resumen-card__item">
+                <span>Plan Daños y Faltantes</span>
+                <strong>{{ formulario.get('valorAseguradoDyF')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+              </div>
+              <hr class="resumen-card__separator" />
+              <div class="resumen-card__item">
+                <span>Gastos Administrativos</span>
+                <strong>{{ formulario.get('administracion')?.value | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+              </div>
+              <div class="resumen-card__total">
+                <span>VALOR ESTIMADO RENOVACIÓN DE PÓLIZA DE ARRENDAMIENTO</span>
+                <strong>{{ calcularTotal() | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>
+              </div>
+              <p class="resumen-card__note">* Valores sujetos a revisión final</p>
+              <a class="resumen-card__link" role="button" tabindex="0" (click)="guardarBorrador($event)" (keydown.enter)="guardarBorrador($event)">Guardar borrador y salir</a>
+            </div>
+          </div>
+
+          <div class="ajuste__sidebar">
+            <div class="observaciones-card">
+              <div class="observaciones-card__header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                <div>
+                  <h4>Planilla de Observaciones</h4>
+                  <span class="observaciones-card__subtitle">Notas adicionales sobre el ajuste de tu póliza de arrendamiento</span>
+                </div>
+              </div>
+              <textarea formControlName="observaciones" rows="5" placeholder="Escribe aquí tus observaciones..."></textarea>
+              <span class="observaciones-card__info">Las observaciones serán adjuntadas al expediente de renovación de la póliza de arrendamiento.</span>
+            </div>
+
+            <button type="button" class="btn btn--primary" (click)="continuarSiguientePaso()">Siguiente paso →</button>
+            <button type="button" class="btn btn--secondary" (click)="volverADetalles()">← Volver al paso anterior</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- ══════════════════ PASO 4 — PROCESO / CONFIRMACIÓN ══════════════════ -->
+  @if (flujo() === 'renovacion' && pasoActivo() === 3) {
+    <div class="proceso">
+      <div class="proceso__icon">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <circle cx="32" cy="32" r="32" fill="var(--color-card)" />
+          <text x="32" y="40" font-size="28" text-anchor="middle">🎉</text>
+        </svg>
+      </div>
+
+      <h1 class="proceso__titulo">Renovación de tu Póliza de Arrendamiento en Proceso</h1>
+
+      <p class="proceso__descripcion">
+        Hemos recibido tu solicitud de renovación de póliza de arrendamiento. Nuestros asesores revisarán la
+        información y te notificarán cuando la protección de tu inmueble arrendado haya sido renovada exitosamente.
+      </p>
+
+      <div class="proceso__section">
+        <h2 class="proceso__section-titulo">¿Qué sigue con la renovación de tu póliza?</h2>
+
+        <div class="proceso__cards">
+          <div class="proceso__card">
+            <div class="proceso__card-icon">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                <circle cx="20" cy="20" r="20" fill="var(--color-card)" />
+                <path d="M14 12h12c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H14c-1.1 0-2-.9-2-2V14c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="1.5" />
+                <path d="M16 18h8M16 22h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg>
+            </div>
+            <h3 class="proceso__card-titulo">Revisión de tu renovación</h3>
+            <p class="proceso__card-descripcion">24 a 48 horas hábiles para validar tu póliza de arrendamiento</p>
+          </div>
+
+          <div class="proceso__card">
+            <div class="proceso__card-icon">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                <circle cx="20" cy="20" r="20" fill="var(--color-card)" />
+                <rect x="12" y="14" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5" />
+                <path d="M12 17l8 5 8-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h3 class="proceso__card-titulo">Notificación de renovación</h3>
+            <p class="proceso__card-descripcion">Recibirás un email con tu póliza de arrendamiento renovada y comprobante</p>
+          </div>
+
+          <div class="proceso__card">
+            <div class="proceso__card-icon">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                <circle cx="20" cy="20" r="20" fill="var(--color-card)" />
+                <path d="M20 14c-3.3 0-6 2.7-6 6v4h12v-4c0-3.3-2.7-6-6-6z" stroke="currentColor" stroke-width="1.5" />
+                <circle cx="20" cy="14" r="4" stroke="currentColor" stroke-width="1.5" />
+                <path d="M16 28h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg>
+            </div>
+            <h3 class="proceso__card-titulo">Soporte de renovación continuo</h3>
+            <p class="proceso__card-descripcion">24/7 disponible para tus consultas sobre pólizas de arrendamiento</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="proceso__acciones">
+        <button type="button" class="btn btn--primary" (click)="finalizar()">Finalizar</button>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════ FLUJO A — CASO ESPECIAL ══════════════════ -->
+  @if (flujo() === 'caso-especial') {
+    <div class="flujo-especial">
+      <app-stepper
+        [pasos]="pasosCasoEspecial"
+        [pasoActivo]="subPaso() === 'documentacion' ? 1 : 2"
+      />
+
+      <!-- Sub-paso: Documentación del caso especial -->
+      @if (subPaso() === 'documentacion') {
+        <div class="flujo-especial__contenido">
+          <h1 class="flujo-especial__titulo">
+            Solicitud de Caso Especial — Póliza de Arrendamiento
+          </h1>
+          <p class="flujo-especial__subtitulo">
+            Carga de documentos para Otro Sí o Cesión de Contrato de tu póliza de arrendamiento
+          </p>
+
+          <div class="flujo-especial__grid">
+            <div class="instrucciones-card">
+              <h3 class="instrucciones-card__titulo">Instrucciones</h3>
+              <p class="instrucciones-card__texto">
+                Para procesar su solicitud de Otro Sí o Cesión de Contrato sobre la póliza de
+                arrendamiento, es indispensable adjuntar el documento legal correspondiente
+                debidamente firmado para garantizar la continuidad de la protección de su inmueble
+                arrendado.
+              </p>
+              <ul class="instrucciones-card__lista">
+                <li>El archivo debe ser legible</li>
+                <li>Formatos permitidos: PDF, JPG, PNG</li>
+                <li>Peso máximo por archivo: 10MB</li>
+              </ul>
+              <p class="instrucciones-card__privacy">
+                Toda su información es procesada de forma segura bajo los estándares de protección
+                de datos vigentes para pólizas de arrendamiento.
+              </p>
+            </div>
+
+            <div class="flujo-especial__formulario">
+              <app-doc-uploader
+                [reglas]="reglaCasoEspecial"
+                [cargados]="cargadosCasoEspecial"
+                (archivoSeleccionado)="onArchivoSeleccionado($event)"
+              />
+
+              <div class="observaciones-field">
+                <label for="obs-caso-especial">Observaciones</label>
+                <textarea
+                  id="obs-caso-especial"
+                  rows="5"
+                  [ngModel]="observacionesCaso()"
+                  (ngModelChange)="observacionesCaso.set($event)"
+                  placeholder="Escriba aquí cualquier observación adicional sobre su solicitud..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="flujo-especial__acciones">
+            <button type="button" class="btn btn--outline" (click)="volverAOpciones()">Cancelar</button>
+            <button
+              type="button"
+              class="btn btn--primary"
+              [disabled]="!hayArchivo"
+              (click)="confirmarCasoEspecial()"
+            >
+              Confirmación
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Sub-paso: Confirmación de identidad (SARLAFT) -->
+      @if (subPaso() === 'sarlaft') {
+        <div class="flujo-especial__sarlaft">
+          @if (estadoSarlaft() === 'validando') {
+            <app-escalerita-loader texto="Validando SARLAFT..." />
+          } @else {
+            <div class="sarlaft-exito">
+              <div class="sarlaft-exito__icon" aria-hidden="true">
+                <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                  <circle cx="28" cy="28" r="28" fill="var(--color-badge-success-bg)" />
+                  <path d="M20 28L26 34L37 22" stroke="var(--color-success)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h2 class="sarlaft-exito__titulo">Validación SARLAFT completada</h2>
+              <p class="sarlaft-exito__texto">
+                La identidad fue verificada correctamente. Continúa para finalizar el envío de tu
+                solicitud de caso especial.
+              </p>
+              <button type="button" class="btn btn--primary" (click)="continuarExitoCasoEspecial()">
+                Continuar →
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Sub-paso: Pantalla de éxito -->
+      @if (subPaso() === 'exito') {
+        <app-success-screen
+          icono="✓"
+          titulo="Solicitud de Caso Especial de Póliza de Arrendamiento Enviada con Éxito"
+          mensaje="Tu trámite de Caso Especial (Otro Sí / Cesión) sobre la póliza de arrendamiento ha sido recibido. Nuestro equipo revisará la documentación y te notificará sobre la continuidad de la protección de tu inmueble arrendado en un plazo máximo de 48 horas."
+          textoVolver="Volver al Inicio →"
+          [tarjetas]="tarjetasCasoEspecial"
+          (volver)="finalizar()"
+        />
+      }
+    </div>
+  }
+
+  <!-- ══════════════════ FLUJO B — CORRECCIÓN DE DOCUMENTOS ══════════════════ -->
+  @if (flujo() === 'correccion') {
+    <div class="flujo-correccion">
+      <app-stepper
+        [pasos]="pasosCorreccion"
+        [pasoActivo]="subPaso() === 'documentacion' ? 0 : (subPaso() === 'observaciones' ? 1 : 2)"
+      />
+
+      <!-- Sub-paso 1: Subir documento corregido -->
+      @if (subPaso() === 'documentacion') {
+        <div class="flujo-correccion__contenido">
+          <app-alert-banner
+            variante="error"
+            titulo="Cédula de Identidad - Ilegible"
+          >
+            La imagen cargada anteriormente no cumple con los requisitos de legibilidad. Por favor,
+            sube una nueva imagen clara y sin recortes.
+          </app-alert-banner>
+
+          <h2 class="flujo-correccion__titulo">
+            Subir Documento Corregido para tu Póliza de Arrendamiento
+          </h2>
+          <p class="flujo-correccion__descripcion">
+            Selecciona o arrastra el documento corregido para continuar con la renovación de tu
+            póliza de arrendamiento. Se aceptan formatos JPG, PNG y PDF con un tamaño máximo de 5MB.
+          </p>
+
+          <app-doc-uploader
+            [reglas]="reglaCorreccion"
+            [cargados]="cargadosCorreccion"
+            (archivoSeleccionado)="onArchivoSeleccionado($event)"
+          />
+
+          <div class="flujo-correccion__acciones">
+            <button type="button" class="btn btn--outline" (click)="volverAOpciones()">
+              ← Cancelar trámite
+            </button>
+            <button
+              type="button"
+              class="btn btn--primary"
+              [disabled]="!hayArchivo"
+              (click)="continuarCorreccionPaso2()"
+            >
+              Continuar a Paso 2 →
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Sub-paso 2: Observaciones de corrección -->
+      @if (subPaso() === 'observaciones') {
+        <div class="flujo-correccion__contenido">
+          <p class="flujo-correccion__instruccion">
+            Paso 2: Describe detalladamente los cambios realizados en la documentación de tu póliza
+            de arrendamiento para agilizar el proceso de validación.
+          </p>
+
+          <div class="flujo-correccion__grid">
+            <!-- Izquierda: Resumen del trámite -->
+            <div class="resumen-tramite">
+              <h3 class="resumen-tramite__titulo">Resumen del Trámite de Póliza de Arrendamiento</h3>
+
+              <div class="resumen-tramite__items">
+                <div class="resumen-tramite__item">
+                  <span class="resumen-tramite__label">Referencia</span>
+                  <span class="resumen-tramite__valor">#PR-2025-0892</span>
+                </div>
+                <div class="resumen-tramite__item">
+                  <span class="resumen-tramite__label">Documento</span>
+                  <span class="resumen-tramite__valor">Identificación Oficial</span>
+                </div>
+                <div class="resumen-tramite__item">
+                  <span class="resumen-tramite__label">Motivo de corrección</span>
+                  <span class="resumen-tramite__valor resumen-tramite__valor--error">
+                    Baja legibilidad / Imagen borrosa
+                  </span>
+                </div>
+              </div>
+
+              <div class="resumen-tramite__archivo">
+                <div class="resumen-tramite__archivo-icon" aria-hidden="true">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5" />
+                    <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5" />
+                  </svg>
+                </div>
+                <div class="resumen-tramite__archivo-info">
+                  <span class="resumen-tramite__archivo-nombre">{{ archivoNombre() }}</span>
+                  <span class="resumen-tramite__archivo-estado">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.15" />
+                      <path d="M5 8L7 10L11 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    Nuevo archivo subido
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Derecha: Observaciones -->
+            <div class="obs-correccion">
+              <h3 class="obs-correccion__titulo">
+                Observaciones sobre la corrección de documentos de tu póliza
+              </h3>
+
+              <label class="obs-correccion__label" for="obs-correccion">
+                Describe los cambios realizados
+              </label>
+              <textarea
+                id="obs-correccion"
+                rows="6"
+                [maxlength]="maxCaracteresCorreccion"
+                [ngModel]="observacionesCorreccion()"
+                (ngModelChange)="observacionesCorreccion.set($event)"
+                placeholder="Ej: He subido una nueva fotografía con iluminación natural para mejorar la legibilidad de la fecha de expiración."
+                class="obs-correccion__textarea"
+              ></textarea>
+
+              <span class="obs-correccion__contador">
+                {{ caracteresCorreccion }}/{{ maxCaracteresCorreccion }}
+              </span>
+
+              <div class="obs-correccion__tip">
+                <p class="obs-correccion__tip-texto">
+                  Recuerda que una descripción clara ayuda a nuestros analistas a procesar tu
+                  solicitud de renovación de póliza de arrendamiento un 40% más rápido.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flujo-correccion__acciones">
+            <button type="button" class="btn btn--outline" (click)="volverCorreccionPaso1()">
+              ← Volver al Paso 1
+            </button>
+            <button type="button" class="btn btn--primary" (click)="enviarCorreccion()">
+              Enviar Corrección ▷
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Sub-paso 3: Confirmación de identidad (SARLAFT) -->
+      @if (subPaso() === 'sarlaft') {
+        <div class="flujo-correccion__sarlaft">
+          @if (estadoSarlaft() === 'validando') {
+            <app-escalerita-loader texto="Validando SARLAFT..." />
+          } @else {
+            <div class="sarlaft-exito">
+              <div class="sarlaft-exito__icon" aria-hidden="true">
+                <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                  <circle cx="28" cy="28" r="28" fill="var(--color-badge-success-bg)" />
+                  <path d="M20 28L26 34L37 22" stroke="var(--color-success)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h2 class="sarlaft-exito__titulo">Validación SARLAFT completada</h2>
+              <p class="sarlaft-exito__texto">
+                La identidad fue verificada correctamente. Continúa para finalizar el envío de tu
+                corrección de documentos.
+              </p>
+              <button type="button" class="btn btn--primary" (click)="continuarExitoCorreccion()">
+                Continuar →
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Sub-paso: Pantalla de éxito -->
+      @if (subPaso() === 'exito') {
+        <div class="correccion-enviada">
+          <div class="correccion-enviada__icon" aria-hidden="true">
+            <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+              <circle cx="36" cy="36" r="36" fill="var(--color-badge-success-bg)" />
+              <path d="M28 36L34 42L44 30" stroke="var(--color-success)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+
+          <h1 class="correccion-enviada__titulo">Corrección de Póliza de Arrendamiento Enviada</h1>
+          <h2 class="correccion-enviada__subtitulo">¡Documento Enviado con Éxito!</h2>
+
+          <p class="correccion-enviada__descripcion">
+            Tu documento corregido para la renovación de tu póliza de arrendamiento ha sido recibido
+            correctamente y se encuentra actualmente en fase de revisión por nuestro equipo técnico
+            especializado en protección de inmuebles arrendados.
+          </p>
+
+          <div class="correccion-enviada__info-card">
+            <div class="correccion-enviada__info-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <p class="correccion-enviada__info-texto">
+              Te enviaremos una notificación a tu correo electrónico una vez validada la
+              documentación de tu póliza de arrendamiento.
+            </p>
+          </div>
+
+          <button type="button" class="btn btn--primary" (click)="finalizar()">
+            Volver al Inicio →
+          </button>
+
+          <p class="correccion-enviada__soporte">
+            ¿Tienes dudas sobre la corrección de tu póliza de arrendamiento?
+            <a class="correccion-enviada__soporte-link" role="button" tabindex="0">
+              Comunícate con nuestro soporte especializado en renovaciones
+            </a>
+          </p>
+        </div>
+      }
+    </div>
+  }
+</section>

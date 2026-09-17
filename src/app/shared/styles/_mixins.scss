@@ -1,0 +1,40 @@
+// =============================================================================
+// Design Tokens — Mixins de apoyo (breakpoints responsivos)
+// Portal de Autogestión de Brokers — Proyectiva (Seguros Bolívar — El Libertador)
+//
+// Mixins que consumen el mapa $breakpoints definido en _tokens.scss para escribir
+// media queries sin valores hardcodeados (Estrategia responsiva, Req 25, 37).
+// Los breakpoints son la fuente única: desktop ≥1024px, tablet 640–1023px,
+// móvil <640px. Ningún componente debe declarar anchos de breakpoint literales.
+//
+// Uso:
+//   @use 'app/shared/styles/mixins' as mx;
+//   .grid { @include mx.respond-to('mobile') { grid-template-columns: 1fr; } }
+//
+// _Requirements: 25.1, 25.3, 25.4, 37.8, 37.11
+// =============================================================================
+
+@use 'sass:map';
+@use 'tokens' as tokens;
+
+// -----------------------------------------------------------------------------
+// respond-to: aplica el contenido dentro de la media query del breakpoint dado.
+// Nombres soportados: 'mobile' (<640px), 'tablet' (640–1023px), 'desktop' (≥1024px).
+// -----------------------------------------------------------------------------
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == 'mobile' {
+    @media (max-width: map.get(tokens.$breakpoints, 'mobile-max')) {
+      @content;
+    }
+  } @else if $breakpoint == 'tablet' {
+    @media (min-width: map.get(tokens.$breakpoints, 'tablet-min')) and (max-width: map.get(tokens.$breakpoints, 'tablet-max')) {
+      @content;
+    }
+  } @else if $breakpoint == 'desktop' {
+    @media (min-width: map.get(tokens.$breakpoints, 'desktop-min')) {
+      @content;
+    }
+  } @else {
+    @error 'Breakpoint no soportado: #{$breakpoint}. Use mobile, tablet o desktop.';
+  }
+}

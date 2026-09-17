@@ -1,0 +1,20 @@
+<div class="field" [class.field--invalido]="!!error">
+  @if (label) {
+    <label class="field-label" [attr.for]="controlId">
+      {{ label }}
+      @if (requerido) {
+        <span class="field-obligatorio" aria-hidden="true">*</span>
+      }
+    </label>
+  }
+
+  <div class="field-control">
+    <ng-content></ng-content>
+  </div>
+
+  @if (error) {
+    <p class="field-error" [id]="errorId" role="alert">{{ error }}</p>
+  } @else if (ayuda) {
+    <p class="field-ayuda" [id]="ayudaId">{{ ayuda }}</p>
+  }
+</div>

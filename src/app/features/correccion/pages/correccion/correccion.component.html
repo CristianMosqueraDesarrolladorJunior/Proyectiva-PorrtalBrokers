@@ -1,0 +1,99 @@
+<section class="correccion" aria-labelledby="correccion-titulo">
+  <header class="correccion-header">
+    <h1 id="correccion-titulo" class="correccion-titulo">Corrección de documentos</h1>
+    <p class="correccion-subtitulo">
+      Sube el documento corregido con tus observaciones para subsanar la observación
+      previa y agilizar el trámite.
+    </p>
+  </header>
+
+  <!-- Indicador de pasos (Req 32.1) -->
+  <app-stepper [pasos]="pasos" [pasoActivo]="pasoActual()"></app-stepper>
+
+  <!-- Resumen del trámite: referencia, documento y motivo de corrección (Req 32.1) -->
+  <div class="correccion-resumen" aria-label="Resumen del trámite">
+    <div class="resumen-fila">
+      <span class="resumen-label">Referencia</span>
+      <span class="resumen-valor">{{ referencia() || '—' }}</span>
+    </div>
+    <div class="resumen-fila">
+      <span class="resumen-label">Documento</span>
+      <span class="resumen-valor">{{ documentoObservado() || '—' }}</span>
+    </div>
+    <div class="resumen-fila">
+      <span class="resumen-label">Motivo de corrección</span>
+      <span class="resumen-valor">{{ motivoCorreccion() || '—' }}</span>
+    </div>
+  </div>
+
+  @if (errorMensaje(); as error) {
+    <app-alert-banner variante="error" titulo="No se pudo continuar">
+      {{ error }}
+    </app-alert-banner>
+  }
+
+  <!-- Paso 1: Subir documento corregido (Req 32.2, 32.3) -->
+  @if (pasoActual() === pasoSubir) {
+    <div class="correccion-paso">
+      <h2 class="correccion-subtitulo-seccion">Documento corregido</h2>
+      <app-doc-uploader
+        [reglas]="[reglaDocumento]"
+        [cargados]="archivosCargados()"
+        (archivoSeleccionado)="onArchivo($event)"
+      ></app-doc-uploader>
+
+      <div class="correccion-acciones">
+        <app-boton
+          variante="primary"
+          [disabled]="!documentoCargado()"
+          (clicked)="avanzarAObservaciones()"
+        >
+          Continuar
+        </app-boton>
+      </div>
+    </div>
+  }
+
+  <!-- Paso 2: Observaciones adicionales (Req 32.4) -->
+  @if (pasoActual() === pasoObservaciones) {
+    <div class="correccion-paso">
+      <h2 class="correccion-subtitulo-seccion">Observaciones</h2>
+      <app-form-field
+        label="Observaciones adicionales"
+        ayuda="Opcional. Describe los cambios realizados en el documento."
+        controlId="correccion-observaciones"
+      >
+        <textarea
+          id="correccion-observaciones"
+          rows="4"
+          [ngModel]="observaciones()"
+          (ngModelChange)="observaciones.set($event)"
+        ></textarea>
+      </app-form-field>
+
+      <div class="correccion-acciones">
+        <app-boton variante="back" (clicked)="volverASubirDocumento()">
+          Volver
+        </app-boton>
+        <app-boton
+          variante="primary"
+          [disabled]="!envioHabilitado() || enviando()"
+          (clicked)="enviar()"
+        >
+          {{ enviando() ? 'Enviando…' : 'Enviar corrección' }}
+        </app-boton>
+      </div>
+    </div>
+  }
+
+  <!-- Paso 3: Confirmación con radicado y tiempo estimado (Req 32.6) -->
+  @if (pasoActual() === pasoConfirmacion && envioExitoso()) {
+    <app-success-screen
+      titulo="¡Corrección enviada!"
+      mensaje="Tu documento corregido fue registrado correctamente. El equipo revisará el trámite en el tiempo estimado."
+      [tarjetas]="tarjetasConfirmacion()"
+      textoVolver="Registrar otra corrección"
+      (volver)="nuevaCorreccion()"
+    ></app-success-screen>
+  }
+</section>
