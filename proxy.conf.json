@@ -1,0 +1,9 @@
+{
+  "comment": "Proxy de desarrollo para `ng serve`. Redirige las llamadas del front (/api/v1/...) al backend local. El host se puede sobrescribir con la variable de entorno API_PROXY_TARGET (p. ej. para apuntar a un backend en Docker). Por defecto apunta al backend en http://localhost:8080.",
+  "/api": {
+    "target": "http://localhost:8080",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

@@ -1,0 +1,18 @@
+# Artefactos y dependencias que NO deben entrar al contexto de build de Docker.
+node_modules
+dist
+.angular
+.git
+.vscode
+.idea
+coverage
+graphify-out
+src/graphify-out
+build-log.txt
+*.log
+
+# .npmrc del repo apunta al JFrog institucional (placeholder <jfrog-host>) y
+# rompería `npm ci` en un build local sin acceso a ese registro. Se excluye para
+# que el build en Docker use el registro npm por defecto. En CI corporativo se
+# inyecta un .npmrc válido con credenciales por variable de entorno.
+.npmrc

@@ -1,0 +1,23 @@
+# Levanta el frontend (Angular + Nginx) en Docker con reverse-proxy de /api al backend.
+#
+# El destino del backend es configurable con la variable BACKEND_URL:
+#   - Backend corriendo en el host (fuera de Docker):   http://host.docker.internal:8080  (por defecto)
+#   - Backend en otro contenedor de la misma red:        http://backend:8080
+#
+# Uso:
+#   docker compose up --build
+#   (o con backend propio)  BACKEND_URL=http://backend:8080 docker compose up --build
+#
+# El portal queda en http://localhost:4200
+services:
+  front:
+    build:
+      context: .
+    container_name: portal-brokers-front
+    ports:
+      - "4200:8080"
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8080}
+    # Necesario en Linux para resolver host.docker.internal hacia el host.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

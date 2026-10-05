@@ -7,6 +7,10 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 
 ## [No publicado]
 
+### Agregado
+- Se dockerizó el frontend: `Dockerfile` multi-stage (build Angular con Node 20 + Nginx) que sirve el SPA y hace de reverse-proxy de `/api` hacia el backend. El destino del backend es configurable por la variable `BACKEND_URL` (resuelta en el arranque con `envsubst` desde `nginx.conf.template` vía `docker-entrypoint.sh`), sin reconstruir la imagen. Se añadió `docker-compose.yml` del front (expone el portal en `http://localhost:4200`) y `.dockerignore`.
+- Se agregó `proxy.conf.json` para desarrollo con `ng serve` (redirige `/api` al backend en `http://localhost:8080`); `npm start` ahora usa este proxy.
+
 ### Eliminado
 - Se eliminaron los mocks base del frontend para conectar el portal al backend real: el interceptor `mockBackendInterceptor` (y su registro en `app.config.ts`), el motor `agente-mock.engine.ts` y su test, los datos `mock-data/admin-cartera.json`, el script `scripts/generar-mock-admin.mjs` y el asset glob `/mock` de `angular.json`. También se quitó el bypass de desarrollo (`isDevMode()`) del login y las credenciales demo del `LoginComponent`.
 
