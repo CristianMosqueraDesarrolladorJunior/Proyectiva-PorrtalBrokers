@@ -22,6 +22,8 @@
 
 import {
   documentosRequeridosRadicacion,
+  type EstadoSarlaftRadicacion,
+  type SujetoSarlaft,
   type TipoDocumentoIdentidad,
   type TipoDocumentoRadicacion,
   type TipoPersona,
@@ -182,4 +184,93 @@ export function etiquetasDocumentos(
   tipos: readonly TipoDocumentoRadicacion[],
 ): readonly string[] {
   return tipos.map((tipo) => ETIQUETA_DOCUMENTO_RADICACION[tipo]);
+}
+
+// --- Paso 4: Validación SARLAFT (3 salidas del flujo de radicación) ---------
+
+/** Pasos del stepper de la radicación, alineados al flujo 02. */
+export const PASOS_RADICACION: readonly string[] = [
+  'Datos y estudio',
+  'Firmante',
+  'SARLAFT',
+  'Documentos',
+  'Envío',
+];
+
+/** Etiqueta del estado SARLAFT para el checklist lateral. */
+export const ETIQUETA_ESTADO_SARLAFT: Readonly<Record<EstadoSarlaftRadicacion, string>> = {
+  actualizado: 'Actualizado',
+  desactualizado: 'Pendiente de actualizar',
+  consultable: 'Consultable',
+};
+
+/** Tipos de documento del apoderado: siempre persona natural (sin NIT). */
+export const TIPOS_DOCUMENTO_APODERADO: readonly TipoDocumentoIdentidad[] = ['CC', 'CE', 'PA'];
+
+/**
+ * A quién se consulta SARLAFT en la radicación: si firma un apoderado, al
+ * apoderado; si no, al propietario. Función pura y total.
+ */
+export function sujetoSarlaft(firmaApoderado: boolean): SujetoSarlaft {
+  return firmaApoderado ? 'apoderado' : 'propietario';
+}
+
+/**
+ * Indica si ya hay datos suficientes para consultar SARLAFT: datos del
+ * propietario y estudio válidos y, en el caso apoderado, su número de documento
+ * válido. Función pura y total.
+ */
+export function puedeConsultarSarlaftRadicacion(
+  datosValidos: boolean,
+  firmaApoderado: boolean,
+  numeroDocumentoApoderado: string,
+): boolean {
+  if (!datosValidos) {
+    return false;
+  }
+  return !firmaApoderado || esNumeroDocumentoPropietarioValido(numeroDocumentoApoderado.trim());
+}
+
+/**
+ * Clave que identifica a quién se consultó en SARLAFT. Si el broker cambia el
+ * firmante, el tipo/número de documento consultado o el tipo de persona, el
+ * resultado anterior deja de aplicar y hay que volver a consultar.
+ * Función pura y total.
+ */
+export function claveConsultaSarlaft(
+  sujeto: SujetoSarlaft,
+  tipoDocumento: TipoDocumentoIdentidad,
+  numeroDocumento: string,
+  tipoPersona: TipoPersona,
+): string {
+  return `${sujeto}|${tipoDocumento}|${numeroDocumento.trim()}|${tipoPersona}`;
+}
+
+/**
+ * Indica si la carga de documentos está habilitada: solo con SARLAFT
+ * `actualizado` (salida 1). Desactualizado espera la actualización y
+ * consultable termina el trámite en el Warehouse. Función pura y total.
+ */
+export function permiteCargarDocumentos(estado: EstadoSarlaftRadicacion | null): boolean {
+  return estado === 'actualizado';
+}
+
+/**
+ * Paso activo del stepper (0-indexado) según el avance real. Función pura y total.
+ * @param datosValidos datos del propietario y estudio válidos.
+ * @param estadoSarlaft resultado vigente de la consulta SARLAFT, o `null`.
+ * @param faltantes cantidad de documentos obligatorios pendientes.
+ */
+export function pasoActivoRadicacion(
+  datosValidos: boolean,
+  estadoSarlaft: EstadoSarlaftRadicacion | null,
+  faltantes: number,
+): number {
+  if (!datosValidos) {
+    return 0;
+  }
+  if (!permiteCargarDocumentos(estadoSarlaft)) {
+    return 2;
+  }
+  return faltantes > 0 ? 3 : 4;
 }

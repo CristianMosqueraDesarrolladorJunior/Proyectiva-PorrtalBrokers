@@ -1,0 +1,165 @@
+<section class="vista" aria-labelledby="brokers-titulo">
+  <div class="vista__cabecera">
+    <app-page-header
+      [eyebrow]="esAdmin() ? 'Consola de administración' : 'Mi cartera'"
+      tituloId="brokers-titulo"
+      [titulo]="esAdmin() ? 'Brokers' : 'Mis brokers'"
+      subtitulo="Estado de los negocios de cada broker e inmobiliaria. Toca una fila para ver el detalle."
+    ></app-page-header>
+    @if (esAdmin() && seleccionados().size > 0) {
+      <button type="button" class="btn-pri" (click)="reasignarSeleccionados()">
+        <app-icon nombre="swap_horiz" [tamano]="18" /> Reasignar {{ seleccionados().size }} seleccionado{{ seleccionados().size === 1 ? '' : 's' }}
+      </button>
+    }
+  </div>
+
+  @if (mensaje()) {
+    <p class="exito" role="status">
+      <app-icon nombre="check_circle" [tamano]="18" /> {{ mensaje() }}
+      <button type="button" class="btn-link" (click)="mensaje.set('')">Cerrar</button>
+    </p>
+  }
+
+  <div class="filtros" role="search">
+    <label class="filtros__busqueda">
+      Buscar
+      <input class="control" type="search" placeholder="Nombre, identificación o correo" [value]="busqueda()"
+        (input)="busqueda.set(valor($event)); filtrar()" />
+    </label>
+    @if (esAdmin()) {
+      <label>
+        Comercial
+        <select class="control" [value]="comercialId()" (change)="comercialId.set(valor($event)); filtrar()">
+          <option value="">Todos</option>
+          @for (c of comerciales(); track c.id) {
+            <option [value]="c.id" [selected]="c.id === comercialId()">{{ c.nombre }}</option>
+          }
+        </select>
+      </label>
+    }
+    <label>
+      Tipo
+      <select class="control" (change)="tipo.set($any(valor($event))); filtrar()">
+        <option value="">Todos</option>
+        <option value="Broker">Broker</option>
+        <option value="Inmobiliaria">Inmobiliaria</option>
+      </select>
+    </label>
+    <label>
+      Cuenta
+      <select class="control" (change)="estadoCuenta.set($any(valor($event))); filtrar()">
+        <option value="">Todas</option>
+        <option value="PROSPECTO">Prospecto</option>
+        <option value="REGISTRADO">Broker registrado</option>
+      </select>
+    </label>
+    <label class="check">
+      <input type="checkbox" [checked]="soloPendientes()" (change)="soloPendientes.set(!soloPendientes()); filtrar()" />
+      Solo con pendientes
+    </label>
+  </div>
+
+  <div class="tabla-envoltura">
+    <table class="tabla" aria-label="Brokers">
+      <thead>
+        <tr>
+          @if (esAdmin()) {
+            <th><input type="checkbox" aria-label="Seleccionar la página" [checked]="paginaSeleccionada()" (change)="seleccionarPagina($event)" /></th>
+          }
+          <th>Broker</th>
+          <th>Tipo</th>
+          <th>Cuenta</th>
+          @if (esAdmin()) { <th>Comercial</th> }
+          <th class="num">Negocios</th>
+          <th class="num">Expedidos</th>
+          <th class="num">Pendientes</th>
+          <th class="num">Prima expedida</th>
+          <th>Última radicación</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (b of resultado().items; track b.id) {
+          <tr class="fila" tabindex="0" (click)="abrirDetalle(b)" (keydown.enter)="abrirDetalle(b)">
+            @if (esAdmin()) {
+              <td (click)="$event.stopPropagation()">
+                <input type="checkbox" [attr.aria-label]="'Seleccionar ' + b.nombre" [checked]="seleccionados().has(b.id)" (change)="alternarSeleccion(b.id, $event)" />
+              </td>
+            }
+            <td><div class="principal"><b>{{ b.nombre }}</b><small>{{ b.id }}</small></div></td>
+            <td><span class="chip" [class.chip--acento]="b.tipo === 'Inmobiliaria'">{{ b.tipo }}</span></td>
+            <td>
+              <app-badge-estado [variante]="b.estadoCuenta === 'PROSPECTO' ? 'warning' : 'success'" [conPunto]="true">
+                {{ etiquetaEstadoCuenta[b.estadoCuenta] }}
+              </app-badge-estado>
+              @if (b.estadoCuenta === 'PROSPECTO') { <small class="docs-aportados">{{ b.documentosAportados }}/4 docs</small> }
+            </td>
+            @if (esAdmin()) { <td>{{ b.comercialNombre }}</td> }
+            <td class="num">{{ num(b.negocios) }}</td>
+            <td class="num">{{ num(b.expedidos) }}</td>
+            <td class="num" [class.alerta]="pendientes(b) > 0">{{ num(pendientes(b)) }}</td>
+            <td class="num">{{ copCompacto(b.primaExpedida) }}</td>
+            <td>{{ fechaCorta(b.ultimaRadicacion) }}</td>
+          </tr>
+        } @empty {
+          <tr><td class="tabla__vacia" colspan="10">No hay brokers con esos filtros.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="paginacion">
+    <span>{{ num(resultado().total) }} brokers · página {{ resultado().pagina }} de {{ totalPaginas() }}</span>
+    <div>
+      <button type="button" class="btn-sec" [disabled]="resultado().pagina <= 1" (click)="irPagina(resultado().pagina - 1)">Anterior</button>
+      <button type="button" class="btn-sec" [disabled]="resultado().pagina >= totalPaginas()" (click)="irPagina(resultado().pagina + 1)">Siguiente</button>
+    </div>
+  </div>
+</section>
+
+<app-drawer-detalle [abierto]="detalle() !== null" [titulo]="detalle()?.nombre ?? ''" [filas]="filasDetalle()" (cerrar)="detalleId.set(null)">
+  @if (detalle(); as b) {
+    <div class="detalle-acciones" acciones>
+      <button type="button" class="btn-sec" (click)="verNegocios(b.id)"><app-icon nombre="description" [tamano]="18" /> Ver todos sus negocios</button>
+      @if (esAdmin()) {
+        <button type="button" class="btn-pri" (click)="abrirReasignar([b.id])"><app-icon nombre="swap_horiz" [tamano]="18" /> Reasignar comercial</button>
+      }
+    </div>
+  }
+  @if (detalle(); as b) {
+    <div class="detalle-seccion">
+      <h4>Últimos negocios</h4>
+      <ul class="mini-lista">
+        @for (n of negociosDetalle().slice(0, 8); track n.codigo + n.fecha) {
+          <li>
+            <span><b>{{ n.codigo }}</b><small>{{ fechaCorta(n.fecha) }} · {{ n.destino || '—' }} · {{ n.ciudad || '—' }}</small></span>
+            <app-badge-estado [variante]="varianteEstado(n.estado)">{{ estadoCorto(n.estado) }}</app-badge-estado>
+          </li>
+        } @empty {
+          <li>Sin negocios registrados.</li>
+        }
+      </ul>
+    </div>
+  }
+</app-drawer-detalle>
+
+<app-modal-dialog [abierto]="modalReasignar()" titulo="Reasignar comercial" (cerrar)="modalReasignar.set(false)">
+  <div class="form">
+    <p class="aviso">
+      Vas a reasignar {{ idsAReasignar().length }} broker{{ idsAReasignar().length === 1 ? '' : 's' }}. El nuevo comercial verá
+      sus negocios en su consola; el anterior deja de verlos.
+    </p>
+    <label>
+      Nuevo comercial
+      <select class="control" (change)="destino.set(valor($event))">
+        <option value="">Selecciona…</option>
+        @for (c of comerciales(); track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
+        }
+      </select>
+    </label>
+  </div>
+  <div acciones class="acciones-modal">
+    <button type="button" class="btn-sec" (click)="modalReasignar.set(false)">Cancelar</button>
+    <button type="button" class="btn-pri" [disabled]="!destino()" (click)="confirmarReasignar()">Confirmar reasignación</button>
+  </div>
+</app-modal-dialog>

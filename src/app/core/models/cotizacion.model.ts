@@ -45,4 +45,6 @@ export interface CotizacionResult {
   readonly primaNetaTotal: number;
   readonly ivaTotal: number;
   readonly total: number;             // suma de primaNeta + iva de todos
+  /** Comisión estimada del bróker (si el backend la informa; si no, se estima en la UI). */
+  readonly comision?: number;
 }

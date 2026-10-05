@@ -4,6 +4,9 @@
     "declaration-property-value-disallowed-list": {
       "/^(font-size|font-weight|line-height|padding|padding-top|padding-right|padding-bottom|padding-left|margin|margin-top|margin-right|margin-bottom|margin-left|gap|row-gap|column-gap|border-radius|border-top-left-radius|border-top-right-radius|border-bottom-right-radius|border-bottom-left-radius|box-shadow)$/": [
         "/^(?!.*(var\\(--|\\$)).*(\\d|#|rgb|hsl|em|rem|px|%).*/"
+      ],
+      "font-size": [
+        "/var\\(--font-size-/"
       ]
     },
     "scss/dollar-variable-pattern": null,
@@ -12,7 +15,9 @@
     "selector-pseudo-element-no-unknown": [
       true,
       {
-        "ignorePseudoElements": ["ng-deep"]
+        "ignorePseudoElements": [
+          "ng-deep"
+        ]
       }
     ],
     "comment-empty-line-before": null,

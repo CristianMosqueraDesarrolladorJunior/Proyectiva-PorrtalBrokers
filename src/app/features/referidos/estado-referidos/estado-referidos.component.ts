@@ -7,12 +7,19 @@ import {
 } from '@angular/core';
 
 import {
-  CardComponent,
+  KpiCardComponent,
   DataTableComponent,
   GridLayoutComponent,
-  EscaleritaLoaderComponent,
   AlertBannerComponent,
+  PageHeaderComponent,
+  BotonComponent,
+  SkeletonComponent,
+  CalloutCardComponent,
 } from '../../../shared/components';
+import { FilterTabsComponent } from '../../../shared/components/filter-tabs/filter-tabs.component';
+import type { FilterTab } from '../../../shared/components/filter-tabs/filter-tabs.component';
+import { Router } from '@angular/router';
+import { coincideEstado } from '../referido-filtro';
 import type { ColumnaTabla } from '../../../shared/components';
 import { estadoABadge } from '../../../shared/pipes/estado-badge';
 import {
@@ -36,17 +43,50 @@ import { calcularKpisReferidos } from '../referido-kpis';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CardComponent,
+    KpiCardComponent,
     DataTableComponent,
     GridLayoutComponent,
-    EscaleritaLoaderComponent,
     AlertBannerComponent,
+    PageHeaderComponent,
+    BotonComponent,
+    SkeletonComponent,
+    CalloutCardComponent,
+    FilterTabsComponent,
   ],
   templateUrl: './estado-referidos.component.html',
   styleUrl: './estado-referidos.component.scss',
 })
 export class EstadoReferidosComponent {
   private readonly referidosService = inject(ReferidosService);
+  private readonly router = inject(Router);
+
+  /** Pestaña de estado activa ('' = todos). */
+  protected readonly estadoActivo = signal('todos');
+
+  protected readonly pestanas = computed<FilterTab[]>(() => {
+    const k = this.kpis();
+    return [
+      { id: 'todos', label: 'Todos', conteo: k.total },
+      { id: 'aceptada', label: 'Aceptadas', conteo: k.aceptadas },
+      { id: 'en proceso', label: 'En proceso', conteo: k.enProceso },
+      { id: 'rechazada', label: 'Rechazadas', conteo: k.rechazadas, color: 'error' },
+    ];
+  });
+
+  /** Tasa de conversión (aceptadas / total) para el KPI de aceptadas. */
+  protected readonly conversion = computed(() => {
+    const k = this.kpis();
+    return k.total > 0 ? `${((k.aceptadas / k.total) * 100).toFixed(1)}% conversión` : 'Sin datos';
+  });
+
+  protected readonly tasaRechazo = computed(() => {
+    const k = this.kpis();
+    return k.total > 0 ? `${((k.rechazadas / k.total) * 100).toFixed(1)}% tasa` : 'Sin datos';
+  });
+
+  protected nuevoReferido(): void {
+    void this.router.navigate(['/app/referidos']);
+  }
 
   /** Lista completa de referidos recibida del backend (Req 15.4). */
   protected readonly referidos = signal<readonly Referido[]>([]);
@@ -73,7 +113,9 @@ export class EstadoReferidosComponent {
 
   /** Filas mapeadas para el DataTable, con la variante de insignia por estado. */
   protected readonly filas = computed(() =>
-    this.referidos().map((r) => ({
+    this.referidos()
+      .filter((r) => coincideEstado(r, this.estadoActivo() === 'todos' ? undefined : this.estadoActivo()))
+      .map((r) => ({
       nombre: r.nombre,
       producto: r.producto,
       estado: r.estado,

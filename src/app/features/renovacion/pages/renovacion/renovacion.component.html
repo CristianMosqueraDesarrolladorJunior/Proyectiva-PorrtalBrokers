@@ -1,10 +1,10 @@
 <section class="renovacion" aria-labelledby="renovacion-titulo">
-  <header class="renovacion-header">
-    <h1 id="renovacion-titulo" class="renovacion-titulo">Renovación de póliza</h1>
-    <p class="renovacion-subtitulo">
-      Revisa el detalle de la póliza, elige la modalidad y completa el formulario de renovación.
-    </p>
-  </header>
+  <app-page-header
+    eyebrow="Renovaciones"
+    tituloId="renovacion-titulo"
+    titulo="Renovación de póliza"
+    subtitulo="Revisa el detalle de la póliza, elige la modalidad y completa el formulario de renovación."
+  ></app-page-header>
 
   @if (envioExitoso()) {
     <!-- Pantalla de éxito de la Renovacion (Req 21.1, 21.2) -->
@@ -17,7 +17,13 @@
     ></app-success-screen>
   } @else {
     <!-- Indicador de pasos del flujo de Renovacion (Req 18.4) -->
-    <app-stepper [pasos]="pasos" [pasoActivo]="pasoActivo()"></app-stepper>
+    <app-step-tabs
+      [pasos]="pasos"
+      [pasoActivo]="pasoActivo()"
+      [navegable]="true"
+      ariaLabel="Pasos de la renovación"
+      (pasoSeleccionado)="irAPaso($event)"
+    />
 
     <!-- Detalle de póliza: valores de referencia del último periodo facturado (Req 18.1) -->
     @if (valoresReferencia; as ref) {

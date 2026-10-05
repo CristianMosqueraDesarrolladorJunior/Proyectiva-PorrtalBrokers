@@ -72,5 +72,34 @@
         Me interesa vender pólizas
       </app-boton>
     </footer>
+
+    <!-- Acceso del equipo interno: administradores y comerciales (consola /admin). -->
+    <section class="login-interno" aria-labelledby="login-interno-titulo">
+      <button
+        type="button"
+        class="login-interno__toggle"
+        [attr.aria-expanded]="accesoInterno()"
+        aria-controls="login-interno-panel"
+        (click)="alternarAccesoInterno()"
+      >
+        <app-icon nombre="admin_panel_settings" [tamano]="20" />
+        <span id="login-interno-titulo">Consola de administración</span>
+        <app-icon class="login-interno__chevron" [nombre]="accesoInterno() ? 'expand_less' : 'expand_more'" [tamano]="20" />
+      </button>
+      @if (accesoInterno()) {
+        <div id="login-interno-panel" class="login-interno__panel">
+          <p>
+            Para administradores y comerciales de la operación. Ingresa arriba con la cédula y la clave que te
+            asignó el administrador: el portal te lleva a la consola de brokers.
+          </p>
+          @if (demoAdmin) {
+            <div class="login-interno__demo">
+              <p><b>Modo demostración</b> · Administrador: cédula <code>{{ demoAdmin.cedula }}</code> · clave <code>{{ demoAdmin.clave }}</code></p>
+              <button type="button" class="login-interno__usar" (click)="usarDemoAdmin()">Usar estas credenciales</button>
+            </div>
+          }
+        </div>
+      }
+    </section>
   </section>
 </main>

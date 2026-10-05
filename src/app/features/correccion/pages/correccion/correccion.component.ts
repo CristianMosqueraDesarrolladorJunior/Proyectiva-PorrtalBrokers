@@ -6,6 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 
 import {
   CorreccionService,
@@ -26,7 +27,7 @@ import {
   BotonComponent,
   DocUploaderComponent,
   FormFieldComponent,
-  StepperComponent,
+  StepTabsComponent,
   SuccessScreenComponent,
 } from '../../../../shared/components';
 import type {
@@ -42,6 +43,7 @@ import {
   puedeEnviarCorreccion,
 } from './correccion-presentacion';
 
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 /** Identificador del documento corregido dentro del uploader (Req 32.2). */
 const ID_DOCUMENTO_CORREGIDO = 'documentoCorregido';
 
@@ -61,7 +63,7 @@ type EstadoEnvioCorreccion = 'inactivo' | 'enviando' | 'exito';
 /**
  * CorreccionComponent — Flujo de Corrección de Documentos de 3 pasos (Req 32).
  *
- * Presenta un `StepperComponent` de 3 pasos (Subir documento → Observaciones →
+ * Presenta un `StepTabsComponent` de 3 pasos (Subir documento → Observaciones →
  * Confirmación) y el resumen del trámite (referencia, documento y motivo de
  * corrección) (Req 32.1). El paso 1 ofrece una zona de carga con
  * `DocUploaderComponent` que acepta PDF/JPG/PNG (Req 32.2) y valida MIME/tamaño con
@@ -81,9 +83,9 @@ type EstadoEnvioCorreccion = 'inactivo' | 'enviando' | 'exito';
   selector: 'app-correccion',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [PageHeaderComponent, 
     FormsModule,
-    StepperComponent,
+    StepTabsComponent,
     DocUploaderComponent,
     FormFieldComponent,
     BotonComponent,
@@ -95,6 +97,18 @@ type EstadoEnvioCorreccion = 'inactivo' | 'enviando' | 'exito';
 })
 export class CorreccionComponent {
   private readonly correccionService = inject(CorreccionService);
+  private readonly route = inject(ActivatedRoute);
+
+  constructor() {
+    // La referencia del trámite a corregir llega desde Seguimiento (Detalle_Solicitud en estado
+    // "observada") como query param ?referencia=... Si no viene, el flujo queda sin precargar.
+    const refParam = this.route.snapshot.queryParamMap.get('referencia');
+    if (refParam && refParam.trim().length > 0) {
+      this.referencia.set(refParam.trim());
+      this.documentoObservado.set('Documentos observados del trámite');
+      this.motivoCorreccion.set('Actualización de documentos solicitada en la revisión');
+    }
+  }
 
   /** Etiquetas de los pasos del stepper (Req 32.1). */
   protected readonly pasos = PASOS_CORRECCION;
@@ -116,6 +130,9 @@ export class CorreccionComponent {
   // --- Paso 1: documento corregido (Req 32.2, 32.3) ---
   /** Documento corregido cargado y validado; `null` mientras no haya carga válida. */
   private readonly documentoCorregido = signal<DocumentoCargado | null>(null);
+
+  /** Archivo real del documento corregido (para el envío multipart al backend). */
+  private readonly archivoCorregido = signal<File | null>(null);
 
   /** Nombres de archivo cargados, indexados por id, para el uploader (Req 35.7). */
   protected readonly archivosCargados = signal<Readonly<Record<string, string>>>({});
@@ -184,6 +201,7 @@ export class CorreccionComponent {
 
     if (!resultado.valido) {
       this.documentoCorregido.set(null);
+      this.archivoCorregido.set(null);
       this.archivosCargados.set({});
       this.errorMensaje.set(
         'El documento corregido debe ser PDF, JPG o PNG y no superar 10 MB.',
@@ -193,6 +211,7 @@ export class CorreccionComponent {
 
     this.errorMensaje.set('');
     this.documentoCorregido.set(documento);
+    this.archivoCorregido.set(evento.archivo);
     this.archivosCargados.set({ [ID_DOCUMENTO_CORREGIDO]: documento.nombre });
   }
 
@@ -210,6 +229,13 @@ export class CorreccionComponent {
   }
 
   /** Regresa del paso "Observaciones" al paso "Subir documento" (Req 32.1). */
+  /** Vuelve al paso de subir documento desde las pestañas (solo antes de enviar). */
+  protected irAPaso(indice: number): void {
+    if (indice === PASO_SUBIR_DOCUMENTO && this.pasoActual() === PASO_OBSERVACIONES) {
+      this.volverASubirDocumento();
+    }
+  }
+
   protected volverASubirDocumento(): void {
     this.errorMensaje.set('');
     this.pasoActual.set(PASO_SUBIR_DOCUMENTO);
@@ -221,8 +247,13 @@ export class CorreccionComponent {
    */
   protected enviar(): void {
     const documento = this.documentoCorregido();
-    if (documento === null || !this.envioHabilitado()) {
+    const archivo = this.archivoCorregido();
+    if (documento === null || archivo === null || !this.envioHabilitado()) {
       this.errorMensaje.set('Debes cargar el documento corregido antes de enviar.');
+      return;
+    }
+    if (this.referencia().trim().length === 0) {
+      this.errorMensaje.set('No hay un trámite asociado a esta corrección.');
       return;
     }
     this.errorMensaje.set('');
@@ -230,7 +261,7 @@ export class CorreccionComponent {
     const observacionesTexto = this.observaciones().trim();
     const request: CorreccionRequest = {
       referencia: this.referencia(),
-      documentoCorregido: documento,
+      archivo,
       ...(observacionesTexto.length > 0 ? { observaciones: observacionesTexto } : {}),
     };
 
@@ -253,6 +284,7 @@ export class CorreccionComponent {
   /** Reinicia el flujo para registrar una nueva corrección tras la confirmación (Req 32.6). */
   protected nuevaCorreccion(): void {
     this.documentoCorregido.set(null);
+    this.archivoCorregido.set(null);
     this.archivosCargados.set({});
     this.observaciones.set('');
     this.confirmacion.set(null);

@@ -17,13 +17,13 @@
 .info-panel-titulo {
   margin: var(--space-0);
   margin-bottom: var(--space-3);
-  font-size: var(--font-size-3md);
+  font-size: var(--text-body-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
 }
 
 .info-panel-cuerpo {
-  font-size: var(--font-size-3sm);
+  font-size: var(--text-body-sm);
   color: var(--color-muted);
   line-height: var(--line-height-normal);
 }

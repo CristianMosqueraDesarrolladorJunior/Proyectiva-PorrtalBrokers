@@ -12,6 +12,8 @@ import {
   CotizacionResult,
 } from '../../../../core/models/cotizacion.model';
 
+import { formatearCop } from '../../../../shared/util/moneda';
+import { NOTA_TASAS } from '../../cotizador-catalogo';
 /**
  * Descripción de una columna del desglose de la Cotizacion (Req 8.1).
  * `key` identifica el campo del `ConceptoCotizacion`; `header` es la etiqueta visible.
@@ -63,6 +65,12 @@ export class CotizadorResultadoComponent {
    * evitar solicitudes duplicadas (Req 9.1).
    */
   @Input() descargandoPdf = false;
+
+  /** Oculta la barra de acciones cuando la pantalla anfitriona ya las ofrece (panel lateral). */
+  @Input() mostrarAcciones = true;
+
+  /** Nota informativa de tasas bajo el desglose (prototipo). */
+  protected readonly notaTasas = NOTA_TASAS;
 
   /** Emite la intención de descargar el PDF de la Cotizacion calculada (Req 9.1). */
   @Output() descargarPdf = new EventEmitter<void>();
@@ -142,11 +150,7 @@ export class CotizadorResultadoComponent {
 
   /** Formatea un importe como pesos colombianos sin decimales. */
   protected formatearMoneda(valor: number): string {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      maximumFractionDigits: 0,
-    }).format(valor);
+    return formatearCop(valor);
   }
 
   /** Formatea la tasa (p. ej. 3.5) como porcentaje "3.5%". */

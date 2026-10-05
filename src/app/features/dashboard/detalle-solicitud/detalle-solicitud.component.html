@@ -20,5 +20,25 @@
       <h4 class="detalle-solicitud__timeline-titulo">Avance del trámite</h4>
       <app-timeline [hitos]="hitos()"></app-timeline>
     </section>
+
+    @if (puedeCorregir()) {
+      <!--
+        Gestión de corrección: la solicitud está "observada" (la revisión pidió actualizar
+        documentos). Permite ir al flujo de Corrección de Documentos con la referencia precargada.
+      -->
+      <section class="detalle-solicitud__gestion" aria-label="Gestión de corrección">
+        <p class="detalle-solicitud__gestion-aviso">
+          Esta solicitud requiere actualización de documentos.
+        </p>
+        <app-boton
+          icono="upload_file"
+          variante="primary"
+          ariaLabel="Actualizar documentos de la solicitud"
+          (clicked)="gestionarCorreccion()"
+        >
+          Actualizar documentos
+        </app-boton>
+      </section>
+    }
   }
 </app-drawer-detalle>

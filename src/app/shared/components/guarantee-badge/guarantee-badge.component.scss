@@ -1,0 +1,35 @@
+// GuaranteeBadge — pill con ícono (stitch). 100% tokenizado.
+
+:host {
+  display: inline-flex;
+}
+
+.guarantee-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-sm);
+
+  &--tertiary {
+    background: var(--color-badge-success-bg);
+    color: var(--color-badge-success-text);
+  }
+
+  &--secondary {
+    background: var(--color-badge-info-bg);
+    color: var(--color-badge-info-text);
+  }
+
+  &--primary {
+    background: var(--color-accent-light);
+    color: var(--color-accent-hover);
+  }
+
+  &__texto {
+    line-height: var(--line-height-tight);
+  }
+}

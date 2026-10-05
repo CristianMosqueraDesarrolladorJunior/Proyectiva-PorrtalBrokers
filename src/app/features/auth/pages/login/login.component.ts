@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, isDevMode, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormControl,
@@ -8,8 +8,10 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { BotonComponent, FormFieldComponent } from '../../../../shared/components';
+import { BotonComponent, FormFieldComponent, IconComponent } from '../../../../shared/components';
 import { AuthService } from '../../../../core/services/auth.service';
+import { rutaInicio } from '../../../../core/guards/rol.guard';
+import { ADMIN_DEMO } from '../../../../core/services/admin.service';
 import { LoginRequest } from '../../../../core/models/broker.model';
 import {
   CEDULA_LONGITUD_MAX,
@@ -21,9 +23,6 @@ import {
 
 /** Ruta del formulario de Solicitud_Registro_Broker (Req 1.8, 2.1, 2.2). */
 const RUTA_REGISTRO_BROKER = '/registro-broker';
-
-/** Ruta del Shell_Aplicacion autenticado a la que se navega tras un login exitoso (Req 1.1). */
-const RUTA_SHELL = '/app';
 
 /**
  * Mensaje de error genérico de credenciales inválidas (Req 1.2, 1.3).
@@ -54,7 +53,7 @@ interface FormularioLogin {
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, FormFieldComponent, BotonComponent],
+  imports: [ReactiveFormsModule, FormFieldComponent, BotonComponent, IconComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -148,9 +147,10 @@ export class LoginComponent {
       .login(credenciales)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: (perfil) => {
           this.enviando.set(false);
-          void this.router.navigate([RUTA_SHELL]);
+          // Broker → /app; Administrador y Comercial → consola /admin.
+          void this.router.navigate([rutaInicio(perfil?.rol)]);
         },
         error: () => {
           this.enviando.set(false);
@@ -160,6 +160,25 @@ export class LoginComponent {
   }
 
   /** Navega al formulario de Solicitud_Registro_Broker (Req 1.8, 2.1, 2.2). */
+  /** Muestra el acceso del equipo interno (consola de administración). */
+  protected readonly accesoInterno = signal(false);
+
+  /** Credenciales de demostración: solo existen en desarrollo. */
+  protected readonly demoAdmin = isDevMode() ? ADMIN_DEMO : null;
+
+  protected alternarAccesoInterno(): void {
+    this.accesoInterno.update((v) => !v);
+  }
+
+  /** Llena el formulario con el administrador de demostración (solo desarrollo). */
+  protected usarDemoAdmin(): void {
+    if (!this.demoAdmin) {
+      return;
+    }
+    this.formulario.setValue({ cedula: this.demoAdmin.cedula, password: this.demoAdmin.clave });
+    this.formulario.markAllAsTouched();
+  }
+
   protected irARegistro(): void {
     void this.router.navigate([RUTA_REGISTRO_BROKER]);
   }

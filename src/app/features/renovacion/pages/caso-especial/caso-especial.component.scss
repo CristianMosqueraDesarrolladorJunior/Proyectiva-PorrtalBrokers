@@ -22,14 +22,14 @@
 }
 
 .caso-especial-titulo {
-  font-size: var(--font-size-h1-seccion);
+  font-size: var(--text-heading);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   margin: var(--space-0);
 }
 
 .caso-especial-subtitulo {
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   color: var(--color-muted);
   line-height: var(--line-height-normal);
   margin: var(--space-0);

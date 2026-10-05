@@ -1,8 +1,10 @@
 <section class="calendario" aria-labelledby="calendario-titulo">
-  <header class="calendario__header">
-    <h1 id="calendario-titulo" class="calendario__titulo">Calendario</h1>
-    <p class="calendario__intro">Visualiza eventos y vencimientos de pólizas.</p>
-  </header>
+  <app-page-header
+    eyebrow="Agenda"
+    tituloId="calendario-titulo"
+    titulo="Calendario"
+    subtitulo="Visualiza eventos y vencimientos de pólizas."
+  ></app-page-header>
 
   <div class="calendar-wrapper">
     <div class="cal-header">
@@ -65,7 +67,7 @@
         <small>{{ evento.vence }}</small>
         @if (evento.gestionable) {
           <button type="button" class="event-card__btn" (click)="gestionar()">
-            Gestionar →
+            Gestionar
           </button>
         }
       </div>

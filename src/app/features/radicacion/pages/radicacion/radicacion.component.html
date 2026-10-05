@@ -1,191 +1,389 @@
+<!--
+  Radicación (Req 10–13) — rediseño "Proyectiva Broker Nexus".
+  Stepper de avance, secciones numeradas (app-form-section-card), checklist lateral
+  en vivo (app-summary-card) y barra de acciones (app-sticky-actions).
+-->
 <section class="radicacion" aria-labelledby="radicacion-titulo">
-  <header class="radicacion-header">
-    <h1 id="radicacion-titulo" class="radicacion-titulo">Nueva radicación de póliza</h1>
-    <p class="radicacion-subtitulo">
-      Sube los documentos requeridos para procesar la póliza.
-    </p>
-  </header>
+  <app-page-header
+    eyebrow="Nueva radicación"
+    tituloId="radicacion-titulo"
+    titulo="Nueva radicación de póliza"
+    subtitulo="Completa los datos y sube los documentos requeridos para procesar y emitir la póliza sin fricciones."
+  ></app-page-header>
 
   @if (radicado(); as numeroRadicado) {
     <app-alert-banner variante="success" titulo="Radicación registrada">
       Tu radicación fue enviada correctamente con el radicado
       <strong>{{ numeroRadicado }}</strong>. El equipo revisará la documentación.
     </app-alert-banner>
+  } @else if (casoConsultable()) {
+    <!-- Salida 3 de SARLAFT: consultable -> el caso baja al Warehouse y termina aquí. -->
+    <app-step-tabs [pasos]="pasos" [pasoActivo]="pasoActivo()" ariaLabel="Pasos de la radicación" />
+    @if (casoConsultable(); as caso) {
+    <div class="rad-sarlaft-fin">
+      <app-alert-banner variante="error" titulo="SARLAFT consultable: el caso pasa a revisión" icono="policy">
+        {{ caso.mensaje }}
+        @if (caso.radicado) {
+          <span class="rad-sarlaft-fin__radicado">Radicado: <strong>{{ caso.radicado }}</strong></span>
+        }
+      </app-alert-banner>
+      <app-info-box icono="info">
+        La radicación no continúa en el portal. Cumplimiento revisará el caso y el
+        estado quedará visible en Seguimiento. La emisión, si procede, la realiza Operación.
+      </app-info-box>
+      <div class="rad-sarlaft-acciones">
+        <app-boton variante="accent" (clicked)="salir()">Ir a Seguimiento</app-boton>
+        <app-boton variante="ghost" (clicked)="corregirDatosSarlaft()">Corregir datos del {{ etiquetaSujetoSarlaft() }}</app-boton>
+      </div>
+    </div>
+    }
   } @else {
-    <div class="form-card">
-      <!-- 1. Datos del propietario (Req 10.1) -->
-      <div class="rad-seccion">
-        <h4 class="rad-seccion-titulo">Datos del propietario</h4>
-        <div class="rad-form-grid">
-          <app-form-field
-            label="Tipo de documento"
-            [requerido]="true"
-            controlId="rad-tipo-doc"
-          >
-            <select
-              id="rad-tipo-doc"
-              [ngModel]="tipoDocumentoPropietario()"
-              (ngModelChange)="tipoDocumentoPropietario.set($event)"
-              aria-label="Tipo de documento del propietario"
-            >
-              @for (tipo of tiposDocumento; track tipo) {
-                <option [value]="tipo">{{ etiquetaTipoDocumento[tipo] }}</option>
-              }
-            </select>
-          </app-form-field>
+    <app-step-tabs [pasos]="pasos" [pasoActivo]="pasoActivo()" ariaLabel="Pasos de la radicación" />
 
+    <div class="radicacion__layout">
+      <div class="radicacion__principal">
+        <app-form-section-card
+          [numero]="1"
+          icono="person"
+          titulo="Datos del propietario"
+          subtitulo="Información del titular legal del inmueble."
+        >
+          <div class="rad-form-grid">
+            <app-form-field
+              label="Tipo de documento"
+              [requerido]="true"
+              controlId="rad-tipo-doc"
+            >
+              <select
+                id="rad-tipo-doc"
+                [ngModel]="tipoDocumentoPropietario()"
+                (ngModelChange)="tipoDocumentoPropietario.set($event)"
+                aria-label="Tipo de documento del propietario"
+              >
+                @for (tipo of tiposDocumento; track tipo) {
+                  <option [value]="tipo">{{ etiquetaTipoDocumento[tipo] }}</option>
+                }
+              </select>
+            </app-form-field>
+
+            <app-form-field
+              label="Número de documento"
+              [requerido]="true"
+              controlId="rad-num-doc"
+            >
+              <input
+                id="rad-num-doc"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="Ej: 1095836254"
+                [ngModel]="numeroDocumentoPropietario()"
+                (ngModelChange)="numeroDocumentoPropietario.set($event)"
+              />
+            </app-form-field>
+          </div>
+        </app-form-section-card>
+
+        <app-form-section-card
+          [numero]="2"
+          icono="task_alt"
+          titulo="Estudio de arrendamiento"
+          subtitulo="Vincula la aprobación previa emitida por la aseguradora aliada."
+        >
           <app-form-field
-            label="Número de documento"
-            ayuda="Ej: 1095836254"
+            label="Número de estudio de inquilino aprobado"
             [requerido]="true"
-            controlId="rad-num-doc"
+            controlId="rad-num-estudio"
           >
             <input
-              id="rad-num-doc"
+              id="rad-num-estudio"
               type="text"
-              inputmode="numeric"
               autocomplete="off"
-              placeholder="Ej: 1095836254"
-              [ngModel]="numeroDocumentoPropietario()"
-              (ngModelChange)="numeroDocumentoPropietario.set($event)"
+              placeholder="Ej: EST-2026-001234"
+              [ngModel]="numeroEstudioArrendamiento()"
+              (ngModelChange)="numeroEstudioArrendamiento.set($event)"
             />
           </app-form-field>
-        </div>
-      </div>
+        </app-form-section-card>
 
-      <!-- 2. Estudio de arrendamiento (Req 10.1) -->
-      <div class="rad-seccion">
-        <h4 class="rad-seccion-titulo">Estudio de arrendamiento</h4>
-        <app-form-field
-          label="Número de estudio de inquilino aprobado"
-          ayuda="Ej: EST-2026-001234"
-          [requerido]="true"
-          controlId="rad-num-estudio"
+        <app-form-section-card
+          [numero]="3"
+          icono="draw"
+          titulo="¿Quién firma el contrato?"
+          subtitulo="Define la titularidad jurídica del suscriptor ante la póliza."
         >
-          <input
-            id="rad-num-estudio"
-            type="text"
-            autocomplete="off"
-            placeholder="Ej: EST-2026-001234"
-            [ngModel]="numeroEstudioArrendamiento()"
-            (ngModelChange)="numeroEstudioArrendamiento.set($event)"
-          />
-        </app-form-field>
-      </div>
+          <app-radio-group
+            [opciones]="opcionesFirmante"
+            [valor]="firmante()"
+            (valorChange)="onCambioFirmante($event)"
+            ariaLabel="Quién firma el contrato"
+          ></app-radio-group>
 
-      <!-- 3. ¿Quién firma el contrato? (Req 10.2) -->
-      <div class="rad-seccion">
-        <h4 class="rad-seccion-titulo">¿Quién firma el contrato?</h4>
-        <app-radio-group
-          [opciones]="opcionesFirmante"
-          [valor]="firmante()"
-          (valorChange)="onCambioFirmante($event)"
-          ariaLabel="Quién firma el contrato"
-        ></app-radio-group>
+          @if (firmaApoderado()) {
+            <div class="rad-apoderado">
+              <div class="rad-form-grid">
+                <app-form-field
+                  label="Tipo de documento del apoderado"
+                  [requerido]="true"
+                  controlId="rad-tipo-doc-apo"
+                >
+                  <select
+                    id="rad-tipo-doc-apo"
+                    [ngModel]="tipoDocumentoApoderado()"
+                    (ngModelChange)="tipoDocumentoApoderado.set($event)"
+                    aria-label="Tipo de documento del apoderado"
+                  >
+                    @for (tipo of tiposDocumentoApoderado; track tipo) {
+                      <option [value]="tipo">{{ etiquetaTipoDocumento[tipo] }}</option>
+                    }
+                  </select>
+                </app-form-field>
 
-        @if (firmaApoderado()) {
-          <div class="rad-apoderado">
+                <app-form-field
+                  label="Número de documento del apoderado"
+                  [requerido]="true"
+                  controlId="rad-num-doc-apo"
+                >
+                  <input
+                    id="rad-num-doc-apo"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="Ej: 80123456"
+                    [ngModel]="numeroDocumentoApoderado()"
+                    (ngModelChange)="numeroDocumentoApoderado.set($event)"
+                  />
+                </app-form-field>
+              </div>
+
+              <app-info-box icono="info">
+                Como firma un apoderado, la validación SARLAFT se hace al <b>apoderado</b> y
+                la URL de actualización, si hace falta, se le envía a él.
+              </app-info-box>
+            </div>
+          }
+
+          <app-tabs
+            [tabs]="tabs"
+            [activa]="tipoPersona()"
+            (activaChange)="onCambioTipoPersona($event)"
+          ></app-tabs>
+        </app-form-section-card>
+
+        <app-form-section-card
+          [numero]="4"
+          icono="verified_user"
+          titulo="Validación SARLAFT"
+          [subtitulo]="'Consulta en listas del ' + etiquetaSujetoSarlaft() + ' antes de cargar los documentos.'"
+        >
+          @if (resultadoSarlaft(); as resultado) {
+            @if (resultado.estado === 'actualizado') {
+              <!-- Salida 1: actualizado -> continúa a documentos. -->
+              <app-alert-banner variante="success" titulo="SARLAFT actualizado">
+                {{ resultado.mensaje }}
+              </app-alert-banner>
+            } @else if (resultado.estado === 'desactualizado') {
+              <!-- Salida 2: desactualizado -> URL al firmante, actualiza y reconsulta. -->
+              <app-alert-banner variante="warning" titulo="SARLAFT desactualizado">
+                {{ resultado.mensaje }}
+              </app-alert-banner>
+
+              <div class="rad-sarlaft-panel">
+                <ol class="rad-sarlaft-pasos">
+                  <li>
+                    Enviamos la URL de actualización al <strong>{{ etiquetaSujetoSarlaft() }}</strong>
+                    @if (resultado.correoDestinatario) {
+                      ({{ resultado.correoDestinatario }})
+                    }
+                  </li>
+                  <li>El {{ etiquetaSujetoSarlaft() }} diligencia la actualización desde el enlace.</li>
+                  <li>Cuando confirme, vuelve a consultar para continuar con los documentos.</li>
+                </ol>
+
+                @if (resultado.enlaceActualizacion) {
+                  <div class="rad-sarlaft-enlace">
+                    <code>{{ resultado.enlaceActualizacion }}</code>
+                    <app-boton variante="outline" icono="content_copy" (clicked)="copiarEnlaceSarlaft()">
+                      {{ enlaceCopiado() ? 'Copiado' : 'Copiar enlace' }}
+                    </app-boton>
+                  </div>
+                }
+              </div>
+
+              <div class="rad-sarlaft-acciones">
+                <app-boton
+                  variante="accent"
+                  icono="refresh"
+                  [disabled]="!puedeConsultarSarlaft()"
+                  (clicked)="consultarSarlaft()"
+                >
+                  {{ consultandoSarlaft() ? 'Consultando…' : 'Volver a consultar' }}
+                </app-boton>
+              </div>
+            }
+          } @else {
+            <div class="rad-sarlaft-panel">
+              <div class="rad-sarlaft-check">
+                <span class="rad-sarlaft-icono" aria-hidden="true">
+                  <span class="material-symbols-outlined">verified_user</span>
+                </span>
+                <div class="rad-sarlaft-texto">
+                  <strong>Consulta SARLAFT del {{ etiquetaSujetoSarlaft() }} <app-info-tip texto="SARLAFT: sistema que verifica la identidad del cliente y lo consulta en listas restrictivas para prevenir el lavado de activos." /></strong>
+                  <span>
+                    Resultados posibles: <b>actualizado</b> (continúas con los documentos),
+                    <b>desactualizado</b> (se envía una URL al {{ etiquetaSujetoSarlaft() }} para
+                    actualizar y luego reconsultas) o <b>consultable</b> (el caso pasa a revisión
+                    y termina en el portal).
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rad-sarlaft-acciones">
+              <app-boton
+                variante="accent"
+                icono="policy"
+                [disabled]="!puedeConsultarSarlaft()"
+                (clicked)="consultarSarlaft()"
+              >
+                {{ consultandoSarlaft() ? 'Consultando…' : 'Consultar SARLAFT' }}
+              </app-boton>
+              @if (!datosSarlaftCompletos()) {
+                <span class="rad-sarlaft-ayuda">
+                  Completa los datos del propietario{{ firmaApoderado() ? ', del apoderado' : '' }} y el estudio para consultar.
+                </span>
+              }
+            </div>
+          }
+
+          @if (errorSarlaft(); as error) {
+            <app-alert-banner variante="error" titulo="Consulta no disponible">{{ error }}</app-alert-banner>
+          }
+
+          @if (modoDesarrollo) {
+            <app-info-box icono="science">
+              <strong>Mock de desarrollo:</strong> el último dígito del documento consultado
+              (propietario, o apoderado si firma él) define la salida: <b>…1</b> actualizado · <b>…2</b> desactualizado (al reconsultar
+              queda actualizado) · <b>…3</b> consultable.
+            </app-info-box>
+          }
+        </app-form-section-card>
+
+        <app-form-section-card
+          [numero]="5"
+          icono="upload_file"
+          titulo="Documentos requeridos"
+          subtitulo="Validación por documento con verificación inmediata."
+        >
+          @if (documentosHabilitados()) {
+            <span class="rad-obligatorios">{{ reglasObligatorias().length }} obligatorios</span>
+
             <app-doc-uploader
-              [reglas]="reglasApoderado()"
+              [reglas]="reglasObligatorias()"
               [cargados]="archivosCargados()"
               (archivoSeleccionado)="onArchivo($event)"
             ></app-doc-uploader>
-          </div>
-        }
-      </div>
 
-      <!-- Tabs Persona Natural / Jurídica (Req 10.3, 10.4) -->
-      <app-tabs
-        [tabs]="tabs"
-        [activa]="tipoPersona()"
-        (activaChange)="onCambioTipoPersona($event)"
-      ></app-tabs>
-
-      <!-- Documentos requeridos según tipo de persona (Req 11.1, 11.2) -->
-      <div class="rad-seccion">
-        <div class="rad-seccion-encabezado">
-          <h4 class="rad-seccion-titulo">Documentos requeridos</h4>
-          <span class="rad-obligatorios">{{ reglasObligatorias().length }} obligatorios</span>
-        </div>
-        <app-doc-uploader
-          [reglas]="reglasObligatorias()"
-          [cargados]="archivosCargados()"
-          (archivoSeleccionado)="onArchivo($event)"
-        ></app-doc-uploader>
-
-        <!-- SARLAFT 4.0 condicional (solo Persona Natural) (Req 12.1, 12.2) -->
-        @if (muestraToggleSarlaft()) {
-          <div class="rad-sarlaft-panel">
-            <div class="rad-sarlaft-check">
-              <app-toggle-switch
-                ariaLabel="La validación SARLAFT 4.0 requiere carga del formulario"
-                [checked]="sarlaftRequiereFormulario()"
-                (checkedChange)="sarlaftRequiereFormulario.set($event)"
-              ></app-toggle-switch>
-              <div class="rad-sarlaft-texto">
-                <strong>¿La validación SARLAFT 4.0 requiere carga del formulario?</strong>
-                <span>
-                  Marque esta opción si el cliente no pudo completar el proceso de
-                  validación digital y debe cargar el formulario SARLAFT manualmente.
-                </span>
-              </div>
-            </div>
-          </div>
-        }
-      </div>
-
-      <!-- Contrato de arrendamiento (opcional) (Req 11.3, 11.5) -->
-      <div class="rad-seccion rad-seccion--contrato">
-        <div class="rad-seccion-encabezado">
-          <h4 class="rad-seccion-titulo">Contrato de arrendamiento</h4>
-          <span class="rad-opcional">Opcional</span>
-        </div>
-        <app-doc-uploader
-          [reglas]="[reglaOpcional]"
-          [cargados]="archivosCargados()"
-          (archivoSeleccionado)="onArchivo($event)"
-        ></app-doc-uploader>
-
-        <app-info-box icono="ℹ️">
-          ¿Aún no tienes el contrato? Puedes crear uno con nuestra plantilla o
-          solicitar que la aseguradora lo elabore.
-        </app-info-box>
-
-        <div class="rad-contrato-accion">
-          <app-boton variante="accent" (clicked)="crearContrato()">
-            ✎ Crear contrato
-          </app-boton>
-        </div>
-      </div>
-
-      <!-- Documentos pendientes (Req 11.4) -->
-      @if (etiquetasFaltantes().length > 0) {
-        <app-alert-banner variante="warning" titulo="Documentos pendientes">
-          Para enviar la radicación faltan por cargar:
-          <ul class="lista-pendientes">
-            @for (etiqueta of etiquetasFaltantes(); track etiqueta) {
-              <li>{{ etiqueta }}</li>
+            @if (firmaApoderado()) {
+              <h4 class="rad-subtitulo-docs">Documentos del apoderado</h4>
+              <app-doc-uploader
+                [reglas]="reglasApoderado()"
+                [cargados]="archivosCargados()"
+                (archivoSeleccionado)="onArchivo($event)"
+              ></app-doc-uploader>
             }
-          </ul>
-        </app-alert-banner>
-      }
 
-      @if (errorEnvio(); as error) {
-        <app-alert-banner variante="error" titulo="No se pudo continuar">
-          {{ error }}
-        </app-alert-banner>
-      }
+            @if (tipoPersona() === 'juridica') {
+              <app-info-box icono="verified_user">
+                Persona jurídica: el Formulario SARLAFT diligenciado es obligatorio junto con
+                los demás documentos.
+              </app-info-box>
+            }
+          } @else {
+            <app-info-box icono="lock">
+              La carga de documentos se habilita cuando la consulta SARLAFT resulte
+              <b>actualizada</b>.
+            </app-info-box>
+          }
+        </app-form-section-card>
 
-      <!-- Acción de envío (Req 11.4) -->
-      <div class="radicacion-acciones">
-        <app-boton
-          variante="primary"
-          [disabled]="!envioHabilitado() || enviando()"
-          (clicked)="enviar()"
+        <app-form-section-card
+          [numero]="6"
+          icono="description"
+          titulo="Contrato de arrendamiento"
+          subtitulo="Opcional: adjúntalo ahora o créalo con nuestra plantilla."
         >
-          {{ enviando() ? 'Enviando…' : 'Enviar radicación' }}
-        </app-boton>
+          <app-doc-uploader
+            [reglas]="[reglaOpcional]"
+            [cargados]="archivosCargados()"
+            (archivoSeleccionado)="onArchivo($event)"
+          ></app-doc-uploader>
+
+          <app-info-box icono="info">
+            ¿Aún no tienes el contrato? Puedes crear uno con nuestra plantilla o
+            solicitar que la aseguradora lo elabore.
+          </app-info-box>
+
+          <div class="rad-contrato-accion">
+            <app-boton variante="accent" (clicked)="crearContrato()">
+              ✎ Crear contrato
+            </app-boton>
+          </div>
+        </app-form-section-card>
+
+        @if (etiquetasFaltantes().length > 0) {
+          <app-alert-banner variante="warning" titulo="Documentos pendientes">
+            Para enviar la radicación faltan por cargar:
+            <ul class="lista-pendientes">
+              @for (etiqueta of etiquetasFaltantes(); track etiqueta) {
+                <li>{{ etiqueta }}</li>
+              }
+            </ul>
+          </app-alert-banner>
+        }
+
+        @if (errorEnvio(); as error) {
+          <app-alert-banner variante="error" titulo="No se pudo continuar">
+            {{ error }}
+          </app-alert-banner>
+        }
+
+        <app-sticky-actions
+          [fija]="true"
+          [nota]="'Documentos obligatorios verificados: ' + cargadosObligatorios() + ' de ' + totalObligatorios()"
+        >
+          <app-boton secundarias variante="ghost" (clicked)="cancelar()">Cancelar radicación</app-boton>
+          <app-boton
+            principal
+            variante="accent"
+            [disabled]="!envioHabilitado() || enviando()"
+            (clicked)="enviar()"
+          >
+            {{ enviando() ? 'Enviando…' : 'Enviar radicación' }}
+          </app-boton>
+        </app-sticky-actions>
       </div>
+
+      <aside class="radicacion__lateral" aria-label="Progreso de la radicación">
+        <app-summary-card
+          titulo="Progreso de radicación"
+          badge="En vivo"
+          [filas]="filasProgreso()"
+          [total]="{ label: 'Documentos', valor: cargadosObligatorios() + ' / ' + totalObligatorios() }"
+        />
+      </aside>
     </div>
+
+    <app-modal-dialog
+      [abierto]="confirmarCancelar()"
+      titulo="¿Cancelar la radicación?"
+      (cerrar)="confirmarCancelar.set(false)"
+    >
+      <p>Perderás los datos y documentos cargados en esta radicación.</p>
+      <div acciones>
+        <app-boton variante="accent" (clicked)="salir()">Sí, cancelar</app-boton>
+        <app-boton variante="ghost" (clicked)="confirmarCancelar.set(false)">Seguir editando</app-boton>
+      </div>
+    </app-modal-dialog>
   }
 </section>

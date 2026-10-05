@@ -4,6 +4,7 @@
  */
 
 import type { DocumentoCargado, TipoMimePermitido } from './documento.model';
+import type { EstadoSarlaftRadicacion, TipoDocumentoIdentidad } from './radicacion.model';
 
 /** Solicitud de registro de un aspirante a Broker (Req 3.1–3.16). */
 export interface SolicitudRegistroBroker {
@@ -12,9 +13,35 @@ export interface SolicitudRegistroBroker {
   readonly codigoPais: string;    // '+57' por defecto
   readonly telefono: string;      // 7–10 dígitos
   readonly ciudad: string;
+  readonly tipoDocumento: TipoDocumentoIdentidad;
   readonly documento: string;     // 6–12 dígitos
-  readonly fechaExpedicion: string; // ISO-8601
+  /** Resultado de la verificación SARLAFT del paso 2 (el backend revalida). */
+  readonly estadoSarlaft?: EstadoSarlaftRadicacion;
+  /** Legado: fecha de expedición de la consulta anterior por antigüedad. */
+  readonly fechaExpedicion?: string; // ISO-8601
   readonly documentos: DocumentoRegistro[];  // los 4 documentos obligatorios de registro (Req 3.16)
+}
+
+/**
+ * Ingreso simple como Prospecto (spec backend, Req 1.2): sin documentación.
+ * El usuario queda con su documento como usuario y su correo como contraseña
+ * inicial (definición de negocio; el backend la almacena con hash, Req 2.6).
+ */
+export interface RegistroProspectoRequest {
+  readonly nombreCompleto: string;
+  readonly correo: string;
+  readonly codigoPais: string;
+  readonly telefono: string;
+  readonly ciudad: string;
+  readonly tipoDocumento: TipoDocumentoIdentidad;
+  readonly documento: string;
+}
+
+/** Verificación SARLAFT del aspirante con el documento del paso 1. */
+export interface VerificacionSarlaftRegistroRequest {
+  readonly tipoDocumento: TipoDocumentoIdentidad;
+  readonly documento: string;
+  readonly correo: string;
 }
 
 // Identificador de cada documento obligatorio del registro de broker (Req 3.16).

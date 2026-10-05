@@ -43,7 +43,7 @@ export class SuccessScreenComponent {
   @Input() mensaje: string | null = null;
 
   /** Ícono mostrado dentro del círculo de éxito. */
-  @Input() icono = '✓';
+  @Input() icono = 'check';
 
   /** Variante de color del ícono de éxito. */
   @Input() varianteIcono: VarianteIconoExito = 'success';

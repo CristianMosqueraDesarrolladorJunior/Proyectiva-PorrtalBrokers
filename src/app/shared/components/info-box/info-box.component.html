@@ -1,6 +1,6 @@
 <div class="info-box" [class.info-box-con-icono]="icono !== null">
   @if (icono) {
-    <span class="info-box-icono" aria-hidden="true">{{ icono }}</span>
+    <span class="info-box-icono" aria-hidden="true"><span class="material-symbols-outlined">{{ icono }}</span></span>
   }
   <div class="info-box-texto">
     <ng-content></ng-content>

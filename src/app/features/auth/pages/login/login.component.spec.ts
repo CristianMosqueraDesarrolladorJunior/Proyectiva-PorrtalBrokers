@@ -12,7 +12,7 @@ describe('LoginComponent', () => {
   let authSpy: { login: jest.Mock };
   let routerSpy: { navigate: jest.Mock };
 
-  const perfil: PerfilBroker = { nombre: 'Ana Broker', rol: 'broker' };
+  const perfil: PerfilBroker = { nombre: 'Ana Broker', rol: 'Broker' };
 
   const query = (selector: string): HTMLElement =>
     fixture.nativeElement.querySelector(selector) as HTMLElement;
@@ -100,6 +100,15 @@ describe('LoginComponent', () => {
     });
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/app']);
     expect(query('.login-error')).toBeNull();
+  });
+
+  it('lleva a la consola /admin cuando el usuario es Administrador o Comercial', () => {
+    authSpy.login.mockReturnValue(of({ nombre: 'Admin', rol: 'Administrador' } as PerfilBroker));
+    escribir('#login-cedula', '1000000001');
+    escribir('#login-password', 'Admin#2026');
+    fixture.detectChanges();
+    query('.login-form').dispatchEvent(new Event('submit'));
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/admin']);
   });
 
   it('no invoca a AuthService cuando el formulario es inválido al enviar', () => {

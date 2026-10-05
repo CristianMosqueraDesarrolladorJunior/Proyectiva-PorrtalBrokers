@@ -1,13 +1,17 @@
 import { Injectable, inject, isDevMode } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, tap } from 'rxjs';
+import { Observable, of, tap, throwError } from 'rxjs';
 
 import { LoginRequest, PerfilBroker } from '../models/broker.model';
+import type { ResultadoSarlaftRadicacion } from '../models/radicacion.model';
 import {
+  RegistroProspectoRequest,
   ResultadoSarlaft,
   SolicitudRegistroBroker,
+  VerificacionSarlaftRegistroRequest,
 } from '../models/registro-broker.model';
 import { SessionService } from './session.service';
+import { autenticarUsuarioInterno } from './admin.service';
 
 /**
  * Parámetros de la Consulta_SARLAFT (documento + fecha de expedición) (Req 3).
@@ -52,6 +56,14 @@ export class AuthService {
     // PerfilBroker de prueba. NO aplica en producción (build optimizado).
     // TODO: eliminar cuando el Servicio_Autenticacion esté disponible.
     if (isDevMode()) {
+      // Usuarios internos de la consola (Administrador y Comerciales mock).
+      const interno = autenticarUsuarioInterno(request.cedula, request.password);
+      if (interno === 'invalida') {
+        return throwError(() => ({ status: 401 }));
+      }
+      if (interno) {
+        return of(interno).pipe(tap((perfil) => this.session.establecerPerfil(perfil)));
+      }
       const perfilDemo: PerfilBroker = {
         nombre: 'Juan Pablo Restrepo',
         rol: 'Broker',
@@ -103,6 +115,30 @@ export class AuthService {
       solicitud,
       { withCredentials: true },
     );
+  }
+
+  /**
+   * Ingreso simple: crea la Cuenta en estado PROSPECTO (spec backend, Req 1.2).
+   * @param datos datos personales y documento del aspirante.
+   * @returns radicado y estado de la cuenta creada.
+   */
+  registrarProspecto(datos: RegistroProspectoRequest): Observable<RegistroBrokerResponse> {
+    return this.http.post<RegistroBrokerResponse>(`${this.baseUrl}/brokers/prospectos`, datos, {
+      withCredentials: true,
+    });
+  }
+
+  /**
+   * Verifica el SARLAFT del aspirante con el documento del paso 1. El backend
+   * decide la salida: actualizado, desactualizado (URL de actualización) o
+   * consultable (el caso pasa a Cumplimiento).
+   */
+  verificarSarlaftRegistro(
+    request: VerificacionSarlaftRegistroRequest,
+  ): Observable<ResultadoSarlaftRadicacion> {
+    return this.http.post<ResultadoSarlaftRadicacion>(`${this.baseUrl}/sarlaft/consultas`, request, {
+      withCredentials: true,
+    });
   }
 
   /**

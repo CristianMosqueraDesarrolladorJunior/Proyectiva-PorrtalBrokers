@@ -1,10 +1,10 @@
 <section class="caso-especial" aria-labelledby="caso-especial-titulo">
-  <header class="caso-especial-header">
-    <h1 id="caso-especial-titulo" class="caso-especial-titulo">Caso especial de renovación</h1>
-    <p class="caso-especial-subtitulo">
-      Tramita un Otro Sí o una Cesión de contrato adjuntando el documento legal correspondiente.
-    </p>
-  </header>
+  <app-page-header
+    eyebrow="Renovaciones"
+    tituloId="caso-especial-titulo"
+    titulo="Caso especial de renovación"
+    subtitulo="Tramita un Otro Sí o una Cesión de contrato adjuntando el documento legal correspondiente."
+  ></app-page-header>
 
   @if (envioExitoso()) {
     <app-success-screen

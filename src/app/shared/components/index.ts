@@ -30,7 +30,8 @@ export type {
   ReglaDocumentoUploader,
   ArchivoSeleccionado,
 } from './doc-uploader/doc-uploader.component';
-export { StepperComponent } from './stepper/stepper.component';
+export { StepTabsComponent } from './step-tabs/step-tabs.component';
+export type { PasoTab, EstadoPasoTab } from './step-tabs/step-tabs.component';
 export { TabsComponent } from './tabs/tabs.component';
 export { RadioGroupComponent } from './radio-group/radio-group.component';
 
@@ -71,3 +72,40 @@ export { DrawerDetalleComponent } from './drawer-detalle/drawer-detalle.componen
 export type { FilaDetalle } from './drawer-detalle/drawer-detalle.component';
 
 export { ChatAsistenteComponent } from './chat-asistente/chat-asistente.component';
+
+// --- Sistema de diseño "Proyectiva Broker Nexus" (stitch) ---
+export { IconComponent } from './icon/icon.component';
+export { PageHeaderComponent } from './page-header/page-header.component';
+export { GuaranteeBadgeComponent } from './guarantee-badge/guarantee-badge.component';
+export type { VarianteGarantia } from './guarantee-badge/guarantee-badge.component';
+export { KpiCardComponent } from './kpi-card/kpi-card.component';
+export type { VarianteKpiCard, TonoKpiCard } from './kpi-card/kpi-card.component';
+export { CommissionBreakdownCardComponent } from './commission-breakdown-card/commission-breakdown-card.component';
+export type { DesgloseRamo } from './commission-breakdown-card/commission-breakdown-card.component';
+export { StatCardComponent } from './stat-card/stat-card.component';
+export type { TonoStatCard } from './stat-card/stat-card.component';
+export { StatBreakdownComponent } from './stat-breakdown/stat-breakdown.component';
+export type { FilaDesglose } from './stat-breakdown/stat-breakdown.component';
+export { StatusPillGroupComponent } from './status-pill-group/status-pill-group.component';
+export type {
+  ItemStatusPill,
+  ColorStatusPill,
+} from './status-pill-group/status-pill-group.component';
+export { AvatarInitialsComponent } from './avatar-initials/avatar-initials.component';
+export { SummaryCardComponent } from './summary-card/summary-card.component';
+export type { FilaResumen, ValorResumen } from './summary-card/summary-card.component';
+export { FormSectionCardComponent } from './form-section-card/form-section-card.component';
+
+// --- Componentes de uniformidad (rediseño Nexus, 2ª fase) ---
+export { TopbarComponent } from './topbar/topbar.component';
+export { SegmentedControlComponent } from './segmented-control/segmented-control.component';
+export type { OpcionSegmentada } from './segmented-control/segmented-control.component';
+export { MoneyInputComponent } from './money-input/money-input.component';
+export { CalloutCardComponent } from './callout-card/callout-card.component';
+export type { TonoCallout } from './callout-card/callout-card.component';
+export { InfoListCardComponent } from './info-list-card/info-list-card.component';
+export type { ItemInfoLista } from './info-list-card/info-list-card.component';
+export { SkeletonComponent } from './skeleton/skeleton.component';
+export { StickyActionsComponent } from './sticky-actions/sticky-actions.component';
+export { ModalDialogComponent } from './modal-dialog/modal-dialog.component';
+export { InfoTipComponent } from './info-tip/info-tip.component';

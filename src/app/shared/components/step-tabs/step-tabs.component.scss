@@ -1,0 +1,180 @@
+// StepTabsComponent — pestañas de paso a paso. 100% tokenizado.
+
+:host {
+  display: block;
+}
+
+.step-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-family-body);
+}
+
+// --- Resumen "Paso X de N" -------------------------------------------------
+
+.step-tabs__resumen {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-caption);
+  color: var(--sb-secondary);
+}
+
+.step-tabs__contador {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: var(--font-weight-semibold);
+}
+
+.step-tabs__actual {
+  font-size: var(--text-body-sm);
+  color: var(--color-text);
+}
+
+// --- Pestañas --------------------------------------------------------------
+
+.step-tabs__lista {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: var(--space-2);
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.step-tab {
+  min-width: 0;
+}
+
+.step-tab__control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--sb-surface-low);
+  color: var(--sb-secondary);
+  font: inherit;
+  text-align: left;
+}
+
+.step-tab__control--boton {
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--sb-tint-success-border);
+    background: var(--sb-tint-success-bg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+.step-tab__marca {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--sb-border);
+  background: var(--color-card);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-bold);
+}
+
+.step-tab__texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.step-tab__etiqueta {
+  overflow: hidden;
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-tab__descripcion {
+  overflow: hidden;
+  font-size: var(--text-caption);
+  color: var(--sb-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Completado: check verde
+.step-tab--completado .step-tab__control {
+  color: var(--color-text);
+}
+
+.step-tab--completado .step-tab__marca {
+  border-color: var(--sb-tertiary);
+  background: var(--sb-tertiary);
+  color: var(--sb-on-primary);
+}
+
+// Activo: pestaña resaltada con el color de acción
+.step-tab--activo .step-tab__control {
+  border-color: var(--sb-tint-accent-border);
+  background: var(--sb-tint-accent-bg);
+  color: var(--color-text);
+  box-shadow: inset 0 -3px 0 var(--sb-primary);
+}
+
+.step-tab--activo .step-tab__marca {
+  border-color: var(--sb-primary);
+  background: var(--sb-primary);
+  color: var(--sb-on-primary);
+}
+
+.step-tab--activo .step-tab__etiqueta {
+  font-weight: var(--font-weight-semibold);
+}
+
+// --- Barra de progreso -----------------------------------------------------
+
+.step-tabs__barra {
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--sb-surface-low);
+}
+
+.step-tabs__relleno {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--sb-tertiary), var(--sb-primary));
+  transition: width 0.3s ease;
+}
+
+// --- Pantallas angostas: solo marcas; el nombre del paso va en el resumen ----
+
+@media (max-width: 720px) {
+  .step-tab__texto {
+    display: none;
+  }
+
+  .step-tab__control {
+    justify-content: center;
+    padding: var(--space-2);
+  }
+}

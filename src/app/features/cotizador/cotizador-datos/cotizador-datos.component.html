@@ -1,180 +1,215 @@
-<section class="cotizador-datos" aria-labelledby="cotizador-datos-titulo">
-  <header class="cotizador-datos__header">
-    <h1 id="cotizador-datos-titulo" class="cotizador-datos__titulo">Cotizador de arrendamiento</h1>
-    <p class="cotizador-datos__subtitulo">
-      Ingresa los datos del inmueble y activa las coberturas para calcular la cotización.
-    </p>
-  </header>
+<!--
+  Cotizador (Req 7) — rediseño "Proyectiva Broker Nexus", enfocado en baja carga cognitiva:
+  - Tres bloques cortos (Inmueble · Valores y vigencia · Coberturas opcionales).
+  - Valores por defecto razonables (Vivienda, 12 meses, inicio hoy).
+  - Divulgación progresiva: administración, IVA y monto de cobertura solo aparecen si aplican.
+  - El resumen lateral muestra únicamente lo calculado; lo ingresado ya está en el formulario.
+-->
+<section class="cotizador-datos">
+  <app-page-header
+    eyebrow="Cotizador Express"
+    titulo="Cotizador de Arrendamiento y Pólizas Inmobiliarias"
+    subtitulo="Calcula la prima y tu comisión de intermediación en tiempo real."
+  >
+    <div acciones>
+      <app-guarantee-badge icono="bolt" variante="tertiary">Tarifas 2026 Vigentes</app-guarantee-badge>
+    </div>
+  </app-page-header>
 
-  <form class="cotizador-datos__form" (ngSubmit)="solicitarCalculo()" novalidate>
-    <!-- Datos del inmueble (Req 7.1) -->
-    <app-card variante="form-card">
-      <app-grid-layout tipo="form-grid">
-        <app-form-field
-          label="Departamento"
-          ayuda="Selecciona el departamento del inmueble"
-          [requerido]="true"
-          controlId="cot-departamento"
-        >
-          <select
-            id="cot-departamento"
-            name="departamento"
-            [ngModel]="departamento()"
-            (ngModelChange)="onDepartamentoChange($event)"
+  <div class="cotizador-datos__layout">
+    <form class="cotizador-datos__form" id="cotizador-form" (ngSubmit)="solicitarCalculo()" novalidate>
+      <!-- 1. Inmueble -->
+      <app-form-section-card [numero]="1" icono="location_on" titulo="Inmueble">
+        <fieldset class="cot-grupo">
+          <legend class="cot-grupo__legend">
+            Tipo de inmueble <span class="cot-grupo__req" aria-hidden="true">*</span>
+          </legend>
+          <app-segmented-control
+            [opciones]="opcionesTipo"
+            [valor]="tipoInmueble()"
+            (valorChange)="onTipoInmuebleChange($event)"
+            ariaLabel="Tipo de inmueble"
+          />
+        </fieldset>
+
+        <app-grid-layout tipo="form-grid">
+          <app-form-field
+            label="Departamento"
+            [requerido]="true"
+            [error]="errorDepartamento()"
+            controlId="cot-departamento"
           >
-            <option value="" disabled>Selecciona un departamento</option>
-            @for (opcion of departamentos; track opcion) {
-              <option [value]="opcion">{{ opcion }}</option>
-            }
-          </select>
-        </app-form-field>
+            <select
+              id="cot-departamento"
+              name="departamento"
+              [ngModel]="departamento()"
+              (ngModelChange)="onDepartamentoChange($event)"
+              [attr.aria-invalid]="errorDepartamento() ? 'true' : null"
+            >
+              <option value="" disabled>Selecciona</option>
+              @for (opcion of departamentos; track opcion) {
+                <option [value]="opcion">{{ opcion }}</option>
+              }
+            </select>
+          </app-form-field>
 
-        <app-form-field
-          label="Ciudad"
-          [ayuda]="cargandoCiudades() ? 'Cargando ciudades...' : 'Selecciona la ciudad en cobertura'"
-          [requerido]="true"
-          controlId="cot-ciudad"
-        >
-          <select
-            id="cot-ciudad"
-            name="ciudad"
-            [disabled]="cobertura().ciudades.length === 0"
-            [ngModel]="ciudad()"
-            (ngModelChange)="ciudad.set($event)"
+          <app-form-field
+            label="Ciudad"
+            [ayuda]="cargandoCiudades() ? 'Cargando ciudades...' : ''"
+            [error]="errorCiudad()"
+            [requerido]="true"
+            controlId="cot-ciudad"
           >
-            <option value="" disabled>
-              {{ departamento().length === 0 ? 'Primero selecciona un departamento' : 'Selecciona una ciudad' }}
-            </option>
-            @for (opcion of cobertura().ciudades; track opcion) {
-              <option [value]="opcion">{{ opcion }}</option>
-            }
-          </select>
-        </app-form-field>
-      </app-grid-layout>
+            <select
+              id="cot-ciudad"
+              name="ciudad"
+              [disabled]="cobertura().ciudades.length === 0"
+              [ngModel]="ciudad()"
+              (ngModelChange)="ciudad.set($event)"
+              [attr.aria-invalid]="errorCiudad() ? 'true' : null"
+            >
+              <option value="" disabled>
+                {{ departamento().length === 0 ? 'Primero elige un departamento' : 'Selecciona' }}
+              </option>
+              @for (opcion of cobertura().ciudades; track opcion) {
+                <option [value]="opcion">{{ opcion }}</option>
+              }
+            </select>
+          </app-form-field>
+        </app-grid-layout>
 
-      <app-grid-layout tipo="form-grid">
-        <app-form-field
-          label="Tipo de inmueble"
-          ayuda="Comercio permite asegurar el IVA del canon"
-          [requerido]="true"
-          controlId="cot-tipo"
-        >
-          <select
-            id="cot-tipo"
-            name="tipoInmueble"
-            [ngModel]="tipoInmueble()"
-            (ngModelChange)="onTipoInmuebleChange($event)"
+        @if (sinCobertura()) {
+          <app-alert-banner variante="warning" titulo="Sin cobertura">
+            {{ mensajeSinCobertura }}
+          </app-alert-banner>
+        }
+      </app-form-section-card>
+
+      <!-- 2. Valores y vigencia -->
+      <app-form-section-card [numero]="2" icono="payments" titulo="Valores y vigencia">
+        <app-grid-layout tipo="form-grid">
+          <app-form-field
+            label="Canon mensual de arrendamiento"
+            [requerido]="true"
+            [error]="errorCanon()"
+            controlId="cot-canon"
           >
-            <option value="" disabled>Selecciona un tipo</option>
-            @for (opcion of tiposInmueble; track opcion) {
-              <option [value]="opcion">{{ opcion }}</option>
-            }
-          </select>
-        </app-form-field>
+            <app-money-input
+              inputId="cot-canon"
+              nombre="canon"
+              [valor]="canon()"
+              [invalido]="!!errorCanon()"
+              [atajos]="atajosMonto"
+              (valorChange)="canon.set($event)"
+            />
+          </app-form-field>
 
-        <app-form-field
-          label="Canon de arrendamiento"
-          ayuda="Valor mensual del canon (mayor a $0)"
-          [requerido]="true"
-          [error]="errorCanon()"
-          controlId="cot-canon"
-        >
-          <input
-            id="cot-canon"
-            type="number"
-            inputmode="numeric"
-            min="1"
-            name="canon"
-            [ngModel]="canon()"
-            (ngModelChange)="canon.set($event)"
-            [attr.aria-invalid]="errorCanon() ? 'true' : null"
-          />
-        </app-form-field>
+          <fieldset class="cot-grupo">
+            <legend class="cot-grupo__legend">¿Tiene cuota de administración?</legend>
+            <app-segmented-control
+              [opciones]="opcionesSiNo"
+              [valor]="tieneAdmin()"
+              (valorChange)="onTieneAdmin($event)"
+              ariaLabel="¿Tiene cuota de administración?"
+            />
+          </fieldset>
+        </app-grid-layout>
 
-        <app-form-field
-          label="Cuota de administración"
-          ayuda="Opcional — valor mensual de administración"
-          controlId="cot-administracion"
-        >
-          <input
-            id="cot-administracion"
-            type="number"
-            inputmode="numeric"
-            min="0"
-            name="administracion"
-            [ngModel]="administracion()"
-            (ngModelChange)="administracion.set($event)"
-          />
-        </app-form-field>
+        @if (tieneAdmin() === 'si') {
+          <app-form-field label="Valor mensual de administración" controlId="cot-administracion">
+            <app-money-input
+              inputId="cot-administracion"
+              nombre="administracion"
+              [valor]="administracion()"
+              (valorChange)="administracion.set($event)"
+            />
+          </app-form-field>
+        }
 
-        <app-form-field
-          label="Fecha de inicio de vigencia"
-          ayuda="Fecha desde la que inicia la póliza"
-          [requerido]="true"
-          controlId="cot-fecha"
-        >
-          <input
-            id="cot-fecha"
-            type="date"
-            name="fechaInicioVigencia"
-            [ngModel]="fechaInicioVigencia()"
-            (ngModelChange)="fechaInicioVigencia.set($event)"
-          />
-        </app-form-field>
+        <app-grid-layout tipo="form-grid">
+          <fieldset class="cot-grupo">
+            <legend class="cot-grupo__legend">
+              Vigencia <span class="cot-grupo__req" aria-hidden="true">*</span>
+            </legend>
+            <app-segmented-control
+              [opciones]="opcionesVigencia"
+              [valor]="'' + mesesVigencia()"
+              (valorChange)="onVigenciaSegmento($event)"
+              ariaLabel="Vigencia contractual en meses"
+            />
+          </fieldset>
 
-        <app-form-field
-          label="Meses de vigencia"
-          ayuda="Entre 1 y 36 meses"
-          [requerido]="true"
-          controlId="cot-meses"
-        >
-          <input
-            id="cot-meses"
-            type="number"
-            inputmode="numeric"
-            [min]="mesesMin"
-            [max]="mesesMax"
-            name="mesesVigencia"
-            [ngModel]="mesesVigencia()"
-            (ngModelChange)="onMesesChange($event)"
-          />
-        </app-form-field>
-      </app-grid-layout>
+          <app-form-field
+            label="Inicio de vigencia"
+            [requerido]="true"
+            [error]="errorFecha()"
+            controlId="cot-fecha"
+          >
+            <input
+              id="cot-fecha"
+              type="date"
+              name="fechaInicioVigencia"
+              [ngModel]="fechaInicioVigencia()"
+              (ngModelChange)="fechaInicioVigencia.set($event)"
+              [attr.aria-invalid]="errorFecha() ? 'true' : null"
+            />
+          </app-form-field>
+        </app-grid-layout>
 
-      <!-- IVA del canon solo para Comercio (Req 7.4) -->
-      @if (esComercio()) {
-        <div class="cotizador-datos__iva">
-          <app-toggle-switch
-            [checked]="aseguraIva()"
-            (checkedChange)="aseguraIva.set($event)"
-            ariaLabel="Asegurar el IVA del canon (19%)"
-          ></app-toggle-switch>
-          <div class="cotizador-datos__iva-texto">
-            <span class="cotizador-datos__iva-label">Asegurar IVA del canon (19%)</span>
-            @if (aseguraIva()) {
-              <span class="cotizador-datos__iva-valor">IVA estimado: {{ ivaCanonEstimado() }}</span>
-            }
+        @if (esComercio()) {
+          <div class="cotizador-datos__iva">
+            <app-toggle-switch
+              [checked]="aseguraIva()"
+              (checkedChange)="aseguraIva.set($event)"
+              ariaLabel="Asegurar el IVA del canon (19%)"
+            ></app-toggle-switch>
+            <div class="cotizador-datos__iva-texto">
+              <span class="cotizador-datos__iva-label">Asegurar el IVA del canon (19%)</span>
+              @if (aseguraIva()) {
+                <span class="cotizador-datos__iva-valor">IVA estimado: {{ cop(ivaCanonEstimado()) }}</span>
+              }
+            </div>
           </div>
-        </div>
-      }
-    </app-card>
+        }
+      </app-form-section-card>
 
-    <!-- Coberturas con toggle y control de monto (Req 7.5, 7.6) -->
-    <section class="cotizador-datos__coberturas" aria-labelledby="cotizador-coberturas-titulo">
-      <h2 id="cotizador-coberturas-titulo" class="cotizador-datos__coberturas-titulo">Coberturas</h2>
-
-      @if (coberturas().length === 0) {
-        <p class="cotizador-datos__coberturas-vacio">No hay coberturas disponibles.</p>
-      } @else {
-        <app-grid-layout tipo="tracking-cards">
-          @for (cobertura of coberturas(); track trackCobertura($index, cobertura)) {
-            <app-card variante="cobertura-card" [activa]="cobertura.activa">
-              <div class="cobertura">
-                <div class="cobertura__cabecera">
-                  <div class="cobertura__texto">
-                    <span class="cobertura__nombre">{{ cobertura.nombre }}</span>
-                    <span class="cobertura__descripcion">{{ cobertura.descripcion }}</span>
+      <!-- 3. Coberturas (opcionales) -->
+      <app-form-section-card
+        [numero]="3"
+        icono="shield"
+        titulo="Coberturas adicionales"
+        subtitulo="Opcional"
+      >
+        @if (coberturas().length === 0) {
+          <p class="cotizador-datos__coberturas-vacio">No hay coberturas disponibles.</p>
+        } @else {
+          <ul class="cotizador-datos__coberturas">
+            @for (cobertura of coberturas(); track trackCobertura($index, cobertura)) {
+              <li class="cob" [class.cob--activa]="cobertura.activa">
+                <div class="cob__fila">
+                  <span class="cob__icono" aria-hidden="true">
+                    <span class="material-symbols-outlined">{{ iconoCobertura(cobertura.id) }}</span>
+                  </span>
+                  <div class="cob__texto">
+                    <span class="cob__nombre">{{ cobertura.nombre }}</span>
+                    <span class="cob__desc">
+                      @for (parte of partesDescripcion(cobertura.descripcion); track $index) {
+                        @if (parte.negrita) {
+                          <strong>{{ parte.texto }}</strong>
+                        } @else {
+                          {{ parte.texto }}
+                        }
+                      }
+                    </span>
                   </div>
+                  <button
+                    type="button"
+                    class="cob__info"
+                    [attr.aria-label]="'Ver detalle de ' + cobertura.nombre"
+                    (click)="verDetalle(cobertura.id)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
                   <app-toggle-switch
                     [checked]="cobertura.activa"
                     (checkedChange)="alternarCobertura(cobertura.id, $event)"
@@ -183,7 +218,8 @@
                 </div>
 
                 @if (cobertura.activa) {
-                  <div class="cobertura__monto">
+                  <div class="cob__monto" role="group" [attr.aria-label]="'Monto asegurado de ' + cobertura.nombre">
+                    <span class="cob__monto-label">Monto asegurado</span>
                     <app-boton
                       variante="outline"
                       ariaLabel="Disminuir monto asegurado"
@@ -192,54 +228,107 @@
                     >
                       −
                     </app-boton>
-                    <span class="cobertura__monto-valor" aria-live="polite">
-                      {{ cobertura.montoAsegurado }}
+                    <span class="cob__monto-valor" aria-live="polite">
+                      {{ cop(cobertura.montoAsegurado) }}
                     </span>
                     <app-boton
                       variante="outline"
                       ariaLabel="Aumentar monto asegurado"
+                      [disabled]="!puedeIncrementar(cobertura.montoAsegurado)"
                       (clicked)="incrementar(cobertura.id)"
                     >
                       +
                     </app-boton>
                   </div>
                 }
-              </div>
-            </app-card>
-          }
-        </app-grid-layout>
+              </li>
+            }
+          </ul>
+        }
+      </app-form-section-card>
+
+      @if (errorCalculo()) {
+        <app-alert-banner variante="error" titulo="No se pudo calcular">
+          {{ errorCalculo() }}
+          <app-boton variante="outline" (clicked)="solicitarCalculo()">Reintentar</app-boton>
+        </app-alert-banner>
       }
-    </section>
 
-    @if (errorCalculo()) {
-      <app-alert-banner variante="error" titulo="No se pudo continuar">
-        {{ errorCalculo() }}
-      </app-alert-banner>
-    }
+      <app-sticky-actions [nota]="notaAcciones()">
+        <app-boton secundarias variante="ghost" (clicked)="pedirLimpiar()">Limpiar</app-boton>
+        <app-boton principal variante="accent" type="submit" [disabled]="calculando()">
+          {{ calculando() ? 'Calculando…' : 'Calcular cotización' }}
+        </app-boton>
+      </app-sticky-actions>
 
-    <div class="cotizador-datos__acciones">
-      <app-boton
-        variante="accent"
-        type="submit"
-        [disabled]="!puedeCalcular() || calculando()"
+      @if (calculando()) {
+        <app-skeleton [lineas]="4" ariaLabel="Calculando cotización" />
+      }
+    </form>
+
+    <!-- Resumen: solo lo calculado -->
+    <aside class="cotizador-datos__lateral" aria-label="Resumen de la cotización" aria-live="polite">
+      <app-summary-card
+        titulo="Resumen"
+        [principal]="resumenPrincipal()"
+        [destacado]="resumenDestacado()"
+        [filas]="resumenFilas()"
       >
-        {{ calculando() ? 'Calculando…' : 'Ver cotización →' }}
-      </app-boton>
-    </div>
-  </form>
+        <div acciones class="cotizador-datos__acciones-panel">
+          @if (resultado()) {
+            <app-boton variante="accent" (clicked)="onRadicarPoliza()">Radicar póliza</app-boton>
+            <app-boton variante="outline" [disabled]="descargandoPdf()" (clicked)="onDescargarPdf()">
+              Descargar PDF
+            </app-boton>
+            <app-boton variante="ghost" (clicked)="onModificarDatos()">Modificar datos</app-boton>
+          } @else {
+            <p class="cotizador-datos__panel-ayuda">
+              Completa el formulario y calcula para ver la prima y tu comisión.
+            </p>
+          }
+        </div>
+      </app-summary-card>
+    </aside>
+  </div>
 
-  @if (calculando()) {
-    <app-escalerita-loader texto="Calculando cotización..."></app-escalerita-loader>
-  }
-
-  <!-- Resultado de la cotización inline (Req 8, 9) -->
   @if (resultado()) {
     <app-cotizador-resultado
       [resultado]="resultado()"
       [descargandoPdf]="descargandoPdf()"
+      [mostrarAcciones]="false"
       (descargarPdf)="onDescargarPdf()"
       (modificarDatos)="onModificarDatos()"
       (radicarPoliza)="onRadicarPoliza()"
     ></app-cotizador-resultado>
   }
+
+  <!-- Detalle de cobertura -->
+  <app-modal-dialog
+    [abierto]="detalleActual() !== null"
+    [titulo]="detalleActual()?.nombre ?? ''"
+    (cerrar)="cerrarDetalle()"
+  >
+    @if (detalleActual(); as detalle) {
+      @for (parrafo of detalle.parrafos; track parrafo) {
+        <p class="cotizador-datos__detalle-p">{{ parrafo }}</p>
+      }
+      <p class="cotizador-datos__detalle-destacado">{{ detalle.destacado }}</p>
+    }
+    <div acciones>
+      <app-boton variante="accent" (clicked)="irAClausulado()">Ver clausulado</app-boton>
+    </div>
+  </app-modal-dialog>
+
+  <!-- Confirmación antes de borrar datos (control y libertad del usuario) -->
+  <app-modal-dialog
+    [abierto]="confirmarLimpiar()"
+    titulo="¿Limpiar la cotización?"
+    (cerrar)="confirmarLimpiar.set(false)"
+  >
+    <p class="cotizador-datos__detalle-p">Se borrarán los datos ingresados y el resultado calculado.</p>
+    <div acciones>
+      <app-boton variante="accent" (clicked)="confirmarYLimpiar()">Sí, limpiar</app-boton>
+      <app-boton variante="ghost" (clicked)="confirmarLimpiar.set(false)">Cancelar</app-boton>
+    </div>
+  </app-modal-dialog>
 </section>

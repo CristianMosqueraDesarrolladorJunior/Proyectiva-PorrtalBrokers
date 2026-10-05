@@ -1,8 +1,7 @@
 // =============================================================================
-// SidebarComponent — barra lateral del Shell_Aplicacion (Req 4)
-// Estilos tokenizados del prototipo (sidebar/sidebar-profile/avatar/sidebar-nav/
-// nav-item/sidebar-footer). Sin valores hardcodeados: todo vía Design_Token
-// (Req 25.3, 25.4, 37.11).
+// SidebarComponent — sistema de diseño "Proyectiva Broker Nexus" (stitch)
+// Fondo slate, marca superior, navegación con Material Symbols y estado activo
+// naranja sólido, perfil del broker y tarjeta VIP. 100% tokenizado.
 // =============================================================================
 
 @use '../../../shared/styles/mixins' as *;
@@ -12,9 +11,10 @@
 }
 
 .sidebar {
-  width: var(--sidebar-width);
-  background: var(--color-primary);
-  color: var(--color-sidebar-text-strong);
+  width: var(--sidebar-actual, var(--sidebar-width));
+  transition: width var(--duration-base) var(--ease-out);
+  background: var(--sb-slate);
+  color: var(--sb-on-slate);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -22,10 +22,8 @@
   left: var(--space-0);
   height: 100vh;
   z-index: var(--z-sidebar);
+  box-shadow: var(--sb-shadow-1);
 
-  // --- Tablet y móvil: cajón (drawer) fuera de pantalla (Req 36.5) ----------
-  // Se conserva la navegación completa; el cajón entra al abrirse por el botón
-  // de menú del ShellComponent, sin eliminar accesos (Req 4.1, 36.3).
   @include respond-to('tablet') {
     transform: translateX(-100%);
     transition: transform 0.2s ease;
@@ -45,26 +43,240 @@
       transform: translateX(0);
     }
   }
+
+  // --- Marca superior ---
+  &__brand {
+    height: var(--topbar-height);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-0) var(--space-5);
+  }
+
+  &__brand-mark {
+    width: var(--sidebar-logo-size);
+    height: var(--sidebar-logo-size);
+    flex-shrink: 0;
+    border-radius: var(--radius-btn-sm);
+    background: var(--sb-primary);
+    color: var(--sb-on-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: var(--line-height-tight);
+
+    strong {
+      font-family: var(--font-family-heading);
+      font-size: var(--text-subtitle);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-card);
+    }
+
+    span {
+      font-size: var(--text-caption);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--sb-primary-fixed);
+    }
+  }
+
+  &__close {
+    display: none;
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--sb-on-slate);
+    cursor: pointer;
+    border-radius: var(--radius-btn-sm);
+    padding: var(--space-1);
+
+    &:focus-visible {
+      outline: var(--focus-ring-width) solid var(--color-focus-ring);
+      outline-offset: var(--focus-ring-offset);
+    }
+
+    @include respond-to('tablet') {
+      display: inline-flex;
+    }
+
+    @include respond-to('mobile') {
+      display: inline-flex;
+    }
+  }
+
+  // --- Navegación ---
+  &__nav {
+    flex: 1;
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    overflow-y: auto;
+  }
+
+  // --- Pie: perfil + VIP ---
+  &__footer {
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  &__profile {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-1);
+  }
+
+  &__avatar {
+    width: var(--sidebar-avatar-size);
+    height: var(--sidebar-avatar-size);
+    flex-shrink: 0;
+    background: var(--sb-primary);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-weight-bold);
+    font-size: var(--text-body-sm);
+    color: var(--sb-on-primary);
+  }
+
+  &__profile-text {
+    display: flex;
+    flex-direction: column;
+    line-height: var(--line-height-tight);
+    min-width: 0;
+
+    strong {
+      font-size: var(--text-body);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-card);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span {
+      font-size: var(--text-caption);
+      color: var(--sb-primary-fixed);
+    }
+  }
+
+  &__vip {
+    background: var(--color-sidebar-hover-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  &__vip-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--sb-tertiary-fixed);
+    font-size: var(--text-caption);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__vip-text {
+    margin: var(--space-0);
+    font-size: var(--text-body-sm);
+    color: var(--color-sidebar-text);
+    line-height: var(--line-height-normal);
+  }
 }
 
-// --- Control de cierre del cajón (solo tablet/móvil) -------------------------
-.sidebar-close {
-  display: none;
-  margin-left: auto;
-  width: var(--menu-button-size);
-  height: var(--menu-button-size);
+// --- Ítem de navegación (estado activo naranja sólido) ---
+.nav-item {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
   color: var(--color-sidebar-text);
-  font-size: var(--font-size-2md);
-  cursor: pointer;
-  border-radius: var(--radius-btn-sm);
+  text-decoration: none;
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background 0.12s ease, color 0.12s ease;
+
+  &__icono {
+    flex-shrink: 0;
+  }
 
   &:hover {
-    color: var(--color-sidebar-text-strong);
     background: var(--color-sidebar-hover-bg);
+    color: var(--color-sidebar-text-strong);
+  }
+
+  &.active {
+    background: var(--sb-primary);
+    color: var(--sb-on-primary);
+    font-weight: var(--font-weight-semibold);
+    box-shadow: var(--sb-shadow-1);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: calc(-1 * var(--focus-ring-offset));
+  }
+}
+
+// Botón "Cerrar sesión" (consola de administración).
+.sidebar__salir {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-sidebar-text);
+  font: inherit;
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-sidebar-hover-bg);
+    color: var(--color-sidebar-text-strong);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+// --- Colapsar / expandir (solo desktop) ---
+.sidebar__colapsar {
+  display: none;
+  align-self: flex-end;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
+  margin: var(--space-0) var(--space-4) var(--space-1);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-sidebar-text);
+  cursor: pointer;
+  transition: background var(--duration-fast) ease, color var(--duration-fast) ease;
+
+  &:hover {
+    background: var(--color-sidebar-hover-bg);
+    color: var(--color-sidebar-text-strong);
   }
 
   &:focus-visible {
@@ -72,125 +284,118 @@
     outline-offset: var(--focus-ring-offset);
   }
 
-  @include respond-to('tablet') {
-    display: inline-flex;
-  }
-
-  @include respond-to('mobile') {
+  @include respond-to('desktop') {
     display: inline-flex;
   }
 }
 
-// --- Perfil del Broker (Req 4.3) -------------------------------------------
-.sidebar-profile {
-  padding: var(--space-5);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  border-bottom: 1px solid var(--color-sidebar-border);
+// Riel de iconos: se ocultan los textos y los ítems se centran.
+@include respond-to('desktop') {
+  .sidebar--colapsado {
+    .sidebar__brand {
+      justify-content: center;
+      padding: var(--space-0);
+    }
 
-  .avatar {
-    width: var(--sidebar-avatar-size);
-    height: var(--sidebar-avatar-size);
-    flex-shrink: 0;
-    background: var(--color-accent);
-    border-radius: var(--radius-full);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: var(--font-weight-bold);
-    font-size: var(--font-size-md);
-    color: var(--color-sidebar-text-strong);
-  }
+    .sidebar__brand-text,
+    .nav-item__texto,
+    .sidebar__profile-text,
+    .sidebar__vip,
+    .sidebar__salir span {
+      display: none;
+    }
 
-  strong {
-    font-size: var(--font-size-4md);
-    font-weight: var(--font-weight-semibold);
-  }
+    .sidebar__colapsar {
+      align-self: center;
+      margin: var(--space-0) var(--space-0) var(--space-1);
+    }
 
-  small {
-    color: var(--color-sidebar-muted);
-    font-size: var(--font-size-2sm);
+    .sidebar__nav {
+      padding: var(--space-3) var(--space-2);
+    }
+
+    .nav-item,
+    .sidebar__salir {
+      justify-content: center;
+      padding: var(--space-2);
+    }
+
+    .sidebar__footer {
+      padding: var(--space-3) var(--space-2);
+      align-items: center;
+    }
+
+    .sidebar__profile {
+      padding: var(--space-0);
+    }
   }
 }
 
-// --- Navegación (Req 4.1, 4.2) ---------------------------------------------
-.sidebar-nav {
-  flex: 1;
-  padding: var(--space-3) var(--space-0);
-  overflow-y: auto;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-5);
-  color: var(--color-sidebar-text);
+// --- Perfil como botón hacia "Mi perfil" ---
+.sidebar__profile--enlace {
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  color: inherit;
   text-decoration: none;
-  font-size: var(--font-size-2md);
-  border-left: 3px solid transparent;
-  transition: all 0.12s;
+  transition: background var(--duration-fast) ease;
 
-  &__icono {
-    display: inline-flex;
-    width: var(--space-4);
-    justify-content: center;
-  }
-
-  &:hover {
+  &:hover,
+  &.sidebar__profile--activo {
     background: var(--color-sidebar-hover-bg);
-    color: var(--color-sidebar-text-strong);
   }
 
-  // Ítem activo marcado por routerLinkActive (Req 4.2).
-  &.active {
-    background: var(--color-sidebar-active-bg);
-    color: var(--color-accent);
-    border-left-color: var(--color-accent);
-    font-weight: var(--font-weight-semibold);
+  &.sidebar__profile--activo {
+    box-shadow: inset 0 0 0 1px var(--color-sidebar-border);
   }
 
-  // Foco visible accesible (Req 27.3).
   &:focus-visible {
     outline: var(--focus-ring-width) solid var(--color-focus-ring);
-    outline-offset: calc(-1 * var(--focus-ring-offset));
+    outline-offset: var(--focus-ring-offset);
   }
 }
 
-// --- Pie del sidebar --------------------------------------------------------
-.sidebar-footer {
-  padding: var(--space-3) var(--space-5);
-  border-top: 1px solid var(--color-sidebar-footer-border);
-  font-size: var(--font-size-xs);
-  color: var(--color-sidebar-footer-text);
+.sidebar__profile-flecha {
+  margin-left: auto;
+  color: var(--color-sidebar-muted);
+}
 
-  &__marca {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
+.sidebar__estado {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: var(--space-1);
+  padding: var(--space-0) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-success) 22%, transparent);
+  color: var(--sb-tertiary-fixed);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+
+  &--prospecto {
+    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    color: var(--sb-primary-fixed);
   }
+}
 
-  &__logo {
-    width: var(--sidebar-logo-size);
-    height: var(--sidebar-logo-size);
-    flex-shrink: 0;
-    background: var(--color-accent);
-    border-radius: var(--radius-btn-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-bold);
-    color: var(--color-sidebar-text-strong);
-  }
+// Módulo restringido para prospectos (solo UI; el servidor autoriza).
+.nav-item--bloqueado {
+  color: var(--color-sidebar-muted);
+}
 
-  strong {
-    font-size: var(--font-size-sm);
-    color: var(--color-sidebar-text-strong);
-  }
+.nav-item__candado {
+  margin-left: auto;
+  opacity: 0.8;
+}
 
-  small {
-    font-size: var(--font-size-2xs);
+@include respond-to('desktop') {
+  .sidebar--colapsado {
+    .sidebar__profile-flecha,
+    .nav-item__candado {
+      display: none;
+    }
+
+    .sidebar__profile--enlace {
+      justify-content: center;
+    }
   }
 }

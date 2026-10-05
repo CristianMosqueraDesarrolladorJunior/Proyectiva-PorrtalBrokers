@@ -55,3 +55,41 @@ export const MESES_VIGENCIA_MAX = 36;
 
 /** Porcentaje de IVA aplicable al canon cuando el inmueble es Comercio (Req 7.4). */
 export const IVA_CANON_COMERCIO = 0.19;
+
+/** Monto máximo seleccionable por cobertura adicional (prototipo: $10.000.000). */
+export const MONTO_MAXIMO_COBERTURA = 10_000_000;
+
+/** Porcentaje de comisión estimada sobre la prima neta del seguro principal (prototipo). */
+export const COMISION_ESTIMADA = 0.08;
+
+/** Nota de tasas mostrada bajo el desglose de la cotización (prototipo). */
+export const NOTA_TASAS =
+  'Nota: Pólizas que superen $9.000.000 de valor asegurado (canon + admon) mensual tienen una tasa de 3.0%. Las inferiores tienen una tasa de 3.5%. El IVA es del 19%.';
+
+/** Detalle informativo de cada cobertura adicional ("Consultar detalle"). */
+export interface DetalleCobertura {
+  readonly parrafos: readonly string[];
+  readonly destacado: string;
+}
+
+export const DETALLE_COBERTURAS: Readonly<Record<string, DetalleCobertura>> = {
+  danios: {
+    parrafos: [
+      'Protegemos tu inmueble si, al ser entregado, faltan elementos del inventario.',
+      'Reporta la situación dentro de los 90 días siguientes a la salida del inquilino, junto con el inventario firmado y las fotos.',
+      'Nosotros cubrimos el costo de reparación.',
+    ],
+    destacado: 'Te recomendamos tener tu inventario al día.',
+  },
+  servicios: {
+    parrafos: [
+      'Si el inquilino entrega el inmueble y deja facturas pendientes de agua, luz y gas, asumimos el pago hasta por $1.000.000.',
+      'Solo necesitas avisarnos durante los tres primeros meses tras la entrega del inmueble, adjuntar las facturas originales con la deuda y la constancia de salida.',
+    ],
+    destacado:
+      'Con estos documentos nos encargamos de realizar el reembolso correspondiente (no cubrimos reconexiones).',
+  },
+};
+
+/** Vigencia por defecto (prototipo: 12 meses). */
+export const MESES_VIGENCIA_DEFECTO = 12;

@@ -15,7 +15,7 @@
   &__titulo {
     margin: var(--space-0);
     color: var(--color-text);
-    font-size: var(--font-size-h1-seccion);
+    font-size: var(--text-heading);
     font-weight: var(--font-weight-bold);
     line-height: var(--line-height-tight);
   }
@@ -23,7 +23,7 @@
   &__subtitulo {
     margin: var(--space-2) var(--space-0) var(--space-0);
     color: var(--color-muted);
-    font-size: var(--font-size-lg);
+    font-size: var(--text-body);
     line-height: var(--line-height-normal);
   }
 
@@ -42,28 +42,28 @@
 
   &__filtro-label {
     color: var(--color-text);
-    font-size: var(--font-size-md);
+    font-size: var(--text-body-sm);
     font-weight: var(--font-weight-semibold);
   }
 
   &__total {
     margin: var(--space-0);
     color: var(--color-muted);
-    font-size: var(--font-size-md);
+    font-size: var(--text-body-sm);
   }
 
   &__empty {
     text-align: center;
     color: var(--color-muted);
     padding: var(--space-6);
-    font-size: var(--font-size-lg);
+    font-size: var(--text-body);
   }
 
   input,
   select {
     width: 100%;
     box-sizing: border-box;
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     color: var(--color-text);
     background: var(--color-card);
     border: 1px solid var(--color-border);
@@ -75,21 +75,6 @@
       outline-offset: var(--focus-ring-offset);
     }
   }
-}
-
-.kpi__etiqueta {
-  display: block;
-  color: var(--color-muted);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-medium);
-}
-
-.kpi__valor {
-  display: block;
-  margin-top: var(--space-2);
-  color: var(--color-text);
-  font-size: var(--font-size-valor-kpi-card);
-  font-weight: var(--font-weight-valor-kpi-card);
 }
 
 .table-wrapper {
@@ -108,14 +93,14 @@
   td {
     text-align: left;
     padding: var(--space-3) var(--space-4);
-    font-size: var(--font-size-lg);
+    font-size: var(--text-body);
     border-bottom: 1px solid var(--color-border);
   }
 
   th {
     color: var(--color-muted);
     font-weight: var(--font-weight-semibold);
-    font-size: var(--font-size-md);
+    font-size: var(--text-body-sm);
   }
 
   td {

@@ -9,6 +9,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { DashboardService } from '../../../core/services/dashboard.service';
@@ -21,6 +22,7 @@ import {
   FilaDetalle,
 } from '../../../shared/components/drawer-detalle/drawer-detalle.component';
 import { TimelineComponent } from '../../../shared/components/timeline/timeline.component';
+import { BotonComponent } from '../../../shared/components/boton/boton.component';
 
 /**
  * DetalleSolicitudComponent — Detalle_Solicitud del Seguimiento (Req 34).
@@ -43,12 +45,13 @@ import { TimelineComponent } from '../../../shared/components/timeline/timeline.
   selector: 'app-detalle-solicitud',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DrawerDetalleComponent, TimelineComponent],
+  imports: [DrawerDetalleComponent, TimelineComponent, BotonComponent],
   templateUrl: './detalle-solicitud.component.html',
   styleUrl: './detalle-solicitud.component.scss',
 })
 export class DetalleSolicitudComponent implements OnChanges {
   private readonly dashboardService = inject(DashboardService);
+  private readonly router = inject(Router);
 
   /** Referencia de la solicitud seleccionada; `null` mantiene el drawer cerrado. */
   @Input() referencia: string | null = null;
@@ -70,6 +73,21 @@ export class DetalleSolicitudComponent implements OnChanges {
 
   /** Hitos del trámite mostrados en la línea de tiempo (Req 34.2). */
   protected readonly hitos = signal<readonly HitoTimeline[]>([]);
+
+  /**
+   * Estado actual de la solicitud cargada. Se usa para habilitar la gestión de corrección de
+   * documentos cuando la solicitud está "observada" (requiere actualización documental).
+   */
+  protected readonly estadoActual = signal<string | null>(null);
+
+  /** Referencia de la solicitud cargada (para enrutar a la corrección de documentos). */
+  private readonly referenciaCargada = signal<string | null>(null);
+
+  /**
+   * Indica si la solicitud permite gestionar una corrección de documentos desde el detalle. Aplica
+   * cuando el estado es "observada": la revisión solicitó actualizar/corregir los documentos.
+   */
+  protected readonly puedeCorregir = signal(false);
 
   /**
    * Reacciona al cambio de referencia: abre y carga el detalle cuando hay una
@@ -119,6 +137,25 @@ export class DetalleSolicitudComponent implements OnChanges {
   private aplicarDetalle(detalle: DetalleSolicitud): void {
     this.filas.set(construirFilasDetalle(detalle));
     this.hitos.set(detalle.timeline);
+    this.estadoActual.set(detalle.estado);
+    this.referenciaCargada.set(detalle.referencia);
+    // "observada" = la revisión solicitó actualizar/corregir documentos (gestión de corrección).
+    this.puedeCorregir.set(detalle.estado === 'observada');
+  }
+
+  /**
+   * Inicia la gestión de corrección de documentos del trámite observado (Req 32). Navega al flujo
+   * de corrección pasando la referencia como query param para precargar el trámite; el backend
+   * revalida la propiedad del trámite (anti-BOLA) antes de registrar la corrección.
+   */
+  protected gestionarCorreccion(): void {
+    const referencia = this.referenciaCargada();
+    if (!referencia) {
+      return;
+    }
+    void this.router.navigate(['/app/correccion'], {
+      queryParams: { referencia },
+    });
   }
 
   /** Restablece el estado interno al cerrar el detalle. */
@@ -128,6 +165,9 @@ export class DetalleSolicitudComponent implements OnChanges {
     this.error.set(null);
     this.filas.set([]);
     this.hitos.set([]);
+    this.estadoActual.set(null);
+    this.referenciaCargada.set(null);
+    this.puedeCorregir.set(false);
   }
 }
 

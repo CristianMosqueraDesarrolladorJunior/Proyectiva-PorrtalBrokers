@@ -12,7 +12,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: var(--space-3) var(--space-4);
-  font-size: var(--font-size-md);
+  font-size: var(--text-body-sm);
   color: var(--color-muted);
   line-height: var(--line-height-tight);
 }
@@ -25,7 +25,7 @@
 }
 
 .info-box-icono {
-  font-size: var(--font-size-4xl);
+  font-size: var(--text-title);
   flex-shrink: 0;
 }
 

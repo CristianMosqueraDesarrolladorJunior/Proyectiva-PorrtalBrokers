@@ -11,10 +11,11 @@ import { FormsModule } from '@angular/forms';
 import {
   BotonComponent,
   FormFieldComponent,
-  StepperComponent,
+  StepTabsComponent,
   AlertBannerComponent,
   EscaleritaLoaderComponent,
   SuccessScreenComponent,
+  PageHeaderComponent,
 } from '../../../shared/components';
 import {
   NuevoNegocioService,
@@ -54,7 +55,7 @@ type EstadoEnvioNN = 'inactivo' | 'enviando' | 'exito';
 /**
  * NuevoNegocioComponent — Flujo Nuevo_Negocio de 3 pasos (Req 31).
  *
- * Presenta un `StepperComponent` de 3 pasos (Datos cliente → Precios → Confirmación).
+ * Presenta un `StepTabsComponent` de 3 pasos (Datos cliente → Precios → Confirmación).
  * El paso 1 captura los datos del cliente y valida los obligatorios con la lógica pura
  * `validarPaso1` (nombre o razón social, identificación, correo y teléfono; dirección
  * opcional) antes de permitir avanzar al paso 2 (Req 31.2, 31.3). El paso 2 captura los
@@ -80,10 +81,11 @@ type EstadoEnvioNN = 'inactivo' | 'enviando' | 'exito';
     FormsModule,
     BotonComponent,
     FormFieldComponent,
-    StepperComponent,
+    StepTabsComponent,
     AlertBannerComponent,
     EscaleritaLoaderComponent,
     SuccessScreenComponent,
+    PageHeaderComponent,
   ],
   templateUrl: './nuevo-negocio.component.html',
   styleUrl: './nuevo-negocio.component.scss',
@@ -199,6 +201,13 @@ export class NuevoNegocioComponent {
   }
 
   /** Regresa del paso 2 al paso 1 para editar los datos del cliente. */
+  /** Vuelve a Datos del cliente desde las pestañas (solo antes de confirmar). */
+  protected irAPaso(indice: number): void {
+    if (indice === 0 && this.pasoActual() === 1) {
+      this.volverADatosCliente();
+    }
+  }
+
   protected volverADatosCliente(): void {
     this.borradorGuardado.set(false);
     this.pasoActual.set(0);

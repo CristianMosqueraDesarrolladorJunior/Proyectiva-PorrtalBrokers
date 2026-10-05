@@ -24,7 +24,7 @@
   border-radius: var(--radius-full);
   background: var(--color-badge-success-bg);
   color: var(--color-success);
-  font-size: var(--font-size-9xl);
+  font-size: var(--text-stat);
   font-weight: var(--font-weight-bold);
 }
 
@@ -37,7 +37,7 @@
 .success-titulo {
   margin: var(--space-0);
   margin-bottom: var(--space-1);
-  font-size: var(--font-size-5xl);
+  font-size: var(--text-title);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
 }
@@ -45,7 +45,7 @@
 .success-mensaje {
   margin: var(--space-0);
   margin-bottom: var(--space-5);
-  font-size: var(--font-size-3md);
+  font-size: var(--text-body-sm);
   color: var(--color-muted);
   line-height: var(--line-height-normal);
 }
@@ -76,13 +76,13 @@
 .track-etiqueta {
   display: block;
   margin-bottom: var(--space-1);
-  font-size: var(--font-size-2xs);
+  font-size: var(--text-caption);
   color: var(--color-muted);
   text-transform: uppercase;
 }
 
 .track-valor {
-  font-size: var(--font-size-lg);
+  font-size: var(--text-body);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
 }
@@ -103,7 +103,7 @@
   border: 1px solid var(--color-border);
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-pill);
-  font-size: var(--font-size-2md);
+  font-size: var(--text-body-sm);
   color: var(--color-text);
   transition: border-color 0.15s ease, color 0.15s ease;
 

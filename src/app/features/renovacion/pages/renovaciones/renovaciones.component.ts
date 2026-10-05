@@ -12,6 +12,8 @@ import {
   DataTableComponent,
   EscaleritaLoaderComponent,
   AlertBannerComponent,
+  PageHeaderComponent,
+  KpiCardComponent,
 } from '../../../../shared/components';
 import type {
   AccionFila,
@@ -44,6 +46,8 @@ import { estadoABadge } from '../../../../shared/pipes/estado-badge';
     DataTableComponent,
     EscaleritaLoaderComponent,
     AlertBannerComponent,
+    PageHeaderComponent,
+    KpiCardComponent,
   ],
   templateUrl: './renovaciones.component.html',
   styleUrl: './renovaciones.component.scss',
@@ -71,7 +75,7 @@ export class RenovacionesComponent {
     { key: 'producto', header: 'Producto', ordenable: true },
     { key: 'fechaVencimiento', header: 'Vencimiento', ordenable: true },
     { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
-    { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Gestionar →', alinear: 'derecha' },
+    { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Gestionar', alinear: 'derecha' },
   ];
 
   /** Filas mapeadas para el DataTable, con la variante de insignia por estado. */

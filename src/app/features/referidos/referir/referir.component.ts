@@ -10,13 +10,21 @@ import { Router } from '@angular/router';
 
 import {
   BotonComponent,
-  CardComponent,
   FormFieldComponent,
   GridLayoutComponent,
   AlertBannerComponent,
   EscaleritaLoaderComponent,
   SuccessScreenComponent,
+  PageHeaderComponent,
+  FormSectionCardComponent,
+  InfoListCardComponent,
+  StatusPillGroupComponent,
+  StickyActionsComponent,
+  CalloutCardComponent,
+  ModalDialogComponent,
 } from '../../../shared/components';
+import type { ItemInfoLista, ItemStatusPill } from '../../../shared/components';
+import { calcularKpisReferidos } from '../referido-kpis';
 import {
   ReferidosService,
   type ReferidoRequest,
@@ -53,12 +61,18 @@ type EstadoEnvioReferido = 'inactivo' | 'enviando' | 'exito';
   imports: [
     FormsModule,
     BotonComponent,
-    CardComponent,
     FormFieldComponent,
     GridLayoutComponent,
     AlertBannerComponent,
     EscaleritaLoaderComponent,
     SuccessScreenComponent,
+    PageHeaderComponent,
+    FormSectionCardComponent,
+    InfoListCardComponent,
+    StatusPillGroupComponent,
+    StickyActionsComponent,
+    CalloutCardComponent,
+    ModalDialogComponent,
   ],
   templateUrl: './referir.component.html',
   styleUrl: './referir.component.scss',
@@ -70,12 +84,70 @@ export class ReferirComponent {
   /** Opciones de producto de interés para el selector (Req 15.1). */
   protected readonly productos = PRODUCTOS_INTERES;
 
+  /** Resumen real de referidos del bróker (KPIs calculados del listado del API). */
+  protected readonly kpis = signal<ReturnType<typeof calcularKpisReferidos> | null>(null);
+
+  protected readonly pillsEstado = computed<ItemStatusPill[]>(() => {
+    const k = this.kpis();
+    return k
+      ? [
+          { label: `${k.aceptadas} aceptadas`, color: 'exito' },
+          { label: `${k.enProceso} en proceso`, color: 'primary' },
+          { label: `${k.rechazadas} rechazadas`, color: 'error' },
+        ]
+      : [];
+  });
+
+  /** Pasos del flujo operativo (contenido informativo de la pantalla). */
+  protected readonly pasosFlujo: readonly ItemInfoLista[] = [
+    { titulo: 'Contacto prioritario', descripcion: 'Nuestro equipo comercial contacta al titular por WhatsApp o llamada.' },
+    { titulo: 'Cotización y estudio digital', descripcion: 'Se genera la oferta vinculando automáticamente tu código de bróker.' },
+    { titulo: 'Cierre y liquidación', descripcion: 'Sigues el avance y tu comisión desde el estado de referidos.' },
+  ];
+
+  constructor() {
+    this.referidosService.listar({}).subscribe({
+      next: (r) => this.kpis.set(calcularKpisReferidos(r.referidos)),
+      error: () => this.kpis.set(null),
+    });
+  }
+
   /** Navega a la sección "Estado referidos" (Req 15.4). */
+  protected irAlCotizador(): void {
+    void this.router.navigate(['/app/cotizador']);
+  }
+
   protected verEstadoReferidos(): void {
     void this.router.navigate(['/app/estado-referidos']);
   }
 
   /** Limpia el formulario sin enviar (acción "Cancelar" del prototipo). */
+  /** ¿Hay datos que se perderían al limpiar? */
+  protected readonly hayDatos = computed(
+    () =>
+      this.nombre().length > 0 ||
+      this.cedula().length > 0 ||
+      this.celular().length > 0 ||
+      this.correo().length > 0 ||
+      this.producto().length > 0 ||
+      this.comentario().length > 0,
+  );
+
+  protected readonly confirmarLimpiar = signal(false);
+
+  protected pedirLimpiar(): void {
+    if (this.hayDatos()) {
+      this.confirmarLimpiar.set(true);
+    } else {
+      this.nuevoReferido();
+    }
+  }
+
+  protected confirmarYLimpiar(): void {
+    this.confirmarLimpiar.set(false);
+    this.nuevoReferido();
+  }
+
   protected cancelar(): void {
     this.nuevoReferido();
   }

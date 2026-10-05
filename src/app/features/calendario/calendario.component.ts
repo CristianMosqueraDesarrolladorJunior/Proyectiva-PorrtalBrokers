@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 /** Punto de color de un día del calendario (rojo urgente, naranja próxima, azul evento). */
 type ColorDot = 'red' | 'orange' | 'blue';
 
@@ -33,6 +34,7 @@ interface EventoCard {
 @Component({
   selector: 'app-calendario',
   standalone: true,
+  imports: [PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './calendario.component.html',
   styleUrl: './calendario.component.scss',
@@ -63,7 +65,7 @@ export class CalendarioComponent {
       variante: 'danger',
       cliente: 'Empresas Globales S.A.',
       detalle: 'Póliza Integral · #POL-90822',
-      vence: '📅 Vence en 3 días',
+      vence: 'Vence en 3 días',
       gestionable: true,
     },
     {
@@ -72,7 +74,7 @@ export class CalendarioComponent {
       variante: 'warning',
       cliente: 'Marta Rodríguez P.',
       detalle: 'Seguro de Vida · #VID-44510',
-      vence: '📅 Vence en 15 días',
+      vence: 'Vence en 15 días',
       gestionable: false,
     },
   ];

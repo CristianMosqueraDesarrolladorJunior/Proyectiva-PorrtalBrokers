@@ -17,45 +17,83 @@
 
 :root {
   // ---------------------------------------------------------------------------
-  // Familia tipográfica base del prototipo (Req 36.2)
+  // Familia tipográfica base (Req 36.2)
+  // Familia Bolívar (Brandbook Proyectiva) con Roboto de respaldo.
+  // `--font-family-base` se mantiene como alias de `--font-family-body`.
   // ---------------------------------------------------------------------------
-  --font-family-base: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue',
-    Arial, sans-serif;
+  --font-family-base: var(--font-family-body);
 
   // ---------------------------------------------------------------------------
-  // Colores base del prototipo (Req 25.2, 36.2)
+  // Sistema de diseño "Proyectiva Broker Nexus" (stitch)
+  // Paleta Material-like: superficies azuladas, primary naranja, slate de
+  // navegación, estados semánticos. Fuente única para TODA la app: portal,
+  // consola admin y Agente Brok. Estos tokens los consumen los componentes
+  // rediseñados; los tokens base del prototipo se mantienen como alias abajo
+  // para no romper los componentes existentes.
   // ---------------------------------------------------------------------------
-  --color-primary: #1a1a2e;
-  --color-accent: #f57c00;
-  --color-accent-light: #fff3e0;
-  --color-success: #43a047;
-  --color-danger: #e53935;
-  --color-info: #1976d2;
-  --color-bg: #f5f6fa;
-  --color-card: #fff;
-  --color-border: #e8e8e8;
-  --color-text: #1a1a2e;
-  --color-muted: #666;
+  --sb-primary: #f97316;            // primary-container (naranja acción)
+  --sb-primary-hover: #ea580c;
+  --sb-primary-fixed: #ffdbca;      // chip/badge naranja claro
+  --sb-on-primary: #ffffff;
+  --sb-on-primary-fixed: #341100;
+  --sb-slate: #213145;              // inverse-surface (sidebar/tabla header)
+  --sb-on-slate: #eaf1ff;           // inverse-on-surface
+  --sb-background: #f8f9ff;         // canvas
+  --sb-surface: #ffffff;            // surface-container-lowest (cards)
+  --sb-surface-low: #eff4ff;        // surface-container-low (inputs)
+  --sb-surface-container: #e5eeff;
+  --sb-surface-high: #dce9ff;
+  --sb-surface-highest: #d3e4fe;
+  --sb-on-surface: #0b1c30;         // texto principal
+  --sb-secondary: #565e74;          // texto secundario/muted
+  --sb-border: #e2e8f0;             // bordes/divisores
+  --sb-tertiary: #006c49;           // éxito (verde)
+  --sb-tertiary-container: #00b07a;
+  --sb-tertiary-fixed: #6ffbbe;
+  --sb-error: #ba1a1a;
+  --sb-error-container: #ffdad6;
+  --sb-info: #2563eb;
+
+  // Sombras de elevación por capas (stitch)
+  --sb-shadow-1: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  --sb-shadow-2: 0 10px 15px -3px rgba(15, 23, 42, 0.07), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
+  --sb-shadow-3: 0 20px 25px -5px rgba(15, 23, 42, 0.10), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+
+  // ---------------------------------------------------------------------------
+  // Colores base — remapeados al sistema "Proyectiva Broker Nexus" (stitch).
+  // Se conservan los nombres de token del prototipo para que TODOS los
+  // Componentes_Compartidos adopten la nueva paleta sin cambios en su SCSS.
+  // (Req 25.2, 36.2)
+  // ---------------------------------------------------------------------------
+  --color-primary: #213145;        // slate (antes #1a1a2e)
+  --color-accent: #f97316;         // naranja stitch (antes #f57c00)
+  --color-accent-light: #ffdbca;   // primary-fixed
+  --color-success: #10b981;        // tertiary/verde stitch
+  --color-danger: #f43f5e;         // rose stitch
+  --color-info: #3b82f6;           // azul stitch
+  --color-bg: #f8f9ff;             // background stitch
+  --color-card: #ffffff;           // surface
+  --color-border: #e2e8f0;         // border stitch
+  --color-text: #0b1c30;           // on-surface
+  --color-muted: #64748b;          // secondary/muted
 
   // ---------------------------------------------------------------------------
   // Estados hover derivados de la paleta (Req 25.2, 36.4)
-  // Tonos de interacción usados por los Componentes_Compartidos; sin hardcodeo
-  // en los componentes (referenciar estos tokens).
   // ---------------------------------------------------------------------------
-  --color-accent-hover: #e65100;   // hover de btn-primary / btn-accent
+  --color-accent-hover: #ea580c;   // hover naranja stitch
 
   // ---------------------------------------------------------------------------
   // Colores de insignia de estado (badge) — pares fondo/texto (Req 35.2)
-  // Derivados del prototipo (.badge-success/info/warning/danger).
+  // Alineados a los estados semánticos de stitch.
   // ---------------------------------------------------------------------------
-  --color-badge-success-bg: #e8f5e9;
-  --color-badge-success-text: #2e7d32;
-  --color-badge-info-bg: #e3f2fd;
-  --color-badge-info-text: #1565c0;
-  --color-badge-warning-bg: #fff3e0;
-  --color-badge-warning-text: #e65100;
-  --color-badge-danger-bg: #ffebee;
-  --color-badge-danger-text: #c62828;
+  --color-badge-success-bg: #ecfdf5;
+  --color-badge-success-text: #059669;
+  --color-badge-info-bg: #eff6ff;
+  --color-badge-info-text: #2563eb;
+  --color-badge-warning-bg: #fffbeb;
+  --color-badge-warning-text: #d97706;
+  --color-badge-danger-bg: #fff1f2;
+  --color-badge-danger-text: #e11d48;
 
   // Colores del punto (dot) de la insignia (Req 35.2)
   --color-dot-success: var(--color-success);
@@ -64,10 +102,24 @@
   --color-dot-danger: var(--color-danger);
 
   // Fondo/borde de KPI en estado danger (Req 5.4)
-  --color-kpi-danger-border: #ffcdd2;
+  --color-kpi-danger-border: #fecdd3;
+
+  // ---------------------------------------------------------------------------
+  // Tonos suaves (tinted) para KpiCard con fondo semántico — pares fondo/borde/texto.
+  // Usados por las tarjetas de estado (Renovadas / Próximas / A punto de vencer).
+  // ---------------------------------------------------------------------------
+  --sb-tint-success-bg: #ecfdf5;
+  --sb-tint-success-border: #a7f3d0;
+  --sb-tint-success-text: #059669;
+  --sb-tint-accent-bg: #fff3e9;
+  --sb-tint-accent-border: #ffdbca;
+  --sb-tint-accent-text: #ea580c;
+  --sb-tint-danger-bg: #fff1f2;
+  --sb-tint-danger-border: #fecdd3;
+  --sb-tint-danger-text: #e11d48;
 
   // Anillo de foco accesible (Req 27.3 — foco visible)
-  --color-focus-ring: #f57c00;
+  --color-focus-ring: #f97316;
 
   // ---------------------------------------------------------------------------
   // Sidebar del Shell_Aplicacion (Req 4) — tonos sobre fondo primario
@@ -83,10 +135,47 @@
   --color-sidebar-border: rgba(255, 255, 255, 0.1);      // separadores del perfil
   --color-sidebar-footer-border: rgba(255, 255, 255, 0.08); // borde superior footer
 
+
+  // ---------------------------------------------------------------------------
+  // Sistema unificado (toda la app): línea fina, acento suave, paneles,
+  // movimiento y degradados. Las transparencias se derivan en los componentes
+  // con color-mix() a partir de estos tokens (sin valores sueltos).
+  // ---------------------------------------------------------------------------
+  --color-line: rgba(15, 23, 42, 0.08);   // divisores y bordes finos
+  --color-accent-soft: var(--sb-primary-fixed);  // naranja claro (orbe, confeti)
+  --color-accent-tint: var(--sb-tint-accent-bg);
+  --gradient-accent: linear-gradient(90deg, var(--color-accent), var(--color-accent-hover));
+  --gradient-orbe: conic-gradient(from 0deg, var(--color-accent), var(--sb-primary-fixed), var(--sb-tint-accent-bg), var(--color-accent));
+  --radius-panel: 20px;                   // paneles y tarjetas grandes
+  --radius-card: var(--radius-xl);        // tarjetas y controles grandes
+  --shadow-panel: var(--sb-shadow-3);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 0.12s;
+  --duration-base: 0.25s;
+  --duration-slow: 0.45s;
+  --control-height-lg: 56px;              // inputs y botones destacados
+  --orbe-size-sm: 40px;
+  --orbe-size-md: 64px;
+  --orbe-size-lg: 150px;
+  --chat-panel-width: 400px;              // panel de chat del Agente Brok
+  --stepper-node-size: 30px;
+  --z-foco: 80;                           // anillo de foco guiado del agente
+  --z-cursor: 90;
+
   // ---------------------------------------------------------------------------
   // Layout (Req 25.2)
   // ---------------------------------------------------------------------------
   --sidebar-width: 260px;
+  --sidebar-width-collapsed: 76px;       // riel de iconos (sidebar colapsado)
+
+  // Densidad de controles (escala compacta y uniforme del portal).
+  --control-height: 40px;        // inputs, selects, botones principales
+  --control-height-sm: 34px;     // segmentados, botones secundarios, chips
+  --icon-badge-size: 36px;       // icono en chip cuadrado (coberturas, avisos)
+  --section-number-size: 28px;   // numeral de secciones de formulario
+  --card-padding: var(--space-5);
+  --page-title-size: var(--text-headline);
 
   // Ancho máximo del contenedor interno del área de contenido (main-content).
   // El prototipo no fija un tope; en pantallas muy anchas se centra el contenido
@@ -103,6 +192,8 @@
 
   // Ancho máximo de la tarjeta/modal de login del prototipo (Req 1, 25.2)
   --login-card-width: 420px;
+  // Tarjeta del registro de broker (comparte UI con el login, más ancha por el asistente).
+  --registro-card-width: 640px;
 
   // Fondo oscuro sólido de la pantalla de login (Req 1). El prototipo usa un
   // degradado #1a1a2e→#16213e; aquí se usa el tono más oscuro como color sólido
@@ -158,9 +249,9 @@
   // fab de acento y modal de login). Ningún componente debe declarar sombras
   // hardcodeadas: referenciar siempre estos tokens.
   // ---------------------------------------------------------------------------
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.03);        // data-table
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);        // hover de tarjetas/paneles
-  --shadow-lg: 0 6px 28px rgba(0, 0, 0, 0.14);       // chat-widget
+  --shadow-sm: var(--sb-shadow-1);                   // data-table / cards (stitch capa 1)
+  --shadow-md: var(--sb-shadow-2);                   // hover de tarjetas/paneles (stitch capa 2)
+  --shadow-lg: var(--sb-shadow-3);                   // chat-widget / popovers (stitch capa 3)
   --shadow-drawer: -4px 0 20px rgba(0, 0, 0, 0.10);  // drawer lateral
   --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.30);   // modal de login/registro
   --shadow-accent-sm: 0 3px 10px rgba(245, 124, 0, 0.08); // hover card de acento

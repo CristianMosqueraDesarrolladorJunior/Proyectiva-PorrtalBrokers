@@ -35,7 +35,7 @@ export class AlertBannerComponent {
   /** Título opcional en negrita del banner. */
   @Input() titulo: string | null = null;
 
-  /** Ícono decorativo mostrado a la izquierda (emoji del prototipo). */
+  /** Ícono decorativo mostrado a la izquierda (nombre de Material Symbols). */
   @Input() icono: string | null = null;
 
   /** Ícono por defecto según la variante cuando no se especifica uno. */
@@ -44,12 +44,12 @@ export class AlertBannerComponent {
       return this.icono;
     }
     if (this.variante === 'success') {
-      return '✓';
+      return 'check_circle';
     }
     if (this.variante === 'error') {
-      return '⚠';
+      return 'error';
     }
-    return 'ℹ️';
+    return this.variante === 'warning' ? 'warning' : 'info';
   }
 
   /**

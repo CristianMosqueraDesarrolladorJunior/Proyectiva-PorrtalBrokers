@@ -11,7 +11,7 @@ import { Component, Input } from '@angular/core';
  *
  * Uso:
  * ```html
- * <app-info-box icono="📅">
+ * <app-info-box icono="event">
  *   <strong>Vigencia:</strong> 12 meses · <strong>Frecuencia:</strong> Mensual
  * </app-info-box>
  * ```

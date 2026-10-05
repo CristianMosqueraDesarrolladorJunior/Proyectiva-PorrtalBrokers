@@ -1,6 +1,6 @@
 <section class="gestion-renovacion">
   <!-- ══════════════════ PASO 1 — OPCIONES ══════════════════ -->
-  @if (flujo() === 'renovacion' && pasoActivo() === 0) {
+  @if (etapa() === 'opciones') {
     <div class="opciones">
       <header class="opciones__header">
         <h1 class="opciones__titulo">
@@ -20,9 +20,9 @@
           role="button"
           tabindex="0"
           aria-label="Renovación Física - Diligencia el formato físico de renovación"
-          (click)="navegarRenovacionFisica()"
-          (keydown.enter)="navegarRenovacionFisica()"
-          (keydown.space)="navegarRenovacionFisica(); $event.preventDefault()"
+          (click)="iniciarRenovacionFisica()"
+          (keydown.enter)="iniciarRenovacionFisica()"
+          (keydown.space)="iniciarRenovacionFisica(); $event.preventDefault()"
         >
           <span class="card__badge">RECOMENDADO</span>
           <div class="card__content">
@@ -45,9 +45,9 @@
           role="button"
           tabindex="0"
           aria-label="Renovación Digital - Renueva tu póliza de forma digital"
-          (click)="navegarRenovacionDigital()"
-          (keydown.enter)="navegarRenovacionDigital()"
-          (keydown.space)="navegarRenovacionDigital(); $event.preventDefault()"
+          (click)="iniciarRenovacionDigital()"
+          (keydown.enter)="iniciarRenovacionDigital()"
+          (keydown.space)="iniciarRenovacionDigital(); $event.preventDefault()"
         >
           <div class="card__content">
             <div class="card__icon card__icon--primary">
@@ -84,9 +84,9 @@
                     role="button"
                     tabindex="0"
                     aria-label="Otro sí de póliza de arrendamiento"
-                    (click)="iniciarCasoEspecial()"
-                    (keydown.enter)="iniciarCasoEspecial()"
-                    (keydown.space)="iniciarCasoEspecial(); $event.preventDefault()"
+                    (click)="iniciarCasoEspecial('otroSi')"
+                    (keydown.enter)="iniciarCasoEspecial('otroSi')"
+                    (keydown.space)="iniciarCasoEspecial('otroSi'); $event.preventDefault()"
                   >• Otro sí de póliza de arrendamiento</a>
                 </li>
                 <li class="card__sub-item">
@@ -95,9 +95,9 @@
                     role="button"
                     tabindex="0"
                     aria-label="Cesión de contrato de arrendamiento"
-                    (click)="iniciarCasoEspecial()"
-                    (keydown.enter)="iniciarCasoEspecial()"
-                    (keydown.space)="iniciarCasoEspecial(); $event.preventDefault()"
+                    (click)="iniciarCasoEspecial('cesionContrato')"
+                    (keydown.enter)="iniciarCasoEspecial('cesionContrato')"
+                    (keydown.space)="iniciarCasoEspecial('cesionContrato'); $event.preventDefault()"
                   >• Cesión de contrato de arrendamiento</a>
                 </li>
                 <li class="card__sub-item card__sub-item--danger">
@@ -166,11 +166,12 @@
             <h2 id="confirm-titulo" class="confirm-dialog__titulo">¿Estás seguro de no renovar tu póliza?</h2>
             <p class="confirm-dialog__mensaje">
               Al no renovar tu póliza de arrendamiento, tu inmueble arrendado dejará de contar con la
-              protección una vez finalice la vigencia actual. Esta acción no se puede deshacer fácilmente.
+              protección una vez finalice la vigencia actual. A continuación indicarás el motivo y se
+              validará el SARLAFT antes de registrar la solicitud.
             </p>
             <div class="confirm-dialog__acciones">
               <button type="button" class="btn btn--outline" (click)="cancelarNoRenovar()">Cancelar</button>
-              <button type="button" class="btn btn--danger" (click)="confirmarNoRenovar()">Confirmar no renovación</button>
+              <button type="button" class="btn btn--danger" (click)="confirmarNoRenovar()">Continuar con no renovación</button>
             </div>
           </div>
         </div>
@@ -178,10 +179,20 @@
     </div>
   }
 
-  <!-- ══════════════════ PASO 2 — DETALLES ══════════════════ -->
-  @if (flujo() === 'renovacion' && pasoActivo() === 1) {
+  <!-- Stepper del flujo activo (todas las gestiones terminan en SARLAFT → éxito) -->
+  @if (etapa() !== 'opciones') {
+    <app-step-tabs
+      [pasos]="pasosFlujo()"
+      [pasoActivo]="pasoActivo()"
+      [navegable]="etapa() !== 'exito'"
+      ariaLabel="Pasos de la gestión de renovación"
+      (pasoSeleccionado)="irAPaso($event)"
+    />
+  }
+
+  <!-- ══════════════════ DIGITAL — DETALLES ══════════════════ -->
+  @if (flujo() === 'digital' && etapa() === 'detalles') {
     <div class="detalles">
-      <app-stepper [pasos]="pasos" [pasoActivo]="1" />
 
       <div class="detalles__contenido">
         <div class="detalles__main">
@@ -302,10 +313,9 @@
     </div>
   }
 
-  <!-- ══════════════════ PASO 3 — AJUSTE ══════════════════ -->
-  @if (flujo() === 'renovacion' && pasoActivo() === 2) {
+  <!-- ══════════════════ DIGITAL — AJUSTE ══════════════════ -->
+  @if (flujo() === 'digital' && etapa() === 'ajuste') {
     <div class="ajuste">
-      <app-stepper [pasos]="pasos" [pasoActivo]="2" />
 
       <div class="ajuste__header">
         <div class="ajuste__title-row">
@@ -577,16 +587,16 @@
               <span class="observaciones-card__info">Las observaciones serán adjuntadas al expediente de renovación de la póliza de arrendamiento.</span>
             </div>
 
-            <button type="button" class="btn btn--primary" (click)="continuarSiguientePaso()">Siguiente paso →</button>
-            <button type="button" class="btn btn--secondary" (click)="volverADetalles()">← Volver al paso anterior</button>
+            <button type="button" class="btn btn--primary" (click)="avanzar()">Validar SARLAFT →</button>
+            <button type="button" class="btn btn--secondary" (click)="retroceder()">← Volver al paso anterior</button>
           </div>
         </div>
       </form>
     </div>
   }
 
-  <!-- ══════════════════ PASO 4 — PROCESO / CONFIRMACIÓN ══════════════════ -->
-  @if (flujo() === 'renovacion' && pasoActivo() === 3) {
+  <!-- ══════════════════ DIGITAL — EN PROCESO (éxito) ══════════════════ -->
+  @if (flujo() === 'digital' && etapa() === 'exito') {
     <div class="proceso">
       <div class="proceso__icon">
         <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
@@ -601,6 +611,9 @@
         Hemos recibido tu solicitud de renovación de póliza de arrendamiento. Nuestros asesores revisarán la
         información y te notificarán cuando la protección de tu inmueble arrendado haya sido renovada exitosamente.
       </p>
+      @if (confirmacion(); as c) {
+        <p class="proceso__descripcion">Radicado <strong>{{ c.radicado }}</strong> · {{ c.estado }}</p>
+      }
 
       <div class="proceso__section">
         <h2 class="proceso__section-titulo">¿Qué sigue con la renovación de tu póliza?</h2>
@@ -651,23 +664,155 @@
     </div>
   }
 
+  <!-- ══════════════════ FÍSICA — FORMULARIO ══════════════════ -->
+  @if (flujo() === 'fisica' && etapa() === 'captura') {
+    <div class="flujo-especial">
+      <div class="flujo-especial__contenido">
+        <h1 class="flujo-especial__titulo">Cargue del Formulario de Renovación</h1>
+        <p class="flujo-especial__subtitulo">
+          Póliza #{{ numeroPoliza() }} · Carga el formato físico de renovación diligenciado y firmado
+        </p>
+
+        <div class="flujo-especial__grid">
+          <div class="instrucciones-card">
+            <h3 class="instrucciones-card__titulo">Instrucciones</h3>
+            <p class="instrucciones-card__texto">
+              Descarga el formato de renovación (persona natural o jurídica), diligéncialo con el
+              cliente y cárgalo firmado. Después se validará el SARLAFT antes de enviar la solicitud.
+            </p>
+            <ul class="instrucciones-card__lista">
+              <li>El archivo debe ser legible</li>
+              <li>Formatos permitidos: PDF, JPG, PNG</li>
+              <li>Peso máximo por archivo: 10MB</li>
+            </ul>
+            <button type="button" class="btn btn--outline" (click)="irAFormatos()">Descargar formato de renovación</button>
+          </div>
+
+          <div class="flujo-especial__formulario">
+            <app-doc-uploader
+              [reglas]="reglaFormularioRenovacion"
+              [cargados]="cargados()"
+              (archivoSeleccionado)="onArchivoSeleccionado($event)"
+            />
+
+            <div class="observaciones-field">
+              <label for="comentarios-fisica">Comentarios (opcional)</label>
+              <textarea
+                id="comentarios-fisica"
+                rows="4"
+                [maxlength]="maxCaracteres"
+                [ngModel]="comentarios()"
+                (ngModelChange)="comentarios.set($event)"
+                placeholder="Información adicional para el equipo de renovaciones..."
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="flujo-especial__acciones">
+          <button type="button" class="btn btn--outline" (click)="volverAOpciones()">Cancelar</button>
+          <button type="button" class="btn btn--primary" [disabled]="!hayArchivo" (click)="avanzar()">
+            Validar SARLAFT →
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════ CASO ESPECIAL — NO RENOVAR (motivo) ══════════════════ -->
+  @if (flujo() === 'no-renovar' && etapa() === 'captura') {
+    <div class="flujo-especial">
+      <div class="flujo-especial__contenido">
+        <h1 class="flujo-especial__titulo">Sentimos que decidas no renovar tu póliza de arrendamiento</h1>
+        <p class="flujo-especial__subtitulo">Póliza #{{ numeroPoliza() }}</p>
+
+        <div class="flujo-especial__formulario">
+          <h3 class="instrucciones-card__titulo">
+            ¿Cuál es el motivo principal para no renovar la póliza de arrendamiento?
+          </h3>
+          <app-radio-group
+            [opciones]="opcionesMotivo"
+            [valor]="motivoNoRenovacion()"
+            (valorChange)="motivoNoRenovacion.set($event)"
+            ariaLabel="Motivo de no renovación"
+          />
+
+          <div class="observaciones-field">
+            <label for="obs-no-renovar">Observaciones adicionales (opcional)</label>
+            <textarea
+              id="obs-no-renovar"
+              rows="4"
+              [maxlength]="maxCaracteres"
+              [ngModel]="comentarios()"
+              (ngModelChange)="comentarios.set($event)"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="flujo-especial__acciones">
+          <button type="button" class="btn btn--outline" (click)="volverAOpciones()">Cancelar</button>
+          <button type="button" class="btn btn--primary" [disabled]="!motivoValido()" (click)="avanzar()">
+            Validar SARLAFT →
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════ SARLAFT (todas las gestiones) ══════════════════ -->
+  @if (etapa() === 'sarlaft') {
+    <app-sarlaft-renovacion
+      [numeroPoliza]="numeroPoliza()"
+      [textoContinuar]="enviando() ? 'Enviando…' : 'Continuar y enviar'"
+      (vigente)="onSarlaftVigente($event)"
+      (cancelar)="volverAOpciones()"
+    />
+    @if (errorEnvio(); as error) {
+      <app-alert-banner variante="error" titulo="No se pudo enviar">{{ error }}</app-alert-banner>
+    }
+  }
+
+  <!-- ══════════════════ ÉXITO — FÍSICA / NO RENOVAR ══════════════════ -->
+  @if (flujo() === 'fisica' && etapa() === 'exito') {
+    <app-success-screen
+      icono="✓"
+      titulo="Solicitud de Renovación Enviada"
+      mensaje="Recibimos el formulario de renovación con SARLAFT vigente. El equipo de renovaciones lo revisará y te notificará el resultado."
+      textoVolver="Volver a renovaciones"
+      [tarjetas]="tarjetasExito()"
+      (volver)="finalizar()"
+    />
+  }
+  @if (flujo() === 'no-renovar' && etapa() === 'exito') {
+    <app-success-screen
+      icono="✓"
+      titulo="Solicitud de No Renovación Recibida"
+      mensaje="Registramos la decisión de no renovar la póliza con su motivo. La protección se mantiene hasta el fin de la vigencia actual."
+      textoVolver="Volver a renovaciones"
+      [tarjetas]="tarjetasExito()"
+      (volver)="finalizar()"
+    />
+  }
+
   <!-- ══════════════════ FLUJO A — CASO ESPECIAL ══════════════════ -->
   @if (flujo() === 'caso-especial') {
     <div class="flujo-especial">
-      <app-stepper
-        [pasos]="pasosCasoEspecial"
-        [pasoActivo]="subPaso() === 'documentacion' ? 1 : 2"
-      />
-
-      <!-- Sub-paso: Documentación del caso especial -->
-      @if (subPaso() === 'documentacion') {
+      <!-- Documento del caso especial (Otro Sí / Cesión) -->
+      @if (etapa() === 'captura') {
         <div class="flujo-especial__contenido">
           <h1 class="flujo-especial__titulo">
             Solicitud de Caso Especial — Póliza de Arrendamiento
           </h1>
           <p class="flujo-especial__subtitulo">
-            Carga de documentos para Otro Sí o Cesión de Contrato de tu póliza de arrendamiento
+            Póliza #{{ numeroPoliza() }} · Carga el documento legal del trámite seleccionado
           </p>
+
+          <app-radio-group
+            [opciones]="opcionesCasoEspecial"
+            [valor]="tipoCasoEspecial()"
+            (valorChange)="tipoCasoEspecial.set($event === 'cesionContrato' ? 'cesionContrato' : 'otroSi')"
+            ariaLabel="Tipo de caso especial"
+          />
 
           <div class="flujo-especial__grid">
             <div class="instrucciones-card">
@@ -692,7 +837,7 @@
             <div class="flujo-especial__formulario">
               <app-doc-uploader
                 [reglas]="reglaCasoEspecial"
-                [cargados]="cargadosCasoEspecial"
+                [cargados]="cargados()"
                 (archivoSeleccionado)="onArchivoSeleccionado($event)"
               />
 
@@ -701,8 +846,9 @@
                 <textarea
                   id="obs-caso-especial"
                   rows="5"
-                  [ngModel]="observacionesCaso()"
-                  (ngModelChange)="observacionesCaso.set($event)"
+                  [maxlength]="maxCaracteres"
+                  [ngModel]="comentarios()"
+                  (ngModelChange)="comentarios.set($event)"
                   placeholder="Escriba aquí cualquier observación adicional sobre su solicitud..."
                 ></textarea>
               </div>
@@ -715,48 +861,22 @@
               type="button"
               class="btn btn--primary"
               [disabled]="!hayArchivo"
-              (click)="confirmarCasoEspecial()"
+              (click)="avanzar()"
             >
-              Confirmación
+              Validar SARLAFT →
             </button>
           </div>
         </div>
       }
 
-      <!-- Sub-paso: Confirmación de identidad (SARLAFT) -->
-      @if (subPaso() === 'sarlaft') {
-        <div class="flujo-especial__sarlaft">
-          @if (estadoSarlaft() === 'validando') {
-            <app-escalerita-loader texto="Validando SARLAFT..." />
-          } @else {
-            <div class="sarlaft-exito">
-              <div class="sarlaft-exito__icon" aria-hidden="true">
-                <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-                  <circle cx="28" cy="28" r="28" fill="var(--color-badge-success-bg)" />
-                  <path d="M20 28L26 34L37 22" stroke="var(--color-success)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </div>
-              <h2 class="sarlaft-exito__titulo">Validación SARLAFT completada</h2>
-              <p class="sarlaft-exito__texto">
-                La identidad fue verificada correctamente. Continúa para finalizar el envío de tu
-                solicitud de caso especial.
-              </p>
-              <button type="button" class="btn btn--primary" (click)="continuarExitoCasoEspecial()">
-                Continuar →
-              </button>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- Sub-paso: Pantalla de éxito -->
-      @if (subPaso() === 'exito') {
+      <!-- Éxito del caso especial -->
+      @if (etapa() === 'exito') {
         <app-success-screen
           icono="✓"
           titulo="Solicitud de Caso Especial de Póliza de Arrendamiento Enviada con Éxito"
-          mensaje="Tu trámite de Caso Especial (Otro Sí / Cesión) sobre la póliza de arrendamiento ha sido recibido. Nuestro equipo revisará la documentación y te notificará sobre la continuidad de la protección de tu inmueble arrendado en un plazo máximo de 48 horas."
-          textoVolver="Volver al Inicio →"
-          [tarjetas]="tarjetasCasoEspecial"
+          mensaje="Tu trámite de Caso Especial (Otro Sí / Cesión) fue recibido con SARLAFT vigente. Nuestro equipo revisará la documentación y te notificará en un plazo máximo de 48 horas."
+          textoVolver="Volver al Inicio"
+          [tarjetas]="tarjetasExito()"
           (volver)="finalizar()"
         />
       }
@@ -766,13 +886,8 @@
   <!-- ══════════════════ FLUJO B — CORRECCIÓN DE DOCUMENTOS ══════════════════ -->
   @if (flujo() === 'correccion') {
     <div class="flujo-correccion">
-      <app-stepper
-        [pasos]="pasosCorreccion"
-        [pasoActivo]="subPaso() === 'documentacion' ? 0 : (subPaso() === 'observaciones' ? 1 : 2)"
-      />
-
-      <!-- Sub-paso 1: Subir documento corregido -->
-      @if (subPaso() === 'documentacion') {
+      <!-- Paso: Subir documento corregido -->
+      @if (etapa() === 'captura') {
         <div class="flujo-correccion__contenido">
           <app-alert-banner
             variante="error"
@@ -792,7 +907,7 @@
 
           <app-doc-uploader
             [reglas]="reglaCorreccion"
-            [cargados]="cargadosCorreccion"
+            [cargados]="cargados()"
             (archivoSeleccionado)="onArchivoSeleccionado($event)"
           />
 
@@ -804,16 +919,16 @@
               type="button"
               class="btn btn--primary"
               [disabled]="!hayArchivo"
-              (click)="continuarCorreccionPaso2()"
+              (click)="avanzar()"
             >
-              Continuar a Paso 2 →
+              Continuar a observaciones
             </button>
           </div>
         </div>
       }
 
-      <!-- Sub-paso 2: Observaciones de corrección -->
-      @if (subPaso() === 'observaciones') {
+      <!-- Paso: Observaciones de corrección -->
+      @if (etapa() === 'observaciones') {
         <div class="flujo-correccion__contenido">
           <p class="flujo-correccion__instruccion">
             Paso 2: Describe detalladamente los cambios realizados en la documentación de tu póliza
@@ -828,7 +943,7 @@
               <div class="resumen-tramite__items">
                 <div class="resumen-tramite__item">
                   <span class="resumen-tramite__label">Referencia</span>
-                  <span class="resumen-tramite__valor">#PR-2025-0892</span>
+                  <span class="resumen-tramite__valor">#{{ numeroPoliza() }}</span>
                 </div>
                 <div class="resumen-tramite__item">
                   <span class="resumen-tramite__label">Documento</span>
@@ -850,7 +965,7 @@
                   </svg>
                 </div>
                 <div class="resumen-tramite__archivo-info">
-                  <span class="resumen-tramite__archivo-nombre">{{ archivoNombre() }}</span>
+                  <span class="resumen-tramite__archivo-nombre">{{ archivo()?.name }}</span>
                   <span class="resumen-tramite__archivo-estado">
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                       <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.15" />
@@ -874,15 +989,15 @@
               <textarea
                 id="obs-correccion"
                 rows="6"
-                [maxlength]="maxCaracteresCorreccion"
-                [ngModel]="observacionesCorreccion()"
-                (ngModelChange)="observacionesCorreccion.set($event)"
+                [maxlength]="maxCaracteres"
+                [ngModel]="comentarios()"
+                (ngModelChange)="comentarios.set($event)"
                 placeholder="Ej: He subido una nueva fotografía con iluminación natural para mejorar la legibilidad de la fecha de expiración."
                 class="obs-correccion__textarea"
               ></textarea>
 
               <span class="obs-correccion__contador">
-                {{ caracteresCorreccion }}/{{ maxCaracteresCorreccion }}
+                {{ caracteresComentarios }}/{{ maxCaracteres }}
               </span>
 
               <div class="obs-correccion__tip">
@@ -895,44 +1010,18 @@
           </div>
 
           <div class="flujo-correccion__acciones">
-            <button type="button" class="btn btn--outline" (click)="volverCorreccionPaso1()">
+            <button type="button" class="btn btn--outline" (click)="retroceder()">
               ← Volver al Paso 1
             </button>
-            <button type="button" class="btn btn--primary" (click)="enviarCorreccion()">
-              Enviar Corrección ▷
+            <button type="button" class="btn btn--primary" (click)="avanzar()">
+              Validar SARLAFT ▷
             </button>
           </div>
         </div>
       }
 
-      <!-- Sub-paso 3: Confirmación de identidad (SARLAFT) -->
-      @if (subPaso() === 'sarlaft') {
-        <div class="flujo-correccion__sarlaft">
-          @if (estadoSarlaft() === 'validando') {
-            <app-escalerita-loader texto="Validando SARLAFT..." />
-          } @else {
-            <div class="sarlaft-exito">
-              <div class="sarlaft-exito__icon" aria-hidden="true">
-                <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-                  <circle cx="28" cy="28" r="28" fill="var(--color-badge-success-bg)" />
-                  <path d="M20 28L26 34L37 22" stroke="var(--color-success)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </div>
-              <h2 class="sarlaft-exito__titulo">Validación SARLAFT completada</h2>
-              <p class="sarlaft-exito__texto">
-                La identidad fue verificada correctamente. Continúa para finalizar el envío de tu
-                corrección de documentos.
-              </p>
-              <button type="button" class="btn btn--primary" (click)="continuarExitoCorreccion()">
-                Continuar →
-              </button>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- Sub-paso: Pantalla de éxito -->
-      @if (subPaso() === 'exito') {
+      <!-- Éxito de la corrección -->
+      @if (etapa() === 'exito') {
         <div class="correccion-enviada">
           <div class="correccion-enviada__icon" aria-hidden="true">
             <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
@@ -943,6 +1032,9 @@
 
           <h1 class="correccion-enviada__titulo">Corrección de Póliza de Arrendamiento Enviada</h1>
           <h2 class="correccion-enviada__subtitulo">¡Documento Enviado con Éxito!</h2>
+          @if (confirmacion(); as c) {
+            <p class="correccion-enviada__descripcion">Radicado <strong>{{ c.radicado }}</strong> · {{ c.estado }}</p>
+          }
 
           <p class="correccion-enviada__descripcion">
             Tu documento corregido para la renovación de tu póliza de arrendamiento ha sido recibido
@@ -964,7 +1056,7 @@
           </div>
 
           <button type="button" class="btn btn--primary" (click)="finalizar()">
-            Volver al Inicio →
+            Volver al Inicio
           </button>
 
           <p class="correccion-enviada__soporte">

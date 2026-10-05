@@ -12,9 +12,8 @@
  *
  * Alinea con Property 29 (design.md):
  *   Para todo `NoRenovacionRequest`, el envío de la no renovación está habilitado
- *   si y solo si se ha seleccionado un motivo del conjunto definido (costo elevado,
- *   cambio de proveedor, ya no necesita la cobertura, insatisfacción con el
- *   servicio); las observaciones son opcionales y no afectan la habilitación.
+ *   si y solo si se ha seleccionado un motivo del conjunto definido (precio elevado,
+ *   venta del inmueble, descontento con el servicio); las observaciones son opcionales y no afectan la habilitación.
  *
  * _Requirements: 22.1, 22.3_
  */
@@ -28,18 +27,16 @@ import type { MotivoNoRenovacion } from '../../core/models/renovacion.model';
  * valor fuera de este conjunto no habilita el envío.
  */
 export const MOTIVOS_NO_RENOVACION: readonly MotivoNoRenovacion[] = [
-  'costoElevado',
-  'cambioProveedor',
-  'yaNoNecesita',
-  'insatisfaccionServicio',
+  'precioElevado',
+  'ventaInmueble',
+  'descontentoServicio',
 ];
 
 /** Etiqueta legible de cada motivo de No Renovación para la UI (Req 22.1). */
 export const ETIQUETA_MOTIVO_NO_RENOVACION: Readonly<Record<MotivoNoRenovacion, string>> = {
-  costoElevado: 'Costo elevado',
-  cambioProveedor: 'Cambio de proveedor',
-  yaNoNecesita: 'Ya no necesita la cobertura',
-  insatisfaccionServicio: 'Insatisfacción con el servicio',
+  precioElevado: 'Precio elevado de la póliza de arrendamiento',
+  ventaInmueble: 'Venta del inmueble arrendado',
+  descontentoServicio: 'Descontento con el servicio de protección del inmueble',
 };
 
 /**

@@ -42,3 +42,8 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Generated artifacts (no son fuente)
+build-log.txt
+graphify-out/
+src/graphify-out/

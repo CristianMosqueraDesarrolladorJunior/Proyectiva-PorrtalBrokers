@@ -1,7 +1,7 @@
 // DrawerDetalleComponent — drawer-overlay / drawer / drawer-header / drawer-body
 // / detail-row / detail-label / drawer-footer. 100% tokenizado para valores de
 // color, radio, espaciado, tipografía y sombra (Req 35.19, 39.2, 39.3, 25.3,
-// 25.4). Replica la apariencia del prototipo (panel lateral derecho + overlay).
+// 25.4). Se presenta como modal central (sin paneles laterales) con las opciones en el pie.
 
 :host {
   display: contents;
@@ -10,22 +10,52 @@
 .drawer-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--color-overlay);
   z-index: 1500;
+  animation: drawer-fondo-in 0.2s ease-out;
 }
 
+// Modal central (antes panel lateral): mismo contrato de accesibilidad, centrado
+// en pantalla con las opciones del detalle en el pie.
 .drawer {
   position: fixed;
-  top: 0;
-  right: 0;
-  width: 380px;
-  max-width: 100vw;
-  height: 100vh;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 2 * var(--space-4)));
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--color-card);
-  box-shadow: var(--shadow-drawer);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-modal);
   z-index: 1600;
+  animation: drawer-modal-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes drawer-fondo-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drawer-modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay,
+  .drawer {
+    animation: none;
+  }
 }
 
 .drawer-header {
@@ -37,7 +67,7 @@
 
   h3 {
     margin: var(--space-0, 0);
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
   }
@@ -47,7 +77,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-size: var(--font-size-4xl);
+  font-size: var(--text-title);
   color: var(--color-muted);
 
   &:hover {
@@ -64,7 +94,7 @@
   flex: 1;
   overflow-y: auto;
   padding: var(--space-5);
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   color: var(--color-text);
 }
 
@@ -82,12 +112,12 @@
 }
 
 .detail-label {
-  font-size: var(--font-size-3sm);
+  font-size: var(--text-body-sm);
   color: var(--color-muted);
 }
 
 .detail-value {
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
   text-align: right;
@@ -95,6 +125,8 @@
 
 .drawer-footer {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
@@ -107,7 +139,7 @@
   border-radius: var(--radius-pill);
   background: var(--color-card);
   color: var(--color-text);
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   cursor: pointer;
 
   &:hover {

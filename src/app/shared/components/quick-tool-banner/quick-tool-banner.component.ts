@@ -31,7 +31,7 @@ export class QuickToolBannerComponent {
   @Input() etiqueta = 'HERRAMIENTA RÁPIDA';
 
   /** Ícono decorativo del banner (emoji del prototipo). */
-  @Input() icono = '⚡';
+  @Input() icono = 'bolt';
 
   /** Título principal del banner. */
   @Input() titulo = '';
@@ -40,7 +40,7 @@ export class QuickToolBannerComponent {
   @Input() descripcion: string | null = null;
 
   /** Etiqueta del botón de acceso directo. */
-  @Input() textoAccion = 'Ir al cotizador →';
+  @Input() textoAccion = 'Ir al cotizador';
 
   /** Emite cuando el usuario activa el acceso directo (por defecto, Cotizador). */
   @Output() accion = new EventEmitter<void>();

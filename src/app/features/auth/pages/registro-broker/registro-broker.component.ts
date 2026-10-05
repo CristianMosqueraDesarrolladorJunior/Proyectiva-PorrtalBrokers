@@ -4,6 +4,7 @@ import {
   DestroyRef,
   computed,
   inject,
+  isDevMode,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,33 +17,32 @@ import {
 import { Router } from '@angular/router';
 
 import {
-  AlertBannerComponent,
   BotonComponent,
   DocUploaderComponent,
   EscaleritaLoaderComponent,
   FormFieldComponent,
-  ResultadoSarlaftTableComponent,
-  SuccessScreenComponent,
+  IconComponent,
+  ModalDialogComponent,
 } from '../../../../shared/components';
 import type {
   ArchivoSeleccionado,
   ReglaDocumentoUploader,
 } from '../../../../shared/components/doc-uploader/doc-uploader.component';
-import type { VarianteAlerta } from '../../../../shared/components/alert-banner/alert-banner.component';
-import {
-  AuthService,
-  type ConsultaSarlaftRequest,
-} from '../../../../core/services/auth.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import {
   DOCUMENTOS_REGISTRO_BROKER,
   type DocumentoRegistro,
-  type NivelSarlaft,
   type ReglaDocumentoRegistro,
-  type ResultadoSarlaft,
   type SolicitudRegistroBroker,
   type TipoDocumentoRegistro,
 } from '../../../../core/models/registro-broker.model';
 import type { TipoMimePermitido } from '../../../../core/models/documento.model';
+import type {
+  ResultadoSarlaftRadicacion,
+  TipoDocumentoIdentidad,
+} from '../../../../core/models/radicacion.model';
+import { MODULOS_RESTRINGIDOS } from '../../../../core/models/cuenta.model';
+import { ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD } from '../../../radicacion/pages/radicacion/radicacion-presentacion';
 import {
   reglaDeDocumentoRegistro,
   validarDocumento,
@@ -60,21 +60,10 @@ import {
   esCodigoPaisValido,
   esCorreoValido,
   esDocumentoValido,
-  esFechaExpedicionValida,
   esNombreValido,
   esTelefonoValido,
-  validarFormularioSarlaft,
-  validarInformacionPersonal,
 } from './registro-validacion';
-import {
-  clasificarSarlaft,
-  puedeConsultarSarlaft,
-  type ClasificacionSarlaft,
-} from './sarlaft-clasificacion';
-import {
-  documentosRegistroCompletos,
-  puedeEnviarSolicitud,
-} from './registro-envio';
+import { documentosRegistroCompletos } from './registro-envio';
 
 /** Ruta de la pantalla de login (acceso "Ya tengo cuenta") (Req 2.3). */
 const RUTA_LOGIN = '/login';
@@ -82,6 +71,11 @@ const RUTA_LOGIN = '/login';
 /** Texto legal mostrado junto al botón de envío (Req 3.20). */
 const TEXTO_LEGAL =
   'Al enviar, aceptas nuestras Políticas de Privacidad y Términos de Uso.';
+
+/** Tipos de documento de identidad admitidos para el registro de broker. */
+const TIPOS_DOCUMENTO_REGISTRO: readonly TipoDocumentoIdentidad[] = ['CC', 'CE', 'NIT'];
+
+type PasoRegistro = 1 | 2 | 3;
 
 /** Estado de un documento de registro cargado en memoria (nombre + validez + tipo MIME). */
 interface EstadoDocumento {
@@ -93,37 +87,40 @@ interface EstadoDocumento {
   readonly error?: string;
 }
 
-/** Tipado del formulario reactivo de Información Personal + SARLAFT. */
+/** Tipado del formulario reactivo del paso 1 (datos personales + documento). */
 interface FormularioRegistro {
   readonly nombreCompleto: FormControl<string>;
   readonly correo: FormControl<string>;
   readonly codigoPais: FormControl<string>;
   readonly telefono: FormControl<string>;
   readonly ciudad: FormControl<string>;
+  readonly tipoDocumento: FormControl<TipoDocumentoIdentidad>;
   readonly documento: FormControl<string>;
-  readonly fechaExpedicion: FormControl<string>;
+}
+
+/** Credenciales iniciales que se informan al terminar el registro. */
+interface Credenciales {
+  readonly usuario: string;
+  readonly contrasena: string;
+  readonly titulo: string;
+  readonly mensaje: string;
 }
 
 /**
- * Página del formulario de Solicitud_Registro_Broker (`/registro-broker`)
- * (Req 3, 2.3).
+ * Registro (`/registro-broker`): asistente de 3 pasos que comparte la UI del
+ * login (mismo fondo y tarjeta).
  *
- * Reutiliza los Componentes_Compartidos `FormFieldComponent`, `BotonComponent`,
- * `DocUploaderComponent`, `AlertBannerComponent`, `EscaleritaLoaderComponent`,
- * `ResultadoSarlaftTableComponent` y `SuccessScreenComponent` (sin duplicar
- * marcado, Req 35.22) y delega la validación de cliente en la lógica pura de
- * `registro-validacion.ts`, `sarlaft-clasificacion.ts`, `registro-envio.ts` y
- * `documento-validacion.ts`.
+ *  1. Datos personales y documento. Desde aquí el aspirante puede
+ *     **registrarse como prospecto** (ingreso simple, spec backend Req 1.2) o
+ *     **continuar** para registrarse como broker.
+ *  2. Verificación SARLAFT con el documento del paso 1 (no se vuelve a pedir).
+ *     Mismas 3 salidas que la radicación: actualizado → paso 3; desactualizado
+ *     → URL de actualización y reconsulta; consultable → el caso pasa a
+ *     Cumplimiento y termina en el portal.
+ *  3. Documentos (identidad, certificación bancaria, autorización de pago, RUT).
  *
- * Estructura en tres secciones (Req 3.1, 3.6, 3.16):
- *  1. Información Personal (nombre, correo, teléfono con código de país, ciudad).
- *  2. Consulta SARLAFT (documento, fecha de expedición) con clasificación por
- *     antigüedad y botón "Consultar".
- *  3. Documentación Requerida (los 4 documentos obligatorios), visible solo tras
- *     una Consulta_SARLAFT exitosa.
- *
- * El backend revalida SIEMPRE (Req 3.23); esta validación es únicamente por UX.
- * El token de sesión no aplica aquí; la solicitud queda pendiente (Req 3.25).
+ * Al terminar se informa que el usuario es su documento y la contraseña su
+ * correo, y se vuelve al login. El backend revalida SIEMPRE (Req 3.23).
  */
 @Component({
   selector: 'app-registro-broker',
@@ -132,12 +129,11 @@ interface FormularioRegistro {
   imports: [
     ReactiveFormsModule,
     FormFieldComponent,
+    IconComponent,
     BotonComponent,
     DocUploaderComponent,
-    AlertBannerComponent,
     EscaleritaLoaderComponent,
-    ResultadoSarlaftTableComponent,
-    SuccessScreenComponent,
+    ModalDialogComponent,
   ],
   templateUrl: './registro-broker.component.html',
   styleUrl: './registro-broker.component.scss',
@@ -155,7 +151,11 @@ export class RegistroBrokerComponent {
   protected readonly documentoLongitudMax = DOCUMENTO_LONGITUD_MAX;
   protected readonly codigosPais = CODIGOS_PAIS_PERMITIDOS;
   protected readonly ciudades = CIUDADES_PERMITIDAS;
+  protected readonly tiposDocumento = TIPOS_DOCUMENTO_REGISTRO;
+  protected readonly etiquetaTipoDocumento = ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD;
+  protected readonly modulosRestringidos = MODULOS_RESTRINGIDOS;
   protected readonly textoLegal = TEXTO_LEGAL;
+  protected readonly modoDesarrollo = isDevMode();
 
   /** Reglas de los 4 documentos obligatorios adaptadas al uploader (Req 3.16). */
   protected readonly reglasUploader: readonly ReglaDocumentoUploader[] =
@@ -166,117 +166,63 @@ export class RegistroBrokerComponent {
       obligatorio: true,
     }));
 
-  /** Formulario reactivo de Información Personal + SARLAFT. */
+  protected readonly paso = signal<PasoRegistro>(1);
+
+  /** Formulario reactivo del paso 1. */
   protected readonly formulario = new FormGroup<FormularioRegistro>({
-    nombreCompleto: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
-    correo: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
-    codigoPais: new FormControl(CODIGO_PAIS_DEFECTO, {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
-    telefono: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
-    ciudad: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
-    documento: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
-    fechaExpedicion: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
+    nombreCompleto: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    correo: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    codigoPais: new FormControl(CODIGO_PAIS_DEFECTO, { nonNullable: true, validators: [Validators.required] }),
+    telefono: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    ciudad: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    tipoDocumento: new FormControl<TipoDocumentoIdentidad>('CC', { nonNullable: true, validators: [Validators.required] }),
+    documento: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
   });
 
   /** Signal que refleja los valores del formulario para recomputar validaciones. */
   private readonly valores = signal(this.formulario.getRawValue());
 
   /** Documentos cargados en memoria, indexados por tipo (Req 3.16). */
-  private readonly documentos = signal<
-    Partial<Record<TipoDocumentoRegistro, EstadoDocumento>>
-  >({});
+  private readonly documentos = signal<Partial<Record<TipoDocumentoRegistro, EstadoDocumento>>>({});
 
-  /** Resultado de la Consulta_SARLAFT exitosa; `null` mientras no se ha consultado (Req 3.15). */
-  protected readonly resultadoSarlaft = signal<ResultadoSarlaft | null>(null);
-
-  /** Indica que la Consulta_SARLAFT está en proceso (loader) (Req 3.14). */
-  protected readonly consultandoSarlaft = signal(false);
-
-  /** Indica que la Solicitud_Registro_Broker se está enviando (loader) (Req 3.21). */
-  protected readonly enviando = signal(false);
-
-  /** Mensaje de error genérico de la Consulta_SARLAFT (sin trazas ni PII). */
+  // --- Paso 2: SARLAFT ---
+  protected readonly sarlaft = signal<ResultadoSarlaftRadicacion | null>(null);
+  protected readonly verificandoSarlaft = signal(false);
   protected readonly errorSarlaft = signal('');
+  protected readonly enlaceCopiado = signal(false);
 
-  /** Mensaje de error genérico del envío de la solicitud (sin trazas ni PII). */
+  // --- Envíos ---
+  protected readonly registrandoProspecto = signal(false);
+  protected readonly enviando = signal(false);
   protected readonly errorEnvio = signal('');
-
-  /** Muestra la pantalla de éxito (modal) tras el registro exitoso (Req 3.24). */
-  protected readonly registroExitoso = signal(false);
+  protected readonly credenciales = signal<Credenciales | null>(null);
 
   constructor() {
-    this.formulario.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.valores.set(this.formulario.getRawValue());
-        // Un cambio en documento o fecha invalida una consulta SARLAFT previa.
-        if (this.resultadoSarlaft() !== null) {
-          this.resultadoSarlaft.set(null);
-          this.documentos.set({});
-        }
-      });
+    this.formulario.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      const previo = this.valores();
+      const actual = this.formulario.getRawValue();
+      this.valores.set(actual);
+      // Un cambio en el documento invalida la verificación SARLAFT previa.
+      if (previo.documento !== actual.documento || previo.tipoDocumento !== actual.tipoDocumento) {
+        this.sarlaft.set(null);
+        this.documentos.set({});
+      }
+    });
   }
 
-  /** Validez de la sección Información Personal (Req 3.2–3.5). */
-  protected readonly personalValido = computed(() => {
+  /** Validez del paso 1 (datos personales + documento). */
+  protected readonly datosValidos = computed(() => {
     const v = this.valores();
-    return validarInformacionPersonal({
-      nombreCompleto: v.nombreCompleto,
-      correo: v.correo,
-      codigoPais: v.codigoPais,
-      telefono: v.telefono,
-      ciudad: v.ciudad,
-    }).personalValido;
+    return (
+      esNombreValido(v.nombreCompleto) &&
+      esCorreoValido(v.correo) &&
+      esCodigoPaisValido(v.codigoPais) &&
+      esTelefonoValido(v.telefono) &&
+      esCiudadValida(v.ciudad) &&
+      TIPOS_DOCUMENTO_REGISTRO.includes(v.tipoDocumento) &&
+      esDocumentoValido(v.documento)
+    );
   });
-
-  /** Validez del formulario SARLAFT (documento + fecha) (Req 3.7, 3.8). */
-  protected readonly sarlaftFormValido = computed(() => {
-    const v = this.valores();
-    return validarFormularioSarlaft(v.documento, v.fechaExpedicion)
-      .sarlaftFormValido;
-  });
-
-  /** Clasificación SARLAFT por antigüedad de la fecha de expedición (Req 3.9–3.11). */
-  protected readonly clasificacionSarlaft = computed<ClasificacionSarlaft | null>(
-    () => {
-      const v = this.valores();
-      if (!esFechaExpedicionValida(v.fechaExpedicion)) {
-        return null;
-      }
-      return clasificarSarlaft(v.fechaExpedicion, this.hoyIso());
-    },
-  );
-
-  /** Variante del banner de alerta SARLAFT según el nivel de clasificación. */
-  protected readonly varianteAlertaSarlaft = computed<VarianteAlerta>(() => {
-    const clasificacion = this.clasificacionSarlaft();
-    return this.nivelAVariante(clasificacion?.nivel);
-  });
-
-  /** Habilitación del botón "Consultar" (Req 3.12, 3.13). */
-  protected readonly puedeConsultar = computed(() =>
-    puedeConsultarSarlaft(this.sarlaftFormValido(), this.clasificacionSarlaft()),
-  );
 
   /** Nombres de los documentos cargados para el uploader (Req 3.16). */
   protected readonly cargados = computed<Readonly<Record<string, string>>>(() => {
@@ -291,129 +237,157 @@ export class RegistroBrokerComponent {
     return salida;
   });
 
-  /** Tipos de documento cargados y validados con éxito (Req 3.16, 3.19). */
-  private readonly tiposDocumentosValidos = computed<TipoDocumentoRegistro[]>(
-    () => {
-      const estado = this.documentos();
-      return (Object.keys(estado) as TipoDocumentoRegistro[]).filter(
-        (tipo) => estado[tipo]?.valido === true,
-      );
-    },
-  );
+  private readonly tiposDocumentosValidos = computed<TipoDocumentoRegistro[]>(() => {
+    const estado = this.documentos();
+    return (Object.keys(estado) as TipoDocumentoRegistro[]).filter((tipo) => estado[tipo]?.valido === true);
+  });
 
-  /** Verdadero si los 4 documentos obligatorios están cargados y válidos (Req 3.16). */
   protected readonly documentosCompletos = computed(() =>
     documentosRegistroCompletos(this.tiposDocumentosValidos()),
   );
 
-  /** Habilitación del botón "Enviar solicitud de registro" (Req 3.19). */
-  protected readonly puedeEnviar = computed(() =>
-    puedeEnviarSolicitud(
-      this.personalValido(),
-      this.resultadoSarlaft() !== null,
-      this.tiposDocumentosValidos(),
-    ),
+  protected readonly puedeEnviar = computed(
+    () =>
+      this.datosValidos() &&
+      this.sarlaft()?.estado === 'actualizado' &&
+      this.documentosCompletos() &&
+      !this.enviando(),
   );
 
-  /** Mensajes de error por campo (solo tras interacción del usuario). */
+  /** Avance del asistente (se muestra al pie de la tarjeta). */
+  protected readonly progreso = computed(() => [
+    { titulo: 'Tus datos', hecho: this.datosValidos() && this.paso() > 1, activo: this.paso() === 1 },
+    { titulo: 'SARLAFT', hecho: this.sarlaft()?.estado === 'actualizado', activo: this.paso() === 2 },
+    {
+      titulo: `Documentos ${this.tiposDocumentosValidos().length}/${DOCUMENTOS_REGISTRO_BROKER.length}`,
+      hecho: this.documentosCompletos(),
+      activo: this.paso() === 3,
+    },
+  ]);
+
+  // --- Mensajes de error por campo (solo tras interacción) ---
   protected get errorNombre(): string {
-    return this.mensajeError(
-      'nombreCompleto',
-      esNombreValido(this.valores().nombreCompleto),
-      `El nombre es obligatorio y debe tener al menos ${NOMBRE_LONGITUD_MIN} caracteres.`,
-    );
+    return this.mensajeError('nombreCompleto', esNombreValido(this.valores().nombreCompleto),
+      `El nombre es obligatorio y debe tener al menos ${NOMBRE_LONGITUD_MIN} caracteres.`);
   }
 
   protected get errorCorreo(): string {
-    return this.mensajeError(
-      'correo',
-      esCorreoValido(this.valores().correo),
-      'Ingresa un correo electrónico válido.',
-    );
+    return this.mensajeError('correo', esCorreoValido(this.valores().correo), 'Ingresa un correo electrónico válido.');
   }
 
   protected get errorTelefono(): string {
-    return this.mensajeError(
-      'telefono',
-      esTelefonoValido(this.valores().telefono),
-      `El teléfono debe contener entre ${TELEFONO_LONGITUD_MIN} y ${TELEFONO_LONGITUD_MAX} dígitos.`,
-    );
+    return this.mensajeError('telefono', esTelefonoValido(this.valores().telefono),
+      `El teléfono debe contener entre ${TELEFONO_LONGITUD_MIN} y ${TELEFONO_LONGITUD_MAX} dígitos.`);
   }
 
   protected get errorCiudad(): string {
-    return this.mensajeError(
-      'ciudad',
-      esCiudadValida(this.valores().ciudad),
-      'Selecciona una ciudad de la lista.',
-    );
-  }
-
-  protected get errorCodigoPais(): string {
-    return this.mensajeError(
-      'codigoPais',
-      esCodigoPaisValido(this.valores().codigoPais),
-      'Selecciona un código de país válido.',
-    );
+    return this.mensajeError('ciudad', esCiudadValida(this.valores().ciudad), 'Selecciona una ciudad de la lista.');
   }
 
   protected get errorDocumento(): string {
-    return this.mensajeError(
-      'documento',
-      esDocumentoValido(this.valores().documento),
-      `El documento debe contener entre ${DOCUMENTO_LONGITUD_MIN} y ${DOCUMENTO_LONGITUD_MAX} dígitos.`,
-    );
+    return this.mensajeError('documento', esDocumentoValido(this.valores().documento),
+      `El documento debe contener entre ${DOCUMENTO_LONGITUD_MIN} y ${DOCUMENTO_LONGITUD_MAX} dígitos.`);
   }
 
-  protected get errorFechaExpedicion(): string {
-    return this.mensajeError(
-      'fechaExpedicion',
-      esFechaExpedicionValida(this.valores().fechaExpedicion),
-      'La fecha de expedición es obligatoria.',
-    );
-  }
+  // ===========================================================================
+  // Paso 1
+  // ===========================================================================
 
-  /**
-   * Ejecuta la Consulta_SARLAFT contra el backend (Req 3.14, 3.15).
-   *
-   * Impide la consulta si el formulario es inválido o la antigüedad es ≥ 3 años
-   * (Req 3.13). Muestra el loader mientras está en proceso y, al éxito, publica
-   * el `ResultadoSarlaft` que habilita la sección Documentación Requerida.
-   */
-  protected consultarSarlaft(): void {
-    this.errorSarlaft.set('');
-    if (!this.puedeConsultar() || this.consultandoSarlaft()) {
+  /** Ingreso simple: la cuenta queda como PROSPECTO y se informan las credenciales. */
+  protected registrarComoProspecto(): void {
+    if (!this.datosValidos() || this.registrandoProspecto()) {
+      this.formulario.markAllAsTouched();
       return;
     }
     const v = this.valores();
-    const request: ConsultaSarlaftRequest = {
-      documento: v.documento,
-      fechaExpedicion: v.fechaExpedicion,
-    };
-    this.consultandoSarlaft.set(true);
+    this.registrandoProspecto.set(true);
+    this.errorEnvio.set('');
     this.auth
-      .consultarSarlaft(request)
+      .registrarProspecto({
+        nombreCompleto: v.nombreCompleto.trim(),
+        correo: v.correo.trim(),
+        codigoPais: v.codigoPais,
+        telefono: v.telefono,
+        ciudad: v.ciudad,
+        tipoDocumento: v.tipoDocumento,
+        documento: v.documento,
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (resultado) => {
-          this.consultandoSarlaft.set(false);
-          this.resultadoSarlaft.set(resultado);
+        next: () => {
+          this.registrandoProspecto.set(false);
+          this.credenciales.set({
+            ...this.credencialesIniciales(),
+            titulo: '¡Ya eres prospecto!',
+            mensaje: 'Tu cuenta quedó creada. Ya puedes radicar y cotizar; completa tu registro de broker cuando quieras desde "Mi perfil".',
+          });
         },
         error: () => {
-          this.consultandoSarlaft.set(false);
-          this.errorSarlaft.set(
-            'No fue posible completar la Consulta SARLAFT. Intenta de nuevo.',
-          );
+          this.registrandoProspecto.set(false);
+          this.errorEnvio.set('No fue posible crear tu cuenta. Intenta de nuevo.');
         },
       });
   }
 
-  /**
-   * Procesa la selección de un archivo para un documento de registro (Req 3.16–3.18).
-   *
-   * Valida MIME/extensión, tamaño y vigencia con la lógica pura de
-   * `documento-validacion.ts`; almacena el estado (válido o con error) para que
-   * el uploader muestre el nombre y el envío se habilite solo con los 4 válidos.
-   */
+  /** Continúa el registro como broker (paso 2: SARLAFT). */
+  protected continuar(): void {
+    if (!this.datosValidos()) {
+      this.formulario.markAllAsTouched();
+      return;
+    }
+    this.errorEnvio.set('');
+    this.paso.set(2);
+  }
+
+  // ===========================================================================
+  // Paso 2 · SARLAFT (3 salidas)
+  // ===========================================================================
+
+  protected verificarSarlaft(): void {
+    if (this.verificandoSarlaft()) {
+      return;
+    }
+    const v = this.valores();
+    this.verificandoSarlaft.set(true);
+    this.errorSarlaft.set('');
+    this.enlaceCopiado.set(false);
+    this.auth
+      .verificarSarlaftRegistro({ tipoDocumento: v.tipoDocumento, documento: v.documento, correo: v.correo.trim() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resultado) => {
+          this.verificandoSarlaft.set(false);
+          this.sarlaft.set(resultado);
+        },
+        error: () => {
+          this.verificandoSarlaft.set(false);
+          this.errorSarlaft.set('No fue posible verificar tu SARLAFT. Intenta de nuevo.');
+        },
+      });
+  }
+
+  protected copiarEnlace(enlace: string | undefined): void {
+    if (!enlace) {
+      return;
+    }
+    void navigator.clipboard
+      ?.writeText(enlace)
+      .then(() => this.enlaceCopiado.set(true))
+      .catch(() => this.enlaceCopiado.set(false));
+  }
+
+  protected irAPaso(paso: PasoRegistro): void {
+    if (paso === 3 && this.sarlaft()?.estado !== 'actualizado') {
+      return;
+    }
+    this.paso.set(paso);
+  }
+
+  // ===========================================================================
+  // Paso 3 · Documentos
+  // ===========================================================================
+
+  /** Valida MIME/extensión, tamaño y vigencia con la lógica pura compartida (Req 3.16–3.18). */
   protected onArchivoSeleccionado(evento: ArchivoSeleccionado): void {
     const tipo = evento.id as TipoDocumentoRegistro;
     const regla = DOCUMENTOS_REGISTRO_BROKER.find((r) => r.tipo === tipo);
@@ -425,16 +399,9 @@ export class RegistroBrokerComponent {
       nombre: evento.archivo.name,
       tipoMime,
       tamanoBytes: evento.archivo.size,
-      fechaEmision:
-        regla.vigenciaMaxDias !== null
-          ? this.fechaEmisionArchivo(evento.archivo)
-          : undefined,
+      fechaEmision: regla.vigenciaMaxDias !== null ? new Date(evento.archivo.lastModified).toISOString() : undefined,
     };
-    const resultado = validarDocumento(
-      documentoCargado,
-      reglaDeDocumentoRegistro(regla),
-      this.hoyIso(),
-    );
+    const resultado = validarDocumento(documentoCargado, reglaDeDocumentoRegistro(regla), new Date().toISOString());
     this.documentos.update((estado) => ({
       ...estado,
       [tipo]: {
@@ -443,33 +410,20 @@ export class RegistroBrokerComponent {
         tipoMime,
         fechaEmision: documentoCargado.fechaEmision,
         valido: resultado.valido,
-        error: resultado.valido
-          ? undefined
-          : this.mensajeRechazo(regla, resultado.motivo),
+        error: resultado.valido ? undefined : this.mensajeRechazo(regla, resultado.motivo),
       },
     }));
   }
 
-  /** Mensaje de error de validación de un documento, si existe (Req 3.18). */
   protected errorDocumentoCargado(tipo: string): string {
     return this.documentos()[tipo as TipoDocumentoRegistro]?.error ?? '';
   }
 
-  /**
-   * Envía la Solicitud_Registro_Broker al backend (Req 3.21, 3.22, 3.24).
-   *
-   * Valida en cliente (fail-fast) antes de enviar; muestra el loader "Enviando
-   * solicitud..." y, al éxito, la pantalla de confirmación (Req 3.24). No expone
-   * PII ni trazas en los mensajes de error (Req 3.26).
-   */
+  /** Envía la Solicitud_Registro_Broker (Req 3.21, 3.24). */
   protected enviarSolicitud(): void {
     this.errorEnvio.set('');
-    if (!this.puedeEnviar() || this.enviando()) {
-      this.formulario.markAllAsTouched();
-      return;
-    }
     const solicitud = this.construirSolicitud();
-    if (solicitud === null) {
+    if (!this.puedeEnviar() || solicitud === null) {
       return;
     }
     this.enviando.set(true);
@@ -479,28 +433,42 @@ export class RegistroBrokerComponent {
       .subscribe({
         next: () => {
           this.enviando.set(false);
-          this.registroExitoso.set(true);
+          this.credenciales.set({
+            ...this.credencialesIniciales(),
+            titulo: 'Solicitud de broker enviada',
+            mensaje: 'Revisaremos tus documentos. Mientras tanto tu cuenta queda como prospecto: ya puedes radicar y cotizar, y tus comisiones se acreditan al ser aprobado.',
+          });
         },
         error: () => {
           this.enviando.set(false);
-          this.errorEnvio.set(
-            'No fue posible enviar la solicitud. Intenta de nuevo.',
-          );
+          this.errorEnvio.set('No fue posible enviar la solicitud. Intenta de nuevo.');
         },
       });
   }
 
-  /** Navega a la pantalla de login ("Ya tengo cuenta") (Req 2.3). */
+  // ===========================================================================
+  // Navegación
+  // ===========================================================================
+
+  /** "Aceptar" del aviso de credenciales: vuelve al login. */
+  protected aceptarCredenciales(): void {
+    this.credenciales.set(null);
+    this.irALogin();
+  }
+
   protected irALogin(): void {
     void this.router.navigate([RUTA_LOGIN]);
   }
 
-  /** Acción "Volver" de la pantalla de éxito: regresa al login (Req 3.24). */
-  protected volverAlLogin(): void {
-    this.irALogin();
+  // ===========================================================================
+  // Privados
+  // ===========================================================================
+
+  private credencialesIniciales(): Pick<Credenciales, 'usuario' | 'contrasena'> {
+    const v = this.valores();
+    return { usuario: v.documento, contrasena: v.correo.trim() };
   }
 
-  /** Construye el payload tipado de la solicitud a partir del estado válido. */
   private construirSolicitud(): SolicitudRegistroBroker | null {
     const v = this.valores();
     const estado = this.documentos();
@@ -524,39 +492,14 @@ export class RegistroBrokerComponent {
       codigoPais: v.codigoPais,
       telefono: v.telefono,
       ciudad: v.ciudad,
+      tipoDocumento: v.tipoDocumento,
       documento: v.documento,
-      fechaExpedicion: v.fechaExpedicion,
+      estadoSarlaft: this.sarlaft()?.estado,
       documentos,
     };
   }
 
-  /** Fecha de emisión del archivo (a partir de `lastModified`), en formato ISO. */
-  private fechaEmisionArchivo(archivo: File): string {
-    return new Date(archivo.lastModified).toISOString();
-  }
-
-  /** Fecha de referencia ("hoy") como ISO-8601 para cálculos de vigencia/antigüedad. */
-  private hoyIso(): string {
-    return new Date().toISOString();
-  }
-
-  /** Convierte un nivel SARLAFT a la variante del banner de alerta compartido. */
-  private nivelAVariante(nivel: NivelSarlaft | undefined): VarianteAlerta {
-    if (nivel === 'exito') {
-      return 'success';
-    }
-    if (nivel === 'advertencia') {
-      return 'warning';
-    }
-    return 'error';
-  }
-
-  /** Genera un mensaje de error de campo solo tras interacción del usuario. */
-  private mensajeError(
-    control: keyof FormularioRegistro,
-    valido: boolean,
-    mensaje: string,
-  ): string {
+  private mensajeError(control: keyof FormularioRegistro, valido: boolean, mensaje: string): string {
     const ctrl = this.formulario.controls[control];
     if (!ctrl.touched && !ctrl.dirty) {
       return '';
@@ -565,15 +508,10 @@ export class RegistroBrokerComponent {
   }
 
   /** Traduce el motivo de rechazo de un documento a un mensaje para el usuario (Req 3.18). */
-  private mensajeRechazo(
-    regla: ReglaDocumentoRegistro,
-    motivo: string | undefined,
-  ): string {
+  private mensajeRechazo(regla: ReglaDocumentoRegistro, motivo: string | undefined): string {
     switch (motivo) {
-      case 'tamano_excedido': {
-        const mb = Math.round(regla.tamanoMaxBytes / 1_048_576);
-        return `El archivo supera el tamaño máximo permitido (${mb} MB).`;
-      }
+      case 'tamano_excedido':
+        return `El archivo supera el tamaño máximo permitido (${Math.round(regla.tamanoMaxBytes / 1_048_576)} MB).`;
       case 'mime_no_permitido':
       case 'extension_no_permitida':
         return 'Formato no permitido. Usa PDF, JPG o PNG.';

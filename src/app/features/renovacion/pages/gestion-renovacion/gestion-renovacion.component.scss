@@ -24,7 +24,7 @@
   border-radius: var(--radius-md);
   font-family: var(--font-family-base);
   font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
+  font-size: var(--text-caption);
   cursor: pointer;
   border: none;
   transition: background 0.2s ease, border-color 0.2s ease;
@@ -96,7 +96,7 @@
   }
 
   &__titulo {
-    font-size: var(--font-size-8xl);
+    font-size: var(--text-headline);
     font-weight: var(--font-weight-regular);
     color: var(--color-text);
     margin: 0 0 var(--space-4);
@@ -108,7 +108,7 @@
   }
 
   &__subtitulo {
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     color: var(--color-muted);
     margin: 0;
     line-height: var(--line-height-normal);
@@ -132,13 +132,13 @@
   }
 
   &__footer-text {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     margin: 0 0 var(--space-2);
   }
 
   &__footer-link {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     color: var(--color-accent);
     text-decoration: underline;
     font-weight: var(--font-weight-medium);
@@ -187,7 +187,7 @@
     left: var(--space-4);
     background: var(--color-accent);
     color: var(--color-card);
-    font-size: var(--font-size-2xs);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-bold);
     letter-spacing: 0.5px;
     padding: var(--space-1) var(--space-3);
@@ -233,14 +233,14 @@
   }
 
   &__title {
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-bold);
     color: var(--color-text);
     margin: 0 0 var(--space-1);
   }
 
   &__description {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     margin: 0;
     line-height: var(--line-height-normal);
@@ -257,7 +257,7 @@
   }
 
   &__sub-link {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     color: var(--color-text);
     cursor: pointer;
     text-decoration: none;
@@ -287,7 +287,7 @@
   &__action {
     display: inline-block;
     margin-top: var(--space-5);
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-semibold);
     color: var(--color-accent);
     cursor: pointer;
@@ -320,14 +320,14 @@
   width: 100%;
 
   &__titulo {
-    font-size: var(--font-size-4xl);
+    font-size: var(--text-title);
     font-weight: var(--font-weight-bold);
     color: var(--color-text);
     margin: 0 0 var(--space-3);
   }
 
   &__mensaje {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     line-height: var(--line-height-normal);
     margin: 0 0 var(--space-6);
@@ -366,14 +366,14 @@
   }
 
   &__titulo {
-    font-size: var(--font-size-h3);
+    font-size: var(--text-title);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
     margin: 0 0 var(--space-5);
   }
 
   &__subtitulo {
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
     margin: var(--space-6) 0 var(--space-4);
@@ -417,7 +417,7 @@
 
   &__label {
     color: var(--color-muted);
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
   }
 
   &__valor {
@@ -466,14 +466,14 @@
   }
 
   &__title {
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
     margin: 0 0 var(--space-1);
   }
 
   &__description {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     margin: 0;
     line-height: var(--line-height-normal);
@@ -491,7 +491,7 @@
   z-index: 10;
 
   &__titulo {
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
     margin: 0 0 var(--space-4);
@@ -503,7 +503,7 @@
     display: flex;
     justify-content: space-between;
     padding: var(--space-2) 0;
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
 
     span {
       color: var(--color-muted);
@@ -532,7 +532,7 @@
 
     strong {
       color: var(--color-primary);
-      font-size: var(--font-size-2xl);
+      font-size: var(--text-subtitle);
       font-weight: var(--font-weight-bold);
     }
   }
@@ -564,7 +564,7 @@
   }
 
   &__titulo {
-    font-size: var(--font-size-h2-login);
+    font-size: var(--text-heading);
     font-weight: var(--font-weight-bold);
     font-style: italic;
     color: var(--color-text);
@@ -586,7 +586,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     color: var(--color-text);
   }
 
@@ -603,7 +603,7 @@
     color: var(--color-danger);
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-sm);
-    font-size: var(--font-size-xs);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-bold);
     text-transform: uppercase;
     white-space: nowrap;
@@ -676,7 +676,7 @@
   box-shadow: var(--shadow-md);
 
   &__label {
-    font-size: var(--font-size-2xs);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-semibold);
     color: var(--color-muted);
     text-transform: uppercase;
@@ -684,7 +684,7 @@
   }
 
   &__value {
-    font-size: var(--font-size-5xl);
+    font-size: var(--text-title);
     font-weight: var(--font-weight-bold);
     color: var(--color-text);
   }
@@ -718,7 +718,7 @@
   }
 
   &__label {
-    font-size: var(--font-size-2xs);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-semibold);
     color: var(--color-muted);
     text-transform: uppercase;
@@ -726,7 +726,7 @@
   }
 
   &__value {
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-bold);
     color: var(--color-text);
   }
@@ -738,7 +738,7 @@
   }
 
   &__date-text {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
   }
@@ -748,7 +748,7 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     font-family: var(--font-family-base);
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     width: 160px;
 
     &:focus {
@@ -771,7 +771,7 @@
     color: var(--color-accent-hover);
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-lg);
-    font-size: var(--font-size-2xs);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-bold);
     white-space: nowrap;
   }
@@ -783,7 +783,7 @@
   }
 
   &__ipc-value {
-    font-size: var(--font-size-3xl);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-bold);
     color: var(--color-accent);
   }
@@ -796,7 +796,7 @@
   border: 1px solid var(--color-border);
   background: var(--color-card);
   cursor: pointer;
-  font-size: var(--font-size-2xl);
+  font-size: var(--text-subtitle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -848,7 +848,7 @@
   }
 
   &__title {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
     margin: 0;
@@ -858,7 +858,7 @@
   &__badge {
     padding: var(--space-0) var(--space-2);
     border-radius: var(--radius-sm);
-    font-size: var(--font-size-2xs);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-bold);
     text-transform: uppercase;
     letter-spacing: 0.3px;
@@ -893,7 +893,7 @@
     gap: var(--space-1);
 
     label {
-      font-size: var(--font-size-xs);
+      font-size: var(--text-caption);
       font-weight: var(--font-weight-medium);
       color: var(--color-muted);
       text-transform: uppercase;
@@ -904,7 +904,7 @@
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       font-family: var(--font-family-base);
-      font-size: var(--font-size-sm);
+      font-size: var(--text-caption);
       color: var(--color-text);
       width: 100%;
       box-sizing: border-box;
@@ -941,12 +941,12 @@
     align-items: center;
 
     span {
-      font-size: var(--font-size-sm);
+      font-size: var(--text-caption);
       color: var(--color-muted);
     }
 
     strong {
-      font-size: var(--font-size-md);
+      font-size: var(--text-body-sm);
       font-weight: var(--font-weight-semibold);
       color: var(--color-text);
     }
@@ -959,12 +959,12 @@
       span {
         font-weight: var(--font-weight-semibold);
         color: var(--color-text);
-        font-size: var(--font-size-xs);
+        font-size: var(--text-caption);
       }
 
       strong {
         color: var(--color-accent);
-        font-size: var(--font-size-lg);
+        font-size: var(--text-body);
       }
     }
   }
@@ -1002,7 +1002,7 @@
     }
 
     h3 {
-      font-size: var(--font-size-2xl);
+      font-size: var(--text-subtitle);
       font-weight: var(--font-weight-semibold);
       color: var(--color-text);
       margin: 0;
@@ -1022,12 +1022,12 @@
     align-items: center;
 
     span {
-      font-size: var(--font-size-sm);
+      font-size: var(--text-caption);
       color: var(--color-muted);
     }
 
     strong {
-      font-size: var(--font-size-sm);
+      font-size: var(--text-caption);
       font-weight: var(--font-weight-semibold);
       color: var(--color-text);
     }
@@ -1049,7 +1049,7 @@
     border-radius: 0 0 var(--radius-md) var(--radius-md);
 
     span {
-      font-size: var(--font-size-sm);
+      font-size: var(--text-caption);
       font-weight: var(--font-weight-bold);
       color: var(--color-text);
       text-transform: uppercase;
@@ -1057,21 +1057,21 @@
     }
 
     strong {
-      font-size: var(--font-size-6xl);
+      font-size: var(--text-heading);
       font-weight: var(--font-weight-bold);
       color: var(--color-accent);
     }
   }
 
   &__note {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     font-style: italic;
     color: var(--color-muted);
     margin: var(--space-1) 0 0;
   }
 
   &__link {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-medium);
     color: var(--color-accent);
     text-decoration: underline;
@@ -1112,7 +1112,7 @@
     }
 
     h4 {
-      font-size: var(--font-size-sm);
+      font-size: var(--text-caption);
       font-weight: var(--font-weight-semibold);
       color: var(--color-text);
       margin: 0;
@@ -1120,7 +1120,7 @@
   }
 
   &__subtitle {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     display: block;
   }
@@ -1131,7 +1131,7 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     font-family: var(--font-family-base);
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     resize: vertical;
     min-height: 80px;
     box-sizing: border-box;
@@ -1153,7 +1153,7 @@
   }
 
   &__info {
-    font-size: var(--font-size-xs);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     font-style: italic;
   }
@@ -1173,14 +1173,14 @@
   }
 
   &__titulo {
-    font-size: var(--font-size-h2-login);
+    font-size: var(--text-heading);
     font-weight: var(--font-weight-bold);
     color: var(--color-text);
     margin: 0 0 var(--space-4);
   }
 
   &__descripcion {
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     color: var(--color-muted);
     line-height: var(--line-height-normal);
     max-width: 500px;
@@ -1191,7 +1191,7 @@
     margin-bottom: var(--space-6);
 
     &-titulo {
-      font-size: var(--font-size-h3);
+      font-size: var(--text-title);
       font-weight: var(--font-weight-semibold);
       color: var(--color-text);
       margin: 0 0 var(--space-5);
@@ -1227,14 +1227,14 @@
     }
 
     &-titulo {
-      font-size: var(--font-size-xl);
+      font-size: var(--text-body);
       font-weight: var(--font-weight-semibold);
       color: var(--color-text);
       margin: 0 0 var(--space-2);
     }
 
     &-descripcion {
-      font-size: var(--font-size-md);
+      font-size: var(--text-body-sm);
       color: var(--color-muted);
       line-height: var(--line-height-normal);
       margin: 0;
@@ -1272,7 +1272,7 @@
 .flujo-correccion__titulo {
   margin: var(--space-0);
   color: var(--color-text);
-  font-size: var(--font-size-h1-seccion);
+  font-size: var(--text-heading);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
 }
@@ -1282,7 +1282,7 @@
 .flujo-correccion__instruccion {
   margin: var(--space-0);
   color: var(--color-muted);
-  font-size: var(--font-size-lg);
+  font-size: var(--text-body);
   line-height: var(--line-height-normal);
 }
 
@@ -1320,14 +1320,14 @@
   &__titulo {
     margin: var(--space-0) var(--space-0) var(--space-3);
     color: var(--color-text);
-    font-size: var(--font-size-h4);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-semibold);
   }
 
   &__texto {
     margin: var(--space-0) var(--space-0) var(--space-3);
     color: var(--color-muted);
-    font-size: var(--font-size-4md);
+    font-size: var(--text-body);
     line-height: var(--line-height-normal);
   }
 
@@ -1335,14 +1335,14 @@
     margin: var(--space-0) var(--space-0) var(--space-3);
     padding-left: var(--space-5);
     color: var(--color-text);
-    font-size: var(--font-size-4md);
+    font-size: var(--text-body);
     line-height: var(--line-height-normal);
   }
 
   &__privacy {
     margin: var(--space-0);
     color: var(--color-muted);
-    font-size: var(--font-size-3sm);
+    font-size: var(--text-body-sm);
     line-height: var(--line-height-normal);
   }
 }
@@ -1357,7 +1357,7 @@
   label,
   .obs-correccion__label {
     color: var(--color-muted);
-    font-size: var(--font-size-3sm);
+    font-size: var(--text-body-sm);
     font-weight: var(--font-weight-medium);
   }
 
@@ -1366,7 +1366,7 @@
     padding: var(--space-3) var(--space-4);
     color: var(--color-text);
     font-family: var(--font-family-base);
-    font-size: var(--font-size-4md);
+    font-size: var(--text-body);
     line-height: var(--line-height-normal);
     background: var(--color-card);
     border: 1px solid var(--color-border);
@@ -1384,14 +1384,14 @@
 .obs-correccion__titulo {
   margin: var(--space-0);
   color: var(--color-text);
-  font-size: var(--font-size-h4);
+  font-size: var(--text-subtitle);
   font-weight: var(--font-weight-semibold);
 }
 
 .obs-correccion__contador {
   align-self: flex-end;
   color: var(--color-muted);
-  font-size: var(--font-size-2xs);
+  font-size: var(--text-caption);
 }
 
 .obs-correccion__tip {
@@ -1402,7 +1402,7 @@
   &-texto {
     margin: var(--space-0);
     color: var(--color-primary);
-    font-size: var(--font-size-3sm);
+    font-size: var(--text-body-sm);
     font-style: italic;
     line-height: var(--line-height-normal);
   }
@@ -1433,7 +1433,7 @@
   &__titulo {
     margin: var(--space-0);
     color: var(--color-text);
-    font-size: var(--font-size-h4);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-semibold);
   }
 
@@ -1451,12 +1451,12 @@
 
   &__label {
     color: var(--color-muted);
-    font-size: var(--font-size-3sm);
+    font-size: var(--text-body-sm);
   }
 
   &__valor {
     color: var(--color-text);
-    font-size: var(--font-size-3sm);
+    font-size: var(--text-body-sm);
     font-weight: var(--font-weight-medium);
 
     &--error {
@@ -1485,7 +1485,7 @@
 
   &__archivo-nombre {
     color: var(--color-text);
-    font-size: var(--font-size-4md);
+    font-size: var(--text-body);
     font-weight: var(--font-weight-medium);
     overflow-wrap: anywhere;
   }
@@ -1495,39 +1495,8 @@
     align-items: center;
     gap: var(--space-1);
     color: var(--color-success);
-    font-size: var(--font-size-2xs);
+    font-size: var(--text-caption);
     font-weight: var(--font-weight-medium);
-  }
-}
-
-// --- Estado de validación SARLAFT (loader → éxito) ---
-.flujo-especial__sarlaft,
-.flujo-correccion__sarlaft {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-9) var(--space-4);
-}
-
-.sarlaft-exito {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  max-width: var(--login-card-width);
-  text-align: center;
-
-  &__titulo {
-    margin: var(--space-0);
-    color: var(--color-text);
-    font-size: var(--font-size-h3);
-    font-weight: var(--font-weight-bold);
-  }
-
-  &__texto {
-    margin: var(--space-0);
-    color: var(--color-muted);
-    font-size: var(--font-size-4md);
-    line-height: var(--line-height-normal);
   }
 }
 
@@ -1545,14 +1514,14 @@
   &__titulo {
     margin: var(--space-0);
     color: var(--color-text);
-    font-size: var(--font-size-8xl);
+    font-size: var(--text-headline);
     font-weight: var(--font-weight-bold);
   }
 
   &__subtitulo {
     margin: var(--space-0);
     color: var(--color-success);
-    font-size: var(--font-size-h4);
+    font-size: var(--text-subtitle);
     font-weight: var(--font-weight-semibold);
   }
 
@@ -1560,7 +1529,7 @@
     margin: var(--space-0);
     max-width: 560px;
     color: var(--color-muted);
-    font-size: var(--font-size-4md);
+    font-size: var(--text-body);
     line-height: var(--line-height-normal);
   }
 
@@ -1584,14 +1553,14 @@
   &__info-texto {
     margin: var(--space-0);
     color: var(--color-muted);
-    font-size: var(--font-size-3sm);
+    font-size: var(--text-body-sm);
     line-height: var(--line-height-normal);
   }
 
   &__soporte {
     margin: var(--space-0);
     color: var(--color-muted);
-    font-size: var(--font-size-3sm);
+    font-size: var(--text-body-sm);
   }
 
   &__soporte-link {

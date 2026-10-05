@@ -1,0 +1,266 @@
+<!--
+  Mi perfil (solo UI, datos mock). Estado de la Cuenta Prospecto / Broker
+  registrado, datos personales, SARLAFT y documentos. El documento de
+  identidad no se puede modificar desde el perfil.
+-->
+<section class="perfil" aria-labelledby="perfil-titulo">
+  <div class="perfil__cabecera">
+    <app-page-header
+      eyebrow="Mi cuenta"
+      tituloId="perfil-titulo"
+      titulo="Mi perfil"
+      subtitulo="Consulta el estado de tu cuenta y mantén al día tus datos, tu SARLAFT y tu documentación."
+    ></app-page-header>
+    @if (modoDesarrollo) {
+      <div class="perfil__simulador">
+        <small>Demo · ver como</small>
+        <app-segmented-control
+          [opciones]="opcionesSimulacion"
+          [valor]="perfil().estadoCuenta"
+          (valorChange)="simularEstado($event)"
+          ariaLabel="Simular estado de la cuenta"
+        />
+      </div>
+    }
+  </div>
+
+  @if (registroCompletado()) {
+    <app-alert-banner variante="success" titulo="¡Ya eres Broker registrado!" icono="verified">
+      Tu cuenta se actualizó sin perder tu historial y se acreditaron {{ perfil().comisiones.solicitudes }} comisiones
+      retroactivas por {{ cop(perfil().comisiones.monto) }}.
+    </app-alert-banner>
+  }
+
+  <!-- ===================== Identidad + estado ===================== -->
+  <article class="perfil-tarjeta perfil-identidad">
+    <div class="perfil-identidad__persona">
+      <app-avatar-initials [nombre]="perfil().nombreCompleto" [tamano]="64" />
+      <div>
+        <h2 class="perfil-identidad__nombre">{{ perfil().nombreCompleto }}</h2>
+        <p class="perfil-identidad__doc">
+          <app-icon nombre="badge" [tamano]="16" />
+          {{ etiquetaTipoDocumento[perfil().tipoDocumento] }} · {{ perfil().numeroDocumento }}
+        </p>
+        <p class="perfil-identidad__meta">Cuenta {{ perfil().id }} · Comercial: {{ perfil().comercialAsignado }} · Ingreso {{ fecha(perfil().fechaIngreso) }}</p>
+      </div>
+    </div>
+    <div class="perfil-estado" [class.perfil-estado--registrado]="!esProspecto()">
+      <span class="perfil-estado__icono" aria-hidden="true">
+        <app-icon [nombre]="esProspecto() ? 'hourglass_top' : 'verified'" [tamano]="22" />
+      </span>
+      <div>
+        <small>Estado de la cuenta</small>
+        <strong>{{ etiquetaEstado[perfil().estadoCuenta] }}</strong>
+      </div>
+    </div>
+  </article>
+
+  <!-- ===================== Estado de la cuenta ===================== -->
+  @if (esProspecto()) {
+    <article class="perfil-tarjeta" aria-labelledby="perfil-cuenta-titulo">
+      <header class="perfil-tarjeta__cabecera">
+        <div>
+          <h3 id="perfil-cuenta-titulo">Completa tu registro de broker</h3>
+          <p>
+            Como <b>prospecto</b> ya puedes radicar y cotizar. Al completar tu documentación y tu SARLAFT pasas a
+            <b>broker registrado</b>: se desbloquean todos los módulos y se acreditan tus comisiones.
+          </p>
+        </div>
+      </header>
+
+      <ol class="perfil-pasos" aria-label="Avance del registro">
+        @for (p of pasosRegistro(); track p.titulo; let i = $index) {
+          <li class="perfil-pasos__item" [class.hecho]="p.hecho">
+            <span class="perfil-pasos__nodo" aria-hidden="true">
+              @if (p.hecho) { <app-icon nombre="check" [tamano]="16" /> } @else { {{ i + 1 }} }
+            </span>
+            <span class="perfil-pasos__texto"><b>{{ p.titulo }}</b><small>{{ p.detalle }}</small></span>
+          </li>
+        }
+      </ol>
+
+      <div class="perfil-comisiones">
+        <div>
+          <p class="perfil-etiqueta">Comisiones de tus radicaciones como prospecto</p>
+          <p class="perfil-comisiones__monto">{{ cop(perfil().comisiones.monto) }}</p>
+          <p class="perfil-comisiones__nota">{{ perfil().comisiones.solicitudes }} solicitudes · se acreditan al completar tu registro</p>
+        </div>
+        <div class="perfil-comisiones__accion">
+          <app-boton variante="accent" icono="how_to_reg" [disabled]="!puedeCompletarRegistro()" (clicked)="confirmarRegistro.set(true)">
+            Completar registro
+          </app-boton>
+          @if (!puedeCompletarRegistro()) {
+            <p class="perfil-comisiones__pendiente">
+              Te falta:
+              @if (documentosAportados() < totalDocumentos()) { <button type="button" class="perfil-enlace" (click)="irA('perfil-documentos')">documentos</button> }
+              @if (documentosAportados() < totalDocumentos() && perfil().sarlaft.estado !== 'vigente') { y }
+              @if (perfil().sarlaft.estado !== 'vigente') { <button type="button" class="perfil-enlace" (click)="irA('perfil-sarlaft')">SARLAFT vigente</button> }
+            </p>
+          }
+        </div>
+      </div>
+    </article>
+  } @else {
+    <!-- Cuenta completa: resumen compacto. -->
+    <article class="perfil-tarjeta perfil-resumen" aria-label="Resumen de la cuenta">
+      <div class="perfil-resumen__dato">
+        <small>Broker registrado desde</small>
+        <b>{{ fecha(perfil().fechaRegistro) }}</b>
+      </div>
+      <div class="perfil-resumen__dato">
+        <small>Comisiones acreditadas como prospecto</small>
+        <b>{{ cop(perfil().comisiones.monto) }} · {{ perfil().comisiones.solicitudes }} solicitudes</b>
+      </div>
+      <div class="perfil-resumen__dato">
+        <small>Documentación</small>
+        <b>{{ documentosAportados() }} de {{ totalDocumentos() }} al día</b>
+      </div>
+    </article>
+  }
+
+  <div class="perfil-rejilla">
+    <!-- ===================== Datos personales ===================== -->
+    <article class="perfil-tarjeta" id="perfil-datos" aria-labelledby="perfil-datos-titulo">
+      <header class="perfil-tarjeta__cabecera">
+        <div>
+          <h3 id="perfil-datos-titulo"><app-icon nombre="person" [tamano]="20" /> Datos personales</h3>
+          <p>Mantén actualizados tus datos de contacto.</p>
+        </div>
+      </header>
+
+      <div class="perfil-campos">
+        <app-form-field label="Documento de identidad" controlId="perfil-documento" ayuda="No se puede modificar. Si hay un error, contacta a soporte.">
+          <div class="perfil-bloqueado">
+            <input id="perfil-documento" type="text" [value]="perfil().tipoDocumento + ' ' + perfil().numeroDocumento" readonly aria-readonly="true" />
+            <app-icon nombre="lock" [tamano]="18" />
+          </div>
+        </app-form-field>
+        <app-form-field label="Nombre completo" controlId="perfil-nombre" [requerido]="true"
+          [error]="esNombreInvalido() ? 'Escribe tu nombre completo.' : ''">
+          <input id="perfil-nombre" type="text" autocomplete="name" [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" />
+        </app-form-field>
+        <app-form-field label="Correo electrónico" controlId="perfil-correo" [requerido]="true"
+          [error]="esCorreoInvalido() ? 'Ingresa un correo válido.' : ''">
+          <input id="perfil-correo" type="email" autocomplete="email" [ngModel]="correo()" (ngModelChange)="correo.set($event)" />
+        </app-form-field>
+        <app-form-field label="Teléfono celular" controlId="perfil-telefono" [requerido]="true"
+          [error]="esTelefonoInvalido() ? 'Entre 7 y 10 dígitos.' : ''">
+          <input id="perfil-telefono" type="tel" inputmode="numeric" autocomplete="tel-national" [ngModel]="telefono()" (ngModelChange)="telefono.set(soloDigitos($event))" />
+        </app-form-field>
+        <app-form-field label="Ciudad" controlId="perfil-ciudad" [requerido]="true">
+          <select id="perfil-ciudad" [ngModel]="ciudad()" (ngModelChange)="ciudad.set($event)">
+            @for (c of ciudades; track c) { <option [value]="c">{{ c }}</option> }
+          </select>
+        </app-form-field>
+      </div>
+
+      @if (mensajeDatos()) {
+        <p class="perfil-ok" role="status"><app-icon nombre="check_circle" [tamano]="16" /> {{ mensajeDatos() }}</p>
+      }
+      <div class="perfil-acciones">
+        <app-boton variante="ghost" [disabled]="!datosCambiados() || guardandoDatos()" (clicked)="descartarDatos()">Descartar</app-boton>
+        <app-boton variante="accent" icono="save" [disabled]="!datosValidos() || !datosCambiados() || guardandoDatos()" (clicked)="guardarDatos()">
+          {{ guardandoDatos() ? 'Guardando…' : 'Guardar cambios' }}
+        </app-boton>
+      </div>
+    </article>
+
+    <!-- ===================== SARLAFT ===================== -->
+    <article class="perfil-tarjeta" id="perfil-sarlaft" aria-labelledby="perfil-sarlaft-titulo">
+      <header class="perfil-tarjeta__cabecera">
+        <div>
+          <h3 id="perfil-sarlaft-titulo"><app-icon nombre="verified_user" [tamano]="20" /> SARLAFT</h3>
+          <p>Conocimiento del cliente. Debe estar vigente para ser broker registrado.</p>
+        </div>
+        <app-badge-estado [variante]="varianteSarlaft[perfil().sarlaft.estado]" [conPunto]="true">
+          {{ etiquetaSarlaft[perfil().sarlaft.estado] }}
+        </app-badge-estado>
+      </header>
+
+      <dl class="perfil-datos">
+        <div><dt>Fecha de expedición del documento</dt><dd>{{ fecha(perfil().sarlaft.fechaExpedicion) }}</dd></div>
+        <div><dt>Última consulta</dt><dd>{{ fecha(perfil().sarlaft.ultimaConsulta) }}</dd></div>
+      </dl>
+
+      @if (perfil().sarlaft.estado === 'por_vencer') {
+        <app-info-box icono="schedule">Tu SARLAFT está próximo a vencer (más de 2,5 años). Actualízalo para completar tu registro.</app-info-box>
+      } @else if (perfil().sarlaft.estado === 'vencido') {
+        <app-info-box icono="error">Tu SARLAFT está vencido (3 años o más). Debes actualizarlo.</app-info-box>
+      }
+
+      <div class="perfil-sarlaft-form">
+        <app-form-field label="Nueva fecha de expedición" controlId="perfil-fecha-exp" ayuda="La del documento de identidad vigente.">
+          <input id="perfil-fecha-exp" type="date" [ngModel]="fechaExpedicion()" (ngModelChange)="fechaExpedicion.set($event)" />
+        </app-form-field>
+        <app-boton variante="outline" icono="policy" [disabled]="!puedeActualizarSarlaft()" (clicked)="actualizarSarlaft()">
+          {{ consultandoSarlaft() ? 'Consultando…' : 'Actualizar SARLAFT' }}
+        </app-boton>
+      </div>
+      @if (mensajeSarlaft()) {
+        <p class="perfil-ok" [class.perfil-ok--alerta]="perfil().sarlaft.estado !== 'vigente'" role="status">
+          <app-icon [nombre]="perfil().sarlaft.estado === 'vigente' ? 'check_circle' : 'error'" [tamano]="16" /> {{ mensajeSarlaft() }}
+        </p>
+      }
+    </article>
+  </div>
+
+  <!-- ===================== Documentos ===================== -->
+  <article class="perfil-tarjeta" id="perfil-documentos" aria-labelledby="perfil-docs-titulo">
+    <header class="perfil-tarjeta__cabecera">
+      <div>
+        <h3 id="perfil-docs-titulo"><app-icon nombre="folder_open" [tamano]="20" /> Documentación</h3>
+        <p>Carga o actualiza tus documentos. Cada nuevo archivo queda en revisión.</p>
+      </div>
+      <span class="perfil-contador">{{ documentosAportados() }}/{{ totalDocumentos() }} aportados</span>
+    </header>
+
+    <ul class="perfil-docs">
+      @if (documentoIdentidad(); as d) {
+        <li class="perfil-docs__item perfil-docs__item--bloqueado">
+          <span class="perfil-docs__icono" aria-hidden="true"><app-icon nombre="badge" [tamano]="20" /></span>
+          <span class="perfil-docs__info">
+            <b>{{ etiquetaDocumento(d.tipo) }}</b>
+            <small>{{ d.archivo || 'Sin archivo' }} · {{ fecha(d.fechaCarga) }}</small>
+          </span>
+          <app-badge-estado [variante]="varianteDoc[d.estado]">{{ etiquetaDoc[d.estado] }}</app-badge-estado>
+          <span class="perfil-docs__candado" title="No se puede modificar desde el perfil"><app-icon nombre="lock" [tamano]="16" /> No modificable</span>
+        </li>
+      }
+      @for (d of documentosEditables(); track d.tipo) {
+        <li class="perfil-docs__item">
+          <span class="perfil-docs__icono" aria-hidden="true"><app-icon nombre="description" [tamano]="20" /></span>
+          <span class="perfil-docs__info">
+            <b>{{ etiquetaDocumento(d.tipo) }}</b>
+            <small>{{ d.archivo ? d.archivo + ' · ' + fecha(d.fechaCarga) : 'Aún no lo has cargado' }}</small>
+          </span>
+          <app-badge-estado [variante]="varianteDoc[d.estado]">{{ etiquetaDoc[d.estado] }}</app-badge-estado>
+        </li>
+      }
+    </ul>
+
+    <p class="perfil-etiqueta">Cargar o reemplazar</p>
+    <app-doc-uploader [reglas]="reglasEditables" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)" />
+
+    @if (errorDocumento()) {
+      <p class="perfil-ok perfil-ok--alerta" role="alert"><app-icon nombre="error" [tamano]="16" /> {{ errorDocumento() }}</p>
+    } @else if (mensajeDocumento()) {
+      <p class="perfil-ok" role="status"><app-icon nombre="check_circle" [tamano]="16" /> {{ mensajeDocumento() }}</p>
+    }
+  </article>
+</section>
+
+<!-- Confirmación de la Transición de registro (modal central) -->
+<app-modal-dialog [abierto]="confirmarRegistro()" titulo="Completar registro de broker" (cerrar)="confirmarRegistro.set(false)">
+  <p>Tu misma cuenta pasará de <b>Prospecto</b> a <b>Broker registrado</b>. Conservas tu historial de solicitudes y cotizaciones.</p>
+  <ul class="perfil-modal-lista">
+    <li><app-icon nombre="lock_open" [tamano]="16" /> Se desbloquean {{ modulosRestringidos.length }} módulos.</li>
+    <li><app-icon nombre="payments" [tamano]="16" /> Se acreditan {{ perfil().comisiones.solicitudes }} comisiones retroactivas por {{ cop(perfil().comisiones.monto) }}.</li>
+    <li><app-icon nombre="fact_check" [tamano]="16" /> La aseguradora valida tu documentación en el servidor.</li>
+  </ul>
+  <div acciones>
+    <app-boton variante="accent" icono="how_to_reg" [disabled]="registrando()" (clicked)="completarRegistro()">
+      {{ registrando() ? 'Registrando…' : 'Confirmar registro' }}
+    </app-boton>
+    <app-boton variante="ghost" (clicked)="confirmarRegistro.set(false)">Cancelar</app-boton>
+  </div>
+</app-modal-dialog>

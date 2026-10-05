@@ -1,10 +1,10 @@
 <section class="no-renovacion" aria-labelledby="no-renovacion-titulo">
-  <header class="no-renovacion-header">
-    <h1 id="no-renovacion-titulo" class="no-renovacion-titulo">Notificar no renovación</h1>
-    <p class="no-renovacion-subtitulo">
-      Indícanos por qué el cliente no desea renovar su póliza para gestionar la baja.
-    </p>
-  </header>
+  <app-page-header
+    eyebrow="Renovaciones"
+    tituloId="no-renovacion-titulo"
+    titulo="Notificar no renovación"
+    subtitulo="Indícanos por qué el cliente no desea renovar su póliza para gestionar la baja."
+  ></app-page-header>
 
   @if (envioExitoso()) {
     <app-success-screen

@@ -22,14 +22,14 @@
 }
 
 .radicacion-titulo {
-  font-size: var(--font-size-h1-seccion);
+  font-size: var(--text-heading);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   margin: var(--space-0);
 }
 
 .radicacion-subtitulo {
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   color: var(--color-muted);
   line-height: var(--line-height-normal);
   margin: var(--space-0);
@@ -74,20 +74,20 @@
 }
 
 .rad-seccion-titulo {
-  font-size: var(--font-size-h4);
+  font-size: var(--text-subtitle);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: var(--space-0);
 }
 
 .rad-obligatorios {
-  font-size: var(--font-size-sm);
+  font-size: var(--text-caption);
   font-weight: var(--font-weight-semibold);
   color: var(--color-accent);
 }
 
 .rad-opcional {
-  font-size: var(--font-size-sm);
+  font-size: var(--text-caption);
   color: var(--color-muted);
   font-style: italic;
 }
@@ -99,7 +99,17 @@
 }
 
 .rad-apoderado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   margin-top: var(--space-2);
+}
+
+.rad-subtitulo-docs {
+  margin: var(--space-3) var(--space-0) var(--space-0);
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
 }
 
 // --- Panel SARLAFT condicional (morado, como el prototipo) ---
@@ -107,9 +117,9 @@
 .rad-sarlaft-panel {
   margin-top: var(--space-2);
   padding: var(--space-4);
-  background: var(--color-accent-light);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  background: var(--sb-tint-accent-bg);
+  border: 1px solid var(--sb-tint-accent-border);
+  border-radius: var(--radius-lg);
 }
 
 .rad-sarlaft-check {
@@ -122,11 +132,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   color: var(--color-text);
 
   span {
-    font-size: var(--font-size-xs);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     line-height: var(--line-height-normal);
   }
@@ -143,7 +153,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
 }
 
 .radicacion-acciones {
@@ -151,5 +161,103 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+// --- Layout de dos columnas (formulario + progreso en vivo) ---
+.radicacion__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.radicacion__principal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.radicacion__lateral {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--space-4));
+}
+
+@media (width <= 1023px) {
+  .radicacion__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .radicacion__lateral {
+    position: static;
+    order: -1;
+  }
+}
+
+.rad-sarlaft-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  background: var(--sb-primary-fixed);
+  color: var(--sb-on-primary-fixed);
+}
+
+// --- Paso 4: Validación SARLAFT (3 salidas) ---
+
+.rad-sarlaft-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.rad-sarlaft-ayuda {
+  font-size: var(--text-caption);
+  color: var(--color-muted);
+}
+
+.rad-sarlaft-pasos {
+  margin: var(--space-0);
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-body);
+  color: var(--color-text);
+}
+
+.rad-sarlaft-enlace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+
+  code {
+    flex: 1 1 260px;
+    min-width: 0;
+    padding: var(--space-2) var(--space-3);
+    overflow-wrap: anywhere;
+    font-size: var(--text-caption);
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+}
+
+.rad-sarlaft-fin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rad-sarlaft-fin__radicado {
+  display: block;
   margin-top: var(--space-2);
 }

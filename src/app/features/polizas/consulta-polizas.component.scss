@@ -15,7 +15,7 @@
   &__titulo {
     margin: var(--space-0);
     color: var(--color-text);
-    font-size: var(--font-size-h1-seccion);
+    font-size: var(--text-heading);
     font-weight: var(--font-weight-bold);
     line-height: var(--line-height-tight);
   }
@@ -23,7 +23,7 @@
   &__subtitulo {
     margin: var(--space-2) var(--space-0) var(--space-0);
     color: var(--color-muted);
-    font-size: var(--font-size-lg);
+    font-size: var(--text-body);
     line-height: var(--line-height-normal);
   }
 
@@ -41,7 +41,7 @@
   input {
     width: 100%;
     box-sizing: border-box;
-    font-size: var(--font-size-2xl);
+    font-size: var(--text-subtitle);
     color: var(--color-text);
     background: var(--color-card);
     border: 1px solid var(--color-border);
@@ -71,14 +71,14 @@
   td {
     text-align: left;
     padding: var(--space-3) var(--space-4);
-    font-size: var(--font-size-lg);
+    font-size: var(--text-body);
     border-bottom: 1px solid var(--color-border);
   }
 
   th {
     color: var(--color-muted);
     font-weight: var(--font-weight-semibold);
-    font-size: var(--font-size-md);
+    font-size: var(--text-body-sm);
   }
 
   td {

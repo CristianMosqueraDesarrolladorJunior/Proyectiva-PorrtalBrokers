@@ -1,10 +1,10 @@
 <section class="consulta-polizas" aria-labelledby="consulta-polizas-titulo">
-  <header class="consulta-polizas__header">
-    <h1 id="consulta-polizas-titulo" class="consulta-polizas__titulo">Consulta de pólizas</h1>
-    <p class="consulta-polizas__subtitulo">
-      Busca las pólizas de un cliente por su cédula y gestiona su cartera.
-    </p>
-  </header>
+  <app-page-header
+    eyebrow="Portafolio"
+    tituloId="consulta-polizas-titulo"
+    titulo="Consulta de pólizas"
+    subtitulo="Busca las pólizas de un cliente por su cédula y gestiona su cartera."
+  ></app-page-header>
 
   <form class="consulta-polizas__buscador" (ngSubmit)="buscar()">
     <app-form-field

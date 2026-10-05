@@ -2,6 +2,9 @@ import { HttpEvent, HttpInterceptorFn, HttpResponse } from '@angular/common/http
 import { isDevMode } from '@angular/core';
 import { Observable, delay, of } from 'rxjs';
 
+import { EventoAgente } from '../models/agente.model';
+import { EstadoHilo, procesarEvento } from '../services/agente-mock.engine';
+
 /**
  * BYPASS TEMPORAL DE DESARROLLO — Mock del API_Backend (solo `isDevMode()`).
  *
@@ -52,6 +55,9 @@ const SOLICITUDES = [
   { referencia: '#10223', cliente: 'Jorge Vélez Cano', producto: 'Arrendamiento Comercial', estado: 'radicada', estadoPago: 'Recaudada', fecha: '11 may 2026', comision: 175000 },
 ];
 
+/** Estado de cada hilo del agente (el checkpointer Postgres en el diseño real). */
+const HILOS_AGENTE = new Map<string, EstadoHilo>();
+
 /**
  * Resuelve la respuesta mock para una ruta del API_Backend.
  * @returns el cuerpo de respuesta, o `undefined` si la ruta no está mockeada.
@@ -66,6 +72,14 @@ function resolverMock(metodo: string, url: string, cuerpo: unknown): unknown {
   }
   if (ruta.endsWith('/api/v1/auth/logout') && metodo === 'POST') {
     return null;
+  }
+
+  // --- Agente IA (diagramas 10–15): BFF simulado con estado por hilo ---
+  if (ruta.endsWith('/api/v1/agente/mensajes') && metodo === 'POST') {
+    const evento = cuerpo as EventoAgente;
+    const { estado, respuesta } = procesarEvento(HILOS_AGENTE.get(evento.hiloId), evento);
+    HILOS_AGENTE.set(evento.hiloId, estado);
+    return respuesta;
   }
 
   // --- Dashboard: comisiones y KPIs (Req 5) ---
@@ -172,6 +186,27 @@ function resolverMock(metodo: string, url: string, cuerpo: unknown): unknown {
   }
 
   // --- Radicación, contrato, nuevo negocio, corrección, renovaciones (confirmaciones) ---
+  // --- Registro de broker (Req 3): SARLAFT del aspirante y Transicion_Registro ---
+  if (ruta.endsWith('/api/v1/sarlaft/consultas') && metodo === 'POST') {
+    const req = (cuerpo ?? {}) as { fechaExpedicion?: string; documento?: string; correo?: string };
+    if (req.fechaExpedicion) {
+      return { nivel: 'exito', fechaExpedicion: req.fechaExpedicion, estado: 'Vigente', vigencia: 'Menor a 3 años' };
+    }
+    return resolverSarlaftRegistro(req.documento ?? '', req.correo ?? '');
+  }
+  if (ruta.endsWith('/api/v1/brokers/prospectos') && metodo === 'POST') {
+    return { radicado: '#PRO-2026-0342', estado: 'PROSPECTO' };
+  }
+  if (ruta.endsWith('/api/v1/brokers/solicitudesRegistro') && metodo === 'POST') {
+    // La cuenta queda como PROSPECTO mientras se revisa la documentación.
+    return { radicado: '#REG-2026-0187', estado: 'PROSPECTO' };
+  }
+  if (ruta.endsWith('/api/v1/radicaciones/estudio') && metodo === 'POST') {
+    return resolverEstudioRadicacion(cuerpo);
+  }
+  if (ruta.endsWith('/api/v1/radicaciones/sarlaft') && metodo === 'POST') {
+    return resolverSarlaftRadicacion(cuerpo);
+  }
   if (ruta.endsWith('/api/v1/radicaciones') && metodo === 'POST') {
     return { radicado: '#RAD-2026-4521', estado: 'Radicada' };
   }
@@ -204,6 +239,9 @@ function resolverMock(metodo: string, url: string, cuerpo: unknown): unknown {
     };
   }
 
+  if (ruta.endsWith('/api/v1/renovaciones/sarlaft') && metodo === 'POST') {
+    return resolverSarlaftRenovacion(cuerpo);
+  }
   if (ruta.includes('/api/v1/renovaciones') && metodo === 'POST') {
     return { radicado: '#RN-2026-1123', estado: 'Procesando' };
   }
@@ -262,6 +300,7 @@ function detalleSolicitud(referencia: string): unknown {
  */
 function cotizacionMock(cuerpo: unknown): unknown {
   const req = (cuerpo ?? {}) as {
+    ciudad?: string;
     canon?: number;
     administracion?: number;
     mesesVigencia?: number;
@@ -271,41 +310,56 @@ function cotizacionMock(cuerpo: unknown): unknown {
   const administracion = Number(req.administracion ?? 0);
   const meses = Number(req.mesesVigencia ?? 12);
   const valorMensual = canon + administracion;
-  const tasa = valorMensual > 9_000_000 ? 3.0 : 3.5;
+  // Reglas del prototipo: Villavicencio 3%; > $9M mensuales 3%; resto 3.5%.
+  const esVillavicencio = (req.ciudad ?? '').toLowerCase().includes('villavicencio');
+  const tasa = esVillavicencio || valorMensual > 9_000_000 ? 3.0 : 3.5;
+  const TASA_COBERTURAS = 5.0;
 
-  const conceptos: unknown[] = [];
-  const agregarConcepto = (nombre: string, valorAsegurado: number): void => {
+  interface ConceptoMock {
+    concepto: string;
+    valorAsegurado: number;
+    meses: number;
+    baseCalculoPeriodo: number;
+    tasa: number;
+    primaNeta: number;
+    iva: number;
+    total: number;
+  }
+  const conceptos: ConceptoMock[] = [];
+  const agregar = (nombre: string, valorAsegurado: number, tasaAplicada: number, sobrePeriodo: boolean): void => {
     const base = valorAsegurado * meses;
-    const primaNeta = Math.round(base * (tasa / 100));
+    // Seguro principal: prima sobre el período; coberturas: 5% sobre el monto (prototipo).
+    const primaNeta = Math.round((sobrePeriodo ? base : valorAsegurado) * (tasaAplicada / 100));
     const iva = Math.round(primaNeta * 0.19);
     conceptos.push({
       concepto: nombre,
       valorAsegurado,
       meses,
       baseCalculoPeriodo: base,
-      tasa,
+      tasa: tasaAplicada,
       primaNeta,
       iva,
       total: primaNeta + iva,
     });
   };
 
-  agregarConcepto('Arrendamiento', valorMensual);
+  agregar('Seguro Principal (Arrendamiento + Admon.)', valorMensual, tasa, true);
+  const principalPrimaNeta = conceptos[0].primaNeta;
   for (const cob of req.coberturas ?? []) {
     if (cob.activa && cob.montoAsegurado > 0) {
-      const nombre = cob.id === 'danios' ? 'Daños y faltantes' : 'Servicios públicos';
-      agregarConcepto(nombre, cob.montoAsegurado);
+      const nombre = cob.id === 'danios' ? 'Daños y Faltantes' : 'Servicios Públicos (excedente)';
+      agregar(nombre, cob.montoAsegurado, TASA_COBERTURAS, false);
     }
   }
 
-  const filas = conceptos as { primaNeta: number; iva: number; total: number }[];
-  const primaNetaTotal = filas.reduce((s, c) => s + c.primaNeta, 0);
-  const ivaTotal = filas.reduce((s, c) => s + c.iva, 0);
+  const primaNetaTotal = conceptos.reduce((s, c) => s + c.primaNeta, 0);
+  const ivaTotal = conceptos.reduce((s, c) => s + c.iva, 0);
   return {
     conceptos,
     primaNetaTotal,
     ivaTotal,
     total: primaNetaTotal + ivaTotal,
+    comision: Math.round(principalPrimaNeta * 0.08),
   };
 }
 
@@ -320,10 +374,10 @@ function referidosMock(): unknown {
     convertidos: 10,
     referidos: [
       { nombre: 'Juan Camilo Ríos', producto: 'Seguro de Hogar', estado: 'Aceptada', fecha: '15 may 2026' },
-      { nombre: 'Paula Andrea Gómez', producto: 'Arrendamiento', estado: 'En proceso', fecha: '10 may 2026' },
+      { nombre: 'Paula Andrea Gómez', producto: 'Seguro de Carros', estado: 'En proceso', fecha: '10 may 2026' },
       { nombre: 'Fernando Castillo', producto: 'Seguro de Vida', estado: 'Rechazada', fecha: '5 may 2026' },
       { nombre: 'Marcela Duque', producto: 'Seguro de Hogar', estado: 'Aceptada', fecha: '28 abr 2026' },
-      { nombre: 'Ricardo Salazar', producto: 'Arrendamiento', estado: 'Aceptada', fecha: '20 abr 2026' },
+      { nombre: 'Ricardo Salazar', producto: 'Seguro de Vida', estado: 'Aceptada', fecha: '20 abr 2026' },
     ],
   };
 }
@@ -342,6 +396,169 @@ function normalizarDepartamento(nombre: string): string {
     return 'valle';
   }
   return base;
+}
+
+/**
+ * Documentos ya notificados como `desactualizado`: al reconsultarlos se simula
+ * que el propietario/apoderado actualizó su SARLAFT con la URL recibida.
+ */
+const SARLAFT_NOTIFICADOS = new Set<string>();
+
+/**
+ * Mock de la API SARLAFT de la radicación (paso 4) con sus 3 salidas.
+ * Se consulta a quien firma (propietario o apoderado). El último dígito del
+ * documento consultado elige el camino:
+ * - termina en 1 (o cualquier otro no listado) → `actualizado`
+ * - termina en 2 → `desactualizado`; la reconsulta devuelve `actualizado`
+ * - termina en 3 → `consultable` (queda en el Warehouse con radicado)
+ */
+function resolverSarlaftRadicacion(cuerpo: unknown): unknown {
+  const req = (cuerpo ?? {}) as {
+    numeroDocumento?: string;
+    sujeto?: 'propietario' | 'apoderado';
+  };
+  const sujeto = req.sujeto ?? 'propietario';
+  const documento = (req.numeroDocumento ?? '').trim();
+  const ultimo = documento.slice(-1);
+  const fechaConsulta = new Date().toISOString();
+
+  if (ultimo === '3') {
+    return {
+      estado: 'consultable',
+      mensaje: `El ${sujeto} aparece como consultable en listas. El caso pasa a revisión de Cumplimiento y los datos quedan en el Warehouse.`,
+      fechaConsulta,
+      radicado: '#RAD-2026-4522',
+    };
+  }
+  if (ultimo === '2' && !SARLAFT_NOTIFICADOS.has(documento)) {
+    SARLAFT_NOTIFICADOS.add(documento);
+    return {
+      estado: 'desactualizado',
+      mensaje: `El SARLAFT del ${sujeto} está desactualizado. Se le envió la URL de actualización.`,
+      fechaConsulta,
+      enlaceActualizacion: `https://sarlaft.segurosbolivar.com/actualizar?t=${documento.slice(-4)}A9F2`,
+      correoDestinatario: sujeto === 'apoderado' ? 'ap*****@correo.com' : 'pr*****@correo.com',
+    };
+  }
+  return {
+    estado: 'actualizado',
+    mensaje: `SARLAFT del ${sujeto} vigente. Puedes continuar con la carga de documentos.`,
+    fechaConsulta,
+  };
+}
+
+/** Documentos de aspirantes a los que ya se les envió la URL de actualización. */
+const SARLAFT_REGISTRO_NOTIFICADOS = new Set<string>();
+
+/**
+ * Mock de la verificación SARLAFT del registro de broker (mismas 3 salidas que
+ * la radicación). Último dígito del documento: 3 → consultable · 2 →
+ * desactualizado (al reconsultar queda actualizado) · otro → actualizado.
+ */
+function resolverSarlaftRegistro(documento: string, correo: string): unknown {
+  const fechaConsulta = new Date().toISOString();
+  const doc = documento.trim();
+  if (doc.endsWith('3')) {
+    return {
+      estado: 'consultable',
+      mensaje: 'Tu documento aparece como consultable en listas. La solicitud pasa a revisión de Cumplimiento.',
+      fechaConsulta,
+      radicado: '#REG-2026-0188',
+    };
+  }
+  if (doc.endsWith('2') && !SARLAFT_REGISTRO_NOTIFICADOS.has(doc)) {
+    SARLAFT_REGISTRO_NOTIFICADOS.add(doc);
+    const [usuario, dominio] = correo.split('@');
+    return {
+      estado: 'desactualizado',
+      mensaje: 'Tu SARLAFT está desactualizado. Te enviamos la URL para actualizarlo.',
+      fechaConsulta,
+      enlaceActualizacion: `https://sarlaft.segurosbolivar.com/actualizar?t=${doc.slice(-4)}B7C1`,
+      correoDestinatario: dominio ? `${(usuario ?? '').slice(0, 2)}*****@${dominio}` : 'tu correo',
+    };
+  }
+  return { estado: 'actualizado', mensaje: 'Tu SARLAFT está vigente. Continúa con tus documentos.', fechaConsulta };
+}
+
+/** Estudios aprobados de ejemplo: inquilino (PII enmascarada) + inmueble. */
+const ESTUDIOS_MOCK = [
+  {
+    inquilino: { nombre: 'Camila Restrepo Gómez', cedula: '1.020.•••.050', celular: '+57 3•• ••• 4412', correo: 'c•••@correo.com' },
+    inmueble: { direccion: 'Cra 43A # 7-50, apto 1204', ciudad: 'Medellín', destino: 'Vivienda', canon: 2800000, administracion: 350000, propietario: 'Jorge Villegas Arango' },
+  },
+  {
+    inquilino: { nombre: 'Andrés Felipe Ríos', cedula: '80.•••.321', celular: '+57 3•• ••• 9087', correo: 'a•••@empresa.co' },
+    inmueble: { direccion: 'Calle 93 # 11-26, local 2', ciudad: 'Bogotá', destino: 'Comercio', canon: 6500000, administracion: 780000, propietario: 'Inversiones Andinas S.A.S.' },
+  },
+  {
+    inquilino: { nombre: 'Valentina Castro Mora', cedula: '1.144.•••.873', celular: '+57 3•• ••• 2250', correo: 'v•••@correo.com' },
+    inmueble: { direccion: 'Av. 6N # 23-40, apto 502', ciudad: 'Cali', destino: 'Vivienda', canon: 1900000, administracion: 240000, propietario: 'Martha Lucía Pérez' },
+  },
+];
+
+/**
+ * Mock de la API de Estudio de Arrendamiento (paso 2, API-gate).
+ * Último dígito del número de estudio: 9 → `no_aprobado` (URL de Estudio
+ * Digital) · 8 → `pendiente` (en proceso) · otro → `aprobado` con los datos del
+ * inquilino y del inmueble.
+ */
+function resolverEstudioRadicacion(cuerpo: unknown): unknown {
+  const numeroEstudio = ((cuerpo ?? {}) as { numeroEstudio?: string }).numeroEstudio?.trim().toUpperCase() ?? '';
+  const fechaConsulta = new Date().toISOString();
+  const ultimo = Number(numeroEstudio.slice(-1));
+  if (numeroEstudio.endsWith('9')) {
+    return {
+      estado: 'no_aprobado',
+      numeroEstudio,
+      fechaConsulta,
+      urlEstudioDigital: `https://estudiodigital.ellibertador.co/estudio?ref=${numeroEstudio.slice(-4)}`,
+    };
+  }
+  if (numeroEstudio.endsWith('8')) {
+    return { estado: 'pendiente', numeroEstudio, fechaConsulta };
+  }
+  const vigencia = new Date();
+  vigencia.setDate(vigencia.getDate() + 30);
+  const ejemplo = ESTUDIOS_MOCK[(Number.isInteger(ultimo) ? ultimo : 0) % ESTUDIOS_MOCK.length];
+  return {
+    estado: 'aprobado',
+    numeroEstudio,
+    fechaConsulta,
+    vigenteHasta: vigencia.toISOString().slice(0, 10),
+    ...ejemplo,
+  };
+}
+
+/**
+ * Mock de la validación SARLAFT de renovación (2 salidas del proceso real).
+ * Pólizas cuyo número termina en dígito impar arrancan con SARLAFT no vigente
+ * (más de 36 meses); al reconsultar con el SARLAFT actualizado queda vigente.
+ */
+function resolverSarlaftRenovacion(cuerpo: unknown): unknown {
+  const req = (cuerpo ?? {}) as { numeroPoliza?: string; documentoActualizado?: unknown };
+  const ultimo = Number((req.numeroPoliza ?? '').trim().slice(-1));
+  const noVigente = !req.documentoActualizado && Number.isInteger(ultimo) && ultimo % 2 === 1;
+  const hoy = new Date();
+  if (noVigente) {
+    const expedicion = new Date(hoy.getFullYear() - 4, hoy.getMonth() - 2, hoy.getDate());
+    return {
+      estado: 'no_vigente',
+      ultimaExpedicion: expedicion.toISOString(),
+      tiempoTranscurrido: '4 años, 2 meses',
+      mesesDesdeExpedicion: 50,
+      validacionId: `VAL-${Date.now()}`,
+    };
+  }
+  const expedicion = req.documentoActualizado
+    ? hoy
+    : new Date(hoy.getFullYear() - 1, hoy.getMonth() - 3, hoy.getDate());
+  return {
+    estado: 'vigente',
+    ultimaExpedicion: expedicion.toISOString(),
+    tiempoTranscurrido: req.documentoActualizado ? 'Expedido hoy' : '1 año, 3 meses',
+    mesesDesdeExpedicion: req.documentoActualizado ? 0 : 15,
+    validacionId: `VAL-${Date.now()}`,
+  };
 }
 
 /** Lee un parámetro de una query string. */

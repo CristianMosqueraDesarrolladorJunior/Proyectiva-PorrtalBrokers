@@ -15,7 +15,7 @@ export interface FilaDetalle {
 }
 
 /**
- * DrawerDetalleComponent — Componente_Compartido de panel lateral deslizante
+ * DrawerDetalleComponent — Componente_Compartido de detalle en modal central
  * (Req 35.19, 39.2, 39.3, 24.1).
  *
  * Encapsula `drawer-overlay`, `drawer`, `drawer-header`, `drawer-body`,

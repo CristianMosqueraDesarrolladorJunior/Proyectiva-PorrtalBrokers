@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 /** Acción de un recurso descargable del prototipo: descargar PDF o abrir. */
 type AccionRecurso = 'pdf' | 'abrir';
 
@@ -28,6 +29,7 @@ interface SeccionDoc {
 @Component({
   selector: 'app-documentos',
   standalone: true,
+  imports: [PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './documentos.component.html',
   styleUrl: './documentos.component.scss',
@@ -38,38 +40,38 @@ export class DocumentosComponent {
     {
       titulo: 'Formatos de renovación',
       recursos: [
-        { icono: '♻️', titulo: 'Formato renovación · Persona natural', descripcion: 'Plantilla oficial', accion: 'pdf', url: '#' },
-        { icono: '🏢', titulo: 'Formato renovación · Persona jurídica', descripcion: 'Plantilla oficial', accion: 'pdf', url: '#' },
+        { icono: 'autorenew', titulo: 'Formato renovación · Persona natural', descripcion: 'Plantilla oficial', accion: 'pdf', url: '#' },
+        { icono: 'apartment', titulo: 'Formato renovación · Persona jurídica', descripcion: 'Plantilla oficial', accion: 'pdf', url: '#' },
       ],
     },
     {
       titulo: 'Cumplimiento y vinculación',
       recursos: [
-        { icono: '🛡️', titulo: 'SARLAFT · Persona natural', descripcion: 'Obligatorio · KYC/AML', accion: 'pdf', url: '#' },
-        { icono: '🛡️', titulo: 'SARLAFT · Persona jurídica', descripcion: 'Obligatorio', accion: 'pdf', url: '#' },
-        { icono: '🔒', titulo: 'Formato de autorizaciones', descripcion: 'Habeas data y tratamiento de datos', accion: 'pdf', url: '#' },
-        { icono: '📑', titulo: 'Acta de junta de socios', descripcion: 'Personas jurídicas', accion: 'pdf', url: '#' },
+        { icono: 'verified_user', titulo: 'SARLAFT · Persona natural', descripcion: 'Obligatorio · KYC/AML', accion: 'pdf', url: '#' },
+        { icono: 'verified_user', titulo: 'SARLAFT · Persona jurídica', descripcion: 'Obligatorio', accion: 'pdf', url: '#' },
+        { icono: 'lock', titulo: 'Formato de autorizaciones', descripcion: 'Habeas data y tratamiento de datos', accion: 'pdf', url: '#' },
+        { icono: 'article', titulo: 'Acta de junta de socios', descripcion: 'Personas jurídicas', accion: 'pdf', url: '#' },
       ],
     },
     {
       titulo: 'Contratos y formatos del cliente',
       recursos: [
-        { icono: '📝', titulo: 'Formato de contrato', descripcion: 'Plantilla editable', accion: 'pdf', url: '#' },
-        { icono: '📋', titulo: 'Formato de inventario', descripcion: 'Estado del inmueble', accion: 'pdf', url: '#' },
+        { icono: 'edit_document', titulo: 'Formato de contrato', descripcion: 'Plantilla editable', accion: 'pdf', url: '#' },
+        { icono: 'assignment', titulo: 'Formato de inventario', descripcion: 'Estado del inmueble', accion: 'pdf', url: '#' },
       ],
     },
     {
       titulo: 'Condiciones y comisiones',
       recursos: [
-        { icono: '📄', titulo: 'Clausulados', descripcion: 'Coberturas, exclusiones y condiciones', accion: 'pdf', url: '#' },
-        { icono: '💲', titulo: 'Instructivo de comisiones', descripcion: 'Tarifas y porcentajes', accion: 'pdf', url: '#' },
+        { icono: 'description', titulo: 'Clausulados', descripcion: 'Coberturas, exclusiones y condiciones', accion: 'pdf', url: '#' },
+        { icono: 'payments', titulo: 'Instructivo de comisiones', descripcion: 'Tarifas y porcentajes', accion: 'pdf', url: '#' },
       ],
     },
     {
       titulo: 'Instructivos y guías',
       recursos: [
-        { icono: '📘', titulo: 'Instructivo de reclamación', descripcion: 'Paso a paso', accion: 'abrir', url: '#' },
-        { icono: '📗', titulo: 'Instructivo de renovación', descripcion: 'Proceso completo', accion: 'abrir', url: '#' },
+        { icono: 'menu_book', titulo: 'Instructivo de reclamación', descripcion: 'Paso a paso', accion: 'abrir', url: '#' },
+        { icono: 'menu_book', titulo: 'Instructivo de renovación', descripcion: 'Proceso completo', accion: 'abrir', url: '#' },
       ],
     },
   ];

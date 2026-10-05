@@ -31,7 +31,7 @@ export class FiltradoInteligenteComponent {
   @Input() titulo = 'Filtrado Inteligente';
 
   /** Ícono decorativo del encabezado (emoji del prototipo). */
-  @Input() icono = '🔎';
+  @Input() icono = 'tune';
 
   /** Número de filtros disponibles; muestra la insignia cuando es mayor a 0. */
   @Input() totalFiltros = 0;

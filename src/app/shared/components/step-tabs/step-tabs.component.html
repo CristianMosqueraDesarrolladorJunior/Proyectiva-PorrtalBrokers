@@ -1,0 +1,61 @@
+<nav class="step-tabs" [attr.aria-label]="ariaLabel">
+  <div class="step-tabs__resumen">
+    <span class="step-tabs__contador">Paso {{ indiceActivo + 1 }} de {{ total }}</span>
+    @if (pasos[indiceActivo]; as actual) {
+      <strong class="step-tabs__actual">{{ etiqueta(actual) }}</strong>
+    }
+  </div>
+
+  <ol class="step-tabs__lista">
+    @for (paso of pasos; track $index; let i = $index) {
+      <li
+        class="step-tab"
+        [class.step-tab--activo]="estado(i) === 'activo'"
+        [class.step-tab--completado]="estado(i) === 'completado'"
+        [attr.aria-current]="estado(i) === 'activo' ? 'step' : null"
+      >
+        @if (esNavegable(i)) {
+          <button
+            type="button"
+            class="step-tab__control step-tab__control--boton"
+            [attr.aria-label]="'Volver al paso ' + (i + 1) + ': ' + etiqueta(paso)"
+            (click)="seleccionar(i)"
+          >
+            <ng-container *ngTemplateOutlet="contenido; context: { $implicit: paso, i: i }" />
+          </button>
+        } @else {
+          <div class="step-tab__control">
+            <ng-container *ngTemplateOutlet="contenido; context: { $implicit: paso, i: i }" />
+          </div>
+        }
+      </li>
+    }
+  </ol>
+
+  <div
+    class="step-tabs__barra"
+    role="progressbar"
+    aria-valuemin="1"
+    [attr.aria-valuemax]="total"
+    [attr.aria-valuenow]="indiceActivo + 1"
+    [attr.aria-valuetext]="'Paso ' + (indiceActivo + 1) + ' de ' + total"
+  >
+    <span class="step-tabs__relleno" [style.width.%]="progreso"></span>
+  </div>
+</nav>
+
+<ng-template #contenido let-paso let-i="i">
+  <span class="step-tab__marca" aria-hidden="true">
+    @if (estado(i) === 'completado') {
+      <app-icon nombre="check" [tamano]="16" />
+    } @else {
+      {{ i + 1 }}
+    }
+  </span>
+  <span class="step-tab__texto">
+    <span class="step-tab__etiqueta">{{ etiqueta(paso) }}</span>
+    @if (descripcion(paso); as desc) {
+      <span class="step-tab__descripcion">{{ desc }}</span>
+    }
+  </span>
+</ng-template>

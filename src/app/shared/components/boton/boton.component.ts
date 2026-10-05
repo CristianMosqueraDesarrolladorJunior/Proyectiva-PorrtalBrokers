@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { IconComponent } from '../icon/icon.component';
 
 /** Variantes de botón del prototipo (Req 35.1). */
 export type VarianteBoton =
@@ -29,10 +30,14 @@ export type TipoBoton = 'button' | 'submit' | 'reset';
 @Component({
   selector: 'app-boton',
   standalone: true,
+  imports: [IconComponent],
   templateUrl: './boton.component.html',
   styleUrl: './boton.component.scss',
 })
 export class BotonComponent {
+  /** Nombre del ícono Material Symbols opcional a mostrar al inicio del botón. */
+  @Input() icono: string | null = null;
+
   /** Variante visual del botón (Req 35.1). */
   @Input() variante: VarianteBoton = 'primary';
 

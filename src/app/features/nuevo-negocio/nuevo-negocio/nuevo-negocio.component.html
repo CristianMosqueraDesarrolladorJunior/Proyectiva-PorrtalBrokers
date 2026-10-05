@@ -1,5 +1,10 @@
 <section class="nuevo-negocio" aria-labelledby="nn-titulo">
-  <header class="nn-header">
+  <app-page-header
+    eyebrow="Canal Comercial"
+    titulo="Nuevo negocio"
+    subtitulo="Registra un nuevo negocio, configura sus precios y envía la solicitud con el resumen financiero."
+  ></app-page-header>
+  <header class="nn-header" hidden>
     <h1 id="nn-titulo" class="nn-titulo">Nuevo negocio</h1>
     <p class="nn-subtitulo">
       Registra un nuevo negocio, configura sus precios y envía la solicitud con el resumen financiero.
@@ -21,7 +26,13 @@
     ></app-success-screen>
   } @else {
     <!-- Indicador de pasos (Req 31.1) -->
-    <app-stepper [pasos]="pasos" [pasoActivo]="pasoActual()"></app-stepper>
+    <app-step-tabs
+      [pasos]="pasos"
+      [pasoActivo]="pasoActual()"
+      [navegable]="pasoActual() < 2"
+      ariaLabel="Pasos del nuevo negocio"
+      (pasoSeleccionado)="irAPaso($event)"
+    />
 
     <!-- Paso 1: Datos del cliente (Req 31.2, 31.3) -->
     @if (pasoActual() === 0) {

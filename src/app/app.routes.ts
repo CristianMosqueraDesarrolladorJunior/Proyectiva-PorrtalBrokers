@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth.guard';
+import { rolGuard } from './core/guards/rol.guard';
 
 /**
  * Tabla de rutas raíz del Portal de Autogestión de Brokers (Req 4, 29.4).
@@ -38,7 +39,7 @@ export const routes: Routes = [
   // --- Shell autenticado (Req 4, 4.4) ---
   {
     path: 'app',
-    canActivate: [authGuard],
+    canActivate: [authGuard, rolGuard('Broker')],
     loadComponent: () =>
       import('./features/shell/shell.component').then((m) => m.ShellComponent),
     children: [
@@ -50,6 +51,14 @@ export const routes: Routes = [
           import(
             './features/dashboard/seguimiento/seguimiento.component'
           ).then((m) => m.SeguimientoComponent),
+      },
+      {
+        path: 'agente',
+        title: 'Agente IA — Proyectiva',
+        loadComponent: () =>
+          import('./features/agente/agente.component').then(
+            (m) => m.AgenteComponent,
+          ),
       },
       {
         path: 'radicacion',
@@ -172,11 +181,65 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'perfil',
+        title: 'Mi perfil — Proyectiva',
+        loadComponent: () =>
+          import('./features/perfil/perfil.component').then(
+            (m) => m.PerfilComponent,
+          ),
+      },
+      {
         path: 'ayuda',
         title: 'Ayuda — Proyectiva',
         loadComponent: () =>
           import('./features/ayuda/ayuda.component').then(
             (m) => m.AyudaComponent,
+          ),
+      },
+    ],
+  },
+
+  // --- Consola de administración (diagrama 16): Administrador y Comercial ---
+  {
+    path: 'admin',
+    canActivate: [rolGuard('Administrador', 'Comercial')],
+    loadComponent: () =>
+      import('./features/admin/admin-shell/admin-shell.component').then(
+        (m) => m.AdminShellComponent,
+      ),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'resumen' },
+      {
+        path: 'resumen',
+        title: 'Resumen — Consola Proyectiva',
+        loadComponent: () =>
+          import('./features/admin/resumen/resumen.component').then(
+            (m) => m.ResumenComponent,
+          ),
+      },
+      {
+        path: 'brokers',
+        title: 'Brokers — Consola Proyectiva',
+        loadComponent: () =>
+          import('./features/admin/brokers/brokers.component').then(
+            (m) => m.BrokersComponent,
+          ),
+      },
+      {
+        path: 'negocios',
+        title: 'Negocios — Consola Proyectiva',
+        loadComponent: () =>
+          import('./features/admin/negocios/negocios.component').then(
+            (m) => m.NegociosComponent,
+          ),
+      },
+      {
+        path: 'comerciales',
+        title: 'Comerciales — Consola Proyectiva',
+        canActivate: [rolGuard('Administrador')],
+        loadComponent: () =>
+          import('./features/admin/comerciales/comerciales.component').then(
+            (m) => m.ComercialesComponent,
           ),
       },
     ],

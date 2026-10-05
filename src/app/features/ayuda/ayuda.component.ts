@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 /** Contacto directo de soporte del prototipo (Req 33.5). */
 interface ContactoDirecto {
   readonly avatar: string;
@@ -24,6 +25,7 @@ interface FaqItem {
 @Component({
   selector: 'app-ayuda',
   standalone: true,
+  imports: [PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './ayuda.component.html',
   styleUrl: './ayuda.component.scss',

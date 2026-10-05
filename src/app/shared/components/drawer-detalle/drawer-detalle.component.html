@@ -15,7 +15,7 @@
         aria-label="Cerrar detalle"
         (click)="solicitarCierre()"
       >
-        ✕
+        <span class="material-symbols-outlined">close</span>
       </button>
     </div>
 
@@ -30,6 +30,7 @@
     </div>
 
     <div class="drawer-footer">
+      <ng-content select="[acciones]"></ng-content>
       <button type="button" class="drawer-footer__close" (click)="solicitarCierre()">
         Cerrar
       </button>

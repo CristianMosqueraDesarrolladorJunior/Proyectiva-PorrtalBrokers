@@ -1,10 +1,10 @@
 <section class="ayuda" aria-labelledby="ayuda-titulo">
-  <header class="ayuda__header">
-    <h1 id="ayuda-titulo" class="ayuda__titulo">Centro de ayuda</h1>
-    <p class="ayuda__intro">
-      Conecta con soporte, resuelve dudas y accede a canales oficiales.
-    </p>
-  </header>
+  <app-page-header
+    eyebrow="Soporte"
+    tituloId="ayuda-titulo"
+    titulo="Centro de ayuda"
+    subtitulo="Conecta con soporte, resuelve dudas y accede a canales oficiales."
+  ></app-page-header>
 
   <!-- Contactos directos (Req 33.5) -->
   <h3 class="ayuda__seccion-titulo">Contactos directos</h3>
@@ -21,7 +21,7 @@
           </div>
           <p class="contact-card__desc">{{ contacto.descripcion }}</p>
           <a class="contact-card__enlace" href="#" (click)="$event.preventDefault()">
-            → Conectar ahora
+            Conectar ahora
           </a>
         </div>
       </div>

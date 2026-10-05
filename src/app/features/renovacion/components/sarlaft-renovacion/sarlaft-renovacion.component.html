@@ -1,0 +1,75 @@
+<!--
+  Validación SARLAFT de renovación (proceso real): vigente -> Continuar;
+  no vigente (>= 36 meses) -> cargar SARLAFT actualizado y reconsultar.
+-->
+<section class="sarlaft-renov" aria-labelledby="sarlaft-renov-titulo">
+  <header class="sarlaft-renov__header">
+    <span class="material-symbols-outlined sarlaft-renov__icono" aria-hidden="true">verified_user</span>
+    <div>
+      <h2 id="sarlaft-renov-titulo" class="sarlaft-renov__titulo">Validación SARLAFT</h2>
+      <p class="sarlaft-renov__subtitulo">
+        Toda gestión de la póliza <strong>#{{ numeroPoliza }}</strong> exige un certificado SARLAFT
+        con menos de {{ mesesVigencia }} meses.
+      </p>
+    </div>
+  </header>
+
+  @if (validando()) {
+    <app-escalerita-loader texto="Validando SARLAFT…" />
+  } @else if (error()) {
+    <app-alert-banner variante="error" titulo="Validación no disponible">{{ error() }}</app-alert-banner>
+    <div class="sarlaft-renov__acciones">
+      <app-boton variante="ghost" (clicked)="cancelar.emit()">Volver a opciones</app-boton>
+      <app-boton variante="accent" (clicked)="reintentar()">Reintentar</app-boton>
+    </div>
+  } @else if (resultado()) {
+    @if (resultado(); as r) {
+    <dl class="sarlaft-renov__datos">
+      <div>
+        <dt>Última expedición</dt>
+        <dd>{{ r.ultimaExpedicion | date: 'dd/MM/yyyy' }}</dd>
+      </div>
+      <div>
+        <dt>Tiempo transcurrido</dt>
+        <dd>{{ r.tiempoTranscurrido }}</dd>
+      </div>
+      <div>
+        <dt>Validación</dt>
+        <dd>{{ r.validacionId }}</dd>
+      </div>
+    </dl>
+
+    @if (r.estado === 'vigente') {
+      <app-alert-banner variante="success" titulo="SARLAFT vigente">
+        El certificado está vigente. Puedes continuar con la gestión de la póliza.
+      </app-alert-banner>
+      <div class="sarlaft-renov__acciones">
+        <app-boton variante="ghost" (clicked)="cancelar.emit()">Cancelar</app-boton>
+        <app-boton variante="accent" (clicked)="continuar()">{{ textoContinuar }}</app-boton>
+      </div>
+    } @else {
+      <app-alert-banner variante="error" titulo="Documento SARLAFT no vigente">
+        El certificado SARLAFT tiene una antigüedad de {{ mesesVigencia }} meses o más y no es válido
+        para continuar. Solicítalo al cliente o descárgalo de su entidad financiera y cárgalo aquí.
+      </app-alert-banner>
+
+      <app-doc-uploader
+        [reglas]="reglaActualizacion"
+        [cargados]="archivoActualizado()"
+        (archivoSeleccionado)="onArchivoActualizado($event)"
+      />
+
+      <div class="sarlaft-renov__acciones">
+        <app-boton variante="ghost" (clicked)="cancelar.emit()">Volver a opciones</app-boton>
+      </div>
+    }
+    }
+  }
+
+  @if (modoDesarrollo) {
+    <app-info-box icono="science">
+      <strong>Mock de desarrollo:</strong> pólizas terminadas en número impar arrancan con SARLAFT
+      no vigente; al cargar el SARLAFT actualizado quedan vigentes.
+    </app-info-box>
+  }
+</section>

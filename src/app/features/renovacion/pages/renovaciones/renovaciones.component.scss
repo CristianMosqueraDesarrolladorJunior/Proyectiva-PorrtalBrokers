@@ -19,127 +19,27 @@
 }
 
 .renovaciones__titulo {
-  font-size: var(--font-size-h1-seccion);
+  font-size: var(--text-heading);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   margin: var(--space-0);
 }
 
 .renovaciones__subtitulo {
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   color: var(--color-muted);
   margin: var(--space-0);
 }
 
-// --- KPIs: portafolio (izq) + 3 tarjetas de estado (der) ---
+// --- KPIs del portafolio: 4 tarjetas KpiCard del mismo tamaño ---
 .renovaciones__kpis {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-4);
-}
+  align-items: stretch;
 
-.renov-portafolio {
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-5);
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-
-.renov-portafolio__label {
-  font-size: var(--font-size-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--color-muted);
-}
-
-.renov-portafolio__valor {
-  font-size: var(--font-size-9xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-  margin: var(--space-1) var(--space-0);
-}
-
-.renov-portafolio__sub {
-  font-size: var(--font-size-3md);
-  color: var(--color-muted);
-}
-
-.renov-portafolio__desglose {
-  margin-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
-  padding-top: var(--space-3);
-}
-
-.renov-portafolio__row {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-1) var(--space-0);
-  font-size: var(--font-size-3md);
-  color: var(--color-text);
-}
-
-.renov-estados {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.renov-estado {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.renov-estado__label {
-  font-size: var(--font-size-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: var(--font-weight-semibold);
-}
-
-.renov-estado__valor {
-  font-size: var(--font-size-7xl);
-  font-weight: var(--font-weight-bold);
-}
-
-.renov-estado__sub {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted);
-}
-
-.renov-estado--success {
-  background: #e8f5e9;
-  border-color: #c8e6c9;
-
-  .renov-estado__label,
-  .renov-estado__valor {
-    color: var(--color-success);
-  }
-}
-
-.renov-estado--accent {
-  background: var(--color-accent-light);
-  border-color: #ffe0b2;
-
-  .renov-estado__label,
-  .renov-estado__valor {
-    color: var(--color-accent);
-  }
-}
-
-.renov-estado--danger {
-  background: #ffebee;
-  border-color: #ffcdd2;
-
-  .renov-estado__label,
-  .renov-estado__valor {
-    color: var(--color-danger);
+  app-kpi-card {
+    display: block;
   }
 }
 
@@ -153,7 +53,7 @@
 }
 
 .renov-buscador__titulo {
-  font-size: var(--font-size-h4);
+  font-size: var(--text-subtitle);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: var(--space-0) var(--space-0) var(--space-2);
@@ -168,7 +68,7 @@
     padding: var(--space-2) var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    font-size: var(--font-size-2md);
+    font-size: var(--text-body-sm);
     color: var(--color-text);
   }
 }
@@ -179,26 +79,32 @@
   border-radius: var(--radius-sm);
   background: var(--color-accent);
   color: var(--color-card);
-  font-size: var(--font-size-2md);
+  font-size: var(--text-body-sm);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }
 
 .renovaciones__listado-titulo {
-  font-size: var(--font-size-h4);
+  font-size: var(--text-subtitle);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: var(--space-2) var(--space-0) var(--space-0);
 }
 
 .renovaciones__listado-sub {
-  font-size: var(--font-size-3md);
+  font-size: var(--text-body-sm);
   color: var(--color-muted);
   margin: var(--space-0) var(--space-0) var(--space-2);
 }
 
-// Responsivo: apila KPIs en pantallas pequeñas.
+// Responsivo: 2 columnas en tablet, 1 en móvil.
 @media (max-width: 1023px) {
+  .renovaciones__kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
   .renovaciones__kpis {
     grid-template-columns: 1fr;
   }

@@ -15,7 +15,7 @@ import {
   BotonComponent,
   EscaleritaLoaderComponent,
   FormFieldComponent,
-  StepperComponent,
+  StepTabsComponent,
   SuccessScreenComponent,
 } from '../../../../shared/components';
 import type { TarjetaSeguimiento } from '../../../../shared/components/success-screen/success-screen.component';
@@ -43,6 +43,7 @@ import {
   type EstadoContrato,
 } from './contrato-presentacion';
 
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 /** Estado del envío del Contrato_Arrendamiento para controlar loader y confirmación (Req 30.7). */
 type EstadoEnvioContrato = 'inactivo' | 'enviando' | 'exito';
 
@@ -78,7 +79,7 @@ const ESTRATOS: readonly number[] = [1, 2, 3, 4, 5, 6];
 /**
  * ContratoComponent — Generador_Contrato de Arrendamiento multipaso (Req 30).
  *
- * Presenta un `StepperComponent` de 4 pasos (Datos del arrendador → Datos del
+ * Presenta un `StepTabsComponent` de 4 pasos (Datos del arrendador → Datos del
  * arrendatario → Datos del inmueble → Condiciones económicas y vigencia) y captura
  * los campos exactos de cada paso con `FormFieldComponent` (Req 30.1–30.5).
  *
@@ -100,9 +101,9 @@ const ESTRATOS: readonly number[] = [1, 2, 3, 4, 5, 6];
   selector: 'app-contrato',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [PageHeaderComponent, 
     FormsModule,
-    StepperComponent,
+    StepTabsComponent,
     FormFieldComponent,
     BotonComponent,
     AlertBannerComponent,
@@ -252,6 +253,16 @@ export class ContratoComponent {
     }
     this.intento.set(false);
     this.pasoActual.update((paso) => paso + 1);
+  }
+
+  /** Vuelve a un paso ya completado desde las pestañas de pasos (Req 30.1). */
+  protected irAPaso(indice: number): void {
+    if (indice < 0 || indice >= this.pasoActual()) {
+      return;
+    }
+    this.intento.set(false);
+    this.errorMensaje.set('');
+    this.pasoActual.set(indice);
   }
 
   /** Retrocede al paso anterior sin perder los datos capturados (Req 30.1). */

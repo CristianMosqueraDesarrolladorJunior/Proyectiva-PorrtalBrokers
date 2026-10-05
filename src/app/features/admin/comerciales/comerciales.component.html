@@ -1,0 +1,116 @@
+<section class="vista" aria-labelledby="comerciales-titulo">
+  <div class="vista__cabecera">
+    <app-page-header
+      eyebrow="Consola de administración"
+      tituloId="comerciales-titulo"
+      titulo="Comerciales"
+      subtitulo="Cada comercial acompaña a sus brokers en los procesos y la radicación. Crea su usuario para que siga el movimiento de su cartera."
+    ></app-page-header>
+    <div class="cabecera-acciones">
+      <button type="button" class="btn-sec" (click)="confirmarRestaurar.set(true)" title="Borra comerciales creados, accesos y reasignaciones de esta demo">
+        <app-icon nombre="restart_alt" [tamano]="18" /> Restaurar demo
+      </button>
+      <button type="button" class="btn-pri" (click)="nuevo()">
+        <app-icon nombre="person_add" [tamano]="18" /> Nuevo comercial
+      </button>
+    </div>
+  </div>
+
+  <div class="tarjetas">
+    @for (c of comerciales(); track c.id) {
+      <article class="tarjeta" [class.tarjeta--inactiva]="!c.activo">
+        <header>
+          <span class="avatar" aria-hidden="true">{{ c.nombre.slice(0, 1) }}</span>
+          <div class="tarjeta__titulo">
+            <h3>{{ c.nombre }}</h3>
+            <small>{{ c.origen === 'csv' ? 'Asignación del Warehouse' : 'Creado en la consola' }}</small>
+          </div>
+          @if (!c.activo) {
+            <app-badge-estado variante="danger">Inactivo</app-badge-estado>
+          } @else if (c.conAcceso) {
+            <app-badge-estado variante="success">Con usuario</app-badge-estado>
+          } @else {
+            <app-badge-estado variante="warning">Sin usuario</app-badge-estado>
+          }
+        </header>
+
+        <dl class="metricas">
+          <div><dt>Brokers</dt><dd>{{ num(c.brokers) }}</dd></div>
+          <div><dt>Activos 90 d</dt><dd>{{ num(c.brokersActivos90d) }}</dd></div>
+          <div><dt>Negocios</dt><dd>{{ num(c.negocios) }}</dd></div>
+          <div><dt>Expedidos</dt><dd>{{ num(c.expedidos) }}</dd></div>
+          <div><dt>Pendientes</dt><dd [class.alerta]="pendientes(c) > 0">{{ num(pendientes(c)) }}</dd></div>
+          <div><dt>Prima expedida</dt><dd>{{ copCompacto(c.primaExpedida) }}</dd></div>
+        </dl>
+
+        @if (c.conAcceso) {
+          <p class="acceso"><app-icon nombre="key" [tamano]="16" /> Usuario: cédula {{ c.cedula }} · {{ c.correo }}</p>
+        }
+
+        <footer>
+          <button type="button" class="btn-link" (click)="verBrokers(c)">Ver brokers</button>
+          <span class="espacio"></span>
+          @if (c.conAcceso) {
+            <button type="button" class="btn-sec" (click)="restablecer(c)">Nueva clave</button>
+          } @else {
+            <button type="button" class="btn-pri" [disabled]="!c.activo" (click)="crearAcceso(c)">Crear usuario</button>
+          }
+          <button type="button" class="btn-sec" (click)="alternarActivo(c)">{{ c.activo ? 'Desactivar' : 'Activar' }}</button>
+        </footer>
+      </article>
+    }
+  </div>
+</section>
+
+<app-modal-dialog [abierto]="form() !== null" [titulo]="form()?.id === null ? 'Nuevo comercial' : 'Crear usuario de ' + (form()?.nombre ?? '')" (cerrar)="form.set(null)">
+  @if (form(); as f) {
+    <form class="form" (submit)="$event.preventDefault(); guardar()">
+      @if (errorForm()) {
+        <p class="error" role="alert">{{ errorForm() }}</p>
+      }
+      <label>
+        Nombre completo
+        <input class="control" type="text" autocomplete="off" [value]="f.nombre" (input)="actualizarCampo('nombre', $event)" [readonly]="f.id !== null" />
+      </label>
+      <label>
+        Cédula (será su usuario)
+        <input class="control" type="text" inputmode="numeric" autocomplete="off" maxlength="10" [value]="f.cedula" (input)="actualizarCampo('cedula', $event)" />
+      </label>
+      <label>
+        Correo corporativo
+        <input class="control" type="email" autocomplete="off" [value]="f.correo" (input)="actualizarCampo('correo', $event)" />
+      </label>
+      <p class="aviso">Se genera una clave temporal que verás una sola vez. Compártela por un canal seguro.</p>
+    </form>
+  }
+  <div acciones class="acciones-modal">
+    <button type="button" class="btn-sec" (click)="form.set(null)">Cancelar</button>
+    <button type="button" class="btn-pri" (click)="guardar()">{{ form()?.id === null ? 'Crear comercial' : 'Crear usuario' }}</button>
+  </div>
+</app-modal-dialog>
+
+<app-modal-dialog [abierto]="claveMostrada() !== null" titulo="Usuario listo" (cerrar)="claveMostrada.set(null)">
+  @if (claveMostrada(); as c) {
+    <div class="form">
+      <p class="aviso">
+        <b>{{ c.nombre }}</b> ya puede entrar desde el login del portal con su cédula <b>{{ c.cedula }}</b> y esta clave temporal.
+        No la volverás a ver: cópiala ahora.
+      </p>
+      <code class="clave">{{ c.clave }}</code>
+    </div>
+  }
+  <div acciones class="acciones-modal">
+    <button type="button" class="btn-sec" (click)="copiarClave()">
+      <app-icon [nombre]="copiado() ? 'check' : 'content_copy'" [tamano]="18" /> {{ copiado() ? 'Copiado' : 'Copiar' }}
+    </button>
+    <button type="button" class="btn-pri" (click)="claveMostrada.set(null)">Listo</button>
+  </div>
+</app-modal-dialog>
+
+<app-modal-dialog [abierto]="confirmarRestaurar()" titulo="Restaurar la demo" (cerrar)="confirmarRestaurar.set(false)">
+  <p class="aviso">Se borran los comerciales creados, los usuarios y las reasignaciones hechas en este navegador. Los datos del Warehouse no cambian.</p>
+  <div acciones class="acciones-modal">
+    <button type="button" class="btn-sec" (click)="confirmarRestaurar.set(false)">Cancelar</button>
+    <button type="button" class="btn-pri" (click)="restaurar()">Restaurar</button>
+  </div>
+</app-modal-dialog>

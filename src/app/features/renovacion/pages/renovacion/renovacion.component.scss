@@ -22,14 +22,14 @@
 }
 
 .renovacion-titulo {
-  font-size: var(--font-size-h1-seccion);
+  font-size: var(--text-heading);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   margin: var(--space-0);
 }
 
 .renovacion-subtitulo {
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   color: var(--color-muted);
   line-height: var(--line-height-normal);
   margin: var(--space-0);
@@ -48,7 +48,7 @@
 }
 
 .renovacion-detalle-titulo {
-  font-size: var(--font-size-h4);
+  font-size: var(--text-subtitle);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: var(--space-0);
@@ -67,14 +67,14 @@
   gap: var(--space-1);
 
   dt {
-    font-size: var(--font-size-2xs);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
   dd {
-    font-size: var(--font-size-lg);
+    font-size: var(--text-body);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
     margin: var(--space-0);
@@ -122,7 +122,7 @@
 }
 
 .renovacion-resumen-titulo {
-  font-size: var(--font-size-h4);
+  font-size: var(--text-subtitle);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: var(--space-0);
@@ -141,14 +141,14 @@
   gap: var(--space-1);
 
   dt {
-    font-size: var(--font-size-2xs);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
   dd {
-    font-size: var(--font-size-2md);
+    font-size: var(--text-body-sm);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
     margin: var(--space-0);
@@ -164,7 +164,7 @@
   background: var(--color-accent-light);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   color: var(--color-text);
   line-height: var(--line-height-normal);
   cursor: pointer;
@@ -176,7 +176,7 @@
 }
 
 .renovacion-error {
-  font-size: var(--font-size-sm);
+  font-size: var(--text-caption);
   color: var(--color-danger);
   margin: var(--space-0);
 }
@@ -187,7 +187,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--font-size-sm);
+  font-size: var(--text-caption);
 }
 
 // --- Acciones del paso (mismo patrón que Crear contrato) ---

@@ -1,0 +1,17 @@
+<header class="page-header">
+  <div class="page-header__texto">
+    @if (eyebrow) {
+      <span class="page-header__eyebrow">
+        <span class="page-header__dot" aria-hidden="true"></span>
+        {{ eyebrow }}
+      </span>
+    }
+    <h1 class="page-header__titulo" [attr.id]="tituloId">{{ titulo }}</h1>
+    @if (subtitulo) {
+      <p class="page-header__subtitulo">{{ subtitulo }}</p>
+    }
+  </div>
+  <div class="page-header__acciones">
+    <ng-content select="[acciones]" />
+  </div>
+</header>

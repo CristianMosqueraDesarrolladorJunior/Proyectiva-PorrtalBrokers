@@ -1,6 +1,7 @@
 // =============================================================================
-// CotizadorResultadoComponent — resultado de la Cotizacion y acciones (Req 8, 9)
-// Sin valores hardcodeados: color/espaciado/radio/tipografía/sombra vía Design_Token.
+// Resultado de la cotización — desglose por concepto (Req 8, 9)
+// Tabla compacta con encabezado slate, cifras alineadas a la derecha y fila de
+// total destacada; se desplaza horizontalmente solo en pantallas muy estrechas.
 // =============================================================================
 
 :host {
@@ -10,72 +11,100 @@
 .resultado-cotizacion {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
+  margin-top: var(--space-5);
 }
 
 .resultado-titulo {
   margin: var(--space-0);
-  font-size: var(--font-size-h3);
+  font-size: var(--text-subtitle);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
+  color: var(--sb-on-surface);
 }
 
-// --- Desglose (Req 8.1) ---
 .table-wrapper {
   overflow-x: auto;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  background: var(--sb-surface);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--sb-shadow-1);
 }
 
 .desglose-table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
 
   th,
   td {
     padding: var(--space-3) var(--space-4);
-    font-size: var(--font-size-md);
-    color: var(--color-text);
+    font-size: var(--text-body-sm);
+    color: var(--sb-on-surface);
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--sb-border);
+  }
+
+  // Concepto: alineado a la izquierda y con espacio para el nombre completo.
+  th:first-child,
+  td:first-child {
     text-align: left;
-    border-bottom: 1px solid var(--color-border);
+    white-space: normal;
+    min-width: 220px;
   }
 
   thead th {
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-muted);
+    background: var(--sb-slate);
+    color: var(--sb-on-slate);
+    font-size: var(--text-caption);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    background: var(--color-bg);
+    border-bottom: none;
+  }
+
+  tbody tr:hover td {
+    background: var(--sb-surface-low);
+  }
+
+  tbody td:first-child {
+    font-weight: var(--font-weight-semibold);
   }
 }
 
 .celda-numerica {
-  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
 .fila-totales {
   th,
   td {
+    background: var(--sb-surface-low);
     font-weight: var(--font-weight-semibold);
-    background: var(--color-bg);
     border-bottom: none;
   }
 
   th {
     text-align: right;
+    font-size: var(--text-body-sm);
+    letter-spacing: normal;
   }
 }
 
 .celda-total {
-  font-size: var(--font-size-valor-cobertura);
-  font-weight: var(--font-weight-valor-cobertura);
-  color: var(--color-accent);
+  font-family: var(--font-family-heading);
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-bold);
+  color: var(--sb-primary-hover);
 }
 
-// --- Acciones (Req 9) ---
+.resultado-nota {
+  margin: var(--space-0);
+  color: var(--sb-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--line-height-normal);
+}
+
 .resultado-acciones {
   display: flex;
   flex-wrap: wrap;

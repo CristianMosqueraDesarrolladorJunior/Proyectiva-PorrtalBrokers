@@ -20,7 +20,7 @@
   border-radius: var(--radius-sm);
   background: var(--color-card);
   color: var(--color-text);
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   cursor: pointer;
   transition: border-color 0.12s ease, background 0.12s ease;
 
@@ -49,6 +49,6 @@
 }
 
 .radio-card__descripcion {
-  font-size: var(--font-size-sm);
+  font-size: var(--text-caption);
   color: var(--color-muted);
 }

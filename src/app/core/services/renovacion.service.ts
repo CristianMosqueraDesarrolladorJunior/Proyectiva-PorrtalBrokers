@@ -4,7 +4,10 @@ import { Observable } from 'rxjs';
 
 import {
   CasoEspecialRequest,
+  ConsultaSarlaftRenovacionRequest,
   NoRenovacionRequest,
+  ResultadoSarlaftRenovacion,
+  SolicitudRenovacionRequest,
   RenovacionRequest,
 } from '../models/renovacion.model';
 import { Poliza } from '../models/poliza.model';
@@ -85,5 +88,25 @@ export class RenovacionService {
       request,
       { withCredentials: true },
     );
+  }
+
+  /**
+   * Valida el SARLAFT de la póliza antes de enviar cualquier gestión de renovación.
+   * Vigente si el certificado tiene menos de 36 meses; si no, se reconsulta
+   * adjuntando el SARLAFT actualizado.
+   */
+  validarSarlaft(
+    request: ConsultaSarlaftRenovacionRequest,
+  ): Observable<ResultadoSarlaftRenovacion> {
+    return this.http.post<ResultadoSarlaftRenovacion>(`${this.baseUrl}/sarlaft`, request, {
+      withCredentials: true,
+    });
+  }
+
+  /** Registra una renovación física o digital tras el SARLAFT vigente. */
+  solicitar(request: SolicitudRenovacionRequest): Observable<RenovacionResponse> {
+    return this.http.post<RenovacionResponse>(`${this.baseUrl}/solicitudes`, request, {
+      withCredentials: true,
+    });
   }
 }

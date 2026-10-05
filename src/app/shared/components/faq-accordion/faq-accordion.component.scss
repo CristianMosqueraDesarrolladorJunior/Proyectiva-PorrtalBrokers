@@ -28,7 +28,7 @@
   border: none;
   text-align: left;
   cursor: pointer;
-  font-size: var(--font-size-2md);
+  font-size: var(--text-body-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
   transition: background-color 0.12s ease;
@@ -45,7 +45,7 @@
 
 .faq__chevron {
   flex: none;
-  font-size: var(--font-size-4xl);
+  font-size: var(--text-title);
   line-height: var(--line-height-tight);
   color: var(--color-accent);
 }
@@ -53,7 +53,7 @@
 .faq__respuesta {
   margin: var(--space-0, 0);
   padding: var(--space-0, 0) var(--space-3) var(--space-3);
-  font-size: var(--font-size-md);
+  font-size: var(--text-body-sm);
   color: var(--color-muted);
   line-height: var(--line-height-normal);
 }

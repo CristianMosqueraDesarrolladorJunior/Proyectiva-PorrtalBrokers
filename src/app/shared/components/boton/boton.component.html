@@ -14,5 +14,8 @@
   [attr.aria-label]="ariaLabel"
   (click)="onClick()"
 >
+  @if (icono) {
+    <app-icon [nombre]="icono" [tamano]="18" />
+  }
   <ng-content></ng-content>
 </button>

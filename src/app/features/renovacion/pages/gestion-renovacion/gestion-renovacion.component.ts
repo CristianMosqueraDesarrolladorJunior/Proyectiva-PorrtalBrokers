@@ -14,59 +14,60 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import type { Observable } from 'rxjs';
 
+import type { DocumentoCargado } from '../../../../core/models/documento.model';
+import type {
+  MotivoNoRenovacion,
+  ResultadoSarlaftRenovacion,
+  TipoCasoEspecial,
+} from '../../../../core/models/renovacion.model';
+import { CorreccionService } from '../../../../core/services/correccion.service';
+import { RenovacionService } from '../../../../core/services/renovacion.service';
 import {
   AlertBannerComponent,
   ArchivoSeleccionado,
   DocUploaderComponent,
-  EscaleritaLoaderComponent,
+  RadioGroupComponent,
   ReglaDocumentoUploader,
-  StepperComponent,
+  StepTabsComponent,
   SuccessScreenComponent,
   TarjetaSeguimiento,
 } from '../../../../shared/components';
+import type { OpcionRadio } from '../../../../shared/components/radio-group/radio-group.component';
+import { SarlaftRenovacionComponent } from '../../components/sarlaft-renovacion/sarlaft-renovacion.component';
+import {
+  ETIQUETA_TIPO_CASO_ESPECIAL,
+  TIPOS_CASO_ESPECIAL,
+} from '../../caso-especial-habilitacion';
+import {
+  ETAPAS_POR_FLUJO,
+  PASOS_POR_FLUJO,
+  etapaAnterior,
+  indicePaso,
+  siguienteEtapa,
+  type EtapaGestion,
+  type FlujoGestion,
+} from '../../gestion-renovacion-flujo';
+import {
+  ETIQUETA_MOTIVO_NO_RENOVACION,
+  MOTIVOS_NO_RENOVACION,
+  puedeEnviarNoRenovacion,
+} from '../../no-renovacion-habilitacion';
 
-/** Paso activo del wizard de renovación (0-indexado). */
-const enum PasoRenovacion {
-  Opciones = 0,
-  Detalles = 1,
-  Ajuste = 2,
-  Proceso = 3,
-}
-
-/**
- * Flujo activo del wizard. `renovacion` es el flujo por defecto de 4 pasos;
- * `caso-especial` y `correccion` son los dos flujos migrados desde el proyecto
- * de referencia, cada uno con su propio stepper de 3 pasos.
- */
-type Flujo = 'renovacion' | 'caso-especial' | 'correccion';
-
-/**
- * Sub-paso interno de los flujos Caso Especial y Corrección. Se controla de
- * forma independiente al `pasoActivo` del flujo de renovación para no interferir
- * con el stepper de 4 pasos.
- */
-type SubPaso = 'documentacion' | 'observaciones' | 'sarlaft' | 'exito';
-
-/** Estado de la validación SARLAFT simulada dentro del sub-paso de confirmación. */
-type EstadoSarlaft = 'validando' | 'exito';
-
-/** Modalidad de ajuste seleccionada en el paso de detalles. */
+/** Modalidad de renovación digital elegida en Detalles. */
 type ModalidadDetalle = 'anterior' | 'ajustar' | null;
 
-/** Modo con el que se abre el paso de ajuste: bloqueado (solo lectura) o editable. */
+/** Modo del paso Ajuste: bloqueado (mismos valores) o editable (con ajustes). */
 type ModoAjuste = 'bloqueado' | 'editable';
 
-/** Número de póliza usado como respaldo de demostración cuando no llega por queryParam. */
+/** Número de póliza de respaldo cuando no llega por queryParam. */
 const POLIZA_FALLBACK = 'POL-2023-8901';
 
-/** Duración (ms) de la validación SARLAFT simulada antes de mostrar el éxito. */
-const DURACION_SARLAFT_MS = 2000;
-
-/** Ruta de retorno al listado de renovaciones. */
+/** Ruta de retorno al portafolio de renovaciones. */
 const RUTA_RENOVACIONES = '/app/renovaciones';
 
-/** Datos mock de la póliza mostrados en el paso de detalles (replican el proyecto fuente). */
+/** Datos mock de la póliza mostrados en Detalles (replican el proyecto fuente). */
 interface DatosPoliza {
   readonly numero: string;
   readonly tipoCobertura: string;
@@ -77,21 +78,25 @@ interface DatosPoliza {
   readonly danosFaltantes: number;
 }
 
+/** Respuesta común de los registros (renovación, caso especial, no renovación, corrección). */
+interface Confirmacion {
+  readonly radicado: string;
+  readonly estado: string;
+}
+
 /**
- * GestionRenovacionComponent — Wizard de renovación de póliza de arrendamiento.
+ * GestionRenovacionComponent — wizard de gestión de una póliza por renovar.
  *
- * Componente standalone auto-contenido que maneja internamente con signals tres
- * flujos, todos dentro del mismo wizard (sin sub-rutas), ramificados por la
- * signal `flujo`:
- *  - `renovacion` (por defecto): 4 pasos Opciones → Detalles → Ajuste →
- *    Proceso/Confirmación, controlados por la signal `pasoActivo`.
- *  - `caso-especial`: 3 pasos (documentación → SARLAFT → éxito), controlados por
- *    la signal `subPaso`.
- *  - `correccion`: 3 pasos (subir documento → observaciones → SARLAFT/éxito),
- *    controlados por la signal `subPaso`.
+ * Sigue el proceso real de renovaciones (proyecto AutogestionRenovaciones): en
+ * Opciones el broker elige una de 4 gestiones y TODAS validan SARLAFT antes de
+ * enviarse:
+ * - Renovación física: formulario diligenciado → SARLAFT → enviada.
+ * - Renovación digital: detalles (modalidad) → ajuste → SARLAFT → en proceso.
+ * - Caso especial: Otro Sí / Cesión (documento) o No renovar (motivo) → SARLAFT.
+ * - Corrección de documentos: documento → observaciones → SARLAFT → enviada.
  *
- * Recibe el número de póliza por el queryParam `numeroPolizaInicial` (usado en el
- * título del paso 1) y navega a `/app/renovaciones` al cancelar o finalizar.
+ * El estado es `flujo` + `etapa` (lógica pura en `gestion-renovacion-flujo.ts`).
+ * Con SARLAFT vigente se registra la gestión en el API_Backend; el backend revalida.
  */
 @Component({
   selector: 'app-gestion-renovacion',
@@ -102,11 +107,12 @@ interface DatosPoliza {
     FormsModule,
     CurrencyPipe,
     DatePipe,
-    StepperComponent,
+    StepTabsComponent,
     AlertBannerComponent,
     DocUploaderComponent,
-    EscaleritaLoaderComponent,
+    RadioGroupComponent,
     SuccessScreenComponent,
+    SarlaftRenovacionComponent,
   ],
   templateUrl: './gestion-renovacion.component.html',
   styleUrl: './gestion-renovacion.component.scss',
@@ -115,98 +121,72 @@ export class GestionRenovacionComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly renovacionService = inject(RenovacionService);
+  private readonly correccionService = inject(CorreccionService);
 
-  /** Etiquetas de los pasos para el `StepperComponent` compartido. */
-  protected readonly pasos: readonly string[] = [
-    'Opciones',
-    'Detalles',
-    'Ajuste',
-    'Confirmación',
-  ];
+  // --- Estado del wizard ---------------------------------------------------
 
-  /** Paso activo del wizard (0..3). */
-  protected readonly pasoActivo = signal<PasoRenovacion>(PasoRenovacion.Opciones);
+  /** Gestión elegida (solo aplica fuera de Opciones). */
+  protected readonly flujo = signal<FlujoGestion>('digital');
 
-  /** Modo del paso de ajuste: bloqueado (solo lectura) o editable. */
-  protected readonly modoAjuste = signal<ModoAjuste>('bloqueado');
+  /** Etapa actual del wizard. */
+  protected readonly etapa = signal<EtapaGestion>('opciones');
 
-  /** Modalidad seleccionada en el paso de detalles (habilita "Continuar al Paso 3"). */
-  protected readonly modalidadSeleccionada = signal<ModalidadDetalle>(null);
+  /** Etiquetas del stepper del flujo activo. */
+  protected readonly pasosFlujo = computed(() => PASOS_POR_FLUJO[this.flujo()]);
 
-  /** Controla la visibilidad del diálogo de confirmación de "No renovar". */
-  protected readonly mostrarConfirmacionNoRenovar = signal(false);
+  /** Paso activo del stepper. */
+  protected readonly pasoActivo = computed(() => indicePaso(this.flujo(), this.etapa()));
 
-  /** Número de póliza recibido por queryParam; con respaldo de demostración. */
+  /** Número de póliza recibido por queryParam. */
   protected readonly numeroPoliza = signal(POLIZA_FALLBACK);
 
-  // --- Flujos Caso Especial / Corrección ---------------------------------
+  /** Diálogo de confirmación antes de "No renovar". */
+  protected readonly mostrarConfirmacionNoRenovar = signal(false);
 
-  /** Flujo activo del wizard (renovación por defecto). */
-  protected readonly flujo = signal<Flujo>('renovacion');
+  // --- Captura común (archivo + texto) ------------------------------------
 
-  /** Sub-paso interno de los flujos Caso Especial y Corrección. */
-  protected readonly subPaso = signal<SubPaso>('documentacion');
+  /** Archivo cargado en la etapa de captura (formulario, documento legal o corrección). */
+  protected readonly archivo = signal<File | null>(null);
 
-  /** Estado de la validación SARLAFT simulada (loader → éxito). */
-  protected readonly estadoSarlaft = signal<EstadoSarlaft>('validando');
+  /** Comentarios / observaciones de la gestión activa. */
+  protected readonly comentarios = signal('');
 
-  /** Nombre del archivo cargado (usado para mostrarlo y habilitar botones). */
-  protected readonly archivoNombre = signal<string | null>(null);
+  /** Máximo de caracteres de observaciones. */
+  protected readonly maxCaracteres = 500;
 
-  /** Observaciones del caso especial. */
-  protected readonly observacionesCaso = signal('');
+  // --- Caso especial y no renovar -----------------------------------------
 
-  /** Observaciones de la corrección de documentos (máx. 500 caracteres). */
-  protected readonly observacionesCorreccion = signal('');
+  protected readonly tipoCasoEspecial = signal<TipoCasoEspecial>('otroSi');
+  protected readonly opcionesCasoEspecial: readonly OpcionRadio[] = TIPOS_CASO_ESPECIAL.map(
+    (tipo) => ({ valor: tipo, etiqueta: ETIQUETA_TIPO_CASO_ESPECIAL[tipo] }),
+  );
 
-  /** Máximo de caracteres permitidos en las observaciones de corrección. */
-  protected readonly maxCaracteresCorreccion = 500;
+  protected readonly motivoNoRenovacion = signal<string>('');
+  protected readonly opcionesMotivo: readonly OpcionRadio[] = MOTIVOS_NO_RENOVACION.map(
+    (motivo) => ({ valor: motivo, etiqueta: ETIQUETA_MOTIVO_NO_RENOVACION[motivo] }),
+  );
+  protected readonly motivoValido = computed(() =>
+    puedeEnviarNoRenovacion(this.motivoNoRenovacion()),
+  );
 
-  /** Etiquetas del stepper del flujo Caso Especial (3 pasos). */
-  protected readonly pasosCasoEspecial: readonly string[] = [
-    'Selección de póliza',
-    'Documentación del caso especial',
-    'Confirmación de identidad',
-  ];
+  // --- Renovación digital --------------------------------------------------
 
-  /** Etiquetas del stepper del flujo Corrección de Documentos (3 pasos). */
-  protected readonly pasosCorreccion: readonly string[] = [
-    'Subir documento de póliza',
-    'Observaciones de corrección',
-    'Confirmación de identidad',
-  ];
+  protected readonly modoAjuste = signal<ModoAjuste>('bloqueado');
+  protected readonly modalidadSeleccionada = signal<ModalidadDetalle>(null);
+  protected readonly esBloqueado = computed(() => this.modoAjuste() === 'bloqueado');
 
-  /** Regla única del cargador de documentos del caso especial. */
-  protected readonly reglaCasoEspecial: readonly ReglaDocumentoUploader[] = [
-    {
-      id: 'documento-caso-especial',
-      etiqueta: 'Documento legal del caso especial',
-      descripcion: 'Otro Sí o Cesión de Contrato firmado (PDF, JPG, PNG · máx. 10MB)',
-      icono: '📄',
-      obligatorio: true,
-    },
-  ];
-
-  /** Regla única del cargador de documentos de corrección. */
-  protected readonly reglaCorreccion: readonly ReglaDocumentoUploader[] = [
-    {
-      id: 'documento-correccion',
-      etiqueta: 'Documento corregido',
-      descripcion: 'Nueva imagen o PDF legible (JPG, PNG, PDF · máx. 5MB)',
-      icono: '🪪',
-      obligatorio: true,
-    },
-  ];
-
-  /** Tarjetas de seguimiento mostradas en la pantalla de éxito del caso especial. */
-  protected readonly tarjetasCasoEspecial: readonly TarjetaSeguimiento[] = [
-    { etiqueta: 'RADICADO', valor: '#TR-2024-8902' },
-    { etiqueta: 'ESTADO', valor: '🟡 En Revisión' },
-    { etiqueta: 'FECHA ESTIMADA', valor: this.formatearFechaEstimada() },
-  ];
-
-  /** Identificador del temporizador de la validación SARLAFT simulada. */
-  private sarlaftTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  /** Formulario del paso Ajuste (valores por defecto del proyecto fuente). */
+  protected readonly formulario: FormGroup = this.fb.group({
+    valorCanon: [450000, [Validators.required, Validators.min(1)]],
+    administracion: [150000, [Validators.required, Validators.min(0)]],
+    valorAseguradoServicios: [80000, [Validators.required, Validators.min(0)]],
+    valorAseguradoDyF: [120000, [Validators.required, Validators.min(0)]],
+    periodoActual: ['2024-01-01'],
+    periodoProyectado: ['01/01/2025 - 31/12/2025'],
+    ipcAplicado: [5.2],
+    observaciones: ['', [Validators.maxLength(500)]],
+  });
 
   /** Datos mock de la póliza (idénticos al proyecto fuente). */
   protected readonly poliza = computed<DatosPoliza>(() => ({
@@ -219,123 +199,186 @@ export class GestionRenovacionComponent {
     danosFaltantes: 120000,
   }));
 
-  /** Total estimado de la póliza mostrado en la barra lateral del paso de detalles. */
   protected readonly totalEstimado = computed(() => {
     const p = this.poliza();
-    return (
-      p.valorMensual + p.administracion + p.serviciosPublicos + p.danosFaltantes
-    );
+    return p.valorMensual + p.administracion + p.serviciosPublicos + p.danosFaltantes;
   });
 
-  /** Verdadero cuando el paso de ajuste se abre en modo solo lectura. */
-  protected readonly esBloqueado = computed(() => this.modoAjuste() === 'bloqueado');
+  // --- Envío tras SARLAFT vigente -----------------------------------------
 
-  /** Formulario reactivo del paso de ajuste (valores por defecto del proyecto fuente). */
-  protected readonly formulario: FormGroup = this.fb.group({
-    valorCanon: [450000, [Validators.required, Validators.min(1)]],
-    administracion: [150000, [Validators.required, Validators.min(0)]],
-    valorAseguradoServicios: [80000, [Validators.required, Validators.min(0)]],
-    valorAseguradoDyF: [120000, [Validators.required, Validators.min(0)]],
-    periodoActual: ['2024-01-01'],
-    periodoProyectado: ['01/01/2025 - 31/12/2025'],
-    ipcAplicado: [5.2],
-    observaciones: ['', [Validators.maxLength(500)]],
+  protected readonly enviando = signal(false);
+  protected readonly errorEnvio = signal<string | null>(null);
+  protected readonly confirmacion = signal<Confirmacion | null>(null);
+
+  /** Tarjetas de seguimiento de las pantallas de éxito. */
+  protected readonly tarjetasExito = computed<readonly TarjetaSeguimiento[]>(() => {
+    const c = this.confirmacion();
+    return [
+      { etiqueta: 'RADICADO', valor: c?.radicado ?? '—' },
+      { etiqueta: 'ESTADO', valor: c?.estado ?? '—' },
+      { etiqueta: 'PÓLIZA', valor: `#${this.numeroPoliza()}` },
+    ];
+  });
+
+  // --- Reglas de los cargadores -------------------------------------------
+
+  protected readonly reglaFormularioRenovacion: readonly ReglaDocumentoUploader[] = [
+    {
+      id: 'formulario-renovacion',
+      etiqueta: 'Formulario de renovación diligenciado',
+      descripcion: 'Formato físico firmado (PDF, JPG, PNG · máx. 10MB)',
+      icono: '📝',
+      obligatorio: true,
+    },
+  ];
+
+  protected readonly reglaCasoEspecial: readonly ReglaDocumentoUploader[] = [
+    {
+      id: 'documento-caso-especial',
+      etiqueta: 'Documento legal del caso especial',
+      descripcion: 'Otro Sí o Cesión de Contrato firmado (PDF, JPG, PNG · máx. 10MB)',
+      icono: '📄',
+      obligatorio: true,
+    },
+  ];
+
+  protected readonly reglaCorreccion: readonly ReglaDocumentoUploader[] = [
+    {
+      id: 'documento-correccion',
+      etiqueta: 'Documento corregido',
+      descripcion: 'Nueva imagen o PDF legible (JPG, PNG, PDF · máx. 5MB)',
+      icono: '🪪',
+      obligatorio: true,
+    },
+  ];
+
+  /** Mapa id → nombre para el cargador de la etapa de captura. */
+  protected readonly cargados = computed<Readonly<Record<string, string>>>(() => {
+    const archivo = this.archivo();
+    if (!archivo) {
+      return {};
+    }
+    const id =
+      this.flujo() === 'fisica'
+        ? 'formulario-renovacion'
+        : this.flujo() === 'caso-especial'
+          ? 'documento-caso-especial'
+          : 'documento-correccion';
+    return { [id]: archivo.name };
   });
 
   constructor() {
     this.route.queryParamMap.subscribe((params) => {
       const numero = params.get('numeroPolizaInicial');
-      this.numeroPoliza.set(numero && numero.trim().length > 0 ? numero.trim() : POLIZA_FALLBACK);
+      this.numeroPoliza.set(
+        numero && numero.trim().length > 0 ? numero.trim().replace(/^#/, '') : POLIZA_FALLBACK,
+      );
     });
   }
 
-  // --- Paso 1: Opciones ---------------------------------------------------
+  // --- Opciones --------------------------------------------------------------
 
-  /** Inicia la renovación física avanzando al paso de detalles. */
-  protected navegarRenovacionFisica(): void {
-    this.irADetalles();
+  protected iniciarRenovacionFisica(): void {
+    this.iniciar('fisica', 'captura');
   }
 
-  /** Inicia la renovación digital avanzando al paso de detalles. */
-  protected navegarRenovacionDigital(): void {
-    this.irADetalles();
+  protected iniciarRenovacionDigital(): void {
+    this.modalidadSeleccionada.set(null);
+    this.iniciar('digital', 'detalles');
   }
 
-  /** Muestra el diálogo de confirmación antes de la acción destructiva "No renovar". */
+  protected iniciarCasoEspecial(tipo: TipoCasoEspecial = 'otroSi'): void {
+    this.tipoCasoEspecial.set(tipo);
+    this.iniciar('caso-especial', 'captura');
+  }
+
+  protected iniciarCorreccion(): void {
+    this.iniciar('correccion', 'captura');
+  }
+
+  /** "No renovar" es un caso especial: primero se confirma la decisión. */
   protected solicitarNoRenovar(): void {
     this.mostrarConfirmacionNoRenovar.set(true);
   }
 
-  /** Confirma la no renovación y regresa al listado de renovaciones. */
   protected confirmarNoRenovar(): void {
     this.mostrarConfirmacionNoRenovar.set(false);
-    void this.router.navigate([RUTA_RENOVACIONES]);
+    this.motivoNoRenovacion.set('');
+    this.iniciar('no-renovar', 'captura');
   }
 
-  /** Cancela la acción de no renovar y cierra el diálogo. */
   protected cancelarNoRenovar(): void {
     this.mostrarConfirmacionNoRenovar.set(false);
   }
 
-  /** Avanza al paso de detalles reiniciando la modalidad seleccionada. */
-  private irADetalles(): void {
-    this.modalidadSeleccionada.set(null);
-    this.pasoActivo.set(PasoRenovacion.Detalles);
-  }
-
-  // --- Paso 1: entrada a flujos Caso Especial / Corrección ----------------
-
-  /**
-   * Inicia el flujo Caso Especial (Otro Sí / Cesión / gestión general) en su
-   * paso de documentación, reiniciando el estado del cargador y observaciones.
-   */
-  protected iniciarCasoEspecial(): void {
-    this.reiniciarEstadoFlujo();
-    this.flujo.set('caso-especial');
-    this.subPaso.set('documentacion');
-  }
-
-  /** Inicia el flujo Corrección de Documentos en su paso 1 (subir documento). */
-  protected iniciarCorreccion(): void {
-    this.reiniciarEstadoFlujo();
-    this.flujo.set('correccion');
-    this.subPaso.set('documentacion');
-  }
-
-  /** Reinicia archivo, observaciones y estado SARLAFT al entrar a un flujo. */
-  private reiniciarEstadoFlujo(): void {
-    this.cancelarTemporizadorSarlaft();
-    this.archivoNombre.set(null);
-    this.observacionesCaso.set('');
-    this.observacionesCorreccion.set('');
-    this.estadoSarlaft.set('validando');
-  }
-
-  /** Regresa al Paso 1 (Opciones) del wizard reiniciando el flujo activo. */
+  /** Regresa a Opciones descartando lo capturado. */
   protected volverAOpciones(): void {
-    this.reiniciarEstadoFlujo();
-    this.flujo.set('renovacion');
-    this.pasoActivo.set(PasoRenovacion.Opciones);
+    this.reiniciarCaptura();
+    this.etapa.set('opciones');
   }
 
-  // --- Paso 2: Detalles ---------------------------------------------------
-
-  /** Selecciona la modalidad "condiciones actuales" (ajuste en modo bloqueado). */
-  protected seleccionarAnterior(): void {
-    this.modalidadSeleccionada.set('anterior');
-  }
-
-  /** Selecciona la modalidad "ajustar póliza" (ajuste en modo editable). */
-  protected seleccionarAjustar(): void {
-    this.modalidadSeleccionada.set('ajustar');
-  }
-
-  /** Cancela el flujo y regresa al listado de renovaciones. */
+  /** Abandona la gestión y vuelve al portafolio. */
   protected cancelar(): void {
     void this.router.navigate([RUTA_RENOVACIONES]);
   }
 
-  /** Continúa al paso de ajuste aplicando el modo según la modalidad elegida. */
+  /** Abre Documentos para descargar el formato de renovación. */
+  protected irAFormatos(): void {
+    void this.router.navigate(['/app/documentos']);
+  }
+
+  // --- Navegación genérica ---------------------------------------------------
+
+  /** Avanza a la siguiente etapa del flujo (la de SARLAFT inclusive). */
+  protected avanzar(): void {
+    this.etapa.set(siguienteEtapa(this.flujo(), this.etapa()));
+  }
+
+  protected retroceder(): void {
+    this.etapa.set(etapaAnterior(this.flujo(), this.etapa()));
+  }
+
+  /**
+   * Vuelve a un paso completado desde las pestañas. Volver a Opciones descarta la
+   * captura; después de enviar (éxito) ya no se puede volver.
+   */
+  protected irAPaso(indice: number): void {
+    if (this.etapa() === 'exito' || indice >= this.pasoActivo()) {
+      return;
+    }
+    const destino = ETAPAS_POR_FLUJO[this.flujo()][indice];
+    if (destino === 'opciones') {
+      this.volverAOpciones();
+    } else if (destino) {
+      this.etapa.set(destino);
+    }
+  }
+
+  // --- Captura ---------------------------------------------------------------
+
+  protected onArchivoSeleccionado(evento: ArchivoSeleccionado): void {
+    this.archivo.set(evento.archivo);
+  }
+
+  protected get hayArchivo(): boolean {
+    return this.archivo() !== null;
+  }
+
+  protected get caracteresComentarios(): number {
+    return this.comentarios().length;
+  }
+
+  // --- Renovación digital: Detalles y Ajuste -------------------------------
+
+  protected seleccionarAnterior(): void {
+    this.modalidadSeleccionada.set('anterior');
+  }
+
+  protected seleccionarAjustar(): void {
+    this.modalidadSeleccionada.set('ajustar');
+  }
+
+  /** Pasa a Ajuste en modo bloqueado (mismos valores) o editable (con ajustes). */
   protected continuarAlAjuste(): void {
     const modalidad = this.modalidadSeleccionada();
     if (!modalidad) {
@@ -348,18 +391,14 @@ export class GestionRenovacionComponent {
     } else {
       this.formulario.enable();
     }
-    this.pasoActivo.set(PasoRenovacion.Ajuste);
+    this.etapa.set('ajuste');
   }
 
-  // --- Paso 3: Ajuste -----------------------------------------------------
-
-  /** Incrementa el IPC aplicado en 0.1 puntos. */
   protected incrementarIpc(): void {
     const actual = Number(this.formulario.get('ipcAplicado')?.value ?? 0);
     this.formulario.patchValue({ ipcAplicado: +(actual + 0.1).toFixed(1) });
   }
 
-  /** Decrementa el IPC aplicado en 0.1 puntos, sin bajar de 0. */
   protected decrementarIpc(): void {
     const actual = Number(this.formulario.get('ipcAplicado')?.value ?? 0);
     if (actual > 0) {
@@ -367,145 +406,134 @@ export class GestionRenovacionComponent {
     }
   }
 
-  /** Calcula la prima base como canon + administración. */
   protected calcularPrimaBase(): number {
     const canon = Number(this.formulario.get('valorCanon')?.value ?? 0);
     const admin = Number(this.formulario.get('administracion')?.value ?? 0);
     return canon + admin;
   }
 
-  /** Calcula el total como prima base + servicios + daños y faltantes. */
   protected calcularTotal(): number {
     const servicios = Number(this.formulario.get('valorAseguradoServicios')?.value ?? 0);
     const dyf = Number(this.formulario.get('valorAseguradoDyF')?.value ?? 0);
     return this.calcularPrimaBase() + servicios + dyf;
   }
 
-  /** Guarda el borrador y regresa al listado de renovaciones. */
   protected guardarBorrador(event: Event): void {
     event.preventDefault();
-    void this.router.navigate(['/app/renovaciones']);
+    void this.router.navigate([RUTA_RENOVACIONES]);
   }
 
-  /** Avanza al paso de proceso/confirmación. */
-  protected continuarSiguientePaso(): void {
-    this.pasoActivo.set(PasoRenovacion.Proceso);
+  // --- SARLAFT vigente → registrar la gestión -------------------------------
+
+  /** Con SARLAFT vigente registra la gestión en el backend y muestra el éxito. */
+  protected onSarlaftVigente(resultado: ResultadoSarlaftRenovacion): void {
+    if (this.enviando()) {
+      return;
+    }
+    this.enviando.set(true);
+    this.errorEnvio.set(null);
+    this.registrar(resultado.validacionId).subscribe({
+      next: (respuesta) => {
+        this.confirmacion.set({ radicado: respuesta.radicado, estado: respuesta.estado });
+        this.enviando.set(false);
+        this.etapa.set('exito');
+      },
+      error: () => {
+        this.enviando.set(false);
+        this.errorEnvio.set('No se pudo registrar la gestión. Intenta nuevamente en unos minutos.');
+      },
+    });
   }
 
-  /** Regresa del paso de ajuste al paso de detalles. */
-  protected volverADetalles(): void {
-    this.pasoActivo.set(PasoRenovacion.Detalles);
-  }
-
-  // --- Paso 4: Proceso ----------------------------------------------------
-
-  /** Finaliza el flujo y regresa al tab de renovaciones. */
+  /** Finaliza la gestión y vuelve al portafolio. */
   protected finalizar(): void {
     void this.router.navigate([RUTA_RENOVACIONES]);
   }
 
-  // --- Flujos Caso Especial / Corrección: manejo de archivo ---------------
+  // --- Privados ------------------------------------------------------------
 
-  /** Registra el nombre del archivo seleccionado en el cargador compartido. */
-  protected onArchivoSeleccionado(evento: ArchivoSeleccionado): void {
-    this.archivoNombre.set(evento.archivo.name);
+  private iniciar(flujo: FlujoGestion, etapa: EtapaGestion): void {
+    this.reiniciarCaptura();
+    this.flujo.set(flujo);
+    this.etapa.set(etapa);
   }
 
-  /** Verdadero cuando ya se cargó un archivo (habilita botones de avance). */
-  protected get hayArchivo(): boolean {
-    return this.archivoNombre() !== null;
+  private reiniciarCaptura(): void {
+    this.archivo.set(null);
+    this.comentarios.set('');
+    this.confirmacion.set(null);
+    this.errorEnvio.set(null);
   }
 
-  /** Mapa de archivos cargados para el cargador del caso especial. */
-  protected get cargadosCasoEspecial(): Readonly<Record<string, string>> {
-    const nombre = this.archivoNombre();
-    return nombre ? { 'documento-caso-especial': nombre } : {};
-  }
+  /** Arma el payload de la gestión activa y lo envía al endpoint correspondiente. */
+  private registrar(validacionSarlaftId: string): Observable<Confirmacion> {
+    const numeroPoliza = this.numeroPoliza();
+    const comentarios = this.comentarios().trim();
+    const conComentarios = comentarios.length > 0 ? { comentarios } : {};
+    const conObservaciones = comentarios.length > 0 ? { observaciones: comentarios } : {};
+    const documento = this.documentoCargado();
 
-  /** Mapa de archivos cargados para el cargador de corrección. */
-  protected get cargadosCorreccion(): Readonly<Record<string, string>> {
-    const nombre = this.archivoNombre();
-    return nombre ? { 'documento-correccion': nombre } : {};
-  }
-
-  // --- Flujo Caso Especial ------------------------------------------------
-
-  /** Confirma la documentación y arranca la validación SARLAFT simulada. */
-  protected confirmarCasoEspecial(): void {
-    if (!this.hayArchivo) {
-      return;
-    }
-    this.iniciarValidacionSarlaft();
-  }
-
-  /** Al finalizar SARLAFT con éxito, muestra la pantalla final del caso especial. */
-  protected continuarExitoCasoEspecial(): void {
-    this.subPaso.set('exito');
-  }
-
-  // --- Flujo Corrección de Documentos -------------------------------------
-
-  /** Avanza del paso 1 (subir documento) al paso 2 (observaciones). */
-  protected continuarCorreccionPaso2(): void {
-    if (!this.hayArchivo) {
-      return;
-    }
-    this.subPaso.set('observaciones');
-  }
-
-  /** Regresa del paso 2 de corrección al paso 1 (subir documento). */
-  protected volverCorreccionPaso1(): void {
-    this.subPaso.set('documentacion');
-  }
-
-  /** Envía la corrección y arranca la validación SARLAFT simulada. */
-  protected enviarCorreccion(): void {
-    this.iniciarValidacionSarlaft();
-  }
-
-  /** Al finalizar SARLAFT con éxito, muestra la pantalla final de corrección. */
-  protected continuarExitoCorreccion(): void {
-    this.subPaso.set('exito');
-  }
-
-  /** Caracteres usados en las observaciones de corrección (para el contador). */
-  protected get caracteresCorreccion(): number {
-    return this.observacionesCorreccion().length;
-  }
-
-  // --- Validación SARLAFT simulada (compartida por ambos flujos) ----------
-
-  /**
-   * Inicia la simulación de validación SARLAFT: muestra el loader durante
-   * `DURACION_SARLAFT_MS` y luego marca el estado como éxito. El cambio de
-   * signal dispara la detección de cambios bajo OnPush.
-   */
-  private iniciarValidacionSarlaft(): void {
-    this.cancelarTemporizadorSarlaft();
-    this.estadoSarlaft.set('validando');
-    this.subPaso.set('sarlaft');
-    this.sarlaftTimeoutId = setTimeout(() => {
-      this.estadoSarlaft.set('exito');
-      this.sarlaftTimeoutId = null;
-    }, DURACION_SARLAFT_MS);
-  }
-
-  /** Cancela el temporizador SARLAFT pendiente, si existe. */
-  private cancelarTemporizadorSarlaft(): void {
-    if (this.sarlaftTimeoutId !== null) {
-      clearTimeout(this.sarlaftTimeoutId);
-      this.sarlaftTimeoutId = null;
+    switch (this.flujo()) {
+      case 'fisica':
+        return this.renovacionService.solicitar({
+          numeroPoliza,
+          tipo: 'fisica',
+          validacionSarlaftId,
+          ...(documento ? { formularioRenovacion: documento } : {}),
+          ...conComentarios,
+        });
+      case 'digital': {
+        const v = this.formulario.getRawValue();
+        const observaciones = String(v.observaciones ?? '').trim();
+        return this.renovacionService.solicitar({
+          numeroPoliza,
+          tipo: 'digital',
+          validacionSarlaftId,
+          modalidad: this.esBloqueado() ? 'mismosValores' : 'conAjustes',
+          ...(this.esBloqueado()
+            ? {}
+            : {
+                ajustes: {
+                  valorCanon: Number(v.valorCanon),
+                  administracion: Number(v.administracion),
+                  valorAseguradoServicios: Number(v.valorAseguradoServicios),
+                  valorAseguradoDyF: Number(v.valorAseguradoDyF),
+                  ipcAplicado: Number(v.ipcAplicado),
+                },
+              }),
+          ...(observaciones ? { comentarios: observaciones } : {}),
+        });
+      }
+      case 'caso-especial':
+        return this.renovacionService.casoEspecial({
+          numeroPoliza,
+          tipo: this.tipoCasoEspecial(),
+          documentoLegal: documento!,
+          ...conObservaciones,
+        });
+      case 'no-renovar':
+        return this.renovacionService.noRenovar({
+          numeroPoliza,
+          motivo: this.motivoNoRenovacion() as MotivoNoRenovacion,
+          ...conObservaciones,
+        });
+      case 'correccion':
+        return this.correccionService.registrar({
+          referencia: numeroPoliza,
+          archivo: this.archivo()!,
+          ...conObservaciones,
+        });
     }
   }
 
-  /** Fecha estimada (hoy + 2 días) formateada en español para la pantalla de éxito. */
-  private formatearFechaEstimada(): string {
-    const fecha = new Date();
-    fecha.setDate(fecha.getDate() + 2);
-    return fecha.toLocaleDateString('es-CO', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+  private documentoCargado(): DocumentoCargado | null {
+    const archivo = this.archivo();
+    return archivo
+      ? {
+          nombre: archivo.name,
+          tipoMime: archivo.type as DocumentoCargado['tipoMime'],
+          tamanoBytes: archivo.size,
+        }
+      : null;
   }
 }

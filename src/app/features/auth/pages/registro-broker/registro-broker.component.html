@@ -1,272 +1,226 @@
+<!--
+  Registro de broker: comparte la UI del login (fondo y tarjeta). Asistente de
+  3 pasos; desde el paso 1 se puede quedar como prospecto.
+-->
 <main class="registro" role="main">
-  @if (registroExitoso()) {
-    <!-- Modal de éxito tras registrar la Solicitud_Registro_Broker (Req 3.24). -->
-    <section class="registro-card" aria-labelledby="registro-exito-titulo">
-      <app-success-screen
-        titulo="Envío Exitoso"
-        mensaje="Todo listo. Su solicitud ha sido enviada correctamente, nos contactaremos con usted lo más pronto posible."
-        [tarjetas]="[{ etiqueta: 'ESTADO', valor: '🟡 Pendiente de aprobación' }]"
-        textoVolver="Volver"
-        (volver)="volverAlLogin()"
-      ></app-success-screen>
-      <p class="registro-nota" role="note">
-        Su solicitud será revisada por el equipo de Proyectiva y nos comunicaremos
-        para iniciar el proceso. El nuevo broker no obtiene acceso inmediato al
-        portal mientras la solicitud permanezca en estado pendiente de aprobación.
+  <section class="registro-card" aria-labelledby="registro-titulo">
+    <header class="registro-header">
+      <h1 class="registro-marca">Proyectiva</h1>
+      <h2 id="registro-titulo" class="registro-titulo">
+        @switch (paso()) {
+          @case (1) { Únete a Proyectiva }
+          @case (2) { Verifica tu SARLAFT }
+          @case (3) { Adjunta tus documentos }
+        }
+      </h2>
+      <p class="registro-subtitulo">
+        @switch (paso()) {
+          @case (1) { Cuéntanos quién eres para crear tu cuenta. }
+          @case (2) { Validamos tu conocimiento de cliente con el documento que registraste. }
+          @case (3) { Con tus documentos aprobados serás broker registrado. }
+        }
       </p>
-    </section>
-  } @else {
-    <section class="registro-card" aria-labelledby="registro-titulo">
-      <header class="registro-header">
-        <h1 class="registro-marca">Proyectiva</h1>
-        <h2 id="registro-titulo" class="registro-titulo">
-          Solicitud de registro de broker
-        </h2>
-        <p class="registro-subtitulo">
-          Completa tu información, valida tu SARLAFT y adjunta tu documentación.
-        </p>
-      </header>
+    </header>
 
-      <form
-        class="registro-form"
-        [formGroup]="formulario"
-        (ngSubmit)="enviarSolicitud()"
-        novalidate
-      >
-        <!-- ============ Sección Información Personal (Req 3.1–3.5) ============ -->
-        <fieldset class="registro-seccion">
-          <legend class="registro-seccion-titulo">Información Personal</legend>
+    <!-- Cómo funciona tu cuenta (arriba). En el paso 1 solo se explica el prospecto. -->
+    @if (paso() === 1) {
+      <div class="registro-aviso registro-aviso--prospecto">
+        <p class="registro-aviso__titulo"><app-icon nombre="rocket_launch" [tamano]="18" /> Empieza como prospecto</p>
+        <p>Sin documentos ya puedes radicar, cotizar y hacer seguimiento. Tus comisiones se acreditan cuando completes tu registro de broker.</p>
+      </div>
+    } @else {
+      <div class="registro-aviso registro-aviso--broker">
+        <p class="registro-aviso__titulo"><app-icon nombre="verified" [tamano]="18" /> Registro como broker</p>
+        <p>Con tu SARLAFT vigente y tus documentos aprobados se desbloquean {{ modulosRestringidos.length }} módulos más y generas comisiones, incluidas las de lo que radiques como prospecto.</p>
+      </div>
+    }
 
-          <app-form-field
-            label="Nombre completo"
-            ayuda="Ej: Juan Pérez"
-            controlId="reg-nombre"
-            [requerido]="true"
-            [error]="errorNombre"
-          >
-            <input
-              id="reg-nombre"
-              class="registro-input"
-              type="text"
-              autocomplete="name"
-              formControlName="nombreCompleto"
-              [attr.minlength]="nombreLongitudMin"
-              [attr.aria-invalid]="!!errorNombre"
-            />
+    <form class="registro-form" [formGroup]="formulario" (ngSubmit)="enviarSolicitud()" novalidate>
+      <!-- ===================== Paso 1 · Tus datos ===================== -->
+      @if (paso() === 1) {
+        <div class="registro-grid">
+          <app-form-field class="registro-grid__ancho" label="Nombre completo" controlId="reg-nombre" [requerido]="true" [error]="errorNombre">
+            <input id="reg-nombre" class="registro-input" type="text" autocomplete="name" placeholder="Juan Pérez Gómez"
+              formControlName="nombreCompleto" [attr.minlength]="nombreLongitudMin" [attr.aria-invalid]="!!errorNombre" />
           </app-form-field>
 
-          <app-form-field
-            label="Correo electrónico"
-            ayuda="correo@ejemplo.com"
-            controlId="reg-correo"
-            [requerido]="true"
-            [error]="errorCorreo"
-          >
-            <input
-              id="reg-correo"
-              class="registro-input"
-              type="email"
-              autocomplete="email"
-              formControlName="correo"
-              [attr.aria-invalid]="!!errorCorreo"
-            />
+          <app-form-field class="registro-grid__ancho" label="Correo electrónico" controlId="reg-correo" [requerido]="true" [error]="errorCorreo">
+            <input id="reg-correo" class="registro-input" type="email" autocomplete="email" placeholder="correo@ejemplo.com"
+              formControlName="correo" [attr.aria-invalid]="!!errorCorreo" />
           </app-form-field>
 
-          <div class="registro-telefono">
-            <app-form-field
-              label="Código"
-              controlId="reg-codigo-pais"
-              [requerido]="true"
-              [error]="errorCodigoPais"
-            >
-              <select
-                id="reg-codigo-pais"
-                class="registro-input registro-select"
-                formControlName="codigoPais"
-                [attr.aria-invalid]="!!errorCodigoPais"
-              >
-                @for (codigo of codigosPais; track codigo) {
-                  <option [value]="codigo">{{ codigo }}</option>
-                }
+          <div class="registro-telefono registro-grid__ancho">
+            <app-form-field label="Código" controlId="reg-codigo-pais" [requerido]="true">
+              <select id="reg-codigo-pais" class="registro-input" formControlName="codigoPais">
+                @for (codigo of codigosPais; track codigo) { <option [value]="codigo">{{ codigo }}</option> }
               </select>
             </app-form-field>
-
-            <app-form-field
-              label="Teléfono de contacto"
-              ayuda="300 000 0000"
-              controlId="reg-telefono"
-              [requerido]="true"
-              [error]="errorTelefono"
-            >
-              <input
-                id="reg-telefono"
-                class="registro-input"
-                type="tel"
-                inputmode="numeric"
-                autocomplete="tel-national"
-                formControlName="telefono"
-                [attr.minlength]="telefonoLongitudMin"
-                [attr.maxlength]="telefonoLongitudMax"
-                [attr.aria-invalid]="!!errorTelefono"
-              />
+            <app-form-field label="Teléfono celular" controlId="reg-telefono" [requerido]="true" [error]="errorTelefono">
+              <input id="reg-telefono" class="registro-input" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="300 000 0000"
+                formControlName="telefono" [attr.minlength]="telefonoLongitudMin" [attr.maxlength]="telefonoLongitudMax" [attr.aria-invalid]="!!errorTelefono" />
             </app-form-field>
           </div>
 
-          <app-form-field
-            label="Ciudad"
-            controlId="reg-ciudad"
-            [requerido]="true"
-            [error]="errorCiudad"
-          >
-            <select
-              id="reg-ciudad"
-              class="registro-input registro-select"
-              formControlName="ciudad"
-              [attr.aria-invalid]="!!errorCiudad"
-            >
+          <app-form-field class="registro-grid__ancho" label="Ciudad" controlId="reg-ciudad" [requerido]="true" [error]="errorCiudad">
+            <select id="reg-ciudad" class="registro-input" formControlName="ciudad" [attr.aria-invalid]="!!errorCiudad">
               <option value="" disabled>Selecciona tu ciudad</option>
-              @for (ciudad of ciudades; track ciudad) {
-                <option [value]="ciudad">{{ ciudad }}</option>
-              }
+              @for (ciudad of ciudades; track ciudad) { <option [value]="ciudad">{{ ciudad }}</option> }
             </select>
           </app-form-field>
-        </fieldset>
 
-        <!-- ============ Sección Consulta SARLAFT (Req 3.6–3.15) ============ -->
-        <fieldset class="registro-seccion">
-          <legend class="registro-seccion-titulo">Consulta SARLAFT</legend>
-
-          <app-form-field
-            label="Número de documento"
-            ayuda="Ingresa tu número de identidad"
-            controlId="reg-documento"
-            [requerido]="true"
-            [error]="errorDocumento"
-          >
-            <input
-              id="reg-documento"
-              class="registro-input"
-              type="text"
-              inputmode="numeric"
-              formControlName="documento"
-              [attr.minlength]="documentoLongitudMin"
-              [attr.maxlength]="documentoLongitudMax"
-              [attr.aria-invalid]="!!errorDocumento"
-            />
+          <app-form-field label="Tipo de documento" controlId="reg-tipo-doc" [requerido]="true">
+            <select id="reg-tipo-doc" class="registro-input" formControlName="tipoDocumento">
+              @for (t of tiposDocumento; track t) { <option [value]="t">{{ etiquetaTipoDocumento[t] }}</option> }
+            </select>
           </app-form-field>
 
-          <app-form-field
-            label="Fecha de expedición"
-            controlId="reg-fecha-expedicion"
-            [requerido]="true"
-            [error]="errorFechaExpedicion"
-          >
-            <input
-              id="reg-fecha-expedicion"
-              class="registro-input"
-              type="date"
-              formControlName="fechaExpedicion"
-              [attr.aria-invalid]="!!errorFechaExpedicion"
-            />
+          <app-form-field label="Número de documento" ayuda="Será tu usuario para ingresar" controlId="reg-documento" [requerido]="true" [error]="errorDocumento">
+            <input id="reg-documento" class="registro-input" type="text" inputmode="numeric" placeholder="1020304050" formControlName="documento"
+              [attr.minlength]="documentoLongitudMin" [attr.maxlength]="documentoLongitudMax" [attr.aria-invalid]="!!errorDocumento" />
           </app-form-field>
+        </div>
 
-          @if (clasificacionSarlaft(); as clasificacion) {
-            <app-alert-banner [variante]="varianteAlertaSarlaft()">
-              {{ clasificacion.mensaje }}
-            </app-alert-banner>
-          }
+        @if (errorEnvio()) { <p class="registro-error" role="alert">{{ errorEnvio() }}</p> }
 
-          @if (errorSarlaft()) {
-            <p class="registro-error" role="alert">{{ errorSarlaft() }}</p>
-          }
+        <div class="registro-acciones">
+          <app-boton variante="accent" [disabled]="!datosValidos()" (clicked)="continuar()">Continuar como broker</app-boton>
+          <app-boton variante="outline" [disabled]="!datosValidos() || registrandoProspecto()" (clicked)="registrarComoProspecto()">
+            {{ registrandoProspecto() ? 'Creando tu cuenta…' : 'Registrarme como prospecto' }}
+          </app-boton>
+        </div>
+      }
 
-          @if (consultandoSarlaft()) {
-            <app-escalerita-loader
-              texto="Consultando SARLAFT..."
-            ></app-escalerita-loader>
-          } @else if (resultadoSarlaft() === null) {
-            <app-boton
-              variante="accent"
-              [disabled]="!puedeConsultar()"
-              (clicked)="consultarSarlaft()"
-            >
-              Consultar
-            </app-boton>
-          }
-        </fieldset>
+      <!-- ===================== Paso 2 · SARLAFT ===================== -->
+      @if (paso() === 2) {
+        <div class="registro-documento">
+          <app-icon nombre="badge" [tamano]="20" />
+          <span>
+            <small>Documento a verificar</small>
+            <b>{{ etiquetaTipoDocumento[formulario.controls.tipoDocumento.value] }} · {{ formulario.controls.documento.value }}</b>
+          </span>
+        </div>
 
-        <!-- ===== Sección Resultado SARLAFT + Documentación Requerida (Req 3.15, 3.16) ===== -->
-        @if (resultadoSarlaft(); as resultado) {
-          <fieldset class="registro-seccion">
-            <legend class="registro-seccion-titulo">Resultado SARLAFT</legend>
-            <div class="registro-sarlaft-exito">
-              <span class="registro-sarlaft-icono" aria-hidden="true">✓</span>
-              <div>
-                <h3 class="registro-sarlaft-subtitulo">
-                  Validación SARLAFT Exitosa
-                </h3>
-                <p class="registro-sarlaft-descripcion">
-                  El documento fue expedido hace menos de 3 años.
-                </p>
+        @if (verificandoSarlaft()) {
+          <app-escalerita-loader texto="Verificando SARLAFT..."></app-escalerita-loader>
+        } @else {
+          @switch (sarlaft()?.estado) {
+            @case ('actualizado') {
+              <div class="registro-resultado registro-resultado--ok" role="status">
+                <app-icon nombre="verified_user" [tamano]="22" />
+                <div>
+                  <b>SARLAFT actualizado</b>
+                  <p>{{ sarlaft()?.mensaje }}</p>
+                </div>
               </div>
-            </div>
-            <app-resultado-sarlaft-table
-              [resultado]="resultado"
-            ></app-resultado-sarlaft-table>
-          </fieldset>
-
-          <fieldset class="registro-seccion">
-            <legend class="registro-seccion-titulo">
-              Documentación Requerida
-            </legend>
-            <app-doc-uploader
-              [reglas]="reglasUploader"
-              [cargados]="cargados()"
-              (archivoSeleccionado)="onArchivoSeleccionado($event)"
-            ></app-doc-uploader>
-
-            @for (regla of reglasUploader; track regla.id) {
-              @if (errorDocumentoCargado(regla.id)) {
-                <p class="registro-error" role="alert">
-                  {{ regla.etiqueta }}: {{ errorDocumentoCargado(regla.id) }}
-                </p>
+            }
+            @case ('desactualizado') {
+              <div class="registro-resultado registro-resultado--aviso" role="status">
+                <app-icon nombre="update" [tamano]="22" />
+                <div>
+                  <b>SARLAFT desactualizado</b>
+                  <p>{{ sarlaft()?.mensaje }}</p>
+                  <ol>
+                    <li>Enviamos la URL de actualización a {{ sarlaft()?.correoDestinatario }}.</li>
+                    <li>Diligencia la actualización desde el enlace.</li>
+                    <li>Vuelve aquí y verifica de nuevo para continuar.</li>
+                  </ol>
+                </div>
+              </div>
+              @if (sarlaft()?.enlaceActualizacion; as enlace) {
+                <div class="registro-enlace">
+                  <code>{{ enlace }}</code>
+                  <app-boton variante="outline" icono="content_copy" (clicked)="copiarEnlace(enlace)">{{ enlaceCopiado() ? 'Copiado' : 'Copiar enlace' }}</app-boton>
+                </div>
               }
             }
-          </fieldset>
+            @case ('consultable') {
+              <div class="registro-resultado registro-resultado--error" role="alert">
+                <app-icon nombre="policy" [tamano]="22" />
+                <div>
+                  <b>Tu solicitud pasa a revisión</b>
+                  <p>{{ sarlaft()?.mensaje }}</p>
+                  @if (sarlaft()?.radicado) { <p>Radicado: <b>{{ sarlaft()?.radicado }}</b>. Te contactaremos por correo.</p> }
+                </div>
+              </div>
+            }
+          }
         }
 
-        <!-- ============ Envío de la solicitud (Req 3.19–3.21) ============ -->
-        @if (errorEnvio()) {
-          <p class="registro-error" role="alert">{{ errorEnvio() }}</p>
+        @if (errorSarlaft()) { <p class="registro-error" role="alert">{{ errorSarlaft() }}</p> }
+        @if (modoDesarrollo) {
+          <p class="registro-guia">Mock: documento terminado en <b>2</b> → desactualizado (al verificar de nuevo queda actualizado) · en <b>3</b> → consultable.</p>
         }
+
+        <div class="registro-acciones">
+          @switch (sarlaft()?.estado) {
+            @case ('actualizado') {
+              <app-boton variante="accent" (clicked)="irAPaso(3)">Continuar a documentos</app-boton>
+            }
+            @case ('consultable') {
+              <app-boton variante="accent" (clicked)="irALogin()">Volver al inicio de sesión</app-boton>
+            }
+            @default {
+              <app-boton variante="accent" icono="policy" [disabled]="verificandoSarlaft()" (clicked)="verificarSarlaft()">
+                {{ sarlaft()?.estado === 'desactualizado' ? 'Verificar de nuevo' : 'Verificar SARLAFT' }}
+              </app-boton>
+            }
+          }
+          @if (sarlaft()?.estado !== 'consultable') {
+            <app-boton variante="ghost" (clicked)="irAPaso(1)">Atrás</app-boton>
+          }
+        </div>
+      }
+
+      <!-- ===================== Paso 3 · Documentos ===================== -->
+      @if (paso() === 3) {
+        <app-doc-uploader [reglas]="reglasUploader" [cargados]="cargados()" (archivoSeleccionado)="onArchivoSeleccionado($event)"></app-doc-uploader>
+        @for (regla of reglasUploader; track regla.id) {
+          @if (errorDocumentoCargado(regla.id)) {
+            <p class="registro-error" role="alert">{{ regla.etiqueta }}: {{ errorDocumentoCargado(regla.id) }}</p>
+          }
+        }
+
+        @if (errorEnvio()) { <p class="registro-error" role="alert">{{ errorEnvio() }}</p> }
 
         @if (enviando()) {
-          <app-escalerita-loader
-            texto="Enviando solicitud..."
-          ></app-escalerita-loader>
+          <app-escalerita-loader texto="Enviando solicitud..."></app-escalerita-loader>
         } @else {
-          <div class="registro-envio">
-            <app-boton
-              variante="primary"
-              type="submit"
-              [disabled]="!puedeEnviar()"
-            >
-              Enviar solicitud de registro
-            </app-boton>
-            <p class="registro-legal">{{ textoLegal }}</p>
+          <div class="registro-acciones">
+            <app-boton variante="accent" type="submit" icono="send" [disabled]="!puedeEnviar()">Enviar solicitud de registro</app-boton>
+            <app-boton variante="ghost" (clicked)="irAPaso(2)">Atrás</app-boton>
           </div>
+          <p class="registro-legal">{{ textoLegal }}</p>
         }
-      </form>
+      }
+    </form>
 
-      <footer class="registro-footer">
-        <app-boton
-          variante="ghost"
-          ariaLabel="Ya tengo cuenta: ir a la pantalla de inicio de sesión"
-          (clicked)="irALogin()"
-        >
-          Ya tengo cuenta
-        </app-boton>
-      </footer>
-    </section>
-  }
+    <!-- Tu avance (abajo) -->
+    <ol class="registro-progreso" aria-label="Avance del registro">
+      @for (p of progreso(); track $index; let i = $index) {
+        <li [class.hecho]="p.hecho" [class.activo]="p.activo">
+          <span class="registro-progreso__nodo" aria-hidden="true">
+            @if (p.hecho) { <app-icon nombre="check" [tamano]="14" /> } @else { {{ i + 1 }} }
+          </span>
+          <span>{{ p.titulo }}</span>
+        </li>
+      }
+    </ol>
+
+    <footer class="registro-footer">
+      <span>¿Ya tienes cuenta?</span>
+      <app-boton variante="ghost" ariaLabel="Ya tengo cuenta: ir a la pantalla de inicio de sesión" (clicked)="irALogin()">Iniciar sesión</app-boton>
+    </footer>
+  </section>
 </main>
+
+<!-- Credenciales de acceso: usuario = documento, contraseña = correo. -->
+<app-modal-dialog [abierto]="credenciales() !== null" [titulo]="credenciales()?.titulo ?? ''" (cerrar)="aceptarCredenciales()">
+  <p>{{ credenciales()?.mensaje }}</p>
+  <dl class="registro-credenciales">
+    <div><dt>Tu usuario</dt><dd>{{ credenciales()?.usuario }}</dd><small>Tu número de documento</small></div>
+    <div><dt>Tu contraseña</dt><dd>{{ credenciales()?.contrasena }}</dd><small>Tu correo electrónico</small></div>
+  </dl>
+  <div acciones>
+    <app-boton variante="accent" (clicked)="aceptarCredenciales()">Aceptar e ir a iniciar sesión</app-boton>
+  </div>
+</app-modal-dialog>

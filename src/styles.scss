@@ -6,6 +6,52 @@
    sombra, espaciado, tipografía, pesos, interlineado y valores numéricos. */
 @use 'app/shared/styles/tokens';
 
+/* Tipografía de marca (Brandbook Proyectiva, p. 19): familia Bolívar.
+   Coloca los archivos en public/fonts/bolivar/. Mientras no estén, el navegador
+   usa el respaldo definido en --font-family-body (Roboto). */
+@font-face {
+  font-family: 'Bolivar';
+  src: url('/fonts/bolivar/Bolivar-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bolivar';
+  src: url('/fonts/bolivar/Bolivar-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bolivar';
+  src: url('/fonts/bolivar/Bolivar-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bolivar';
+  src: url('/fonts/bolivar/Bolivar-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bolivar';
+  src: url('/fonts/bolivar/Bolivar-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bolivar';
+  src: url('/fonts/bolivar/Bolivar-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Reset base y tipografía global del prototipo (Req 36.1, 36.2).
    Todos los valores se referencian vía Design_Token (Req 25.3, 25.4). */
 * {
@@ -15,12 +61,13 @@
 }
 
 html {
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   font-size: 100%;
 }
 
 body {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-4md);
+  font-family: var(--font-family-body);
+  font-size: var(--text-body);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-normal);
   color: var(--color-text);
@@ -29,6 +76,29 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Titulares con Plus Jakarta Sans (sistema stitch). Los componentes pueden
+   sobreescribir por token; esto asegura la familia de encabezados por defecto. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-heading);
+}
+
+/* Iconografía Material Symbols Outlined (sistema stitch). Uso:
+   <span class="material-symbols-outlined">home</span> */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 /* Hereda la familia tipográfica en los controles de formulario,

@@ -22,14 +22,14 @@
 }
 
 .correccion-titulo {
-  font-size: var(--font-size-h1-seccion);
+  font-size: var(--text-heading);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   margin: var(--space-0);
 }
 
 .correccion-subtitulo {
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   color: var(--color-muted);
   line-height: var(--line-height-normal);
   margin: var(--space-0);
@@ -55,14 +55,14 @@
 }
 
 .resumen-label {
-  font-size: var(--font-size-xs);
+  font-size: var(--text-caption);
   font-weight: var(--font-weight-semibold);
   color: var(--color-muted);
   text-transform: uppercase;
 }
 
 .resumen-valor {
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
 }
@@ -74,7 +74,7 @@
 }
 
 .correccion-subtitulo-seccion {
-  font-size: var(--font-size-h4);
+  font-size: var(--text-subtitle);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: var(--space-0);

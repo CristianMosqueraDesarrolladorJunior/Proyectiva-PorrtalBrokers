@@ -19,7 +19,7 @@ import {
   EscaleritaLoaderComponent,
   FormFieldComponent,
   RadioGroupComponent,
-  StepperComponent,
+  StepTabsComponent,
   SuccessScreenComponent,
 } from '../../../../shared/components';
 import type { ReglaDocumentoUploader } from '../../../../shared/components/doc-uploader/doc-uploader.component';
@@ -61,6 +61,7 @@ import {
   type ErroresRenovacion,
 } from '../../renovacion-habilitacion';
 
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 /** Errores por campo todos vacíos (sin mostrar), antes del primer intento. */
 const ERRORES_VACIOS: ErroresRenovacion = {
   tipoPersona: '',
@@ -85,7 +86,7 @@ const ID_FORMULARIO_RENOVACION = 'formularioRenovacion';
 const ID_FORMULARIO_SARLAFT = 'formularioSarlaft';
 
 /**
- * Pasos del flujo de Renovacion mostrados por el `StepperComponent` (Req 18.4).
+ * Pasos del flujo de Renovacion mostrados por el `StepTabsComponent` (Req 18.4).
  * Modalidad → Datos del propietario → Documentos → Confirmación.
  */
 const PASOS_RENOVACION: readonly string[] = [
@@ -129,7 +130,7 @@ const MENSAJE_RECHAZO: Readonly<Record<MotivoRechazoDocumento, string>> = {
  * (Req 17, 18, 19, 20, 21).
  *
  * Guía al Broker por el flujo de Renovacion en pasos, REUTILIZANDO sin duplicar los
- * Componentes_Compartidos `StepperComponent` (avance, Req 18.4), `RadioGroupComponent`
+ * Componentes_Compartidos `StepTabsComponent` (avance, Req 18.4), `RadioGroupComponent`
  * (tipo de persona, tipo de documento y modalidad, Req 17.1, 17.2, 18.2, 18.3),
  * `FormFieldComponent`, `DocUploaderComponent` (Formulario de Renovación obligatorio
  * y Formulario SARLAFT opcional, Req 17.3, 19.1), `AlertBannerComponent`
@@ -153,10 +154,10 @@ const MENSAJE_RECHAZO: Readonly<Record<MotivoRechazoDocumento, string>> = {
   selector: 'app-renovacion',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [PageHeaderComponent, 
     CurrencyPipe,
     FormsModule,
-    StepperComponent,
+    StepTabsComponent,
     RadioGroupComponent,
     FormFieldComponent,
     DocUploaderComponent,
@@ -188,7 +189,7 @@ export class RenovacionComponent {
   /** Emite al finalizar el flujo para regresar a Renovaciones o Seguimiento (Req 21.3). */
   @Output() readonly volver = new EventEmitter<void>();
 
-  /** Etiquetas de los pasos del flujo para el `StepperComponent` (Req 18.4). */
+  /** Etiquetas de los pasos del flujo para el `StepTabsComponent` (Req 18.4). */
   protected readonly pasos = PASOS_RENOVACION;
 
   /** Paso activo del flujo (0-indexado) (Req 18.4). */
@@ -409,6 +410,13 @@ export class RenovacionComponent {
   protected continuarDesdeDocumentos(): void {
     if (this.formularioRenovacion() !== undefined) {
       this.pasoActivo.set(PasoRenovacion.Confirmacion);
+    }
+  }
+
+  /** Vuelve a un paso ya completado desde las pestañas, sin perder datos. */
+  protected irAPaso(indice: number): void {
+    if (indice >= 0 && indice < this.pasoActivo()) {
+      this.pasoActivo.set(indice);
     }
   }
 

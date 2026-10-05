@@ -1,0 +1,42 @@
+<div class="app-wrapper" [class.app-wrapper--sidebar-abierto]="sidebarAbierto()" [class.app-wrapper--colapsado]="layout.sidebarColapsado()">
+  <header class="topbar admin-topbar">
+    <button type="button" class="admin-topbar__menu" aria-label="Abrir menú" (click)="alternarSidebar()">
+      <app-icon nombre="menu" [tamano]="22" />
+    </button>
+    <div class="admin-topbar__titulo">
+      <app-icon nombre="admin_panel_settings" [tamano]="22" />
+      <strong>Consola de brokers</strong>
+    </div>
+    @if (perfil(); as p) {
+      <span class="admin-topbar__rol" [class.admin-topbar__rol--comercial]="p.rol === 'Comercial'">{{ p.rol }}</span>
+    }
+    <span class="admin-topbar__demo" title="Datos del Warehouse cargados en modo demostración">Modo demostración</span>
+  </header>
+
+  <div id="sidebar-navegacion">
+    <app-sidebar
+      [abierto]="sidebarAbierto()"
+      [accesos]="accesos()"
+      base="/admin"
+      subtitulo="Consola operación"
+      [mostrarVip]="false"
+      [conSalir]="true"
+      (cerrar)="cerrarSidebar()"
+      (salir)="salir()"
+    />
+  </div>
+  <div class="sidebar-overlay" (click)="cerrarSidebar()" aria-hidden="true"></div>
+
+  <main class="main-content" id="contenido-principal" tabindex="-1">
+    @if (admin.errorCarga()) {
+      <div class="admin-aviso" role="alert">
+        No se pudieron cargar los datos de la consola.
+        <button type="button" (click)="reintentarCarga()">Reintentar</button>
+      </div>
+    } @else if (!admin.cargado()) {
+      <div class="admin-aviso" role="status">Cargando cartera de brokers…</div>
+    } @else {
+      <router-outlet />
+    }
+  </main>
+</div>

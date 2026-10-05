@@ -6,12 +6,20 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import {
+  SkeletonComponent,
+  AlertBannerComponent,
+  BotonComponent,
   DataTableComponent,
   FiltradoInteligenteComponent,
   QuickToolBannerComponent,
+  PageHeaderComponent,
+  GuaranteeBadgeComponent,
+  KpiCardComponent,
+  CommissionBreakdownCardComponent,
 } from '../../../shared/components';
 import type {
   AccionFila,
@@ -27,6 +35,7 @@ import {
 import type { Solicitud } from '../../../core/models/solicitud.model';
 import { estadoABadge } from '../../../shared/pipes/estado-badge';
 
+import { formatearCop } from '../../../shared/util/moneda';
 /** Tamaño de página del Seguimiento: 10 solicitudes por página (Req 6.5). */
 const TAMANO_PAGINA = 10;
 
@@ -75,11 +84,18 @@ const ESTADOS: readonly { readonly valor: string; readonly etiqueta: string }[] 
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    SkeletonComponent,
+    AlertBannerComponent,
+    BotonComponent,
     FormsModule,
     QuickToolBannerComponent,
     FiltradoInteligenteComponent,
     DataTableComponent,
     DetalleSolicitudComponent,
+    PageHeaderComponent,
+    GuaranteeBadgeComponent,
+    KpiCardComponent,
+    CommissionBreakdownCardComponent,
   ],
   templateUrl: './seguimiento.component.html',
   styleUrl: './seguimiento.component.scss',
@@ -104,7 +120,7 @@ export class SeguimientoComponent {
     { key: 'estadoPago', header: 'Pago póliza' },
     { key: 'fecha', header: 'Fecha', ordenable: true },
     { key: 'comisionLabel', header: 'Comisión', alinear: 'derecha' },
-    { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Gestionar →', alinear: 'derecha' },
+    { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Gestionar', alinear: 'derecha' },
   ];
 
   // --- Comisiones y KPIs (Req 5.2, 5.3) ---
@@ -145,7 +161,17 @@ export class SeguimientoComponent {
 
   constructor() {
     this.cargarDashboard();
-    this.cargarSolicitudes();
+    // Búsqueda global de la barra superior: /app/seguimiento?q=texto
+    inject(ActivatedRoute)
+      .queryParamMap.pipe(takeUntilDestroyed())
+      .subscribe((params) => {
+        const q = params.get('q');
+        if (q !== null && q !== this.busqueda()) {
+          this.busqueda.set(q);
+          this.paginaActual.set(1);
+        }
+        this.cargarSolicitudes();
+      });
   }
 
   /** Navega al Cotizador desde el banner "Herramienta Rápida" (Req 5.5). */
@@ -238,10 +264,6 @@ export class SeguimientoComponent {
 
   /** Formatea un valor como pesos colombianos. */
   protected formatearCop(valor: number): string {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      maximumFractionDigits: 0,
-    }).format(valor);
+    return formatearCop(valor);
   }
 }

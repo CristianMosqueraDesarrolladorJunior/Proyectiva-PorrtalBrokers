@@ -29,6 +29,7 @@ import {
   puedeEnviarNoRenovacion,
 } from '../../no-renovacion-habilitacion';
 
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 /** Estado del envío de la No Renovación para controlar loaders y confirmación (Req 22.2). */
 type EstadoEnvioNoRenovacion = 'inactivo' | 'enviando' | 'exito';
 
@@ -54,7 +55,7 @@ type EstadoEnvioNoRenovacion = 'inactivo' | 'enviando' | 'exito';
   selector: 'app-no-renovacion',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [PageHeaderComponent, 
     FormsModule,
     RadioGroupComponent,
     FormFieldComponent,

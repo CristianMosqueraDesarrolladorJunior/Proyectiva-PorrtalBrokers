@@ -1,41 +1,48 @@
 // =============================================================================
 // Cotizador — entrada de datos y coberturas (Req 7.1–7.8)
-// Todos los valores vía Design_Token (Req 25); sin colores/espaciados hardcodeados.
+// Escala compacta y uniforme: los controles heredan tamaños de los componentes
+// compartidos (form-field, segmented-control, money-input); aquí solo el layout.
 // =============================================================================
 
 .cotizador-datos {
   display: block;
 
-  &__header {
-    margin-bottom: var(--space-6);
-  }
-
-  &__titulo {
-    margin: var(--space-0);
-    color: var(--color-text);
-    font-size: var(--font-size-h1-seccion);
-    font-weight: var(--font-weight-bold);
-    line-height: var(--line-height-tight);
-  }
-
-  &__subtitulo {
-    margin: var(--space-2) var(--space-0) var(--space-0);
-    color: var(--color-muted);
-    font-size: var(--font-size-lg);
-    line-height: var(--line-height-normal);
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-5);
+    align-items: start;
   }
 
   &__form {
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
+    gap: var(--space-4);
+    min-width: 0;
+  }
+
+  &__lateral {
+    position: sticky;
+    top: calc(var(--topbar-height) + var(--space-4));
+  }
+
+  &__acciones-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 100%;
+  }
+
+  &__panel-ayuda {
+    margin: var(--space-0);
+    color: var(--sb-on-slate);
+    font-size: var(--text-body-sm);
   }
 
   &__iva {
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    margin-top: var(--space-4);
   }
 
   &__iva-texto {
@@ -44,101 +51,190 @@
   }
 
   &__iva-label {
-    color: var(--color-text);
-    font-size: var(--font-size-2xl);
+    color: var(--sb-on-surface);
+    font-size: var(--text-body);
     font-weight: var(--font-weight-medium);
   }
 
   &__iva-valor {
-    color: var(--color-muted);
-    font-size: var(--font-size-lg);
+    color: var(--sb-secondary);
+    font-size: var(--text-body-sm);
   }
 
-  &__coberturas-titulo {
-    margin: var(--space-0) var(--space-0) var(--space-4);
-    color: var(--color-text);
-    font-size: var(--font-size-h3);
-    font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-tight);
+  &__coberturas {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-0);
+    padding: var(--space-0);
+    list-style: none;
   }
 
   &__coberturas-vacio {
     margin: var(--space-0);
-    color: var(--color-muted);
-    font-size: var(--font-size-lg);
+    color: var(--sb-secondary);
+    font-size: var(--text-body);
   }
 
-  &__acciones {
+  &__detalle-p {
+    margin: var(--space-0);
+  }
+
+  &__detalle-destacado {
+    margin: var(--space-0);
+    color: var(--sb-primary-hover);
+    font-weight: var(--font-weight-semibold);
+  }
+}
+
+// Grupo con leyenda (selectores segmentados)
+.cot-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: var(--space-0);
+  padding: var(--space-0);
+  border: none;
+
+  &__legend {
+    margin-bottom: var(--space-1);
+    padding: var(--space-0);
+    color: var(--sb-on-surface);
+    font-size: var(--text-body-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  &__req {
+    color: var(--sb-error);
+  }
+
+  &__ayuda {
+    color: var(--sb-secondary);
+    font-size: var(--text-caption);
+  }
+}
+
+// --- Cobertura: fila compacta con divulgación progresiva del monto ---
+.cob {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--sb-surface);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-lg);
+
+  &--activa {
+    border-color: var(--sb-primary);
+    background: var(--sb-tint-accent-bg);
+  }
+
+  &__fila {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    gap: var(--space-3);
   }
 
-  select,
-  input {
-    width: 100%;
-    box-sizing: border-box;
-    font-size: var(--font-size-2xl);
-    color: var(--color-text);
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    padding: var(--space-3);
+  &__icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: var(--icon-badge-size);
+    height: var(--icon-badge-size);
+    border-radius: var(--radius-md);
+    background: var(--sb-primary-fixed);
+    color: var(--sb-on-primary-fixed);
+
+    .material-symbols-outlined {
+      font-size: var(--text-heading);
+    }
+  }
+
+  &__texto {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__nombre {
+    color: var(--sb-on-surface);
+    font-size: var(--text-body);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  &__desc {
+    color: var(--sb-secondary);
+    font-size: var(--text-caption);
     line-height: var(--line-height-normal);
+
+    strong {
+      color: var(--sb-on-surface);
+    }
+  }
+
+  &__info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: var(--control-height-sm);
+    height: var(--control-height-sm);
+    border: none;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--sb-secondary);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--sb-surface-container);
+      color: var(--sb-on-surface);
+    }
 
     &:focus-visible {
       outline: var(--focus-ring-width) solid var(--color-focus-ring);
       outline-offset: var(--focus-ring-offset);
     }
 
-    &:disabled {
-      background: var(--color-bg);
-      color: var(--color-muted);
+    .material-symbols-outlined {
+      font-size: var(--text-heading);
     }
-  }
-}
-
-.cobertura {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-
-  &__cabecera {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-3);
-  }
-
-  &__texto {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  &__nombre {
-    color: var(--color-text);
-    font-size: var(--font-size-3xl);
-    font-weight: var(--font-weight-semibold);
-  }
-
-  &__descripcion {
-    color: var(--color-muted);
-    font-size: var(--font-size-lg);
-    line-height: var(--line-height-normal);
   }
 
   &__monto {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-4);
+    gap: var(--space-2);
+    padding-left: calc(var(--icon-badge-size) + var(--space-3));
+  }
+
+  &__monto-label {
+    flex: 1;
+    color: var(--sb-secondary);
+    font-size: var(--text-caption);
+    font-weight: var(--font-weight-semibold);
   }
 
   &__monto-valor {
-    min-width: var(--space-10);
+    min-width: 96px;
     text-align: center;
-    color: var(--color-text);
-    font-size: var(--font-size-valor-cobertura);
-    font-weight: var(--font-weight-valor-cobertura);
+    color: var(--sb-on-surface);
+    font-size: var(--text-body);
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
   }
 }
+
+@media (width <= 1023px) {
+  .cotizador-datos__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cotizador-datos__lateral {
+    position: static;
+    order: -1; // el resumen queda visible arriba en tablet/móvil
+  }
+}
+

@@ -21,14 +21,14 @@
 }
 
 .nn-titulo {
-  font-size: var(--font-size-h1-seccion);
+  font-size: var(--text-heading);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   margin: var(--space-0);
 }
 
 .nn-subtitulo {
-  font-size: var(--font-size-4md);
+  font-size: var(--text-body);
   color: var(--color-muted);
   line-height: var(--line-height-normal);
   margin: var(--space-0);
@@ -58,7 +58,7 @@
 }
 
 .nn-resumen-titulo {
-  font-size: var(--font-size-h3);
+  font-size: var(--text-title);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: var(--space-0);
@@ -77,14 +77,14 @@
   gap: var(--space-1);
 
   dt {
-    font-size: var(--font-size-sm);
+    font-size: var(--text-caption);
     color: var(--color-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
   dd {
-    font-size: var(--font-size-lg);
+    font-size: var(--text-body);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
     margin: var(--space-0);

@@ -8,7 +8,11 @@ import {
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
+import { ETIQUETA_ESTADO_CUENTA, moduloBloqueado } from '../../../core/models/cuenta.model';
+import { LayoutService } from '../../../core/services/layout.service';
+import { PerfilService } from '../../../core/services/perfil.service';
 import { SessionService } from '../../../core/services/session.service';
+import { IconComponent } from '../../../shared/components';
 
 /**
  * Acceso de navegación del sidebar del Shell_Aplicacion (Req 4.1).
@@ -31,15 +35,17 @@ export interface AccesoSidebar {
  * cuyo cableado con `loadComponent`/`authGuard` se realiza en la tarea 16.2.
  */
 export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
-  { ruta: 'seguimiento', icono: '◻', etiqueta: 'Seguimiento' },
-  { ruta: 'radicacion', icono: '+', etiqueta: 'Nueva radicación' },
-  { ruta: 'referidos', icono: '↗', etiqueta: 'Referir cliente' },
-  { ruta: 'estado-referidos', icono: '📊', etiqueta: 'Estado referidos' },
-  { ruta: 'cotizador', icono: '⚡', etiqueta: 'Cotizador' },
-  { ruta: 'renovaciones', icono: '♻', etiqueta: 'Renovaciones' },
-  { ruta: 'calendario', icono: '📅', etiqueta: 'Calendario' },
-  { ruta: 'documentos', icono: '◈', etiqueta: 'Documentos' },
-  { ruta: 'ayuda', icono: '?', etiqueta: 'Ayuda' },
+  { ruta: 'seguimiento', icono: 'grid_view', etiqueta: 'Seguimiento' },
+  { ruta: 'agente', icono: 'smart_toy', etiqueta: 'Agente IA' },
+  { ruta: 'radicacion', icono: 'post_add', etiqueta: 'Nueva radicación' },
+  { ruta: 'referidos', icono: 'person_add', etiqueta: 'Referir cliente' },
+  { ruta: 'estado-referidos', icono: 'conversion_path', etiqueta: 'Estado referidos' },
+  { ruta: 'cotizador', icono: 'calculate', etiqueta: 'Cotizador' },
+  { ruta: 'contrato', icono: 'description', etiqueta: 'Contratos' },
+  { ruta: 'renovaciones', icono: 'update', etiqueta: 'Renovaciones' },
+  { ruta: 'calendario', icono: 'calendar_today', etiqueta: 'Calendario' },
+  { ruta: 'documentos', icono: 'folder_open', etiqueta: 'Documentos' },
+  { ruta: 'ayuda', icono: 'help_outline', etiqueta: 'Ayuda' },
 ] as const;
 
 /**
@@ -67,12 +73,22 @@ export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
   selector: 'app-sidebar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, IconComponent],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })
 export class SidebarComponent {
   private readonly session = inject(SessionService);
+  private readonly layout = inject(LayoutService);
+
+  private readonly cuenta = inject(PerfilService);
+
+  /** Estado de la Cuenta (Prospecto / Broker registrado) para el pie del sidebar. */
+  protected readonly estadoCuenta = this.cuenta.estadoCuenta;
+  protected readonly etiquetaEstado = ETIQUETA_ESTADO_CUENTA;
+
+  /** En desktop el sidebar puede plegarse a un riel de iconos. */
+  protected readonly colapsado = this.layout.sidebarColapsado;
 
   /**
    * Indica si el cajón del sidebar está abierto en tablet/móvil (Req 36.5).
@@ -87,11 +103,41 @@ export class SidebarComponent {
    */
   @Output() readonly cerrar = new EventEmitter<void>();
 
-  /** Accesos del sidebar en el orden del prototipo (Req 4.1). */
-  protected readonly accesos = ACCESOS_SIDEBAR;
+  /** Accesos del sidebar; por defecto los del broker (Req 4.1). */
+  @Input() accesos: readonly AccesoSidebar[] = ACCESOS_SIDEBAR;
+
+  /** Ruta base de los accesos (`/app` para el broker, `/admin` para la consola). */
+  @Input() base = '/app';
+
+  /** Subtítulo de la marca superior. */
+  @Input() subtitulo = 'Panel Bróker';
+
+  /** Muestra la tarjeta "Línea Bróker VIP" (solo tiene sentido para brokers). */
+  @Input() mostrarVip = true;
+
+  /** Muestra el botón "Cerrar sesión" en el pie. */
+  @Input() conSalir = false;
+
+  /** Emite al pulsar "Cerrar sesión". */
+  @Output() readonly salir = new EventEmitter<void>();
 
   /** Perfil del Broker autenticado (nombre y rol) para el `sidebar-profile` (Req 4.3). */
   protected readonly perfil = this.session.perfil;
+
+  /** Solo en el portal del broker: el perfil y la Matriz_Acceso aplican a `/app`. */
+  protected get esPortalBroker(): boolean {
+    return this.base === '/app';
+  }
+
+  /** Módulo presentado con candado mientras la Cuenta es prospecto (solo UI). */
+  protected bloqueado(ruta: string): boolean {
+    return this.esPortalBroker && moduloBloqueado(this.estadoCuenta(), ruta);
+  }
+
+  /** Alterna el riel de iconos (solo desktop). */
+  protected alternarColapso(): void {
+    this.layout.alternarSidebar();
+  }
 
   /** Solicita plegar el cajón del sidebar en tablet/móvil (Req 36.5). */
   protected solicitarCierre(): void {

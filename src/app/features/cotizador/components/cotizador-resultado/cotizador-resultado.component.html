@@ -4,11 +4,6 @@
   </h3>
 
   @if (hayResultado && resultado) {
-    <!-- Alerta al propietario: sin contrato firmado no hay seguro (Req 8.6) -->
-    <app-alert-banner variante="warning" titulo="Importante">
-      Sin contrato firmado no hay seguro.
-    </app-alert-banner>
-
     <!-- Desglose calculado por el Motor_Tarifas del API_Backend (Req 8.1, 8.7) -->
     <div class="table-wrapper">
       <table class="desglose-table" aria-label="Desglose de la cotización">
@@ -40,8 +35,17 @@
         </tfoot>
       </table>
     </div>
+    <p class="resultado-nota">{{ notaTasas }}</p>
+
+    <!-- Alerta al propietario: sin contrato firmado no hay seguro (Req 8.6) -->
+    <app-alert-banner variante="warning" titulo="¡Señor propietario, alerta!">
+      Recuerde, no puede entregar el inmueble si no están los contratos firmados por
+      arrendatario y deudores solidarios. Si lo hace, es bajo su responsabilidad.
+      Sin contrato firmado no hay seguro.
+    </app-alert-banner>
 
     <!-- Acciones sobre el resultado (Req 9) -->
+    @if (mostrarAcciones) {
     <div class="resultado-acciones">
       <app-boton
         variante="outline"
@@ -60,5 +64,6 @@
         Radicar póliza
       </app-boton>
     </div>
+    }
   }
 </section>

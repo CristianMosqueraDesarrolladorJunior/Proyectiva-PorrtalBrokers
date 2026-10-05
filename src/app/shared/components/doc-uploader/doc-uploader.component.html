@@ -1,7 +1,7 @@
 <ul class="doc-list">
   @for (regla of reglas; track trackRegla($index, regla)) {
     <li class="doc-item">
-      <span class="doc-icon" aria-hidden="true">{{ regla.icono || '📄' }}</span>
+      <span class="doc-icon" aria-hidden="true"><span class="material-symbols-outlined">{{ regla.icono || 'description' }}</span></span>
       <span class="doc-info">
         <strong>
           {{ regla.etiqueta }}
@@ -11,7 +11,7 @@
         </strong>
         <small>{{ regla.descripcion }}</small>
         @if (estaCargado(regla.id)) {
-          <small class="doc-info__cargado">✓ {{ nombreCargado(regla.id) }}</small>
+          <small class="doc-info__cargado"><span class="material-symbols-outlined">check</span> {{ nombreCargado(regla.id) }}</small>
         }
       </span>
 

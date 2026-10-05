@@ -44,37 +44,74 @@ $font-size-scale: (
 
 :root {
   // ---------------------------------------------------------------------------
+  // Familias tipográficas — Sistema "Proyectiva Broker Nexus" (stitch)
+  // Brandbook Proyectiva (p. 19): familia Bolívar. Light/Regular/Semibold
+  // para textos de apoyo; Bold/ExtraBold para títulos y cifras destacadas.
+  // Fallback: Roboto (tipografía de composición del brandbook).
+  // ---------------------------------------------------------------------------
+  --font-family-body: 'Bolivar', 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-family-heading: 'Bolivar', 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-family-display: 'Bolivar', 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-family-mono: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+
+  // ---------------------------------------------------------------------------
+  // ESCALA POR ROLES (fuente única de tamaños de texto del portal).
+  // Los componentes usan SOLO estos tokens (--text-*); una regla de stylelint
+  // prohíbe font-size con los tokens legados --font-size-*. Cambiar un rol aquí
+  // cambia el tamaño en toda la plataforma.
+  //   caption   12px  ayudas, etiquetas en mayúscula, badges, encabezados de tabla
+  //   body-sm   13px  texto secundario, etiquetas de campo, celdas de tabla
+  //   body      14px  texto base, controles, botones
+  //   subtitle  16px  títulos de tarjeta, valores destacados de lista
+  //   title     20px  títulos de sección
+  //   heading   24px  títulos de bloque / cifras medianas
+  //   headline  28px  título de página, cifras de KPI
+  //   stat      32px  cifra hero (total, comisión)
+  // ---------------------------------------------------------------------------
+  --text-caption: 0.75rem;
+  --text-body-sm: 0.8125rem;
+  --text-body: 0.875rem;
+  --text-subtitle: 1rem;
+  --text-title: 1.25rem;
+  --text-heading: 1.5rem;
+  --text-headline: 1.75rem;
+  --text-stat: 2rem;
+  --text-display: 2.375rem;   // titular de bienvenida (Agente Brok)
+
+  // ---------------------------------------------------------------------------
   // Escala_Tipografica — 20 tamaños de fuente (Req 37.1, 37.2)
   // Un token por valor rem, nomenclatura ordenada de menor a mayor.
   // ---------------------------------------------------------------------------
-  --font-size-2xs: 0.65rem;
-  --font-size-xs: 0.70rem;
-  --font-size-2sm: 0.72rem;
-  --font-size-sm: 0.75rem;
-  --font-size-3sm: 0.78rem;
-  --font-size-md: 0.80rem;
-  --font-size-2md: 0.82rem;
-  --font-size-3md: 0.84rem;
-  --font-size-4md: 0.85rem;
-  --font-size-lg: 0.90rem;
-  --font-size-xl: 0.95rem;
-  --font-size-2xl: 1.00rem;
-  --font-size-3xl: 1.10rem;
-  --font-size-4xl: 1.20rem;
-  --font-size-5xl: 1.30rem;
-  --font-size-6xl: 1.40rem;
-  --font-size-7xl: 1.50rem;
-  --font-size-8xl: 1.80rem;
-  --font-size-9xl: 2.00rem;
-  --font-size-10xl: 2.40rem;
+  --font-size-2xs: var(--text-caption); // alias legado → rol
+  --font-size-xs: var(--text-caption); // alias legado → rol
+  --font-size-2sm: var(--text-caption); // alias legado → rol
+  --font-size-sm: var(--text-caption); // alias legado → rol
+  --font-size-3sm: var(--text-body-sm); // alias legado → rol
+  --font-size-md: var(--text-body-sm); // alias legado → rol
+  --font-size-2md: var(--text-body-sm); // alias legado → rol
+  --font-size-3md: var(--text-body-sm); // alias legado → rol
+  --font-size-4md: var(--text-body); // alias legado → rol
+  --font-size-lg: var(--text-body); // alias legado → rol
+  --font-size-xl: var(--text-body); // alias legado → rol
+  --font-size-2xl: var(--text-subtitle); // alias legado → rol
+  --font-size-3xl: var(--text-subtitle); // alias legado → rol
+  --font-size-4xl: var(--text-title); // alias legado → rol
+  --font-size-5xl: var(--text-title); // alias legado → rol
+  --font-size-6xl: var(--text-heading); // alias legado → rol
+  --font-size-7xl: var(--text-heading); // alias legado → rol
+  --font-size-8xl: var(--text-headline); // alias legado → rol
+  --font-size-9xl: var(--text-stat); // alias legado → rol
+  --font-size-10xl: var(--text-stat); // alias legado → rol
 
   // ---------------------------------------------------------------------------
   // Pesos de fuente (Req 37.3)
   // ---------------------------------------------------------------------------
+  --font-weight-light: 300;
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
 
   // ---------------------------------------------------------------------------
   // Interlineado / line-height (Req 37.4)

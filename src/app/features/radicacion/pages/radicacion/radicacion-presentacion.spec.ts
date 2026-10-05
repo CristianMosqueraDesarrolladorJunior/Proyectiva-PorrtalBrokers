@@ -1,9 +1,14 @@
 import {
+  claveConsultaSarlaft,
   documentosObligatoriosFaltantes,
   esNumeroDocumentoPropietarioValido,
   esNumeroEstudioValido,
   etiquetasDocumentos,
+  pasoActivoRadicacion,
+  permiteCargarDocumentos,
+  puedeConsultarSarlaftRadicacion,
   puedeEnviarRadicacion,
+  sujetoSarlaft,
   validarDatosRadicacion,
 } from './radicacion-presentacion';
 import type { TipoDocumentoRadicacion } from '../../../../core/models/radicacion.model';
@@ -152,6 +157,44 @@ describe('radicacion-presentacion', () => {
       const etiquetas = etiquetasDocumentos(['cedulaPropietario', 'formularioSarlaft']);
       // Then
       expect([...etiquetas]).toEqual(['Cédula del propietario', 'Formulario SARLAFT']);
+    });
+  });
+
+  describe('paso 4 SARLAFT (3 salidas)', () => {
+    it('solo habilita documentos con SARLAFT actualizado', () => {
+      expect(permiteCargarDocumentos('actualizado')).toBe(true);
+      expect(permiteCargarDocumentos('desactualizado')).toBe(false);
+      expect(permiteCargarDocumentos('consultable')).toBe(false);
+      expect(permiteCargarDocumentos(null)).toBe(false);
+    });
+
+    it('ubica el stepper según datos, SARLAFT y documentos', () => {
+      expect(pasoActivoRadicacion(false, 'actualizado', 0)).toBe(0);
+      expect(pasoActivoRadicacion(true, null, 2)).toBe(2);
+      expect(pasoActivoRadicacion(true, 'desactualizado', 2)).toBe(2);
+      expect(pasoActivoRadicacion(true, 'actualizado', 2)).toBe(3);
+      expect(pasoActivoRadicacion(true, 'actualizado', 0)).toBe(4);
+    });
+
+    it('invalida la consulta si cambia firmante, documento o tipo de persona', () => {
+      const base = claveConsultaSarlaft('propietario', 'CC', '1095836251', 'natural');
+      expect(claveConsultaSarlaft('propietario', 'CC', ' 1095836251 ', 'natural')).toBe(base);
+      expect(claveConsultaSarlaft('propietario', 'CC', '1095836252', 'natural')).not.toBe(base);
+      expect(claveConsultaSarlaft('propietario', 'CE', '1095836251', 'natural')).not.toBe(base);
+      expect(claveConsultaSarlaft('propietario', 'CC', '1095836251', 'juridica')).not.toBe(base);
+      expect(claveConsultaSarlaft('apoderado', 'CC', '1095836251', 'natural')).not.toBe(base);
+    });
+
+    it('consulta al apoderado cuando es quien firma', () => {
+      expect(sujetoSarlaft(true)).toBe('apoderado');
+      expect(sujetoSarlaft(false)).toBe('propietario');
+    });
+
+    it('exige el documento del apoderado para consultar en el caso apoderado', () => {
+      expect(puedeConsultarSarlaftRadicacion(true, false, '')).toBe(true);
+      expect(puedeConsultarSarlaftRadicacion(true, true, '')).toBe(false);
+      expect(puedeConsultarSarlaftRadicacion(true, true, '80123456')).toBe(true);
+      expect(puedeConsultarSarlaftRadicacion(false, true, '80123456')).toBe(false);
     });
   });
 });

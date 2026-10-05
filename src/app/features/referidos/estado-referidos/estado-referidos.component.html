@@ -1,47 +1,77 @@
-<section class="estado-referidos" aria-labelledby="estado-referidos-titulo">
-  <header class="estado-referidos__header">
-    <h1 id="estado-referidos-titulo" class="estado-referidos__titulo">Estado de mis referidos</h1>
-    <p class="estado-referidos__subtitulo">
-      Seguimiento de todos los clientes que has referido.
-    </p>
-  </header>
+<!--
+  Estado de referidos (Req 15) — rediseño "Proyectiva Broker Nexus".
+  KPIs con contexto (conversión / tasa), pestañas de estado con contadores
+  (app-filter-tabs) y tabla reutilizable (app-data-table, reflow a tarjetas en móvil).
+-->
+<section class="estado-referidos">
+  <app-page-header
+    eyebrow="Módulo Comercial Bróker"
+    titulo="Estado de mis referidos"
+    subtitulo="Sigue el avance de los clientes que referiste para otros seguros (Hogar, Vida y Carros): en proceso, aceptados o rechazados."
+  >
+    <div acciones>
+      <app-boton variante="accent" (clicked)="nuevoReferido()">Nuevo referido</app-boton>
+    </div>
+  </app-page-header>
 
   @if (errorCarga()) {
     <app-alert-banner variante="error" titulo="No se pudieron cargar los referidos">
       {{ errorCarga() }}
+      <app-boton variante="outline" (clicked)="cargar()">Reintentar</app-boton>
     </app-alert-banner>
   }
 
   <app-grid-layout tipo="kpi-grid">
-    <app-card variante="kpi-card">
-      <span class="kpi__etiqueta">Total</span>
-      <span class="kpi__valor">{{ kpis().total }}</span>
-    </app-card>
-    <app-card variante="kpi-card">
-      <span class="kpi__etiqueta">Aceptadas</span>
-      <span class="kpi__valor">{{ kpis().aceptadas }}</span>
-    </app-card>
-    <app-card variante="kpi-card">
-      <span class="kpi__etiqueta">En proceso</span>
-      <span class="kpi__valor">{{ kpis().enProceso }}</span>
-    </app-card>
-    <app-card variante="kpi-card" [danger]="kpis().rechazadas > 0">
-      <span class="kpi__etiqueta">Rechazadas</span>
-      <span class="kpi__valor">{{ kpis().rechazadas }}</span>
-    </app-card>
+    <app-kpi-card label="Total referidos" [valor]="kpis().total" icono="groups" />
+    <app-kpi-card
+      label="Aceptadas / ganadas"
+      [valor]="kpis().aceptadas"
+      icono="check_circle"
+      variante="exito"
+      [sub]="conversion()"
+    />
+    <app-kpi-card
+      label="En proceso comercial"
+      [valor]="kpis().enProceso"
+      icono="pending_actions"
+    />
+    <app-kpi-card
+      label="Rechazadas / retiradas"
+      [valor]="kpis().rechazadas"
+      icono="cancel"
+      [variante]="kpis().rechazadas > 0 ? 'alerta' : 'default'"
+      [sub]="tasaRechazo()"
+    />
   </app-grid-layout>
 
+  <app-filter-tabs
+    [tabs]="pestanas()"
+    [activa]="estadoActivo()"
+    (activaChange)="estadoActivo.set($event)"
+  />
+
   @if (cargando()) {
-    <app-escalerita-loader texto="Cargando referidos..."></app-escalerita-loader>
+    <app-skeleton [lineas]="6" [alto]="28" ariaLabel="Cargando referidos" />
   } @else {
     <app-data-table
       [columnas]="columnas"
       [filas]="filas()"
-      [total]="totalBackend()"
+      [total]="filas().length"
       [tamanoPagina]="filas().length || 1"
       [conBusqueda]="true"
-      placeholderBusqueda="Buscar por nombre o producto..."
+      placeholderBusqueda="Buscar por cliente o producto..."
       ariaLabel="Tabla de referidos"
     ></app-data-table>
   }
+
+  <app-callout-card
+    icono="bolt"
+    tono="info"
+    titulo="¿Tienes otro cliente interesado?"
+    descripcion="Refiérelo en minutos y sigue su avance desde esta misma pantalla."
+  >
+    <div acciones>
+      <app-boton variante="outline" (clicked)="nuevoReferido()">Referir cliente</app-boton>
+    </div>
+  </app-callout-card>
 </section>

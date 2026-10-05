@@ -8,15 +8,16 @@
 }
 
 .filtrado-inteligente {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--sb-surface);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--sb-shadow-1);
   margin-bottom: var(--space-4);
   overflow: hidden;
   transition: box-shadow 0.15s ease;
 
   &:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--sb-shadow-2);
   }
 }
 
@@ -47,11 +48,11 @@
 }
 
 .filtrado-icono {
-  font-size: var(--font-size-3xl);
+  font-size: var(--text-subtitle);
 }
 
 .filtrado-titulo {
-  font-size: var(--font-size-lg);
+  font-size: var(--text-body);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -61,13 +62,13 @@
   border-radius: var(--radius-xs);
   background: var(--color-badge-info-bg);
   color: var(--color-badge-info-text);
-  font-size: var(--font-size-xs);
+  font-size: var(--text-caption);
   font-weight: var(--font-weight-medium);
 }
 
 // Chevron que rota al abrir (.filtrado-chevron).
 .filtrado-chevron {
-  font-size: var(--font-size-6xl);
+  font-size: var(--text-heading);
   color: var(--color-muted);
   transition: transform 0.2s ease;
 }

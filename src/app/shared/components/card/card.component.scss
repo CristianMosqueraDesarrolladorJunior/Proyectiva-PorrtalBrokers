@@ -1,7 +1,7 @@
 // =============================================================================
-// CardComponent — variantes de tarjeta tokenizadas (Req 35.3)
-// Sin valores hardcodeados: color/tamaño/peso/radio/espaciado/sombra vía
-// Design_Token.
+// CardComponent — variantes de tarjeta · sistema "Proyectiva Broker Nexus"
+// (stitch). Superficie --sb-surface, borde --sb-border, sombra --sb-shadow-1,
+// hover --sb-shadow-2, radio --radius-xl. 100% tokenizado.
 // =============================================================================
 
 :host {
@@ -9,55 +9,68 @@
 }
 
 .card {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-}
+  background: var(--sb-surface);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--sb-shadow-1);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
 
-// --- commission-card: tarjeta de comisión estimada (.commission-card) ---
-.commission-card {
-  border-radius: var(--radius-md);
-  padding: var(--space-6) var(--space-6);
-}
-
-// --- dash-kpi: KPI apilado del dashboard (.dash-kpi) ---
-.dash-kpi {
-  border-radius: var(--radius-md);
-  padding: var(--space-4) var(--space-5);
-}
-
-// Estado danger del KPI del dashboard (.dash-kpi-danger)
-.dash-kpi-danger {
-  border-color: var(--color-kpi-danger-border);
-}
-
-// --- kpi-card: tarjeta KPI centrada (.kpi-card) ---
-.kpi-card {
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  text-align: center;
-}
-
-// --- form-card: contenedor de formulario (.form-card) ---
-.form-card {
-  border-radius: var(--radius-md);
-  padding: var(--space-6);
-  margin-bottom: var(--space-4);
-}
-
-// --- cobertura-card: tarjeta de cobertura con estado activo (.cobertura-card) ---
-.cobertura-card {
-  border-radius: var(--radius-md);
-  padding: var(--space-4) var(--space-5);
-  margin-bottom: var(--space-3);
-
-  &.active {
-    border-color: var(--color-accent);
+  &:hover {
+    box-shadow: var(--sb-shadow-2);
+    border-color: var(--sb-surface-highest);
   }
 }
 
-// --- track-card: tarjeta compacta de seguimiento (.track-card) ---
+// --- commission-card: tarjeta de comisión estimada ---
+.commission-card {
+  padding: var(--space-6);
+}
+
+// --- dash-kpi: KPI apilado del dashboard ---
+.dash-kpi {
+  padding: var(--space-5);
+}
+
+// Estado danger del KPI del dashboard (inset izquierdo de color)
+.dash-kpi-danger {
+  position: relative;
+  border-color: var(--sb-error-container);
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--space-1);
+    background: var(--sb-error);
+  }
+}
+
+// --- kpi-card: tarjeta KPI centrada ---
+.kpi-card {
+  padding: var(--space-5);
+  text-align: center;
+}
+
+// --- form-card: contenedor de formulario ---
+.form-card {
+  padding: var(--card-padding);
+  margin-bottom: var(--space-4);
+}
+
+// --- cobertura-card: tarjeta de cobertura con estado activo ---
+.cobertura-card {
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-0);
+
+  &.active {
+    border-color: var(--sb-primary);
+    box-shadow: var(--sb-shadow-2);
+  }
+}
+
+// --- track-card: tarjeta compacta de seguimiento ---
 .track-card {
-  border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-4) var(--space-5);
   text-align: center;
 }

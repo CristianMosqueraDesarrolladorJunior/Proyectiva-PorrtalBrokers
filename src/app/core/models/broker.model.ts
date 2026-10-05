@@ -6,10 +6,18 @@
 /** Estado del Broker en la Base_Brokers (Req 1). */
 export type EstadoBroker = 'activo' | 'pendiente' | 'inactivo';
 
-/** Perfil del Broker autenticado mostrado en el Shell_Aplicacion (Req 4.3). */
+/**
+ * Rol del usuario autenticado. Broker usa `/app`; Administrador y Comercial
+ * usan la consola `/admin`. El backend es quien autoriza de verdad.
+ */
+export type Rol = 'Broker' | 'Administrador' | 'Comercial';
+
+/** Perfil del usuario autenticado mostrado en el Shell_Aplicacion (Req 4.3). */
 export interface PerfilBroker {
   readonly nombre: string;
-  readonly rol: string;
+  readonly rol: Rol;
+  /** Solo para el rol Comercial: su cartera. */
+  readonly comercialId?: string;
 }
 
 /** Credenciales de login del Broker (Req 1.1, 1.4). */

@@ -1,8 +1,9 @@
-<section class="renovaciones" aria-labelledby="renovaciones-titulo">
-  <header class="renovaciones__header">
-    <h1 id="renovaciones-titulo" class="renovaciones__titulo">Gestión de Renovaciones</h1>
-    <p class="renovaciones__subtitulo">Consulta y gestiona las renovaciones de tus pólizas.</p>
-  </header>
+<section class="renovaciones">
+  <app-page-header
+    eyebrow="Portafolio"
+    titulo="Gestión de Renovaciones"
+    subtitulo="Consulta y gestiona las renovaciones de tus pólizas."
+  ></app-page-header>
 
   @if (error()) {
     <app-alert-banner variante="error" titulo="No se pudo cargar">
@@ -10,42 +11,35 @@
     </app-alert-banner>
   }
 
-  <!-- KPIs: card grande (portafolio) + 3 tarjetas de estado (Req 17) -->
+  <!-- KPIs del portafolio: 4 tarjetas KpiCard del mismo tamaño (Req 17) -->
+  <!-- Mismo estilo/tamaño que el Dashboard de Seguimiento: KpiCardComponent. -->
   <div class="renovaciones__kpis">
-    <div class="renov-portafolio">
-      <span class="renov-portafolio__label">Pólizas en portafolio</span>
-      <span class="renov-portafolio__valor">{{ portafolio()?.total ?? '—' }}</span>
-      <span class="renov-portafolio__sub">Total de pólizas activas</span>
-      <div class="renov-portafolio__desglose">
-        <div class="renov-portafolio__row">
-          <span>Renovadas</span><strong>{{ portafolio()?.renovadas ?? '—' }}</strong>
-        </div>
-        <div class="renov-portafolio__row">
-          <span>Próximas a renovar</span><strong>{{ portafolio()?.proximasARenovar ?? '—' }}</strong>
-        </div>
-        <div class="renov-portafolio__row">
-          <span>A punto de vencer</span><strong>{{ portafolio()?.aPuntoDeVencer ?? '—' }}</strong>
-        </div>
-      </div>
-    </div>
-
-    <div class="renov-estados">
-      <div class="renov-estado renov-estado--success">
-        <span class="renov-estado__label">Renovadas</span>
-        <span class="renov-estado__valor">{{ portafolio()?.renovadas ?? '—' }}</span>
-        <span class="renov-estado__sub">Al día con renovaciones</span>
-      </div>
-      <div class="renov-estado renov-estado--accent">
-        <span class="renov-estado__label">Próximas a renovar</span>
-        <span class="renov-estado__valor">{{ portafolio()?.proximasARenovar ?? '—' }}</span>
-        <span class="renov-estado__sub">En los próximos 30 días</span>
-      </div>
-      <div class="renov-estado renov-estado--danger">
-        <span class="renov-estado__label">A punto de vencer</span>
-        <span class="renov-estado__valor">{{ portafolio()?.aPuntoDeVencer ?? '—' }}</span>
-        <span class="renov-estado__sub">Requieren atención inmediata</span>
-      </div>
-    </div>
+    <app-kpi-card
+      label="Pólizas en portafolio"
+      [valor]="portafolio()?.total ?? '—'"
+      icono="folder_open"
+      sub="Total de pólizas activas"
+    />
+    <app-kpi-card
+      label="Renovadas"
+      [valor]="portafolio()?.renovadas ?? '—'"
+      icono="task_alt"
+      variante="exito"
+      sub="Al día con renovaciones"
+    />
+    <app-kpi-card
+      label="Próximas a renovar"
+      [valor]="portafolio()?.proximasARenovar ?? '—'"
+      icono="event_upcoming"
+      sub="En los próximos 30 días"
+    />
+    <app-kpi-card
+      label="A punto de vencer"
+      [valor]="portafolio()?.aPuntoDeVencer ?? '—'"
+      icono="warning"
+      variante="alerta"
+      sub="Requieren atención inmediata"
+    />
   </div>
 
   <!-- Buscar cliente (Req 16.1) -->

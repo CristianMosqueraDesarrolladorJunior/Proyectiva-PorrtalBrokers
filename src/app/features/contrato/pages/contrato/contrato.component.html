@@ -9,16 +9,21 @@
       (volver)="volverARadicacion()"
     ></app-success-screen>
   } @else {
-    <header class="contrato-header">
-      <h1 id="contrato-titulo" class="contrato-titulo">Crear contrato de arrendamiento</h1>
-      <p class="contrato-subtitulo">
-        Completa los datos en cada paso para generar automáticamente el contrato de
-        arrendamiento.
-      </p>
-    </header>
+    <app-page-header
+    eyebrow="Contratos"
+    tituloId="contrato-titulo"
+    titulo="Crear contrato de arrendamiento"
+    subtitulo="Completa los datos en cada paso para generar automáticamente el contrato de arrendamiento."
+  ></app-page-header>
 
     <!-- Indicador de pasos (Req 30.1) -->
-    <app-stepper [pasos]="pasos" [pasoActivo]="pasoActual()"></app-stepper>
+    <app-step-tabs
+      [pasos]="pasos"
+      [pasoActivo]="pasoActual()"
+      [navegable]="true"
+      ariaLabel="Pasos del contrato"
+      (pasoSeleccionado)="irAPaso($event)"
+    />
 
     <!-- Paso 1: Datos del arrendador (Req 30.2) -->
     @if (pasoActual() === 0) {

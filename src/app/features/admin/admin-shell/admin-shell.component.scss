@@ -1,0 +1,98 @@
+@use '../../../shared/styles/mixins' as *;
+
+// Barra superior propia de la consola (no usa búsqueda ni notificaciones del broker).
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--topbar-height);
+  padding: var(--space-0) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-card);
+}
+
+.admin-topbar__menu {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--menu-button-size);
+  height: var(--menu-button-size);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.admin-topbar__titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--text-subtitle);
+}
+
+.admin-topbar__rol {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--sb-slate);
+  color: var(--sb-on-slate);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+
+  &--comercial {
+    background: var(--sb-primary);
+    color: var(--sb-on-primary);
+  }
+}
+
+.admin-topbar__demo {
+  margin-left: auto;
+  padding: 2px var(--space-2);
+  border: 1px dashed var(--sb-tint-accent-border);
+  border-radius: var(--radius-pill);
+  color: var(--sb-tint-accent-text);
+  font-size: var(--text-caption);
+}
+
+@mixin topbar-compacta {
+  .admin-topbar {
+    padding: var(--space-0) var(--space-4);
+  }
+
+  .admin-topbar__menu {
+    display: inline-flex;
+  }
+
+  .admin-topbar__demo {
+    display: none;
+  }
+}
+
+@include respond-to('tablet') {
+  @include topbar-compacta;
+}
+
+@include respond-to('mobile') {
+  @include topbar-compacta;
+}
+
+.admin-aviso {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+  color: var(--color-muted);
+
+  button {
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--sb-primary);
+    border-radius: var(--radius-btn-sm);
+    background: var(--sb-primary);
+    color: var(--sb-on-primary);
+    cursor: pointer;
+  }
+}

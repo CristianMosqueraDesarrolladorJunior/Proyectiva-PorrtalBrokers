@@ -36,7 +36,7 @@
 }
 
 .alert-icon {
-  font-size: var(--font-size-5xl);
+  font-size: var(--text-title);
   line-height: var(--line-height-tight);
   flex-shrink: 0;
 }
@@ -48,13 +48,13 @@
 .alert-title {
   display: block;
   margin-bottom: var(--space-1);
-  font-size: var(--font-size-lg);
+  font-size: var(--text-body);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
 }
 
 .alert-text {
-  font-size: var(--font-size-2md);
+  font-size: var(--text-body-sm);
   color: var(--color-muted);
   line-height: var(--line-height-tight);
 }

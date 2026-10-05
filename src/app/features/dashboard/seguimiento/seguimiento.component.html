@@ -1,61 +1,70 @@
 <section class="seguimiento" aria-labelledby="seg-titulo">
-  <header class="seg-header">
-    <h1 id="seg-titulo" class="seg-titulo">Seguimiento</h1>
-    <p class="seg-subtitulo">Monitorea tus comisiones, KPIs y el estado de tus solicitudes.</p>
-  </header>
+  <app-page-header
+    eyebrow="Resumen de Operaciones"
+    tituloId="seg-titulo"
+    titulo="Seguimiento y Rendimiento"
+    subtitulo="Monitorea tus comisiones acumuladas, KPIs del mes y el estado de radicación en tiempo real."
+  >
+    <div acciones>
+      <app-guarantee-badge icono="verified" variante="tertiary">Tarifas 2026 Vigentes</app-guarantee-badge>
+      <app-guarantee-badge icono="bolt" variante="primary">Cotizador Express</app-guarantee-badge>
+    </div>
+  </app-page-header>
 
   <!-- Banner Herramienta Rápida (Req 5.1, 5.5) -->
   <app-quick-tool-banner
     titulo="Cotiza en segundos la póliza ideal para tu cliente"
     descripcion="Calcula primas, coberturas y comisiones al instante. Comparte la cotización directamente con tu cliente."
-    textoAccion="Ir al cotizador →"
+    textoAccion="Ir al cotizador"
     (accion)="irAlCotizador()"
   ></app-quick-tool-banner>
 
-  <!-- Dashboard grid: comisión (izq) + KPIs apilados (der) (Req 5.2, 5.3) -->
+  <!-- Dashboard grid: comisión (izq, ancha) + KPIs (der, 2x2) (Req 5.2, 5.3) -->
   <div class="dash-grid">
-    <!-- Tarjeta de comisión estimada (Req 5.2) -->
-    <div class="commission-card">
-      <span class="comm-label">Valor de comisión estimada o aproximada</span>
-      <span class="comm-value">
-        {{ comisiones() ? formatearCop(comisiones()!.valorEstimado) : '—' }}
-      </span>
-      @if (comisiones(); as c) {
-        <span class="comm-periodo">{{ c.periodo }} · {{ c.polizasRadicadas }} pólizas radicadas</span>
-        <div class="comm-desglose">
-          @for (item of c.desglose; track item.producto) {
-            <div class="comm-row">
-              <span>{{ item.producto }}</span>
-              <strong>{{ formatearCop(item.valor) }}</strong>
-            </div>
-          }
-        </div>
-      } @else {
-        <span class="comm-periodo">Sin datos de comisión disponibles.</span>
-      }
-    </div>
+    <!-- Tarjeta de comisión estimada con barra apilada por ramo (Req 5.2) -->
+    <app-commission-breakdown-card
+      class="dash-comm"
+      [valorEstimado]="comisiones()?.valorEstimado ?? 0"
+      [periodo]="comisiones()?.periodo ?? ''"
+      [polizasRadicadas]="comisiones()?.polizasRadicadas ?? 0"
+      [desglose]="comisiones()?.desglose ?? []"
+    />
 
-    <!-- KPIs apilados (Req 5.3, 5.4) -->
-    <div class="dash-kpis-stack">
-      <div class="dash-kpi">
-        <span class="dash-kpi-label">Primas generadas</span>
-        <span class="dash-kpi-value">
-          {{ kpis() ? formatearCop(kpis()!.primasGeneradas) : '—' }}
-        </span>
-      </div>
-      <div class="dash-kpi">
-        <span class="dash-kpi-label">Total radicadas</span>
-        <span class="dash-kpi-value">{{ kpis()?.totalRadicadas ?? '—' }}</span>
-      </div>
-      <div class="dash-kpi">
-        <span class="dash-kpi-label">En revisión</span>
-        <span class="dash-kpi-value dash-kpi-value--accent">{{ kpis()?.enRevision ?? '—' }}</span>
-      </div>
+    <!-- KPIs en grid 2x2 con íconos + delta de tendencia (Req 5.3, 5.4) -->
+    <div class="dash-kpis-grid">
+      <app-kpi-card
+        label="Primas generadas"
+        [valor]="kpis() ? formatearCop(kpis()!.primasGeneradas) : '—'"
+        icono="trending_up"
+        delta="+12.4%"
+        [deltaPositivo]="true"
+        sub="COP en primas brutas"
+      />
+      <app-kpi-card
+        label="Total radicadas"
+        [valor]="kpis()?.totalRadicadas ?? '—'"
+        icono="contract"
+        variante="exito"
+        delta="91% efectividad"
+        [deltaPositivo]="true"
+        sub="Solicitudes gestionadas"
+      />
+      <app-kpi-card
+        label="En revisión"
+        [valor]="kpis()?.enRevision ?? '—'"
+        icono="pending_actions"
+        sub="En mesa de suscripción · ~45 min"
+      />
       <!-- KPI de alerta con estilo danger (Req 5.4) -->
-      <div class="dash-kpi dash-kpi--danger">
-        <span class="dash-kpi-label">Bloqueadas</span>
-        <span class="dash-kpi-value">{{ kpis()?.bloqueadas ?? '—' }}</span>
-      </div>
+      <app-kpi-card
+        label="Bloqueadas"
+        [valor]="kpis()?.bloqueadas ?? '—'"
+        icono="warning"
+        variante="alerta"
+        delta="Falta doc. SARLAFT"
+        [deltaPositivo]="false"
+        sub="Subsanar ahora"
+      />
     </div>
   </div>
 
@@ -103,15 +112,21 @@
         Limpiar filtros
       </button>
       <button type="button" class="seg-btn-accent" (click)="aplicarFiltros()">
-        Aplicar filtros →
+        Aplicar filtros
       </button>
     </div>
   </app-filtrado-inteligente>
 
   <!-- Tabla de solicitudes con paginación (Req 6.1, 6.5) -->
   @if (errorTabla(); as error) {
-    <p class="seg-error" role="alert">{{ error }}</p>
+    <app-alert-banner variante="error" titulo="No se pudieron cargar las solicitudes">
+      {{ error }}
+      <app-boton variante="outline" (clicked)="aplicarFiltros()">Reintentar</app-boton>
+    </app-alert-banner>
   }
+  @if (cargandoTabla() && filas().length === 0) {
+    <app-skeleton [lineas]="6" [alto]="28" ariaLabel="Cargando solicitudes" />
+  } @else {
   <app-data-table
     [columnas]="columnas"
     [filas]="filas()"
@@ -125,6 +140,7 @@
     (seleccionFila)="onSeleccionFila($event)"
     (accion)="onGestionar($event)"
   ></app-data-table>
+  }
 
   <!-- Detalle de la solicitud seleccionada (drawer) (Req 6.4, 34) -->
   <app-detalle-solicitud

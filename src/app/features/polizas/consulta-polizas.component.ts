@@ -22,6 +22,7 @@ import { Poliza } from '../../core/models/poliza.model';
 import { esPolizaRenovable } from './poliza-renovable';
 import { computed } from '@angular/core';
 
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 /** Estado de la consulta para controlar loader, error y vacío (Req 16.1). */
 type EstadoConsulta = 'inicial' | 'consultando' | 'resultado' | 'error';
 
@@ -52,7 +53,7 @@ const CEDULA_MAX_DIGITOS = 10;
   selector: 'app-consulta-polizas',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [PageHeaderComponent, 
     FormsModule,
     BotonComponent,
     FormFieldComponent,

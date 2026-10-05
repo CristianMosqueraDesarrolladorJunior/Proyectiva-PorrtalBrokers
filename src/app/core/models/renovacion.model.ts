@@ -43,9 +43,8 @@ export interface AvisoSarlaftEnlaceDigital {
   readonly mensaje: string;     // "El formulario SARLAFT se enviará al propietario mediante enlace digital."
 }
 
-/** Motivo de la No Renovación; conjunto cerrado (Req 22.1). */
-export type MotivoNoRenovacion =
-  | 'costoElevado' | 'cambioProveedor' | 'yaNoNecesita' | 'insatisfaccionServicio';
+/** Motivo de la No Renovación; conjunto cerrado del proceso real de renovaciones. */
+export type MotivoNoRenovacion = 'precioElevado' | 'ventaInmueble' | 'descontentoServicio';
 
 /** Notificación de No Renovación radicada por el Broker (Req 22). */
 export interface NoRenovacionRequest {
@@ -63,4 +62,49 @@ export interface CasoEspecialRequest {
   readonly tipo: TipoCasoEspecial;
   readonly documentoLegal: DocumentoCargado; // PDF (Req 23.1, 23.2)
   readonly observaciones?: string;           // Req 23.1
+}
+
+// --- Gestión de renovación (wizard /renovaciones/detalle) -------------------
+// Proceso real: 4 opciones (física, digital, caso especial, corrección) y TODAS
+// validan SARLAFT antes de enviar la solicitud.
+
+/** Resultado de la validación SARLAFT de renovación: vigente si tiene menos de 36 meses. */
+export type EstadoSarlaftRenovacion = 'vigente' | 'no_vigente';
+
+/** Consulta SARLAFT de la póliza; en la reconsulta se adjunta el SARLAFT actualizado. */
+export interface ConsultaSarlaftRenovacionRequest {
+  readonly numeroPoliza: string;
+  readonly documentoActualizado?: DocumentoCargado;
+}
+
+/** Respuesta de la validación SARLAFT de renovación. El backend decide la vigencia. */
+export interface ResultadoSarlaftRenovacion {
+  readonly estado: EstadoSarlaftRenovacion;
+  readonly ultimaExpedicion: string;      // ISO-8601
+  readonly tiempoTranscurrido: string;    // legible, p. ej. "4 años, 2 meses"
+  readonly mesesDesdeExpedicion: number;
+  readonly validacionId: string;
+}
+
+/** Tipo de renovación: física (formulario cargado) o digital (detalles + ajuste). */
+export type TipoSolicitudRenovacion = 'fisica' | 'digital';
+
+/** Ajustes de la renovación digital (paso Ajuste). */
+export interface AjustesRenovacion {
+  readonly valorCanon: number;
+  readonly administracion: number;
+  readonly valorAseguradoServicios: number;
+  readonly valorAseguradoDyF: number;
+  readonly ipcAplicado: number;
+}
+
+/** Solicitud de renovación física o digital enviada tras SARLAFT vigente. */
+export interface SolicitudRenovacionRequest {
+  readonly numeroPoliza: string;
+  readonly tipo: TipoSolicitudRenovacion;
+  readonly formularioRenovacion?: DocumentoCargado; // física
+  readonly modalidad?: ModalidadRenovacion;         // digital
+  readonly ajustes?: AjustesRenovacion;             // digital con ajustes
+  readonly comentarios?: string;
+  readonly validacionSarlaftId: string;
 }

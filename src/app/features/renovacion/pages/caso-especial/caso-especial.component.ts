@@ -37,6 +37,7 @@ import {
   TIPOS_CASO_ESPECIAL,
 } from '../../caso-especial-habilitacion';
 
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 /** Estado del envío del Caso Especial para controlar loaders y confirmación (Req 23.3). */
 type EstadoEnvioCasoEspecial = 'inactivo' | 'enviando' | 'exito';
 
@@ -76,7 +77,7 @@ const MENSAJE_RECHAZO: Readonly<Record<MotivoRechazoDocumento, string>> = {
   selector: 'app-caso-especial',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [PageHeaderComponent, 
     FormsModule,
     RadioGroupComponent,
     DocUploaderComponent,

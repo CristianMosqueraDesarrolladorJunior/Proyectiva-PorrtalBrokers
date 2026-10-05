@@ -1,62 +1,112 @@
 <!--
-  Sidebar de navegación del Shell_Aplicacion (Req 4).
-  Reproduce el marcado del prototipo (sidebar-profile/avatar/sidebar-nav/
-  nav-item/sidebar-footer). El acceso activo se marca con routerLinkActive
-  (Req 4.2) y el perfil del Broker proviene del SessionService (Req 4.3).
+  Sidebar de navegación del Shell_Aplicacion (Req 4) — sistema de diseño
+  "Proyectiva Broker Nexus" (stitch): fondo slate, marca superior, ítems con
+  Material Symbols y estado activo naranja, perfil del broker y tarjeta VIP.
 -->
-<aside class="sidebar" [class.sidebar--abierto]="abierto">
-  <!-- Perfil del Broker autenticado: nombre y rol (Req 4.3). -->
-  <div class="sidebar-profile">
-    <div class="avatar" aria-hidden="true">{{ iniciales(perfil()?.nombre) }}</div>
-    @if (perfil(); as broker) {
-      <div>
-        <strong>{{ broker.nombre }}</strong>
-        <br />
-        <small>{{ broker.rol }}</small>
-      </div>
-    }
+<aside class="sidebar" [class.sidebar--abierto]="abierto" [class.sidebar--colapsado]="colapsado()">
+  <!-- Marca superior -->
+  <div class="sidebar__brand">
+    <div class="sidebar__brand-mark" aria-hidden="true">
+      <app-icon nombre="shield" [tamano]="20" [relleno]="true" />
+    </div>
+    <div class="sidebar__brand-text">
+      <strong>Proyectiva</strong>
+      <span>{{ subtitulo }}</span>
+    </div>
 
-    <!--
-      Control de cierre del cajón, visible solo en tablet/móvil (Estrategia
-      responsiva, Req 36.5). En desktop permanece oculto por CSS. Mantiene foco
-      visible y etiqueta accesible (Req 27, 36.6).
-    -->
     <button
       type="button"
-      class="sidebar-close"
+      class="sidebar__close"
       aria-label="Cerrar menú de navegación"
       (click)="solicitarCierre()"
     >
-      <span aria-hidden="true">✕</span>
+      <app-icon nombre="close" [tamano]="20" />
     </button>
   </div>
 
+  <!-- Colapsar/expandir (solo desktop): el sidebar pasa a riel de iconos. -->
+  <button
+    type="button"
+    class="sidebar__colapsar"
+    [attr.aria-label]="colapsado() ? 'Expandir menú' : 'Colapsar menú'"
+    [attr.aria-expanded]="!colapsado()"
+    [title]="colapsado() ? 'Expandir menú' : 'Colapsar menú'"
+    (click)="alternarColapso()"
+  >
+    <app-icon [nombre]="colapsado() ? 'left_panel_open' : 'left_panel_close'" [tamano]="18" />
+  </button>
+
   <!-- Accesos de navegación (Req 4.1). El ítem activo se resalta (Req 4.2). -->
-  <nav class="sidebar-nav" aria-label="Navegación principal">
+  <nav class="sidebar__nav" aria-label="Navegación principal">
     @for (acceso of accesos; track acceso.ruta) {
       <a
         class="nav-item"
-        [routerLink]="['/app', acceso.ruta]"
+        [routerLink]="[base, acceso.ruta]"
         routerLinkActive="active"
         #enlace="routerLinkActive"
         [attr.aria-current]="enlace.isActive ? 'page' : null"
+        [class.nav-item--bloqueado]="bloqueado(acceso.ruta)"
+        [attr.title]="bloqueado(acceso.ruta) ? acceso.etiqueta + ' · disponible al completar tu registro' : colapsado() ? acceso.etiqueta : null"
+        [attr.aria-label]="colapsado() || bloqueado(acceso.ruta) ? acceso.etiqueta + (bloqueado(acceso.ruta) ? ' (requiere registro)' : '') : null"
         (click)="solicitarCierre()"
       >
-        <span class="nav-item__icono" aria-hidden="true">{{ acceso.icono }}</span>
-        {{ acceso.etiqueta }}
+        <app-icon class="nav-item__icono" [nombre]="acceso.icono" [tamano]="20" />
+        <span class="nav-item__texto">{{ acceso.etiqueta }}</span>
+        @if (bloqueado(acceso.ruta)) {
+          <app-icon class="nav-item__candado" nombre="lock" [tamano]="14" />
+        }
       </a>
     }
   </nav>
 
-  <!-- Pie del sidebar con la marca del panel (prototipo). -->
-  <div class="sidebar-footer">
-    <div class="sidebar-footer__marca">
-      <div class="sidebar-footer__logo" aria-hidden="true">P</div>
-      <div>
-        <strong>Proyectiva</strong>
-        <br />
-        <small>PANEL BRÓKER</small>
+  <!-- Perfil del broker + tarjeta VIP -->
+  <div class="sidebar__footer">
+    @if (perfil(); as broker) {
+      @if (esPortalBroker) {
+        <!-- Abre "Mi perfil": datos, SARLAFT, documentos y estado de la cuenta. -->
+        <a
+          class="sidebar__profile sidebar__profile--enlace"
+          routerLink="/app/perfil"
+          routerLinkActive="sidebar__profile--activo"
+          [attr.title]="colapsado() ? broker.nombre + ' · Mi perfil' : null"
+          [attr.aria-label]="broker.nombre + ', ' + etiquetaEstado[estadoCuenta()] + '. Ver mi perfil'"
+          (click)="solicitarCierre()"
+        >
+          <div class="sidebar__avatar" aria-hidden="true">{{ iniciales(broker.nombre) }}</div>
+          <div class="sidebar__profile-text">
+            <strong>{{ broker.nombre }}</strong>
+            <span class="sidebar__estado" [class.sidebar__estado--prospecto]="estadoCuenta() === 'PROSPECTO'">
+              {{ etiquetaEstado[estadoCuenta()] }}
+            </span>
+          </div>
+          <app-icon class="sidebar__profile-flecha" nombre="chevron_right" [tamano]="18" />
+        </a>
+      } @else {
+        <div class="sidebar__profile">
+          <div class="sidebar__avatar" aria-hidden="true">{{ iniciales(broker.nombre) }}</div>
+          <div class="sidebar__profile-text">
+            <strong>{{ broker.nombre }}</strong>
+            <span>{{ broker.rol }}</span>
+          </div>
+        </div>
+      }
+    }
+
+    @if (mostrarVip) {
+      <div class="sidebar__vip">
+        <div class="sidebar__vip-title">
+          <app-icon nombre="verified" [tamano]="18" />
+          <span>Línea Bróker VIP</span>
+        </div>
+        <p class="sidebar__vip-text">Soporte directo con Mesa de Suscripción 24/7.</p>
       </div>
-    </div>
+    }
+
+    @if (conSalir) {
+      <button type="button" class="sidebar__salir" [attr.title]="colapsado() ? 'Cerrar sesión' : null" (click)="salir.emit()">
+        <app-icon nombre="logout" [tamano]="18" />
+        <span>Cerrar sesión</span>
+      </button>
+    }
   </div>
 </aside>

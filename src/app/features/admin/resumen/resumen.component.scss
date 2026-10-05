@@ -1,0 +1,108 @@
+@use '../../../shared/styles/mixins' as *;
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-4);
+
+  @include respond-to('tablet') {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// --- Barras por mes ---
+.barras {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-1);
+  height: 220px;
+}
+
+.barra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.barra__valor {
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.barra__pista {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 36px;
+}
+
+.barra__total {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  min-height: 2px;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  background: var(--sb-primary-fixed);
+  overflow: hidden;
+}
+
+.barra__exp {
+  width: 100%;
+  background: var(--sb-primary);
+}
+
+.barra__mes {
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  white-space: nowrap;
+}
+
+// --- Estados ---
+.estados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-0) var(--space-0) var(--space-3);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.estados__fila {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-body-sm);
+  color: var(--color-text);
+}
+
+.estados__pista {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--sb-surface-container);
+  overflow: hidden;
+}
+
+.estados__barra {
+  height: 100%;
+  min-width: 2px;
+  border-radius: var(--radius-pill);
+
+  &--ok { background: var(--color-success); }
+  &--info { background: var(--color-info); }
+  &--warn { background: var(--sb-primary); }
+  &--ko { background: var(--color-danger); }
+}

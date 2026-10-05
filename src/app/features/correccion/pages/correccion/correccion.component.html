@@ -1,14 +1,19 @@
 <section class="correccion" aria-labelledby="correccion-titulo">
-  <header class="correccion-header">
-    <h1 id="correccion-titulo" class="correccion-titulo">Corrección de documentos</h1>
-    <p class="correccion-subtitulo">
-      Sube el documento corregido con tus observaciones para subsanar la observación
-      previa y agilizar el trámite.
-    </p>
-  </header>
+  <app-page-header
+    eyebrow="Trámites"
+    tituloId="correccion-titulo"
+    titulo="Corrección de documentos"
+    subtitulo="Sube el documento corregido con tus observaciones para subsanar la observación previa y agilizar el trámite."
+  ></app-page-header>
 
   <!-- Indicador de pasos (Req 32.1) -->
-  <app-stepper [pasos]="pasos" [pasoActivo]="pasoActual()"></app-stepper>
+  <app-step-tabs
+    [pasos]="pasos"
+    [pasoActivo]="pasoActual()"
+    [navegable]="pasoActual() < 2"
+    ariaLabel="Pasos de la corrección"
+    (pasoSeleccionado)="irAPaso($event)"
+  />
 
   <!-- Resumen del trámite: referencia, documento y motivo de corrección (Req 32.1) -->
   <div class="correccion-resumen" aria-label="Resumen del trámite">

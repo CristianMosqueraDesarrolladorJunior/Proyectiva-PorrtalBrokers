@@ -1,0 +1,647 @@
+<!--
+  Agente IA · Brok — experiencia guiada a pantalla completa (marca Proyectiva).
+  Un solo componente: chat con caja de mensajes a la izquierda y escenario por
+  paso a la derecha. Todo el texto se pinta con interpolación ({{ }}); nunca
+  [innerHTML].
+-->
+<section class="brok" aria-label="Asistente Brok">
+
+  <!-- Barra: stepper del flujo 02 -->
+  <header class="brok-barra">
+    <div class="brok-barra__marca">
+      <span class="brok-orbe brok-orbe--mini" aria-hidden="true"></span>
+      <span class="brok-barra__nombre">Brok <small>Agente IA</small></span>
+    </div>
+    <ol class="brok-stepper" [class.brok-stepper--celebra]="celebrar()" aria-label="Pasos de la radicación">
+      @for (p of pasos; track p; let i = $index) {
+        <li class="brok-stepper__item">
+          <span
+            class="brok-stepper__nodo"
+            [class.activo]="paso() === i + 1"
+            [class.hecho]="paso() > i + 1"
+            [attr.aria-current]="paso() === i + 1 ? 'step' : null"
+            [title]="p"
+          >
+            @if (paso() > i + 1) { <app-icon nombre="check" [tamano]="16" /> } @else { {{ i + 1 }} }
+          </span>
+          <span class="brok-stepper__texto">{{ p }}</span>
+          @if (i < pasos.length - 1) {
+            <span class="brok-stepper__linea" [class.llena]="paso() > i + 1"></span>
+          }
+        </li>
+      }
+    </ol>
+    <div class="brok-barra__acciones">
+      <span class="brok-chip"><app-icon nombre="lock" [tamano]="14" /> Sesión segura</span>
+      <button type="button" class="brok-icono-btn" title="Reiniciar" aria-label="Reiniciar" (click)="reiniciar()">
+        <app-icon nombre="restart_alt" [tamano]="18" />
+      </button>
+    </div>
+  </header>
+
+  <div class="brok-cuerpo">
+
+    <!-- ===================== CHAT ===================== -->
+    <aside class="brok-chat" [class.expandido]="chatExpandido()">
+      <button type="button" class="brok-chat__cabecera" (click)="alternarChat()" [attr.aria-expanded]="chatExpandido()">
+        <span class="brok-orbe brok-chat__orbe" [class.rapido]="pensando()" aria-hidden="true"></span>
+        <span class="brok-chat__titulo">
+          <span class="brok-chat__nombre">Brok <span class="brok-punto" aria-hidden="true"></span></span>
+          <span class="brok-chat__estado" role="status">{{ estadoBrok() }}</span>
+          <span class="brok-chat__previa">{{ vistaPrevia() }}</span>
+        </span>
+        <span class="brok-chat__flecha" aria-hidden="true"><app-icon nombre="expand_less" [tamano]="20" /></span>
+      </button>
+
+      <div class="brok-chat__lista" role="log" aria-live="polite">
+        @for (m of chat(); track m.id) {
+          @switch (m.tipo) {
+            @case ('brok') {
+              @if (m.tipo === 'brok') {
+                <div class="brok-msg">
+                  <p class="brok-burbuja">
+                    @if (m.escribiendo) {
+                      <span class="brok-escribiendo" aria-label="Brok está escribiendo"><span></span><span></span><span></span></span>
+                    } @else {
+                      @for (w of m.palabras; track $index) {
+                        <span class="brok-palabra" [class.negrita]="w.negrita" [style.animation-delay.ms]="$index * 28">{{ w.texto }}</span>{{ ' ' }}
+                      }
+                    }
+                  </p>
+                  <span class="brok-msg__hora">{{ m.hora }}</span>
+                </div>
+              }
+            }
+            @case ('broker') {
+              @if (m.tipo === 'broker') {
+                <div class="brok-msg brok-msg--broker">
+                  <p class="brok-burbuja brok-burbuja--broker">{{ m.texto }}</p>
+                  <span class="brok-msg__hora">{{ m.hora }}</span>
+                </div>
+              }
+            }
+            @case ('accion') {
+              @if (m.tipo === 'accion') {
+                <div class="brok-accion">
+                  @switch (m.estado) {
+                    @case ('cargando') { <span class="brok-spinner" aria-hidden="true"></span> }
+                    @case ('ok') { <app-icon class="ok" nombre="check" [tamano]="16" /> }
+                    @case ('error') { <app-icon class="ko" nombre="cancel" [tamano]="16" /> }
+                  }
+                  <span>{{ m.texto }}</span>
+                </div>
+              }
+            }
+            @case ('divisor') {
+              @if (m.tipo === 'divisor') {
+                <div class="brok-divisor"><span></span><small>{{ m.texto }}</small><span></span></div>
+              }
+            }
+            @case ('checklist') {
+              @if (m.tipo === 'checklist') {
+                <div class="brok-checklist">
+                  <p><app-icon nombre="verified_user" [tamano]="16" /> {{ m.titulo }}</p>
+                  @for (f of m.filas; track f.texto) {
+                    <div class="brok-checklist__fila" [class.hecha]="f.estado !== 'cargando'">
+                      @switch (f.estado) {
+                        @case ('cargando') { <span class="brok-spinner brok-spinner--sm" aria-hidden="true"></span> }
+                        @case ('ok') { <app-icon class="ok" nombre="check_circle" [tamano]="16" /> }
+                        @case ('alerta') { <app-icon class="alerta" nombre="error" [tamano]="16" /> }
+                      }
+                      <span>{{ f.texto }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          }
+        }
+      </div>
+
+      <!-- Caja de mensajes -->
+      <div class="brok-entrada">
+        @if (sugerencias().length > 0) {
+          <div class="brok-sugerencias">
+            @for (s of sugerencias(); track s) {
+              <button type="button" class="brok-sugerencia" (click)="enviarMensaje(s)">{{ s }}</button>
+            }
+          </div>
+        }
+        <div class="brok-entrada__caja">
+          <textarea
+            rows="1"
+            [attr.maxlength]="maxMensaje"
+            placeholder="Escríbele a Brok…"
+            aria-label="Mensaje para Brok"
+            [value]="mensaje()"
+            (input)="onMensaje($event)"
+            (keydown.enter)="onEnterMensaje($event)"
+          ></textarea>
+          <button type="button" class="brok-entrada__enviar" aria-label="Enviar mensaje" [disabled]="!mensaje().trim()" (click)="enviarMensaje(mensaje())">
+            <app-icon nombre="send" [tamano]="18" />
+          </button>
+        </div>
+        <p class="brok-entrada__pie">
+          <app-icon nombre="auto_awesome" [tamano]="14" />
+          <span>Brok te guía · nada se envía sin tu confirmación</span>
+          <span class="brok-onda" [class.activa]="pensando()" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>
+        </p>
+      </div>
+    </aside>
+
+    <!-- ===================== ESCENARIO ===================== -->
+    <main class="brok-escenario">
+      <div class="brok-escenario__puntos" aria-hidden="true"></div>
+      <div class="brok-escenario__interior">
+        <div class="brok-paneles">
+          @switch (escena()) {
+
+            <!-- Bienvenida -->
+            @case ('bienvenida') {
+              <section class="brok-panel brok-bienvenida">
+                <span class="brok-orbe brok-orbe--grande" aria-hidden="true"></span>
+                <div>
+                  <h1 class="brok-display">Hola, {{ nombreBroker() }}. Soy Brok.</h1>
+                  <p class="brok-muted brok-bienvenida__sub">Te acompaño a radicar la póliza de arrendamiento de tu cliente en pocos minutos.</p>
+                </div>
+                <div class="brok-recorrido">
+                  @for (r of recorrido; track r.titulo) {
+                    <div class="brok-card brok-card--mini">
+                      <app-icon [nombre]="r.icono" [tamano]="22" />
+                      <strong>{{ r.titulo }}</strong>
+                      <small>{{ r.tiempo }}</small>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+
+            <!-- Paso 1 · Datos del propietario -->
+            @case ('datos') {
+              <section class="brok-panel">
+                <div class="brok-card brok-card--panel">
+                  <h2 class="brok-titulo">Datos del propietario</h2>
+                  <p class="brok-muted brok-sub">Identifica al titular legal del inmueble.</p>
+
+                  <div class="brok-campos">
+                    <app-form-field label="Tipo de documento" [requerido]="true" controlId="brok-tipo-doc">
+                      <select id="brok-tipo-doc" [ngModel]="tipoDocumentoPropietario()" (ngModelChange)="tipoDocumentoPropietario.set($event)">
+                        @for (t of tiposDocumento; track t) { <option [value]="t">{{ etiquetaTipoDocumento[t] }}</option> }
+                      </select>
+                    </app-form-field>
+                    <app-form-field label="Número de documento" [requerido]="true" controlId="brok-num-doc" [error]="errorDocumento()">
+                      <input
+                        id="brok-num-doc"
+                        class="brok-input-grande"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        placeholder="1095836251"
+                        [ngModel]="numeroDocumentoPropietario()"
+                        (ngModelChange)="onNumeroDocumento($event)"
+                        (blur)="validarDocumentoAlSalir()"
+                      />
+                    </app-form-field>
+                  </div>
+
+                  <div class="brok-demo">
+                    <span>Datos de demo disponibles</span>
+                    <button type="button" class="brok-enlace" [disabled]="autocompletando()" (click)="autocompletarDocumento()">
+                      <app-icon nombre="auto_fix_high" [tamano]="16" /> Autocompletar demo
+                    </button>
+                  </div>
+                  @if (modoDesarrollo) {
+                    <p class="brok-guia">Mock SARLAFT: documento terminado en <b>2</b> → desactualizado · en <b>3</b> → consultable · otro → actualizado.</p>
+                  }
+
+                  <button id="brok-continuar-datos" type="button" class="brok-btn brok-btn--bloque" [disabled]="!documentoValido()" (click)="continuarDatos()">
+                    Continuar <app-icon nombre="arrow_forward" [tamano]="18" />
+                  </button>
+                </div>
+              </section>
+            }
+
+            <!-- Paso 2 · Estudio de arrendamiento -->
+            @case ('estudio') {
+              <section class="brok-panel">
+                <div class="brok-card brok-card--panel">
+                  <h2 class="brok-titulo">Estudio de arrendamiento</h2>
+                  <p class="brok-muted brok-sub">Consulta el estudio aprobado del inquilino. La aseguradora devuelve el estado, el inquilino y el inmueble.</p>
+
+                  <div class="brok-consulta">
+                    <app-form-field class="brok-consulta__campo" label="Número de estudio" [requerido]="true" controlId="brok-num-estudio">
+                      <input
+                        id="brok-num-estudio"
+                        class="brok-input-grande"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="EST-2026-001234"
+                        [ngModel]="numeroEstudio()"
+                        (ngModelChange)="onNumeroEstudio($event)"
+                        (keydown.enter)="consultarEstudio()"
+                      />
+                    </app-form-field>
+                    <button id="brok-consultar-estudio" type="button" class="brok-btn brok-consulta__btn" [disabled]="!puedeConsultarEstudio()" (click)="consultarEstudio()">
+                      @if (consultandoEstudio()) { <span class="brok-spinner brok-spinner--claro" aria-hidden="true"></span> Consultando… }
+                      @else { <app-icon nombre="search" [tamano]="18" /> Consultar estudio }
+                    </button>
+                  </div>
+                  <div class="brok-demo">
+                    <span>Estudio de demo disponible</span>
+                    <button type="button" class="brok-enlace" [disabled]="autocompletando() || consultandoEstudio()" (click)="autocompletarEstudio()">
+                      <app-icon nombre="auto_fix_high" [tamano]="16" /> Autocompletar demo
+                    </button>
+                  </div>
+                  @if (modoDesarrollo) {
+                    <p class="brok-guia">Mock estudio: terminado en <b>9</b> → no aprobado · en <b>8</b> → en proceso · otro → aprobado (el último dígito cambia el inquilino).</p>
+                  }
+                  @if (errorEstudio(); as error) {
+                    <p class="brok-error" role="alert"><app-icon nombre="error" [tamano]="16" /> {{ error }}</p>
+                  }
+                </div>
+
+                @if (consultandoEstudio()) {
+                  <div class="brok-grid">
+                    <div class="brok-esqueleto brok-esqueleto--hero brok-grid__ancho"></div>
+                    <div class="brok-esqueleto brok-esqueleto--card"></div>
+                    <div class="brok-esqueleto brok-esqueleto--card"></div>
+                  </div>
+                } @else {
+                @if (estudio(); as e) {
+                  @switch (e.estado) {
+                    @case ('aprobado') {
+                      <div class="brok-grid">
+                        <div id="brok-sello" class="brok-card brok-card--hero brok-grid__ancho">
+                          <svg viewBox="0 0 80 80" class="brok-sello" [class.dibujado]="selloDibujado()" aria-hidden="true">
+                            <circle cx="40" cy="40" r="36" class="brok-sello__base" />
+                            <circle cx="40" cy="40" r="36" class="brok-sello__aro" transform="rotate(-90 40 40)" />
+                            <path d="M24 41 L35 52 L57 28" class="brok-sello__check" />
+                          </svg>
+                          <div class="brok-hero__texto">
+                            <h3 class="brok-titulo brok-titulo--sm">Estudio <span class="brok-cifra brok-acento">{{ e.numeroEstudio }}</span></h3>
+                            <p class="brok-ok"><app-icon nombre="verified" [tamano]="16" /> Aprobado · Verificado</p>
+                            <p class="brok-muted brok-pequeno">
+                              Consultado el <span class="brok-cifra">{{ e.fechaConsulta.slice(0, 10) }}</span>
+                              @if (e.vigenteHasta) { · vigente hasta <span class="brok-cifra">{{ e.vigenteHasta }}</span> }
+                            </p>
+                          </div>
+                        </div>
+
+                        @if (e.inquilino; as inq) {
+                          <div class="brok-card">
+                            <p class="brok-etiqueta">Inquilino</p>
+                            <div class="brok-persona">
+                              <span class="brok-avatar" aria-hidden="true"><app-icon nombre="person" [tamano]="20" /></span>
+                              <div>
+                                <p class="brok-fuerte">{{ inq.nombre }}</p>
+                                @if (inq.cedula) { <p class="brok-cifra brok-pequeno brok-muted">CC {{ inq.cedula }}</p> }
+                              </div>
+                            </div>
+                            <dl class="brok-datos">
+                              @if (inq.celular) { <div><dt>Celular</dt><dd class="brok-cifra">{{ inq.celular }}</dd></div> }
+                              @if (inq.correo) { <div><dt>Correo</dt><dd class="brok-cifra">{{ inq.correo }}</dd></div> }
+                            </dl>
+                          </div>
+                        }
+
+                        @if (e.inmueble; as inm) {
+                          <div class="brok-card">
+                            <p class="brok-etiqueta">Inmueble</p>
+                            <div class="brok-persona">
+                              <span class="brok-avatar" aria-hidden="true"><app-icon [nombre]="inm.destino === 'Vivienda' ? 'home' : 'storefront'" [tamano]="20" /></span>
+                              <div>
+                                <p class="brok-fuerte">{{ inm.direccion }}</p>
+                                <p class="brok-pequeno brok-muted">{{ inm.ciudad }} · {{ inm.destino }}</p>
+                              </div>
+                            </div>
+                            <dl class="brok-datos">
+                              @if (inm.propietario) { <div><dt>Propietario</dt><dd>{{ inm.propietario }}</dd></div> }
+                              <div><dt>Canon</dt><dd class="brok-cifra">{{ moneda(inm.canon) }}</dd></div>
+                              <div><dt>Administración</dt><dd class="brok-cifra">{{ moneda(inm.administracion) }}</dd></div>
+                            </dl>
+                          </div>
+
+                          <div class="brok-card brok-grid__ancho brok-mensualidad">
+                            <div>
+                              <p class="brok-etiqueta">Canon + administración</p>
+                              <p class="brok-monto">{{ moneda(mensualidad()) }} <small>/ mes</small></p>
+                            </div>
+                            <button id="brok-continuar-estudio" type="button" class="brok-btn" (click)="continuarEstudio()">
+                              Continuar <app-icon nombre="arrow_forward" [tamano]="18" />
+                            </button>
+                          </div>
+                        } @else {
+                          <div class="brok-acciones brok-grid__ancho">
+                            <button id="brok-continuar-estudio" type="button" class="brok-btn brok-acciones__fin" (click)="continuarEstudio()">
+                              Continuar <app-icon nombre="arrow_forward" [tamano]="18" />
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    }
+                    @case ('no_aprobado') {
+                      <div class="brok-card brok-card--panel brok-card--alerta brok-resultado">
+                        <span class="brok-icono-grande brok-icono-grande--alerta"><app-icon nombre="block" [tamano]="28" /></span>
+                        <div>
+                          <h3 class="brok-titulo brok-titulo--sm">Estudio no aprobado</h3>
+                          <p class="brok-muted brok-sub">El estudio <span class="brok-cifra">{{ e.numeroEstudio }}</span> no está aprobado. El inquilino debe realizar el Estudio Digital antes de radicar.</p>
+                          @if (e.urlEstudioDigital; as url) {
+                            <div class="brok-enlace-caja">
+                              <code>{{ url }}</code>
+                              <button type="button" class="brok-btn brok-btn--sec" (click)="copiarEnlace(url)">
+                                <app-icon nombre="content_copy" [tamano]="16" /> {{ enlaceCopiado() ? 'Copiado' : 'Copiar enlace' }}
+                              </button>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                    @case ('pendiente') {
+                      <div class="brok-card brok-card--panel brok-card--aviso brok-resultado">
+                        <span class="brok-icono-grande brok-icono-grande--aviso"><app-icon nombre="hourglass_top" [tamano]="28" /></span>
+                        <div>
+                          <h3 class="brok-titulo brok-titulo--sm">Estudio en proceso</h3>
+                          <p class="brok-muted brok-sub">La aseguradora aún no resuelve el estudio <span class="brok-cifra">{{ e.numeroEstudio }}</span>. Vuelve a consultarlo más tarde.</p>
+                        </div>
+                      </div>
+                    }
+                  }
+                }
+                }
+              </section>
+            }
+
+            <!-- Paso 3 · Firmante -->
+            @case ('firma') {
+              <section class="brok-panel">
+                <div class="brok-card brok-card--panel">
+                  <h2 class="brok-titulo">¿Quién firma el contrato?</h2>
+                  <p class="brok-muted brok-sub">Define la titularidad jurídica del suscriptor ante la póliza.</p>
+
+                  <div id="brok-firmante" class="brok-bloque">
+                    <app-radio-group
+                      [opciones]="opcionesFirmante"
+                      [valor]="firmante()"
+                      (valorChange)="onCambioFirmante($event)"
+                      ariaLabel="Quién firma el contrato"
+                    />
+                  </div>
+
+                  @if (firmaApoderado()) {
+                    <div class="brok-campos">
+                      <app-form-field label="Tipo de documento del apoderado" [requerido]="true" controlId="brok-tipo-doc-apo">
+                        <select id="brok-tipo-doc-apo" [ngModel]="tipoDocumentoApoderado()" (ngModelChange)="tipoDocumentoApoderado.set($event)">
+                          @for (t of tiposDocumentoApoderado; track t) { <option [value]="t">{{ etiquetaTipoDocumento[t] }}</option> }
+                        </select>
+                      </app-form-field>
+                      <app-form-field label="Número de documento del apoderado" [requerido]="true" controlId="brok-num-doc-apo">
+                        <input
+                          id="brok-num-doc-apo"
+                          type="text"
+                          inputmode="numeric"
+                          autocomplete="off"
+                          placeholder="80123456"
+                          [ngModel]="numeroDocumentoApoderado()"
+                          (ngModelChange)="onNumeroApoderado($event)"
+                        />
+                      </app-form-field>
+                    </div>
+                    <app-info-box icono="info">
+                      Como firma un apoderado, la validación SARLAFT se hace al <b>apoderado</b> y la URL de actualización, si hace falta, se le envía a él.
+                    </app-info-box>
+                  }
+
+                  <p class="brok-etiqueta brok-bloque">Tipo de persona del propietario</p>
+                  <app-tabs [tabs]="tabsPersona" [activa]="tipoPersona()" (activaChange)="onCambioTipoPersona($event)" />
+
+                  <button type="button" class="brok-btn brok-btn--bloque" [disabled]="!firmaCompleta()" (click)="continuarFirma()">
+                    Continuar a SARLAFT <app-icon nombre="arrow_forward" [tamano]="18" />
+                  </button>
+                </div>
+              </section>
+            }
+
+            <!-- Paso 4 · SARLAFT: salida desactualizado -->
+            @case ('sarlaft-pendiente') {
+              <section class="brok-panel">
+                <div class="brok-card brok-card--panel brok-card--aviso">
+                  <h2 class="brok-titulo">SARLAFT desactualizado</h2>
+                  <p class="brok-muted brok-sub">{{ sarlaft()?.mensaje }}</p>
+                  <ol class="brok-pasos-lista">
+                    <li>Enviamos la URL de actualización al <strong>{{ etiquetaSujeto() }}</strong>@if (sarlaft()?.correoDestinatario) { ({{ sarlaft()?.correoDestinatario }})}.</li>
+                    <li>El {{ etiquetaSujeto() }} diligencia la actualización desde el enlace.</li>
+                    <li>Cuando confirme, vuelve a consultar para continuar con los documentos.</li>
+                  </ol>
+                  @if (sarlaft()?.enlaceActualizacion; as enlace) {
+                    <div class="brok-enlace-caja">
+                      <code>{{ enlace }}</code>
+                      <button type="button" class="brok-btn brok-btn--sec" (click)="copiarEnlace(enlace)">
+                        <app-icon nombre="content_copy" [tamano]="16" /> {{ enlaceCopiado() ? 'Copiado' : 'Copiar enlace' }}
+                      </button>
+                    </div>
+                  }
+                  <button id="brok-reconsultar" type="button" class="brok-btn brok-btn--bloque" [disabled]="consultandoSarlaft()" (click)="reconsultarSarlaft()">
+                    <app-icon nombre="refresh" [tamano]="18" /> {{ consultandoSarlaft() ? 'Consultando…' : 'Volver a consultar' }}
+                  </button>
+                </div>
+              </section>
+            }
+
+            <!-- Paso 4 · SARLAFT: salida consultable (fin del trámite en el portal) -->
+            @case ('sarlaft-fin') {
+              <section class="brok-panel">
+                <div class="brok-card brok-card--panel brok-card--alerta brok-centro">
+                  <span class="brok-icono-grande brok-icono-grande--alerta"><app-icon nombre="policy" [tamano]="30" /></span>
+                  <h2 class="brok-titulo">El caso pasa a revisión</h2>
+                  <p class="brok-muted brok-sub">{{ sarlaft()?.mensaje }}</p>
+                  @if (sarlaft()?.radicado; as rad) {
+                    <p class="brok-cifra brok-acento brok-radicado-mini">{{ rad }}</p>
+                  }
+                  <p class="brok-muted brok-pequeno">Cumplimiento revisará el caso y el estado quedará visible en Seguimiento.</p>
+                  <div class="brok-acciones brok-acciones--centro">
+                    <button type="button" class="brok-btn brok-btn--sec" (click)="corregirSarlaft()">Corregir datos del {{ etiquetaSujeto() }}</button>
+                    <button type="button" class="brok-btn" (click)="irASeguimiento()">Ir a Seguimiento</button>
+                  </div>
+                </div>
+              </section>
+            }
+
+            <!-- Todo en orden -->
+            @case ('todo-ok') {
+              <section class="brok-panel">
+                <div class="brok-card brok-card--panel brok-centro">
+                  <svg viewBox="0 0 80 80" class="brok-sello brok-sello--chico dibujado" aria-hidden="true">
+                    <circle cx="40" cy="40" r="36" class="brok-sello__base" />
+                    <path d="M22 42 L34 54 L58 26" class="brok-sello__check" />
+                  </svg>
+                  <h2 class="brok-titulo">Todo está en orden</h2>
+                  <div class="brok-filas">
+                    <div><span class="brok-muted">Estudio de arrendamiento</span><span class="brok-ok"><app-icon nombre="check" [tamano]="16" /> Aprobado</span></div>
+                    <div><span class="brok-muted">SARLAFT del {{ etiquetaSujeto() }}</span><span class="brok-ok"><app-icon nombre="check" [tamano]="16" /> Actualizado</span></div>
+                  </div>
+                </div>
+              </section>
+            }
+
+            <!-- Paso 4 · Documentos -->
+            @case ('documentos') {
+              <section class="brok-panel">
+                <div class="brok-card brok-card--panel">
+                  <div class="brok-cabecera-doc">
+                    <div>
+                      <h2 class="brok-titulo">Carga los documentos</h2>
+                      <p class="brok-muted brok-sub">PDF, JPG o PNG. Cada archivo se valida al cargarlo; el backend lo revalida.</p>
+                    </div>
+                    <div class="brok-anillo">
+                      <svg viewBox="0 0 44 44" aria-hidden="true">
+                        <circle cx="22" cy="22" r="19" class="brok-anillo__base" />
+                        <circle cx="22" cy="22" r="19" class="brok-anillo__valor" [attr.stroke-dasharray]="circunferencia" [style.stroke-dashoffset]="desfaseAnillo()" />
+                      </svg>
+                      <span class="brok-cifra">{{ documentosValidados() }}/{{ totalDocumentos() }}</span>
+                    </div>
+                  </div>
+
+                  <div id="brok-docs" class="brok-bloque">
+                    <app-doc-uploader [reglas]="reglasObligatorias()" [cargados]="archivosCargados()" (archivoSeleccionado)="onArchivo($event)" />
+                  </div>
+                  @if (firmaApoderado()) {
+                    <p class="brok-etiqueta brok-bloque">Documentos del apoderado</p>
+                    <app-doc-uploader [reglas]="reglasApoderado()" [cargados]="archivosCargados()" (archivoSeleccionado)="onArchivo($event)" />
+                  }
+                  <p class="brok-etiqueta brok-bloque">Opcional</p>
+                  <app-doc-uploader [reglas]="reglaOpcional" [cargados]="archivosCargados()" (archivoSeleccionado)="onArchivo($event)" />
+
+                  @if (errorArchivo(); as error) {
+                    <p class="brok-error" role="alert"><app-icon nombre="error" [tamano]="16" /> {{ error }}</p>
+                  }
+
+                  <div class="brok-acciones">
+                    <button type="button" class="brok-btn brok-btn--sec" [disabled]="cargandoDemo()" (click)="usarDocumentosDemo()">
+                      <app-icon nombre="auto_fix_high" [tamano]="16" /> Usar documentos de demo
+                    </button>
+                    <button id="brok-continuar-docs" type="button" class="brok-btn brok-acciones__fin" [disabled]="!documentosCompletos()" (click)="continuarDocumentos()">
+                      Continuar a radicación <app-icon nombre="arrow_forward" [tamano]="18" />
+                    </button>
+                  </div>
+                </div>
+              </section>
+            }
+
+            <!-- Paso 5 · Radicación -->
+            @case ('radicar') {
+              <section class="brok-panel">
+                <div class="brok-card brok-card--panel brok-relativo">
+                  <h2 class="brok-titulo">Revisa y radica</h2>
+                  <p class="brok-muted brok-sub">Confirma la información del negocio antes de enviarlo a la aseguradora.</p>
+
+                  <div class="brok-grid brok-grid--resumen">
+                    <div class="brok-filas brok-filas--izq">
+                      <p class="brok-etiqueta">Resumen</p>
+                      @for (r of resumen(); track r.etiqueta) {
+                        <div><span class="brok-muted">{{ r.etiqueta }}</span><span>{{ r.valor }}</span></div>
+                      }
+                    </div>
+                    <div class="brok-check-final">
+                      <p class="brok-etiqueta">Checklist final</p>
+                      @for (c of checklistFinal(); track c) {
+                        <p class="brok-ok"><app-icon nombre="check_circle" [tamano]="16" /> {{ c }}</p>
+                      }
+                    </div>
+                  </div>
+
+                  <button id="brok-declaro" type="button" class="brok-declaracion" [attr.aria-pressed]="declarado()" (click)="alternarDeclaracion()">
+                    <span class="brok-chk" [class.on]="declarado()"><app-icon nombre="check" [tamano]="16" /></span>
+                    <span>Declaro, como broker, que la información del negocio es veraz y que cuento con la autorización del propietario y del inquilino para el tratamiento de sus datos personales.</span>
+                  </button>
+
+                  @if (errorEnvio(); as error) {
+                    <p class="brok-error" role="alert"><app-icon nombre="error" [tamano]="16" /> {{ error }}</p>
+                  }
+
+                  <button id="brok-radicar" type="button" class="brok-btn brok-btn--bloque" [disabled]="!declarado() || enviando()" (click)="radicar()">
+                    <app-icon nombre="send" [tamano]="18" /> Radicar negocio
+                  </button>
+
+                  @if (enviando()) {
+                    <div class="brok-envio">
+                      <span class="brok-orbe brok-orbe--chico rapido" aria-hidden="true"></span>
+                      <p role="status">{{ pasoEnvio() }}</p>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+
+            <!-- Éxito -->
+            @case ('exito') {
+              <section class="brok-panel">
+                <div class="brok-card brok-card--panel brok-centro brok-exito">
+                  <svg viewBox="0 0 90 90" class="brok-sello brok-sello--exito dibujado" aria-hidden="true">
+                    <circle cx="45" cy="45" r="40" class="brok-sello__base" />
+                    <path d="M25 47 L39 61 L65 30" class="brok-sello__check" />
+                  </svg>
+                  <h2 class="brok-titulo brok-titulo--lg">Negocio radicado</h2>
+                  <p class="brok-muted">Puedes hacerle seguimiento con este número de radicado</p>
+                  <p class="brok-radicado brok-cifra">{{ radicadoVisible() }}</p>
+                  <p class="brok-muted brok-pequeno">{{ fechaRadicado() }}</p>
+
+                  <div class="brok-proximos">
+                    <p class="brok-etiqueta">Próximos pasos</p>
+                    <div><span class="brok-num">1</span> Revisión de la aseguradora <small class="brok-muted">(1–2 días hábiles)</small></div>
+                    <div><span class="brok-num">2</span> Emisión de la póliza</div>
+                    <div><span class="brok-num">3</span> Te notificamos por correo</div>
+                  </div>
+
+                  <div class="brok-acciones brok-acciones--centro">
+                    <button type="button" class="brok-btn brok-btn--sec" (click)="copiarRadicado()"><app-icon nombre="content_copy" [tamano]="16" /> Copiar radicado</button>
+                    <button type="button" class="brok-btn brok-btn--sec" (click)="irASeguimiento()"><app-icon nombre="timeline" [tamano]="16" /> Ir a Seguimiento</button>
+                    <button type="button" class="brok-btn" (click)="reiniciar()"><app-icon nombre="add" [tamano]="16" /> Radicar otro negocio</button>
+                  </div>
+                </div>
+              </section>
+            }
+          }
+        </div>
+      </div>
+
+      <!-- Dock SARLAFT (validación en segundo plano) -->
+      @if (dock(); as d) {
+        <div class="brok-dock">
+          @if (d.resultado === null) {
+            <div class="brok-card brok-dock__card">
+              <div class="brok-dock__cab">
+                <span class="brok-radar" aria-hidden="true"></span>
+                <div>
+                  <p class="brok-fuerte">SARLAFT del {{ etiquetaSujeto() }}</p>
+                  <p class="brok-cifra brok-pequeno brok-muted">{{ firmaApoderado() ? numeroDocumentoApoderado() : numeroDocumentoPropietario() }}</p>
+                </div>
+              </div>
+              <div class="brok-barra-fina"><span [style.width.%]="d.progreso"></span></div>
+              @for (f of d.filas; track f.texto) {
+                <div class="brok-dock__fila" [class.hecha]="f.estado !== 'cargando'">
+                  @if (f.estado === 'cargando') { <span class="brok-spinner brok-spinner--sm" aria-hidden="true"></span> }
+                  @else { <app-icon [class]="f.estado === 'ok' ? 'ok' : 'alerta'" [nombre]="f.estado === 'ok' ? 'check_circle' : 'error'" [tamano]="16" /> }
+                  <span>{{ f.texto }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="brok-dock__pildora" [class.alerta]="d.resultado !== 'ok'">
+              <app-icon [nombre]="d.resultado === 'ok' ? 'verified_user' : 'gpp_maybe'" [tamano]="16" />
+              {{ d.resultado === 'ok' ? 'SARLAFT ✓ Actualizado' : d.resultado === 'alerta' ? 'SARLAFT · Desactualizado' : 'SARLAFT · Consultable' }}
+            </div>
+          }
+        </div>
+      }
+    </main>
+  </div>
+
+  <!-- Foco (spotlight) y cursor guía -->
+  @if (foco(); as f) {
+    <div class="brok-foco" [style.top.px]="f.top" [style.left.px]="f.left" [style.width.px]="f.width" [style.height.px]="f.height" aria-hidden="true"></div>
+    <div class="brok-foco__etiqueta" [style.top.px]="f.top - 32" [style.left.px]="f.left + 6" aria-hidden="true">
+      <app-icon nombre="auto_awesome" [tamano]="14" /> {{ f.etiqueta }}
+    </div>
+  }
+  <div class="brok-cursor" aria-hidden="true"></div>
+</section>

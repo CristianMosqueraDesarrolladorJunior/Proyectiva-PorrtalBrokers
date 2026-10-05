@@ -1,6 +1,6 @@
 @if (conBusqueda) {
   <div class="dt-toolbar">
-    <span class="dt-toolbar__icono" aria-hidden="true">🔍</span>
+    <span class="dt-toolbar__icono" aria-hidden="true"><span class="material-symbols-outlined">search</span></span>
     <input
       type="search"
       class="dt-toolbar__input"
@@ -49,6 +49,7 @@
         >
           @for (columna of columnas; track trackColumna($index, columna)) {
             <td
+              [attr.data-label]="columna.header || null"
               [class.dt-td--centro]="columna.alinear === 'centro'"
               [class.dt-td--derecha]="columna.alinear === 'derecha'"
             >

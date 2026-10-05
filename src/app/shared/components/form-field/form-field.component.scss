@@ -10,14 +10,15 @@
 
 .field-label {
   display: block;
-  font-size: var(--font-size-3sm);
-  color: var(--color-muted);
+  font-family: var(--font-family-body);
+  font-size: var(--text-body-sm);
+  color: var(--sb-on-surface);
   margin-bottom: var(--space-1);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
 }
 
 .field-obligatorio {
-  color: var(--color-danger);
+  color: var(--sb-error);
   margin-left: var(--space-1);
 }
 
@@ -27,40 +28,44 @@
 .field-control ::ng-deep select,
 .field-control ::ng-deep textarea {
   width: 100%;
+  min-height: var(--control-height);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-4md);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-body);
   outline: none;
-  background: var(--color-card);
-  color: var(--color-text);
-  font-family: inherit;
+  background: var(--sb-surface);
+  color: var(--sb-on-surface);
+  font-family: var(--font-family-body);
 }
 
+.field-control ::ng-deep input:focus,
+.field-control ::ng-deep select:focus,
+.field-control ::ng-deep textarea:focus,
 .field-control ::ng-deep input:focus-visible,
 .field-control ::ng-deep select:focus-visible,
 .field-control ::ng-deep textarea:focus-visible {
-  border-color: var(--color-accent);
-  outline: var(--focus-ring-width) solid var(--color-focus-ring);
-  outline-offset: var(--focus-ring-offset);
+  outline: none;
+  border-color: var(--sb-primary);
+  box-shadow: 0 0 0 2px var(--sb-primary-fixed);
 }
 
 .field--invalido .field-control ::ng-deep input,
 .field--invalido .field-control ::ng-deep select,
 .field--invalido .field-control ::ng-deep textarea {
-  border-color: var(--color-danger);
+  border-color: var(--sb-error);
 }
 
 .field-ayuda {
   margin-top: var(--space-1);
-  font-size: var(--font-size-xs);
-  color: var(--color-muted);
+  font-size: var(--text-caption);
+  color: var(--sb-secondary);
   line-height: var(--line-height-normal);
 }
 
 .field-error {
   margin-top: var(--space-1);
-  font-size: var(--font-size-xs);
-  color: var(--color-danger);
+  font-size: var(--text-caption);
+  color: var(--sb-error);
   line-height: var(--line-height-normal);
 }

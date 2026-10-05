@@ -1,0 +1,473 @@
+// =============================================================================
+// Mi perfil — 100% tokenizado (colores, tipografía, espaciado, radios, sombras).
+// =============================================================================
+@use '../../shared/styles/mixins' as *;
+
+:host {
+  display: block;
+}
+
+.perfil {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: var(--content-max-width);
+  margin: var(--space-0) auto;
+}
+
+.perfil__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.perfil__simulador {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  small {
+    font-size: var(--text-caption);
+    color: var(--color-muted);
+  }
+}
+
+.perfil-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  background: var(--color-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.perfil-tarjeta__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-0);
+    font-size: var(--text-title);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+
+    app-icon { color: var(--color-accent); }
+  }
+
+  p {
+    margin: var(--space-1) var(--space-0) var(--space-0);
+    font-size: var(--text-body);
+    color: var(--color-muted);
+  }
+}
+
+.perfil-etiqueta {
+  margin: var(--space-0);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+// --- Identidad + estado ---
+.perfil-identidad {
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.perfil-identidad__persona {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.perfil-identidad__nombre {
+  margin: var(--space-0);
+  font-size: var(--text-heading);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.perfil-identidad__doc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-1) var(--space-0) var(--space-0);
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+
+  app-icon { color: var(--color-muted); }
+}
+
+.perfil-identidad__meta {
+  margin: var(--space-1) var(--space-0) var(--space-0);
+  font-size: var(--text-caption);
+  color: var(--color-muted);
+}
+
+.perfil-estado {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--sb-tint-accent-border);
+  border-radius: var(--radius-xl);
+  background: var(--sb-tint-accent-bg);
+  color: var(--sb-tint-accent-text);
+
+  small {
+    display: block;
+    font-size: var(--text-caption);
+    color: var(--color-muted);
+  }
+
+  strong {
+    font-size: var(--text-subtitle);
+    font-weight: var(--font-weight-bold);
+  }
+
+  &--registrado {
+    border-color: var(--color-border);
+    background: var(--sb-surface-low);
+    color: var(--color-primary);
+  }
+}
+
+.perfil-estado__icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-badge-size);
+  height: var(--icon-badge-size);
+  border-radius: var(--radius-full);
+  background: var(--color-card);
+}
+
+// --- Pasos del registro ---
+.perfil-pasos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.perfil-pasos__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--sb-surface-low);
+
+  &.hecho {
+    background: var(--color-card);
+  }
+}
+
+.perfil-pasos__nodo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--section-number-size);
+  height: var(--section-number-size);
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-card);
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-bold);
+
+  .hecho & {
+    background: var(--color-primary);
+    color: var(--color-card);
+  }
+}
+
+.perfil-pasos__texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  b {
+    font-size: var(--text-body-sm);
+    color: var(--color-text);
+  }
+
+  small {
+    font-size: var(--text-caption);
+    color: var(--color-muted);
+  }
+}
+
+// --- Comisiones (prospecto) ---
+.perfil-comisiones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px dashed var(--sb-tint-accent-border);
+  border-radius: var(--radius-xl);
+  background: var(--sb-tint-accent-bg);
+}
+
+.perfil-comisiones__accion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+// --- Resumen de cuenta completa ---
+.perfil-resumen {
+  flex-flow: row wrap;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-6);
+}
+
+.perfil-resumen__dato {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  small {
+    font-size: var(--text-caption);
+    color: var(--color-muted);
+  }
+
+  b {
+    font-size: var(--text-body);
+    color: var(--color-text);
+  }
+}
+
+.perfil-comisiones__monto {
+  margin: var(--space-0);
+  font-family: var(--font-family-heading);
+  font-size: var(--text-heading);
+  font-weight: var(--font-weight-extrabold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.perfil-comisiones__nota,
+.perfil-comisiones__pendiente {
+  margin: var(--space-0);
+  font-size: var(--text-body-sm);
+  color: var(--color-muted);
+}
+
+.perfil-enlace {
+  padding: var(--space-0);
+  border: 0;
+  background: none;
+  color: var(--color-accent-hover);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+// --- Datos personales + SARLAFT ---
+.perfil-rejilla {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.perfil-campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.perfil-bloqueado {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  input {
+    width: 100%;
+    padding-right: var(--space-8);
+    background: var(--sb-surface-container);
+    color: var(--color-muted);
+    cursor: not-allowed;
+  }
+
+  app-icon {
+    position: absolute;
+    right: var(--space-3);
+    color: var(--color-muted);
+  }
+}
+
+.perfil-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.perfil-ok {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-0);
+  font-size: var(--text-body-sm);
+  color: var(--color-success);
+
+  &--alerta { color: var(--color-danger); }
+}
+
+.perfil-datos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-0);
+  font-size: var(--text-body);
+
+  > div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  dt { color: var(--color-muted); }
+
+  dd {
+    margin: var(--space-0);
+    font-weight: var(--font-weight-semibold);
+  }
+}
+
+.perfil-sarlaft-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+
+  app-form-field {
+    flex: 1;
+    min-width: 180px;
+  }
+}
+
+// --- Documentos ---
+.perfil-contador {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--sb-surface-container);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.perfil-docs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.perfil-docs__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+
+  &--bloqueado { background: var(--sb-surface-low); }
+}
+
+.perfil-docs__icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-badge-size);
+  height: var(--icon-badge-size);
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--sb-tint-accent-bg);
+  color: var(--sb-tint-accent-text);
+}
+
+.perfil-docs__info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+
+  b { font-size: var(--text-body); }
+
+  small {
+    overflow: hidden;
+    font-size: var(--text-caption);
+    color: var(--color-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.perfil-docs__candado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-caption);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.perfil-modal-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  app-icon { color: var(--color-accent); }
+}
+
+@include respond-to('tablet') {
+  .perfil-rejilla { grid-template-columns: 1fr; }
+
+  .perfil-pasos { grid-template-columns: repeat(2, 1fr); }
+}
+
+@include respond-to('mobile') {
+  .perfil-tarjeta { padding: var(--space-4); }
+
+  .perfil-rejilla,
+  .perfil-campos,
+  .perfil-pasos { grid-template-columns: 1fr; }
+
+  .perfil-docs__item { flex-wrap: wrap; }
+}
