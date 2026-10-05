@@ -6,7 +6,6 @@ import {
   OnInit,
   Output,
   inject,
-  isDevMode,
   signal,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -73,7 +72,6 @@ export class SarlaftRenovacionComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly archivoActualizado = signal<Readonly<Record<string, string>>>({});
   protected readonly mesesVigencia = MESES_VIGENCIA_SARLAFT;
-  protected readonly modoDesarrollo = isDevMode();
 
   /** Regla del cargador del SARLAFT actualizado (salida no vigente). */
   protected readonly reglaActualizacion: readonly ReglaDocumentoUploader[] = [

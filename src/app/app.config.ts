@@ -10,7 +10,6 @@ import {
   errorInterceptor,
   timeoutRetryInterceptor
 } from './core/interceptors';
-import { mockBackendInterceptor } from './core/interceptors/mock-backend.interceptor';
 
 /**
  * Configuración raíz de la aplicación standalone del Portal de Autogestión de Brokers.
@@ -30,8 +29,6 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     provideHttpClient(
       withInterceptors([
-        // Mock del API_Backend en desarrollo (BYPASS TEMPORAL); en producción es no-op.
-        mockBackendInterceptor,
         correlationIdInterceptor,
         authCookieInterceptor,
         timeoutRetryInterceptor,

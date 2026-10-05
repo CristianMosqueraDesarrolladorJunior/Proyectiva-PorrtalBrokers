@@ -1,11 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
 
-import { BrokerResumen } from '../../../core/models/admin.model';
-import { ETIQUETA_ESTADO_CUENTA, type EstadoCuenta } from '../../../core/models/cuenta.model';
+import { BrokerAdminResponse, ComercialResponse } from '../../../core/models/admin.model';
 import { AdminService } from '../../../core/services/admin.service';
-import { copCompacto, cop, fechaCorta, pendientes } from '../../../core/services/admin.helpers';
 import {
   BadgeEstadoComponent,
   DrawerDetalleComponent,
@@ -13,13 +10,15 @@ import {
   ModalDialogComponent,
   PageHeaderComponent,
 } from '../../../shared/components';
-import { estadoCorto, varianteEstado } from '../admin-vista';
-
-const TAMANO_PAGINA = 15;
+import type { FilaDetalle, VarianteBadge } from '../../../shared/components';
 
 /**
- * Brokers de la cartera visible: el Administrador ve todos y puede reasignar
- * (uno o varios); el Comercial ve solo los suyos.
+ * Brokers de la cartera visible (Req 16). El Administrador ve todos y puede
+ * reasignar un broker a un comercial; el Comercial ve solo los suyos.
+ *
+ * Toda la información proviene del API_Backend de forma asíncrona
+ * (`AdminService`). La búsqueda se envía al servidor como parámetro (no se
+ * filtra en el cliente). Solo se presentan los campos del `BrokerAdminResponse`.
  */
 @Component({
   selector: 'app-admin-brokers',
@@ -31,155 +30,171 @@ const TAMANO_PAGINA = 15;
 })
 export class BrokersComponent {
   private readonly admin = inject(AdminService);
-  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly esAdmin = this.admin.esAdmin;
-  protected readonly comerciales = computed(() => this.admin.comerciales().filter((c) => c.activo));
+  protected readonly esAdmin = this.admin.esAdmin();
 
-  // Filtros
+  // --- Estado de carga de brokers ---
+  protected readonly brokers = signal<readonly BrokerAdminResponse[]>([]);
+  protected readonly cargando = signal(false);
+  protected readonly error = signal(false);
+
+  // --- Comerciales activos para el selector de reasignación ---
+  protected readonly comerciales = signal<readonly ComercialResponse[]>([]);
+
+  // --- Búsqueda (se envía al backend) ---
   protected readonly busqueda = signal('');
-  protected readonly comercialId = signal('');
-  protected readonly tipo = signal<'' | 'Broker' | 'Inmobiliaria'>('');
-  protected readonly estadoCuenta = signal<'' | EstadoCuenta>('');
-  protected readonly etiquetaEstadoCuenta = ETIQUETA_ESTADO_CUENTA;
-  protected readonly soloPendientes = signal(false);
-  protected readonly pagina = signal(1);
 
-  protected readonly resultado = computed(() =>
-    this.admin.listarBrokers(
-      {
-        busqueda: this.busqueda(),
-        comercialId: this.comercialId(),
-        tipo: this.tipo(),
-        estadoCuenta: this.estadoCuenta(),
-        soloConPendientes: this.soloPendientes(),
-      },
-      this.pagina(),
-      TAMANO_PAGINA,
-    ),
-  );
-  protected readonly totalPaginas = computed(() => Math.max(1, Math.ceil(this.resultado().total / TAMANO_PAGINA)));
+  // --- Detalle (drawer) ---
+  protected readonly detalle = signal<BrokerAdminResponse | null>(null);
 
-  // Selección y detalle
-  protected readonly seleccionados = signal<ReadonlySet<string>>(new Set());
-  protected readonly detalleId = signal<string | null>(null);
-  protected readonly detalle = computed(() => {
-    const id = this.detalleId();
-    return id ? this.admin.brokersVisibles().find((b) => b.id === id) ?? null : null;
-  });
-  protected readonly negociosDetalle = computed(() => {
-    const id = this.detalleId();
-    return id ? this.admin.negociosDeBroker(id) : [];
-  });
-  protected readonly filasDetalle = computed(() => {
-    const b = this.detalle();
-    if (!b) return [];
-    return [
-      { etiqueta: 'Identificación', valor: b.id },
-      { etiqueta: 'Tipo', valor: b.tipo },
-      { etiqueta: 'Estado de la cuenta', valor: ETIQUETA_ESTADO_CUENTA[b.estadoCuenta] },
-      { etiqueta: 'Documentación', valor: `${b.documentosAportados} de 4 documentos aportados` },
-      { etiqueta: 'Comercial', valor: b.comercialNombre },
-      { etiqueta: 'Celular', valor: b.celular || '—' },
-      { etiqueta: 'Correo', valor: b.correo || '—' },
-      { etiqueta: 'Negocios', valor: `${b.negocios} (${b.expedidos} expedidos)` },
-      { etiqueta: 'Pendientes', valor: `${b.pendientesCorreccion} corrección · ${b.pendientesValidacion} validación` },
-      { etiqueta: 'Prima expedida', valor: cop(b.primaExpedida) },
-      { etiqueta: 'Última radicación', valor: fechaCorta(b.ultimaRadicacion) },
-    ];
-  });
-
-  // Reasignación
-  protected readonly modalReasignar = signal(false);
-  protected readonly destino = signal('');
-  protected readonly idsAReasignar = signal<readonly string[]>([]);
+  // --- Reasignación ---
+  protected readonly brokerAReasignar = signal<BrokerAdminResponse | null>(null);
+  protected readonly comercialDestino = signal('');
+  protected readonly guardandoReasignacion = signal(false);
+  protected readonly errorReasignacion = signal(false);
   protected readonly mensaje = signal('');
 
-  protected readonly copCompacto = copCompacto;
-  protected readonly fechaCorta = fechaCorta;
-  protected readonly pendientes = pendientes;
-  protected readonly varianteEstado = varianteEstado;
-  protected readonly estadoCorto = estadoCorto;
-
   constructor() {
-    inject(ActivatedRoute)
-      .queryParamMap.pipe(takeUntilDestroyed())
-      .subscribe((q) => {
-        this.comercialId.set(q.get('comercial') ?? '');
-        this.soloPendientes.set(q.get('pendientes') === '1');
-        this.pagina.set(1);
-      });
+    this.cargarBrokers();
+    if (this.esAdmin) {
+      this.cargarComerciales();
+    }
   }
 
-  protected num(n: number): string {
-    return n.toLocaleString('es-CO');
-  }
-
+  /** Lee el texto de un input/select. */
   protected valor(evento: Event): string {
     return (evento.target as HTMLInputElement | HTMLSelectElement).value;
   }
 
-  /** Tras cambiar un filtro, vuelve a la primera página. */
-  protected filtrar(): void {
-    this.pagina.set(1);
+  /** Filas de detalle del broker seleccionado (solo campos del backend). */
+  protected filasDetalle(): readonly FilaDetalle[] {
+    const b = this.detalle();
+    if (!b) return [];
+    return [
+      { etiqueta: 'Identificación', valor: b.brokerId },
+      { etiqueta: 'Tipo', valor: b.tipo },
+      { etiqueta: 'Comercial', valor: b.comercial },
+      { etiqueta: 'Negocios', valor: String(b.numeroNegocios) },
+      { etiqueta: 'SARLAFT', valor: this.etiquetaSarlaft(b.estadoSarlaft) },
+      { etiqueta: 'Estado', valor: b.estado },
+    ];
   }
 
-  protected irPagina(p: number): void {
-    this.pagina.set(Math.min(Math.max(1, p), this.totalPaginas()));
+  /** Dispara la búsqueda contra el backend. */
+  protected buscar(termino: string): void {
+    this.busqueda.set(termino);
+    this.cargarBrokers();
   }
 
-  protected alternarSeleccion(id: string, evento: Event): void {
-    evento.stopPropagation();
-    this.seleccionados.update((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
+  protected abrirDetalle(b: BrokerAdminResponse): void {
+    this.detalle.set(b);
   }
 
-  protected seleccionarPagina(evento: Event): void {
-    const marcar = (evento.target as HTMLInputElement).checked;
-    this.seleccionados.update((s) => {
-      const n = new Set(s);
-      for (const b of this.resultado().items) {
-        if (marcar) n.add(b.id);
-        else n.delete(b.id);
-      }
-      return n;
-    });
+  protected abrirReasignar(b: BrokerAdminResponse): void {
+    this.brokerAReasignar.set(b);
+    this.comercialDestino.set('');
+    this.errorReasignacion.set(false);
   }
 
-  protected paginaSeleccionada(): boolean {
-    const items = this.resultado().items;
-    return items.length > 0 && items.every((b) => this.seleccionados().has(b.id));
+  protected cerrarReasignar(): void {
+    this.brokerAReasignar.set(null);
   }
 
-  protected abrirDetalle(b: BrokerResumen): void {
-    this.detalleId.set(b.id);
-  }
-
-  protected abrirReasignar(ids: readonly string[]): void {
-    this.idsAReasignar.set(ids);
-    this.destino.set('');
-    this.modalReasignar.set(true);
-  }
-
-  protected reasignarSeleccionados(): void {
-    this.abrirReasignar([...this.seleccionados()]);
-  }
-
+  /** Confirma la reasignación de un broker al comercial destino (Req 16.3). */
   protected confirmarReasignar(): void {
-    const destino = this.destino();
-    if (!destino) return;
-    const n = this.admin.reasignar(this.idsAReasignar(), destino);
-    const nombre = this.comerciales().find((c) => c.id === destino)?.nombre ?? destino;
-    this.mensaje.set(`${n} broker${n === 1 ? '' : 's'} reasignado${n === 1 ? '' : 's'} a ${nombre}.`);
-    this.modalReasignar.set(false);
-    this.seleccionados.set(new Set());
+    const broker = this.brokerAReasignar();
+    const destino = this.comercialDestino();
+    if (!broker || !destino) return;
+    this.guardandoReasignacion.set(true);
+    this.errorReasignacion.set(false);
+    this.admin
+      .asignarComercial(broker.brokerId, destino)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (actualizado) => {
+          this.guardandoReasignacion.set(false);
+          this.brokerAReasignar.set(null);
+          this.mensaje.set(`Broker ${actualizado.broker} reasignado a ${actualizado.comercial}.`);
+          this.cargarBrokers();
+        },
+        error: () => {
+          this.guardandoReasignacion.set(false);
+          this.errorReasignacion.set(true);
+        },
+      });
   }
 
-  protected verNegocios(brokerId: string): void {
-    void this.router.navigate(['/admin/negocios'], { queryParams: { broker: brokerId } });
+  /** Variante de badge para el estado SARLAFT (`ok` / `rev` / `pend`). */
+  protected varianteSarlaft(estado: string): VarianteBadge {
+    switch (estado) {
+      case 'ok':
+        return 'success';
+      case 'rev':
+        return 'warning';
+      case 'pend':
+        return 'danger';
+      default:
+        return 'info';
+    }
+  }
+
+  /** Etiqueta legible del estado SARLAFT. */
+  protected etiquetaSarlaft(estado: string): string {
+    switch (estado) {
+      case 'ok':
+        return 'Aprobado';
+      case 'rev':
+        return 'En revisión';
+      case 'pend':
+        return 'Pendiente';
+      default:
+        return estado;
+    }
+  }
+
+  /** Variante de badge para el estado del broker. */
+  protected varianteEstado(estado: string): VarianteBadge {
+    switch (estado) {
+      case 'Activo':
+        return 'success';
+      case 'En registro':
+        return 'warning';
+      case 'Inactivo':
+        return 'danger';
+      default:
+        return 'info';
+    }
+  }
+
+  /** Obtiene los brokers visibles (con el término de búsqueda al backend). */
+  private cargarBrokers(): void {
+    this.cargando.set(true);
+    this.error.set(false);
+    this.admin
+      .listarBrokers(this.busqueda())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (brokers) => {
+          this.brokers.set(brokers);
+          this.cargando.set(false);
+        },
+        error: () => {
+          this.brokers.set([]);
+          this.cargando.set(false);
+          this.error.set(true);
+        },
+      });
+  }
+
+  /** Obtiene los comerciales activos para el selector de reasignación. */
+  private cargarComerciales(): void {
+    this.admin
+      .listarComerciales()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (comerciales) => this.comerciales.set(comerciales.filter((c) => c.activo)),
+        error: () => this.comerciales.set([]),
+      });
   }
 }

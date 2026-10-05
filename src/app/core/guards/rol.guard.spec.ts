@@ -18,26 +18,26 @@ describe('rolGuard', () => {
   });
 
   it('sin sesión redirige a /login', () => {
-    const r = ejecutar('Administrador');
+    const r = ejecutar('ADMINISTRADOR');
     expect(router.serializeUrl(r as UrlTree)).toBe('/login');
   });
 
   it('permite el rol autorizado', () => {
-    session.establecerPerfil({ nombre: 'Admin', rol: 'Administrador' });
-    expect(ejecutar('Administrador', 'Comercial')).toBe(true);
+    session.establecerPerfil({ nombre: 'Admin', rol: 'ADMINISTRADOR' });
+    expect(ejecutar('ADMINISTRADOR', 'COMERCIAL')).toBe(true);
   });
 
   it('un broker no entra a /admin y un comercial no entra a /app', () => {
-    session.establecerPerfil({ nombre: 'Ana', rol: 'Broker' });
-    expect(router.serializeUrl(ejecutar('Administrador', 'Comercial') as UrlTree)).toBe('/app');
-    session.establecerPerfil({ nombre: 'Com', rol: 'Comercial', comercialId: 'magda' });
-    expect(router.serializeUrl(ejecutar('Broker') as UrlTree)).toBe('/admin');
-    expect(router.serializeUrl(ejecutar('Administrador') as UrlTree)).toBe('/admin');
+    session.establecerPerfil({ nombre: 'Ana', rol: 'BROKER' });
+    expect(router.serializeUrl(ejecutar('ADMINISTRADOR', 'COMERCIAL') as UrlTree)).toBe('/app');
+    session.establecerPerfil({ nombre: 'Com', rol: 'COMERCIAL', comercialId: 'magda' });
+    expect(router.serializeUrl(ejecutar('BROKER') as UrlTree)).toBe('/admin');
+    expect(router.serializeUrl(ejecutar('ADMINISTRADOR') as UrlTree)).toBe('/admin');
   });
 
   it('ruta de inicio por rol', () => {
-    expect(rutaInicio('Broker')).toBe('/app');
-    expect(rutaInicio('Administrador')).toBe('/admin');
-    expect(rutaInicio('Comercial')).toBe('/admin');
+    expect(rutaInicio('BROKER')).toBe('/app');
+    expect(rutaInicio('ADMINISTRADOR')).toBe('/admin');
+    expect(rutaInicio('COMERCIAL')).toBe('/admin');
   });
 });

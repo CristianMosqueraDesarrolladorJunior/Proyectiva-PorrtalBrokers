@@ -7,6 +7,18 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 
 ## [No publicado]
 
+### Eliminado
+- Se eliminaron los mocks base del frontend para conectar el portal al backend real: el interceptor `mockBackendInterceptor` (y su registro en `app.config.ts`), el motor `agente-mock.engine.ts` y su test, los datos `mock-data/admin-cartera.json`, el script `scripts/generar-mock-admin.mjs` y el asset glob `/mock` de `angular.json`. También se quitó el bypass de desarrollo (`isDevMode()`) del login y las credenciales demo del `LoginComponent`.
+
+### Cambiado
+- Se reescribió `AdminService` para consumir exclusivamente los endpoints reales `/api/v1/admin/*` vía `HttpClient`; `admin.model.ts` refleja 1:1 los DTOs del backend y `admin.helpers.ts` conserva solo formateadores de presentación.
+- Se alineó el modelo de sesión al contrato real del backend: el tipo `Rol` usa identificadores en mayúsculas (`BROKER`/`ADMINISTRADOR`/`COMERCIAL`) y `PerfilBroker` incorpora `estadoCuenta` y `modulosPermitidos` del `SessionResponse`. Se actualizaron guards, rutas y specs.
+- Se reescribió `PerfilService` para derivar el estado de la Cuenta de la sesión real; el detalle del perfil (datos personales, documentos, SARLAFT, comisiones) no se muestra mientras el backend no exponga su endpoint, en lugar de usar datos simulados. "Mi perfil" muestra solo nombre, rol y estado de cuenta.
+- Se reescribieron los componentes de la consola admin (`admin-shell`, `brokers`, `negocios`, `comerciales`, `resumen`) para consumir el nuevo `AdminService` **asíncrono** (HTTP) con los contratos reales del backend (`BrokerAdminResponse`, `ComercialResponse`, `NegocioAdminResponse`, `ResumenAdminResponse`). Cada vista carga sus datos con `HttpClient` + signals (`cargando`/`error`) y `takeUntilDestroyed`, con estados de carga, error genérico y vacío ("No hay información disponible"). La búsqueda de brokers y el filtro de etapa de negocios se envían al backend (sin filtrado en cliente).
+
+### Eliminado
+- Se eliminaron de la consola admin todas las funciones y campos sin respaldo en el backend: paginación en cliente, filtros no soportados (tipo de broker, estado de cuenta, solo pendientes, comercial, rango de fechas), columnas inexistentes (celular, correo, documentos aportados, destino, póliza, horas de gestión, última radicación, indicadores), la generación/restablecimiento de clave temporal y el alta de acceso por cédula/correo, el activar/desactivar de comerciales y la reasignación masiva de brokers. El formulario de comercial se redujo al contrato real (`comercialId`, `nombre`, `activo`) y la reasignación usa `asignarComercial(brokerId, comercialId)` de a un broker. Se quitó la carga de datos mock del `admin-shell` (`cargar`/`errorCarga`/`cargado`).
+
 ### Corregido
 - Se corrigió un error de compilación en `GestionRenovacionComponent` (flujo de corrección): se enviaba `documentoCorregido` (metadatos `DocumentoCargado`) a `CorreccionService.registrar`, que espera el `File` real en el campo `archivo`. Ahora se envía `archivo: this.archivo()!`.
 

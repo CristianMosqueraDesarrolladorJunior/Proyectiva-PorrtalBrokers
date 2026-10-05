@@ -1,9 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { ComercialResumen } from '../../../core/models/admin.model';
+import { ComercialResponse } from '../../../core/models/admin.model';
 import { AdminService } from '../../../core/services/admin.service';
-import { copCompacto, pendientes } from '../../../core/services/admin.helpers';
 import {
   BadgeEstadoComponent,
   IconComponent,
@@ -11,17 +10,21 @@ import {
   PageHeaderComponent,
 } from '../../../shared/components';
 
-/** Formulario de comercial: nuevo (`id` null) o acceso para uno existente. */
+/** Datos del formulario de comercial (contrato real: comercialId, nombre, activo). */
 interface FormComercial {
-  readonly id: string | null;
+  comercialId: string;
   nombre: string;
-  cedula: string;
-  correo: string;
+  activo: boolean;
+  /** `true` cuando se edita un comercial existente (no se cambia el id). */
+  readonly edicion: boolean;
 }
 
 /**
- * Comerciales (solo Administrador): cartera y producción de cada uno, creación
- * de comerciales y de su usuario, clave temporal, activar/desactivar.
+ * Comerciales (Req 16). El Comercial solo lista su cartera; el Administrador
+ * puede registrar o actualizar un comercial (`guardarComercial`).
+ *
+ * La información proviene del API_Backend de forma asíncrona (`AdminService`).
+ * Solo se presentan los campos del `ComercialResponse`.
  */
 @Component({
   selector: 'app-admin-comerciales',
@@ -33,84 +36,99 @@ interface FormComercial {
 })
 export class ComercialesComponent {
   private readonly admin = inject(AdminService);
-  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly comerciales = computed(() => this.admin.comercialesResumen());
+  protected readonly esAdmin = this.admin.esAdmin();
 
+  // --- Estado de carga ---
+  protected readonly comerciales = signal<readonly ComercialResponse[]>([]);
+  protected readonly cargando = signal(false);
+  protected readonly error = signal(false);
+
+  // --- Formulario (solo Administrador) ---
   protected readonly form = signal<FormComercial | null>(null);
-  protected readonly errorForm = signal('');
-  /** Clave temporal recién generada: se muestra una sola vez. */
-  protected readonly claveMostrada = signal<{ nombre: string; cedula: string; clave: string } | null>(null);
-  protected readonly copiado = signal(false);
-  protected readonly confirmarRestaurar = signal(false);
+  protected readonly errorForm = signal(false);
+  protected readonly guardando = signal(false);
 
-  protected readonly copCompacto = copCompacto;
-  protected readonly pendientes = pendientes;
-
-  protected num(n: number): string {
-    return n.toLocaleString('es-CO');
+  constructor() {
+    this.cargarComerciales();
   }
 
+  /** Abre el formulario para registrar un comercial nuevo. */
   protected nuevo(): void {
-    this.errorForm.set('');
-    this.form.set({ id: null, nombre: '', cedula: '', correo: '' });
+    this.errorForm.set(false);
+    this.form.set({ comercialId: '', nombre: '', activo: true, edicion: false });
   }
 
-  protected crearAcceso(c: ComercialResumen): void {
-    this.errorForm.set('');
-    this.form.set({ id: c.id, nombre: c.nombre, cedula: c.cedula ?? '', correo: c.correo ?? '' });
+  /** Abre el formulario para editar un comercial existente. */
+  protected editar(c: ComercialResponse): void {
+    this.errorForm.set(false);
+    this.form.set({ comercialId: c.comercialId, nombre: c.nombre, activo: c.activo, edicion: true });
   }
 
-  protected actualizarCampo(campo: 'nombre' | 'cedula' | 'correo', evento: Event): void {
+  protected cerrarForm(): void {
+    this.form.set(null);
+  }
+
+  /** Actualiza un campo de texto del formulario. */
+  protected actualizarCampo(campo: 'comercialId' | 'nombre', evento: Event): void {
     const f = this.form();
     if (!f) return;
-    let valor = (evento.target as HTMLInputElement).value;
-    if (campo === 'cedula') valor = valor.replace(/\D/g, '').slice(0, 10);
-    this.form.set({ ...f, [campo]: valor });
+    this.form.set({ ...f, [campo]: (evento.target as HTMLInputElement).value });
   }
 
+  /** Alterna el estado activo del comercial en el formulario. */
+  protected alternarActivo(evento: Event): void {
+    const f = this.form();
+    if (!f) return;
+    this.form.set({ ...f, activo: (evento.target as HTMLInputElement).checked });
+  }
+
+  /** Registra o actualiza el comercial contra el backend (solo Administrador). */
   protected guardar(): void {
     const f = this.form();
     if (!f) return;
-    const datos = { nombre: f.nombre, cedula: f.cedula, correo: f.correo };
-    const r = f.id === null ? this.admin.crearComercial(datos) : this.admin.crearAcceso(f.id, datos);
-    if ('error' in r) {
-      this.errorForm.set(r.error);
+    const comercialId = f.comercialId.trim();
+    const nombre = f.nombre.trim();
+    if (!comercialId || !nombre) {
+      this.errorForm.set(true);
       return;
     }
-    this.form.set(null);
-    this.copiado.set(false);
-    this.claveMostrada.set({ nombre: f.nombre.trim(), cedula: f.cedula, clave: r.clave });
+    this.guardando.set(true);
+    this.errorForm.set(false);
+    this.admin
+      .guardarComercial({ comercialId, nombre, activo: f.activo })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.guardando.set(false);
+          this.form.set(null);
+          this.cargarComerciales();
+        },
+        error: () => {
+          this.guardando.set(false);
+          this.errorForm.set(true);
+        },
+      });
   }
 
-  protected restablecer(c: ComercialResumen): void {
-    const clave = this.admin.restablecerClave(c.id);
-    if (clave) {
-      this.copiado.set(false);
-      this.claveMostrada.set({ nombre: c.nombre, cedula: c.cedula ?? '', clave });
-    }
-  }
-
-  protected alternarActivo(c: ComercialResumen): void {
-    this.admin.alternarActivo(c.id);
-  }
-
-  protected verBrokers(c: ComercialResumen): void {
-    void this.router.navigate(['/admin/brokers'], { queryParams: { comercial: c.id } });
-  }
-
-  protected copiarClave(): void {
-    const c = this.claveMostrada();
-    if (!c) return;
-    const texto = `Consola Proyectiva\nUsuario (cédula): ${c.cedula}\nClave temporal: ${c.clave}`;
-    navigator.clipboard?.writeText(texto).then(
-      () => this.copiado.set(true),
-      () => this.copiado.set(false),
-    );
-  }
-
-  protected restaurar(): void {
-    this.admin.restaurarDemo();
-    this.confirmarRestaurar.set(false);
+  /** Obtiene los comerciales visibles según el rol de la sesión. */
+  private cargarComerciales(): void {
+    this.cargando.set(true);
+    this.error.set(false);
+    this.admin
+      .listarComerciales()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (comerciales) => {
+          this.comerciales.set(comerciales);
+          this.cargando.set(false);
+        },
+        error: () => {
+          this.comerciales.set([]);
+          this.cargando.set(false);
+          this.error.set(true);
+        },
+      });
   }
 }

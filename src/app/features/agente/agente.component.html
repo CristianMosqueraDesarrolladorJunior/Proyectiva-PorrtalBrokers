@@ -210,10 +210,6 @@
                       <app-icon nombre="auto_fix_high" [tamano]="16" /> Autocompletar demo
                     </button>
                   </div>
-                  @if (modoDesarrollo) {
-                    <p class="brok-guia">Mock SARLAFT: documento terminado en <b>2</b> → desactualizado · en <b>3</b> → consultable · otro → actualizado.</p>
-                  }
-
                   <button id="brok-continuar-datos" type="button" class="brok-btn brok-btn--bloque" [disabled]="!documentoValido()" (click)="continuarDatos()">
                     Continuar <app-icon nombre="arrow_forward" [tamano]="18" />
                   </button>
@@ -252,9 +248,6 @@
                       <app-icon nombre="auto_fix_high" [tamano]="16" /> Autocompletar demo
                     </button>
                   </div>
-                  @if (modoDesarrollo) {
-                    <p class="brok-guia">Mock estudio: terminado en <b>9</b> → no aprobado · en <b>8</b> → en proceso · otro → aprobado (el último dígito cambia el inquilino).</p>
-                  }
                   @if (errorEstudio(); as error) {
                     <p class="brok-error" role="alert"><app-icon nombre="error" [tamano]="16" /> {{ error }}</p>
                   }

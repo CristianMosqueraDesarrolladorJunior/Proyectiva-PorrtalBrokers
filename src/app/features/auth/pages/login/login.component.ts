@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, isDevMode, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormControl,
@@ -11,7 +11,6 @@ import { Router } from '@angular/router';
 import { BotonComponent, FormFieldComponent, IconComponent } from '../../../../shared/components';
 import { AuthService } from '../../../../core/services/auth.service';
 import { rutaInicio } from '../../../../core/guards/rol.guard';
-import { ADMIN_DEMO } from '../../../../core/services/admin.service';
 import { LoginRequest } from '../../../../core/models/broker.model';
 import {
   CEDULA_LONGITUD_MAX,
@@ -160,25 +159,6 @@ export class LoginComponent {
   }
 
   /** Navega al formulario de Solicitud_Registro_Broker (Req 1.8, 2.1, 2.2). */
-  /** Muestra el acceso del equipo interno (consola de administración). */
-  protected readonly accesoInterno = signal(false);
-
-  /** Credenciales de demostración: solo existen en desarrollo. */
-  protected readonly demoAdmin = isDevMode() ? ADMIN_DEMO : null;
-
-  protected alternarAccesoInterno(): void {
-    this.accesoInterno.update((v) => !v);
-  }
-
-  /** Llena el formulario con el administrador de demostración (solo desarrollo). */
-  protected usarDemoAdmin(): void {
-    if (!this.demoAdmin) {
-      return;
-    }
-    this.formulario.setValue({ cedula: this.demoAdmin.cedula, password: this.demoAdmin.clave });
-    this.formulario.markAllAsTouched();
-  }
-
   protected irARegistro(): void {
     void this.router.navigate([RUTA_REGISTRO_BROKER]);
   }

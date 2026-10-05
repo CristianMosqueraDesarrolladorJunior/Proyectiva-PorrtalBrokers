@@ -4,6 +4,7 @@ import {
   EventEmitter,
   Input,
   Output,
+  computed,
   inject,
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
@@ -85,7 +86,12 @@ export class SidebarComponent {
 
   /** Estado de la Cuenta (Prospecto / Broker registrado) para el pie del sidebar. */
   protected readonly estadoCuenta = this.cuenta.estadoCuenta;
-  protected readonly etiquetaEstado = ETIQUETA_ESTADO_CUENTA;
+
+  /** Etiqueta visible del estado de la Cuenta (`—` si aún no se conoce). */
+  protected readonly etiquetaEstadoActual = computed<string>(() => {
+    const estado = this.estadoCuenta();
+    return estado ? ETIQUETA_ESTADO_CUENTA[estado] : '—';
+  });
 
   /** En desktop el sidebar puede plegarse a un riel de iconos. */
   protected readonly colapsado = this.layout.sidebarColapsado;
@@ -129,9 +135,14 @@ export class SidebarComponent {
     return this.base === '/app';
   }
 
-  /** Módulo presentado con candado mientras la Cuenta es prospecto (solo UI). */
+  /**
+   * Módulo presentado con candado mientras la Cuenta es prospecto (solo UI).
+   * Si aún no se conoce el estado de la Cuenta (`null`), no se marca candado;
+   * la autorización efectiva la aplica el servidor (403).
+   */
   protected bloqueado(ruta: string): boolean {
-    return this.esPortalBroker && moduloBloqueado(this.estadoCuenta(), ruta);
+    const estado = this.estadoCuenta();
+    return this.esPortalBroker && estado !== null && moduloBloqueado(estado, ruta);
   }
 
   /** Alterna el riel de iconos (solo desktop). */

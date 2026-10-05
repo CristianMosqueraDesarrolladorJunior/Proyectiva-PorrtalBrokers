@@ -4,7 +4,6 @@ import {
   DestroyRef,
   computed,
   inject,
-  isDevMode,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -155,7 +154,6 @@ export class RegistroBrokerComponent {
   protected readonly etiquetaTipoDocumento = ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD;
   protected readonly modulosRestringidos = MODULOS_RESTRINGIDOS;
   protected readonly textoLegal = TEXTO_LEGAL;
-  protected readonly modoDesarrollo = isDevMode();
 
   /** Reglas de los 4 documentos obligatorios adaptadas al uploader (Req 3.16). */
   protected readonly reglasUploader: readonly ReglaDocumentoUploader[] =

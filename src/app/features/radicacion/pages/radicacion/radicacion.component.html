@@ -260,13 +260,6 @@
             <app-alert-banner variante="error" titulo="Consulta no disponible">{{ error }}</app-alert-banner>
           }
 
-          @if (modoDesarrollo) {
-            <app-info-box icono="science">
-              <strong>Mock de desarrollo:</strong> el último dígito del documento consultado
-              (propietario, o apoderado si firma él) define la salida: <b>…1</b> actualizado · <b>…2</b> desactualizado (al reconsultar
-              queda actualizado) · <b>…3</b> consultable.
-            </app-info-box>
-          }
         </app-form-section-card>
 
         <app-form-section-card

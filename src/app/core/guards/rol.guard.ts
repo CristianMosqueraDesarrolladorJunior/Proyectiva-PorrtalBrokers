@@ -6,7 +6,7 @@ import { SessionService } from '../services/session.service';
 
 /** Ruta de inicio de cada rol después del login. */
 export function rutaInicio(rol: Rol | undefined): string {
-  return rol === 'Administrador' || rol === 'Comercial' ? '/admin' : '/app';
+  return rol === 'ADMINISTRADOR' || rol === 'COMERCIAL' ? '/admin' : '/app';
 }
 
 /**

@@ -39,7 +39,7 @@ export const routes: Routes = [
   // --- Shell autenticado (Req 4, 4.4) ---
   {
     path: 'app',
-    canActivate: [authGuard, rolGuard('Broker')],
+    canActivate: [authGuard, rolGuard('BROKER')],
     loadComponent: () =>
       import('./features/shell/shell.component').then((m) => m.ShellComponent),
     children: [
@@ -202,7 +202,7 @@ export const routes: Routes = [
   // --- Consola de administración (diagrama 16): Administrador y Comercial ---
   {
     path: 'admin',
-    canActivate: [rolGuard('Administrador', 'Comercial')],
+    canActivate: [rolGuard('ADMINISTRADOR', 'COMERCIAL')],
     loadComponent: () =>
       import('./features/admin/admin-shell/admin-shell.component').then(
         (m) => m.AdminShellComponent,
@@ -236,7 +236,7 @@ export const routes: Routes = [
       {
         path: 'comerciales',
         title: 'Comerciales — Consola Proyectiva',
-        canActivate: [rolGuard('Administrador')],
+        canActivate: [rolGuard('ADMINISTRADOR')],
         loadComponent: () =>
           import('./features/admin/comerciales/comerciales.component').then(
             (m) => m.ComercialesComponent,

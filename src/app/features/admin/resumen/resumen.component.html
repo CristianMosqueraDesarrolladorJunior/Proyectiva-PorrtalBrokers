@@ -1,142 +1,68 @@
 <section class="vista" aria-labelledby="resumen-titulo">
   <app-page-header
-    [eyebrow]="esAdmin() ? 'Consola de administración' : 'Mi cartera'"
+    [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="resumen-titulo"
-    [titulo]="esAdmin() ? 'Estado de la operación' : 'Hola, ' + (perfil()?.nombre ?? '')"
-    [subtitulo]="esAdmin()
-      ? 'Brokers, negocios radicados y su estado documental, por comercial.'
-      : 'Así van los brokers que acompañas: ayúdalos a radicar y a resolver sus pendientes.'"
+    [titulo]="esAdmin ? 'Estado de la operación' : 'Hola, ' + (perfil()?.nombre ?? '')"
+    subtitulo="Indicadores de la cartera, radicados por comercial y actividad reciente."
   ></app-page-header>
 
-  @let r = resumen();
-  <div class="kpis">
-    <app-kpi-card label="Brokers" [valor]="num(r.brokers)" icono="groups" [sub]="num(r.brokersConPendientes) + ' con pendientes'" />
-    <app-kpi-card label="Negocios radicados" [valor]="num(r.indicadores.negocios)" icono="description"
-      [sub]="'Último mes (' + etiquetaMes(r.ultimoMes.clave) + '): ' + num(r.ultimoMes.negocios)" />
-    <app-kpi-card label="Pólizas expedidas" [valor]="num(r.indicadores.expedidos)" icono="verified" tono="success"
-      [sub]="pct(r.indicadores.expedidos, r.indicadores.negocios) + ' de lo radicado'" />
-    <app-kpi-card label="Pendientes documentales" [valor]="num(pendientes(r.indicadores))" icono="pending_actions" tono="accent"
-      [sub]="num(r.indicadores.pendientesCorreccion) + ' en corrección · ' + num(r.indicadores.pendientesValidacion) + ' en validación'" />
-    <app-kpi-card [label]="esAdmin() ? 'Prima expedida' : 'Mi producción (prima expedida)'" [valor]="copCompacto(r.indicadores.primaExpedida)" icono="payments"
-      [sub]="'Último mes: ' + copCompacto(r.ultimoMes.prima)" />
-  </div>
-
-  <div class="grid-2">
-    <div class="panel">
-      <h3>Radicaciones por mes</h3>
-      <p class="panel__sub">Últimos 12 meses con datos · barra clara = radicados, oscura = expedidos</p>
-      <div class="barras" role="img" [attr.aria-label]="'Radicaciones por mes, último mes ' + r.ultimoMes.negocios">
-        @for (m of r.porMes; track m.clave) {
-          <div class="barra" [title]="m.etiqueta + ': ' + m.negocios + ' radicados, ' + m.expedidos + ' expedidos'">
-            <span class="barra__valor">{{ m.negocios }}</span>
-            <div class="barra__pista">
-              <div class="barra__total" [style.height.%]="(m.negocios / maxMes()) * 100">
-                <div class="barra__exp" [style.height.%]="m.negocios ? (m.expedidos / m.negocios) * 100 : 0"></div>
-              </div>
-            </div>
-            <span class="barra__mes">{{ m.etiqueta }}</span>
-          </div>
+  @if (resumen(); as r) {
+    @if (r.kpis.length > 0) {
+      <div class="kpis">
+        @for (k of r.kpis; track k.etiqueta) {
+          <app-kpi-card [label]="k.etiqueta" [valor]="k.valor" [sub]="k.detalle" [tono]="tonoKpi(k.alerta)" />
         }
       </div>
-    </div>
-
-    <div class="panel">
-      <h3>Estado documental</h3>
-      <p class="panel__sub">{{ num(r.indicadores.negocios) }} negocios en total</p>
-      <ul class="estados">
-        @for (e of estados(); track e.etiqueta) {
-          <li>
-            <div class="estados__fila">
-              <span>{{ e.etiqueta }}</span>
-              <b>{{ num(e.valor) }}</b>
-            </div>
-            <div class="estados__pista"><div [class]="'estados__barra estados__barra--' + e.clase" [style.width.%]="e.pct"></div></div>
-          </li>
-        }
-      </ul>
-      <button type="button" class="btn-link" (click)="verPendientes()">
-        Ver brokers con pendientes <app-icon nombre="arrow_forward" [tamano]="16" />
-      </button>
-    </div>
-  </div>
-
-  @if (esAdmin()) {
-    <div class="panel">
-      <h3>Cartera por comercial</h3>
-      <p class="panel__sub">Producción informativa (prima de pólizas expedidas); el cálculo de comisión no está incluido.</p>
-      <div class="tabla-envoltura">
-        <table class="tabla">
-          <thead>
-            <tr>
-              <th>Comercial</th>
-              <th class="num">Brokers</th>
-              <th class="num">Activos 90 d</th>
-              <th class="num">Negocios</th>
-              <th class="num">Expedidos</th>
-              <th class="num">Pendientes</th>
-              <th class="num">Prima expedida</th>
-              <th>Acceso</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (c of comerciales(); track c.id) {
-              <tr class="fila" tabindex="0" (click)="verBrokersDe(c.id)" (keydown.enter)="verBrokersDe(c.id)">
-                <td><div class="principal"><b>{{ c.nombre }}</b><small>{{ c.origen === 'csv' ? 'Del Warehouse' : 'Creado en la consola' }}</small></div></td>
-                <td class="num">{{ num(c.brokers) }}</td>
-                <td class="num">{{ num(c.brokersActivos90d) }}</td>
-                <td class="num">{{ num(c.negocios) }}</td>
-                <td class="num">{{ num(c.expedidos) }}</td>
-                <td class="num" [class.alerta]="pendientes(c) > 0">{{ num(pendientes(c)) }}</td>
-                <td class="num">{{ copCompacto(c.primaExpedida) }}</td>
-                <td>
-                  @if (!c.activo) {
-                    <app-badge-estado variante="danger">Inactivo</app-badge-estado>
-                  } @else if (c.conAcceso) {
-                    <app-badge-estado variante="success">Con usuario</app-badge-estado>
-                  } @else {
-                    <app-badge-estado variante="warning">Sin usuario</app-badge-estado>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </div>
-  }
-
-  <div class="panel">
-    <h3>Pendientes que más tiempo llevan</h3>
-    <p class="panel__sub">Negocios en validación o corrección documental ordenados por horas de gestión: aquí es donde el acompañamiento al broker hace la diferencia.</p>
-    @if (r.alertas.length === 0) {
-      <p class="aviso">No hay negocios pendientes. 🎉</p>
     } @else {
-      <div class="tabla-envoltura">
-        <table class="tabla">
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Broker</th>
-              @if (esAdmin()) { <th>Comercial</th> }
-              <th>Estado</th>
-              <th>Radicado</th>
-              <th class="num">Horas gestión</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (a of r.alertas; track a.codigo) {
-              <tr class="fila" tabindex="0" (click)="verNegocio(a.codigo)" (keydown.enter)="verNegocio(a.codigo)">
-                <td><b>{{ a.codigo }}</b></td>
-                <td>{{ a.brokerNombre }}</td>
-                @if (esAdmin()) { <td>{{ a.comercialNombre }}</td> }
-                <td><app-badge-estado [variante]="varianteEstado(a.estado)">{{ estadoCorto(a.estado) }}</app-badge-estado></td>
-                <td>{{ fechaCorta(a.fecha) }}</td>
-                <td class="num alerta">{{ num(a.horasGestion) }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <p class="aviso">No hay indicadores disponibles.</p>
     }
-  </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Radicados por comercial</h3>
+        @if (r.radicadosPorComercial.length > 0) {
+          <ul class="estados">
+            @for (rc of r.radicadosPorComercial; track rc.comercial) {
+              <li>
+                <div class="estados__fila">
+                  <span>{{ rc.comercial }}</span>
+                  <b>{{ rc.radicados }}</b>
+                </div>
+                <div class="estados__pista">
+                  <div class="estados__barra estados__barra--info" [style.width.%]="(rc.radicados / maxRadicados()) * 100"></div>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="aviso">No hay información disponible.</p>
+        }
+      </div>
+
+      <div class="panel">
+        <h3>Actividad reciente</h3>
+        @if (r.actividadReciente.length > 0) {
+          <ul class="mini-lista">
+            @for (a of r.actividadReciente; track a.texto + a.fecha) {
+              <li [class.alerta]="a.alerta">
+                <span>
+                  <b>{{ a.texto }}</b>
+                  <small>{{ fechaCorta(a.fecha) }}</small>
+                </span>
+                @if (a.alerta) {
+                  <app-icon nombre="warning" [tamano]="18" />
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="aviso">No hay actividad reciente.</p>
+        }
+      </div>
+    </div>
+  } @else if (cargando()) {
+    <p class="aviso" role="status">Cargando resumen…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">No se pudo cargar la información. Intenta nuevamente.</p>
+  }
 </section>

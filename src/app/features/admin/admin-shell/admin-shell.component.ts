@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Router, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../../../core/services/auth.service';
-import { AdminService } from '../../../core/services/admin.service';
 import { LayoutService } from '../../../core/services/layout.service';
 import { SessionService } from '../../../core/services/session.service';
 import { IconComponent } from '../../../shared/components';
@@ -25,7 +24,8 @@ const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
  * Shell de la consola de administración (diagrama 16).
  *
  * Reutiliza el sidebar del portal con los accesos del rol: el Administrador ve
- * Comerciales; el Comercial solo su cartera. Carga una vez los datos mock.
+ * Comerciales; el Comercial solo su cartera. Cada vista hija carga sus propios
+ * datos desde el API_Backend de forma asíncrona.
  */
 @Component({
   selector: 'app-admin-shell',
@@ -39,22 +39,13 @@ export class AdminShellComponent {
   private readonly session = inject(SessionService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
-  protected readonly admin = inject(AdminService);
   protected readonly layout = inject(LayoutService);
 
   protected readonly perfil = this.session.perfil;
   protected readonly accesos = computed(() =>
-    this.perfil()?.rol === 'Administrador' ? ACCESOS_ADMIN : ACCESOS_COMERCIAL,
+    this.perfil()?.rol === 'ADMINISTRADOR' ? ACCESOS_ADMIN : ACCESOS_COMERCIAL,
   );
   protected readonly sidebarAbierto = signal(false);
-
-  constructor() {
-    this.admin.cargar().subscribe();
-  }
-
-  protected reintentarCarga(): void {
-    this.admin.cargar().subscribe();
-  }
 
   protected alternarSidebar(): void {
     this.sidebarAbierto.update((v) => !v);

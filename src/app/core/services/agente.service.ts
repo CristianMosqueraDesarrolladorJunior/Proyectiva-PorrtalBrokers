@@ -9,7 +9,6 @@ import { EventoAgente, RespuestaAgente } from '../models/agente.model';
  *
  * El front solo habla con el BFF (`POST /api/v1/agente/mensajes`) usando la
  * cookie HttpOnly de la sesión. Nunca llama al LLM ni al agente directamente.
- * En desarrollo responde el motor mock del `mockBackendInterceptor`.
  */
 @Injectable({ providedIn: 'root' })
 export class AgenteService {

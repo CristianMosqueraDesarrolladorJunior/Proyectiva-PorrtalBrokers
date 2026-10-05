@@ -1,6 +1,6 @@
-import { Injectable, inject, isDevMode } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, tap, throwError } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 
 import { LoginRequest, PerfilBroker } from '../models/broker.model';
 import type { ResultadoSarlaftRadicacion } from '../models/radicacion.model';
@@ -11,7 +11,6 @@ import {
   VerificacionSarlaftRegistroRequest,
 } from '../models/registro-broker.model';
 import { SessionService } from './session.service';
-import { autenticarUsuarioInterno } from './admin.service';
 
 /**
  * Parámetros de la Consulta_SARLAFT (documento + fecha de expedición) (Req 3).
@@ -50,29 +49,6 @@ export class AuthService {
    * @returns el `PerfilBroker` autenticado.
    */
   login(request: LoginRequest): Observable<PerfilBroker> {
-    // BYPASS TEMPORAL DE DESARROLLO (solo `ng serve`, isDevMode()): mientras el
-    // API_Backend no exista, permite recorrer toda la experiencia sin servidor.
-    // Cualquier cédula (6–10 dígitos) y contraseña no vacía autentican con un
-    // PerfilBroker de prueba. NO aplica en producción (build optimizado).
-    // TODO: eliminar cuando el Servicio_Autenticacion esté disponible.
-    if (isDevMode()) {
-      // Usuarios internos de la consola (Administrador y Comerciales mock).
-      const interno = autenticarUsuarioInterno(request.cedula, request.password);
-      if (interno === 'invalida') {
-        return throwError(() => ({ status: 401 }));
-      }
-      if (interno) {
-        return of(interno).pipe(tap((perfil) => this.session.establecerPerfil(perfil)));
-      }
-      const perfilDemo: PerfilBroker = {
-        nombre: 'Juan Pablo Restrepo',
-        rol: 'Broker',
-      };
-      return of(perfilDemo).pipe(
-        tap((perfil) => this.session.establecerPerfil(perfil)),
-      );
-    }
-
     return this.http
       .post<PerfilBroker>(`${this.baseUrl}/auth/login`, request, {
         withCredentials: true,

@@ -64,11 +64,6 @@
                 {
                   "glob": "**/*",
                   "input": "public"
-                },
-                {
-                  "glob": "**/*.json",
-                  "input": "mock-data",
-                  "output": "mock"
                 }
               ]
             }

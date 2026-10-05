@@ -1,10 +1,12 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import {
   FormBuilder,
@@ -24,6 +26,7 @@ import type {
 } from '../../../../core/models/renovacion.model';
 import { CorreccionService } from '../../../../core/services/correccion.service';
 import { RenovacionService } from '../../../../core/services/renovacion.service';
+import type { Poliza } from '../../../../core/models/poliza.model';
 import {
   AlertBannerComponent,
   ArchivoSeleccionado,
@@ -61,17 +64,19 @@ type ModalidadDetalle = 'anterior' | 'ajustar' | null;
 /** Modo del paso Ajuste: bloqueado (mismos valores) o editable (con ajustes). */
 type ModoAjuste = 'bloqueado' | 'editable';
 
-/** Número de póliza de respaldo cuando no llega por queryParam. */
-const POLIZA_FALLBACK = 'POL-2023-8901';
-
 /** Ruta de retorno al portafolio de renovaciones. */
 const RUTA_RENOVACIONES = '/app/renovaciones';
 
-/** Datos mock de la póliza mostrados en Detalles (replican el proyecto fuente). */
+/**
+ * Detalle de la póliza mostrado en el paso Detalles. Los datos de identificación
+ * (cobertura, vencimiento) provienen de la póliza real del portafolio del
+ * backend; los valores económicos los captura el broker en el formulario de
+ * ajuste. `null` mientras no se resuelva la póliza del portafolio.
+ */
 interface DatosPoliza {
   readonly numero: string;
   readonly tipoCobertura: string;
-  readonly fechaVencimiento: Date;
+  readonly fechaVencimiento: Date | null;
   readonly valorMensual: number;
   readonly administracion: number;
   readonly serviciosPublicos: number;
@@ -123,6 +128,7 @@ export class GestionRenovacionComponent {
   private readonly fb = inject(FormBuilder);
   private readonly renovacionService = inject(RenovacionService);
   private readonly correccionService = inject(CorreccionService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- Estado del wizard ---------------------------------------------------
 
@@ -139,7 +145,10 @@ export class GestionRenovacionComponent {
   protected readonly pasoActivo = computed(() => indicePaso(this.flujo(), this.etapa()));
 
   /** Número de póliza recibido por queryParam. */
-  protected readonly numeroPoliza = signal(POLIZA_FALLBACK);
+  protected readonly numeroPoliza = signal('');
+
+  /** Póliza real del portafolio del backend que coincide con `numeroPoliza`. */
+  private readonly polizaReal = signal<Poliza | null>(null);
 
   /** Diálogo de confirmación antes de "No renovar". */
   protected readonly mostrarConfirmacionNoRenovar = signal(false);
@@ -176,28 +185,37 @@ export class GestionRenovacionComponent {
   protected readonly modalidadSeleccionada = signal<ModalidadDetalle>(null);
   protected readonly esBloqueado = computed(() => this.modoAjuste() === 'bloqueado');
 
-  /** Formulario del paso Ajuste (valores por defecto del proyecto fuente). */
+  /** Formulario del paso Ajuste. Los valores los captura el broker (sin precargar). */
   protected readonly formulario: FormGroup = this.fb.group({
-    valorCanon: [450000, [Validators.required, Validators.min(1)]],
-    administracion: [150000, [Validators.required, Validators.min(0)]],
-    valorAseguradoServicios: [80000, [Validators.required, Validators.min(0)]],
-    valorAseguradoDyF: [120000, [Validators.required, Validators.min(0)]],
-    periodoActual: ['2024-01-01'],
-    periodoProyectado: ['01/01/2025 - 31/12/2025'],
-    ipcAplicado: [5.2],
+    valorCanon: [null, [Validators.required, Validators.min(1)]],
+    administracion: [null, [Validators.required, Validators.min(0)]],
+    valorAseguradoServicios: [null, [Validators.required, Validators.min(0)]],
+    valorAseguradoDyF: [null, [Validators.required, Validators.min(0)]],
+    periodoActual: [''],
+    periodoProyectado: [''],
+    ipcAplicado: [null],
     observaciones: ['', [Validators.maxLength(500)]],
   });
 
-  /** Datos mock de la póliza (idénticos al proyecto fuente). */
-  protected readonly poliza = computed<DatosPoliza>(() => ({
-    numero: this.numeroPoliza(),
-    tipoCobertura: 'Arrendamiento Integral',
-    fechaVencimiento: new Date('2024-12-31'),
-    valorMensual: 450000,
-    administracion: 150000,
-    serviciosPublicos: 80000,
-    danosFaltantes: 120000,
-  }));
+  /**
+   * Detalle de la póliza para la vista: identificación tomada de la póliza real
+   * del portafolio del backend (cobertura y vencimiento) y valores económicos
+   * tomados del formulario que edita el broker. No se usan datos simulados.
+   */
+  protected readonly poliza = computed<DatosPoliza>(() => {
+    const real = this.polizaReal();
+    const f = this.formulario.getRawValue();
+    const vencimiento = real?.fechaVencimiento ? new Date(real.fechaVencimiento) : null;
+    return {
+      numero: this.numeroPoliza(),
+      tipoCobertura: real?.producto ?? '—',
+      fechaVencimiento: vencimiento,
+      valorMensual: Number(f.valorCanon) || 0,
+      administracion: Number(f.administracion) || 0,
+      serviciosPublicos: Number(f.valorAseguradoServicios) || 0,
+      danosFaltantes: Number(f.valorAseguradoDyF) || 0,
+    };
+  });
 
   protected readonly totalEstimado = computed(() => {
     const p = this.poliza();
@@ -268,12 +286,34 @@ export class GestionRenovacionComponent {
   });
 
   constructor() {
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const numero = params.get('numeroPolizaInicial');
-      this.numeroPoliza.set(
-        numero && numero.trim().length > 0 ? numero.trim().replace(/^#/, '') : POLIZA_FALLBACK,
-      );
+      this.numeroPoliza.set(numero && numero.trim().length > 0 ? numero.trim().replace(/^#/, '') : '');
+      this.cargarPolizaReal();
     });
+  }
+
+  /**
+   * Resuelve la póliza del portafolio real del backend que coincide con el
+   * número recibido, para mostrar su cobertura y vencimiento. Si no se encuentra
+   * o falla la consulta, la vista muestra valores neutros (sin datos simulados).
+   */
+  private cargarPolizaReal(): void {
+    const numero = this.numeroPoliza();
+    if (!numero) {
+      this.polizaReal.set(null);
+      return;
+    }
+    this.renovacionService
+      .portafolio()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (portafolio) => {
+          const encontrada = portafolio.polizas.find((p) => p.numero === numero) ?? null;
+          this.polizaReal.set(encontrada);
+        },
+        error: () => this.polizaReal.set(null),
+      });
   }
 
   // --- Opciones --------------------------------------------------------------

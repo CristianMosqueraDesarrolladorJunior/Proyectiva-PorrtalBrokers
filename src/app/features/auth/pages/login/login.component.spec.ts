@@ -12,7 +12,7 @@ describe('LoginComponent', () => {
   let authSpy: { login: jest.Mock };
   let routerSpy: { navigate: jest.Mock };
 
-  const perfil: PerfilBroker = { nombre: 'Ana Broker', rol: 'Broker' };
+  const perfil: PerfilBroker = { nombre: 'Ana Broker', rol: 'BROKER' };
 
   const query = (selector: string): HTMLElement =>
     fixture.nativeElement.querySelector(selector) as HTMLElement;
@@ -103,7 +103,7 @@ describe('LoginComponent', () => {
   });
 
   it('lleva a la consola /admin cuando el usuario es Administrador o Comercial', () => {
-    authSpy.login.mockReturnValue(of({ nombre: 'Admin', rol: 'Administrador' } as PerfilBroker));
+    authSpy.login.mockReturnValue(of({ nombre: 'Admin', rol: 'ADMINISTRADOR' } as PerfilBroker));
     escribir('#login-cedula', '1000000001');
     escribir('#login-password', 'Admin#2026');
     fixture.detectChanges();

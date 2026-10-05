@@ -147,9 +147,6 @@
         }
 
         @if (errorSarlaft()) { <p class="registro-error" role="alert">{{ errorSarlaft() }}</p> }
-        @if (modoDesarrollo) {
-          <p class="registro-guia">Mock: documento terminado en <b>2</b> → desactualizado (al verificar de nuevo queda actualizado) · en <b>3</b> → consultable.</p>
-        }
 
         <div class="registro-acciones">
           @switch (sarlaft()?.estado) {

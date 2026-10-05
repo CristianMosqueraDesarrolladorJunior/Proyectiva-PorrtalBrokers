@@ -5,7 +5,7 @@ import { PerfilBroker } from '../models/broker.model';
 describe('SessionService', () => {
   let service: SessionService;
 
-  const perfil: PerfilBroker = { nombre: 'Juan Pérez', rol: 'Broker' };
+  const perfil: PerfilBroker = { nombre: 'Juan Pérez', rol: 'BROKER' };
 
   beforeEach(() => {
     TestBed.configureTestingModule({});

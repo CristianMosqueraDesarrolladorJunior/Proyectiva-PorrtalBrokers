@@ -6,7 +6,6 @@ import {
   HostListener,
   computed,
   inject,
-  isDevMode,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -174,7 +173,6 @@ export class AgenteComponent {
 
   protected readonly pasos = PASOS;
   protected readonly recorrido = RECORRIDO;
-  protected readonly modoDesarrollo = isDevMode();
   protected readonly circunferencia = CIRCUNFERENCIA_ANILLO;
   protected readonly maxMensaje = MAX_MENSAJE;
   protected readonly moneda = formatearCop;

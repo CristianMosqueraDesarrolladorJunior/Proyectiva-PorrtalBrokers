@@ -69,14 +69,14 @@
           routerLink="/app/perfil"
           routerLinkActive="sidebar__profile--activo"
           [attr.title]="colapsado() ? broker.nombre + ' · Mi perfil' : null"
-          [attr.aria-label]="broker.nombre + ', ' + etiquetaEstado[estadoCuenta()] + '. Ver mi perfil'"
+          [attr.aria-label]="broker.nombre + ', ' + etiquetaEstadoActual() + '. Ver mi perfil'"
           (click)="solicitarCierre()"
         >
           <div class="sidebar__avatar" aria-hidden="true">{{ iniciales(broker.nombre) }}</div>
           <div class="sidebar__profile-text">
             <strong>{{ broker.nombre }}</strong>
             <span class="sidebar__estado" [class.sidebar__estado--prospecto]="estadoCuenta() === 'PROSPECTO'">
-              {{ etiquetaEstado[estadoCuenta()] }}
+              {{ etiquetaEstadoActual() }}
             </span>
           </div>
           <app-icon class="sidebar__profile-flecha" nombre="chevron_right" [tamano]="18" />

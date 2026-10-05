@@ -1,99 +1,63 @@
 <section class="vista" aria-labelledby="negocios-titulo">
   <app-page-header
-    [eyebrow]="esAdmin() ? 'Consola de administración' : 'Mi cartera'"
+    [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="negocios-titulo"
     titulo="Negocios"
-    [subtitulo]="nombreBrokerFiltro()
-      ? 'Negocios de ' + nombreBrokerFiltro()
-      : 'Solicitudes radicadas y su estado documental. Toca una fila para ver el detalle.'"
+    subtitulo="Solicitudes radicadas y su etapa. Toca una fila para ver el detalle."
   ></app-page-header>
 
   <div class="filtros" role="search">
-    <label class="filtros__busqueda">
-      Buscar
-      <input class="control" type="search" placeholder="Código, póliza, broker o ciudad" [value]="busqueda()"
-        (input)="busqueda.set(valor($event)); filtrar()" />
-    </label>
     <label>
-      Estado
-      <select class="control" (change)="estado.set(valor($event)); filtrar()">
-        <option value="" [selected]="!estado()">Todos</option>
-        @for (e of estadosDisponibles; track e) {
-          <option [value]="e" [selected]="e === estado()">{{ e }}</option>
+      Etapa
+      <select class="control" (change)="filtrarEtapa(valor($event))">
+        <option value="" [selected]="!etapa()">Todas</option>
+        @for (e of etapasDisponibles; track e) {
+          <option [value]="e" [selected]="e === etapa()">{{ e }}</option>
         }
       </select>
     </label>
-    @if (esAdmin()) {
-      <label>
-        Comercial
-        <select class="control" (change)="comercialId.set(valor($event)); filtrar()">
-          <option value="" [selected]="!comercialId()">Todos</option>
-          @for (c of comerciales(); track c.id) {
-            <option [value]="c.id" [selected]="c.id === comercialId()">{{ c.nombre }}</option>
-          }
-        </select>
-      </label>
-    }
-    <label>
-      Desde
-      <input class="control" type="date" [value]="desde()" (change)="desde.set(valor($event)); filtrar()" />
-    </label>
-    <label>
-      Hasta
-      <input class="control" type="date" [value]="hasta()" (change)="hasta.set(valor($event)); filtrar()" />
-    </label>
-    <button type="button" class="btn-sec" (click)="limpiar()">Limpiar</button>
   </div>
 
-  <div class="tabla-envoltura">
-    <table class="tabla" aria-label="Negocios">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Radicado</th>
-          <th>Broker</th>
-          @if (esAdmin()) { <th>Comercial</th> }
-          <th>Destino · ciudad</th>
-          <th class="num">Valor póliza</th>
-          <th>Estado</th>
-          <th class="num">Horas</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (n of resultado().items; track $index) {
-          <tr class="fila" tabindex="0" (click)="detalle.set(n)" (keydown.enter)="detalle.set(n)">
-            <td><div class="principal"><b>{{ n.codigo }}</b><small>{{ n.poliza || 'sin póliza' }}</small></div></td>
-            <td>{{ fechaCorta(n.fecha) }}</td>
-            <td>{{ n.brokerNombre }}</td>
-            @if (esAdmin()) { <td>{{ n.comercialNombre }}</td> }
-            <td>{{ n.destino || '—' }} · {{ n.ciudad || '—' }}</td>
-            <td class="num">{{ cop(n.valorPoliza) }}</td>
-            <td><app-badge-estado [variante]="varianteEstado(n.estado)">{{ estadoCorto(n.estado) }}</app-badge-estado></td>
-            <td class="num" [class.alerta]="n.estado.startsWith('Pendiente') && n.horasGestion > 48">{{ num(n.horasGestion) }}</td>
+  @if (cargando()) {
+    <p class="aviso" role="status">Cargando negocios…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">No se pudo cargar la información. Intenta nuevamente.</p>
+  } @else {
+    <div class="tabla-envoltura">
+      <table class="tabla" aria-label="Negocios">
+        <thead>
+          <tr>
+            <th>Radicado</th>
+            <th>Inquilino</th>
+            <th>Broker</th>
+            <th class="num">Valor asegurado</th>
+            <th>Etapa</th>
+            <th>Fecha</th>
           </tr>
-        } @empty {
-          <tr><td class="tabla__vacia" colspan="8">No hay negocios con esos filtros.</td></tr>
-        }
-      </tbody>
-    </table>
-  </div>
-
-  <div class="paginacion">
-    <span>{{ num(resultado().total) }} negocios · página {{ resultado().pagina }} de {{ totalPaginas() }}</span>
-    <div>
-      <button type="button" class="btn-sec" [disabled]="resultado().pagina <= 1" (click)="irPagina(resultado().pagina - 1)">Anterior</button>
-      <button type="button" class="btn-sec" [disabled]="resultado().pagina >= totalPaginas()" (click)="irPagina(resultado().pagina + 1)">Siguiente</button>
+        </thead>
+        <tbody>
+          @for (n of negocios(); track n.radicado) {
+            <tr class="fila" tabindex="0" (click)="detalle.set(n)" (keydown.enter)="detalle.set(n)">
+              <td><b>{{ n.radicado }}</b></td>
+              <td>{{ n.inquilino }}</td>
+              <td>{{ n.broker }}</td>
+              <td class="num">{{ cop(n.valorAsegurado) }}</td>
+              <td><app-badge-estado [variante]="varianteEtapa(n.etapa)">{{ n.etapa }}</app-badge-estado></td>
+              <td>{{ fechaCorta(n.fecha) }}</td>
+            </tr>
+          } @empty {
+            <tr><td class="tabla__vacia" colspan="6">No hay información disponible.</td></tr>
+          }
+        </tbody>
+      </table>
     </div>
-  </div>
+  }
 </section>
 
-<app-drawer-detalle [abierto]="detalle() !== null" [titulo]="detalle()?.codigo ?? ''" [filas]="filasDetalle()" (cerrar)="detalle.set(null)">
+<app-drawer-detalle [abierto]="detalle() !== null" [titulo]="detalle()?.radicado ?? ''" [filas]="filasDetalle()" (cerrar)="detalle.set(null)">
   @if (detalle(); as n) {
     <div class="detalle-seccion">
-      <app-badge-estado [variante]="varianteEstado(n.estado)">{{ n.estado }}</app-badge-estado>
-      @if (n.estado.startsWith('Pendiente')) {
-        <p class="aviso">Acompaña al broker a completar o corregir los documentos para que la póliza se expida.</p>
-      }
+      <app-badge-estado [variante]="varianteEtapa(n.etapa)">{{ n.etapa }}</app-badge-estado>
     </div>
   }
 </app-drawer-detalle>

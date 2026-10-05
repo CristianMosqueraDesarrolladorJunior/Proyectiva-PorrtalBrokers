@@ -3,7 +3,6 @@ import {
   Component,
   computed,
   inject,
-  isDevMode,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -186,9 +185,6 @@ export class RadicacionComponent {
 
   /** Confirmación visual tras copiar el enlace de actualización. */
   protected readonly enlaceCopiado = signal(false);
-
-  /** Muestra la guía de casos de prueba del mock solo en desarrollo. */
-  protected readonly modoDesarrollo = isDevMode();
 
   /** A quién se consulta SARLAFT: al apoderado si firma él; si no, al propietario. */
   protected readonly sujetoSarlaft = computed(() => sujetoSarlaft(this.firmaApoderado()));

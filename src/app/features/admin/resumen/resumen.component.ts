@@ -1,76 +1,78 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { ResumenAdminResponse } from '../../../core/models/admin.model';
 import { AdminService } from '../../../core/services/admin.service';
-import { copCompacto, etiquetaMes, fechaCorta, pendientes } from '../../../core/services/admin.helpers';
+import { fechaCorta } from '../../../core/services/admin.helpers';
 import { SessionService } from '../../../core/services/session.service';
 import {
-  BadgeEstadoComponent,
   IconComponent,
   KpiCardComponent,
   PageHeaderComponent,
 } from '../../../shared/components';
-import { estadoCorto, varianteEstado } from '../admin-vista';
+import type { TonoKpiCard } from '../../../shared/components';
 
 /**
- * Resumen de la consola: KPIs, estado documental, radicaciones por mes,
- * comparativo por comercial (solo admin) y negocios pendientes con más horas.
+ * Resumen de la consola (Req 16): KPIs, radicados por comercial y actividad
+ * reciente, tal como los entrega el API_Backend (`AdminService`). No hay
+ * cálculos ni agregaciones en el cliente.
  */
 @Component({
   selector: 'app-admin-resumen',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeaderComponent, KpiCardComponent, BadgeEstadoComponent, IconComponent],
+  imports: [PageHeaderComponent, KpiCardComponent, IconComponent],
   templateUrl: './resumen.component.html',
   styleUrls: ['../admin-comun.scss', './resumen.component.scss'],
 })
 export class ResumenComponent {
   private readonly admin = inject(AdminService);
-  private readonly router = inject(Router);
   private readonly session = inject(SessionService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly esAdmin = this.admin.esAdmin;
+  protected readonly esAdmin = this.admin.esAdmin();
   protected readonly perfil = this.session.perfil;
-  protected readonly resumen = computed(() => this.admin.resumen());
-  protected readonly comerciales = computed(() => this.admin.comercialesResumen());
 
-  protected readonly maxMes = computed(() => Math.max(1, ...this.resumen().porMes.map((m) => m.negocios)));
+  // --- Estado de carga ---
+  protected readonly resumen = signal<ResumenAdminResponse | null>(null);
+  protected readonly cargando = signal(false);
+  protected readonly error = signal(false);
 
-  protected readonly estados = computed(() => {
-    const i = this.resumen().indicadores;
-    const total = Math.max(1, i.negocios);
-    return [
-      { etiqueta: 'Expedido', valor: i.expedidos, clase: 'ok' },
-      { etiqueta: 'Pendiente Validación Documental', valor: i.pendientesValidacion, clase: 'info' },
-      { etiqueta: 'Pendiente Corrección Documental', valor: i.pendientesCorreccion, clase: 'warn' },
-      { etiqueta: 'Desistido', valor: i.desistidos, clase: 'ko' },
-    ].map((e) => ({ ...e, pct: (e.valor / total) * 100 }));
-  });
-
-  protected readonly copCompacto = copCompacto;
   protected readonly fechaCorta = fechaCorta;
-  protected readonly etiquetaMes = etiquetaMes;
-  protected readonly pendientes = pendientes;
-  protected readonly varianteEstado = varianteEstado;
-  protected readonly estadoCorto = estadoCorto;
 
-  protected num(n: number): string {
-    return n.toLocaleString('es-CO');
+  constructor() {
+    this.cargarResumen();
   }
 
-  protected pct(parte: number, total: number): string {
-    return total ? `${Math.round((parte / total) * 100)}%` : '—';
+  /** Máximo de radicados para dimensionar las barras (mínimo 1). */
+  protected maxRadicados(): number {
+    const r = this.resumen();
+    if (!r) return 1;
+    return Math.max(1, ...r.radicadosPorComercial.map((x) => x.radicados));
   }
 
-  protected verBrokersDe(comercialId: string): void {
-    void this.router.navigate(['/admin/brokers'], { queryParams: { comercial: comercialId } });
+  /** Tono de la tarjeta de KPI según su bandera de alerta. */
+  protected tonoKpi(alerta: boolean): TonoKpiCard {
+    return alerta ? 'danger' : 'none';
   }
 
-  protected verNegocio(codigo: string): void {
-    void this.router.navigate(['/admin/negocios'], { queryParams: { q: codigo } });
-  }
-
-  protected verPendientes(): void {
-    void this.router.navigate(['/admin/brokers'], { queryParams: { pendientes: 1 } });
+  /** Obtiene el resumen de administración desde el backend. */
+  private cargarResumen(): void {
+    this.cargando.set(true);
+    this.error.set(false);
+    this.admin
+      .obtenerResumen()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resumen) => {
+          this.resumen.set(resumen);
+          this.cargando.set(false);
+        },
+        error: () => {
+          this.resumen.set(null);
+          this.cargando.set(false);
+          this.error.set(true);
+        },
+      });
   }
 }

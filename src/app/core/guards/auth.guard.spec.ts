@@ -31,7 +31,7 @@ describe('authGuard', () => {
 
   it('permite el acceso cuando el Broker está autenticado', () => {
     // Given
-    session.establecerPerfil({ nombre: 'Ana', rol: 'Broker' });
+    session.establecerPerfil({ nombre: 'Ana', rol: 'BROKER' });
     // When
     const resultado = ejecutarGuard();
     // Then
