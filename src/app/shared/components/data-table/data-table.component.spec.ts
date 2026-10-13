@@ -64,4 +64,56 @@ describe('DataTableComponent', () => {
     // Then
     expect(emitido).toEqual([]);
   });
+
+  it('pinta la celda principal con subtítulo y emite la acción elegida sin seleccionar la fila', () => {
+    component.columnas = [
+      { key: 'nombre', header: 'Nombre', tipo: 'principal' },
+      {
+        key: 'acciones',
+        header: '',
+        tipo: 'acciones',
+        acciones: [
+          { id: 'editar', etiqueta: 'Editar', icono: 'edit' },
+          { id: 'borrar', etiqueta: 'Borrar', icono: 'delete', tono: 'peligro' },
+        ],
+      },
+    ];
+    component.filas = [{ nombre: 'Ana', nombreSub: 'ana@correo.co' }];
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.dt-principal__sub')?.textContent).toContain('ana@correo.co');
+    const acciones: { accion?: string }[] = [];
+    const seleccion: number[] = [];
+    component.accion.subscribe((a) => acciones.push(a));
+    component.seleccionFila.subscribe((i) => seleccion.push(i));
+    const botones = el.querySelectorAll<HTMLButtonElement>('.dt-accion');
+    expect(botones[1].classList).toContain('dt-accion--peligro');
+    botones[1].click();
+    expect(acciones).toEqual([{ indice: 0, columna: 'acciones', accion: 'borrar' }]);
+    expect(seleccion).toEqual([]);
+  });
+
+  it('pagina localmente cuando recibe todas las filas y la búsqueda vuelve a la primera página', () => {
+    component.filas = Array.from({ length: 25 }, (_, i) => ({ ref: `R-${i + 1}`, cliente: i < 3 ? 'Ana' : 'Juan' }));
+    component.total = 25;
+    component.tamanoPagina = 10;
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelectorAll('tbody tr').length).toBe(10);
+    el.querySelector<HTMLButtonElement>('[aria-label="Página 3"]')!.click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('tbody tr').length).toBe(5);
+    expect(el.querySelector('tbody tr td')?.textContent).toContain('R-21');
+  });
+
+  it('usa el texto de acción propio de la fila y cae al de la columna', () => {
+    component.columnas = [{ key: 'ir', header: '', tipo: 'accion', textoAccion: 'Gestionar' }];
+    component.filas = [{ ir: '', irTexto: 'Ver detalle' }, { ir: '' }];
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const textos = [...(fixture.nativeElement as HTMLElement).querySelectorAll('tbody button')].map((b) => b.textContent?.trim());
+    expect(textos).toEqual(['Ver detalle', 'Gestionar']);
+  });
 });

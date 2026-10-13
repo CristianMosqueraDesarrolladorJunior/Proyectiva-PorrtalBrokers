@@ -29,7 +29,8 @@ FROM nginx:1.27-alpine AS runtime
 # Plantilla de Nginx (se resuelve con envsubst en el arranque) y entrypoint.
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY docker-entrypoint.sh /docker-entrypoint-front.sh
-RUN chmod +x /docker-entrypoint-front.sh
+# Quita CRLF por si el repo se clonó en Windows (sh no ejecuta "#!/bin/sh" con \r al final).
+RUN sed -i 's/\r$//' /docker-entrypoint-front.sh && chmod +x /docker-entrypoint-front.sh
 
 # Bundle del navegador generado por el builder `application` de Angular.
 COPY --from=build /src/dist/portal-brokers/browser /usr/share/nginx/html

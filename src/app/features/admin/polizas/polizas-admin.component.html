@@ -1,0 +1,74 @@
+<section class="vista" aria-labelledby="polizas-titulo">
+  <app-page-header
+    [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
+    tituloId="polizas-titulo"
+    titulo="Pólizas expedidas"
+    subtitulo="Cada póliza con su comisión: si ya se le pagó al broker y la cuenta de cobro con la que la cobró."
+  ></app-page-header>
+
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Pólizas expedidas" [valor]="polizas().length" icono="workspace_premium" [sub]="compacto(primaTotal()) + ' en primas emitidas'" />
+    <app-kpi-card label="Comisión pagada" [valor]="pagadas()" icono="paid" sub="Pólizas con comisión consignada" />
+    <app-kpi-card label="Comisión por pagar" [valor]="pendientes()" icono="schedule" tono="accent" sub="Cobradas, falta consignar" />
+    <app-kpi-card label="Sin cuenta de cobro" [valor]="sinCobrar()" icono="receipt_long" sub="El broker aún no la radica" />
+  </app-grid-layout>
+
+  <app-barra-acciones>
+    <div filtros>
+      <app-segmented-control [opciones]="filtros" [valor]="filtro()" ariaLabel="Filtrar por pago" (valorChange)="filtro.set($event)" />
+    </div>
+  </app-barra-acciones>
+
+  <app-estado-vista
+    [cargando]="cargando()"
+    [error]="error()"
+    [vacio]="filas().length === 0"
+    entidad="pólizas"
+    iconoVacio="workspace_premium"
+    tituloVacio="No hay pólizas en este filtro"
+    descripcionVacio="Aparecen cuando el área expide un negocio."
+    (reintentar)="cargar()"
+  >
+    <app-data-table
+      [columnas]="columnas"
+      [filas]="filas()"
+      [total]="filas().length"
+      [tamanoPagina]="20"
+      [conBusqueda]="true"
+      placeholderBusqueda="Buscar por póliza, negocio, propietario o broker…"
+      ariaLabel="Pólizas expedidas"
+      (accion)="gestionar($event)"
+    />
+  </app-estado-vista>
+</section>
+
+<app-modal-dialog
+  [abierto]="seleccionada() !== null"
+  [titulo]="'Póliza ' + (seleccionada()?.numero ?? '')"
+  [subtitulo]="(seleccionada()?.propietario ?? '') + ' · ' + (seleccionada()?.broker ?? '')"
+  eyebrow="Póliza expedida"
+  tamano="xl"
+  [pestanas]="pestanas()"
+  [pestana]="pestana()"
+  (pestanaChange)="cambiarPestana($event)"
+  (cerrar)="seleccionada.set(null)"
+>
+  @if (seleccionada(); as p) {
+    <div cabecera>
+      <app-badge-estado [variante]="(pago[p.estadoPago] ?? { variante: 'info' }).variante" [conPunto]="true">
+        {{ (pago[p.estadoPago] ?? { etiqueta: p.estadoPago }).etiqueta }}
+      </app-badge-estado>
+    </div>
+  }
+  @if (seleccionada()) {
+    @if (pestana() === 'detalle') {
+      <app-ficha [secciones]="ficha()" />
+    } @else {
+      <app-visor-archivo
+        [archivo]="archivo()"
+        [cargando]="cargandoArchivo()"
+        [nombre]="pestana() === 'documento' ? 'poliza-' + seleccionada()!.numero + '.pdf' : 'cuenta-de-cobro.pdf'"
+      />
+    }
+  }
+</app-modal-dialog>

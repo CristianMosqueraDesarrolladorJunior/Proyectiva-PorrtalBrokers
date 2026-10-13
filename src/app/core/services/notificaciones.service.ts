@@ -4,6 +4,9 @@ import { catchError, forkJoin, of } from 'rxjs';
 import type { Notificacion } from '../models/notificacion.model';
 import { DashboardService } from './dashboard.service';
 import { DocumentosService } from './documentos.service';
+import { CatalogoService } from './catalogo.service';
+import { SessionService } from './session.service';
+import { moduloBloqueado } from '../models/cuenta.model';
 
 const CLAVE_LEIDAS = 'portal-brokers:notificaciones-leidas';
 const MAXIMO_NOTIFICACIONES = 8;
@@ -17,6 +20,8 @@ const MAXIMO_NOTIFICACIONES = 8;
 export class NotificacionesService {
   private readonly dashboard = inject(DashboardService);
   private readonly documentos = inject(DocumentosService);
+  private readonly catalogo = inject(CatalogoService);
+  private readonly session = inject(SessionService);
 
   private readonly base = signal<readonly Omit<Notificacion, 'leida'>[]>([]);
   private readonly leidas = signal<ReadonlySet<string>>(this.leerLeidas());
@@ -27,12 +32,20 @@ export class NotificacionesService {
 
   readonly noLeidas = computed(() => this.lista().filter((n) => !n.leida).length);
 
+  /** El calendario es un módulo restringido para el prospecto (catálogo `modulo_portal`): no se consulta. */
+  private calendarioPermitido(): boolean {
+    const estado = this.session.perfil()?.estadoCuenta;
+    return !estado || !moduloBloqueado(estado, 'calendario', this.catalogo.modulosRestringidos().map((m) => m.ruta));
+  }
+
   /** Carga (o refresca) las notificaciones desde el API. Los fallos no interrumpen la UI. */
   cargar(): void {
     const mes = new Date().toISOString().slice(0, 7);
     forkJoin({
       kpis: this.dashboard.obtenerKpis().pipe(catchError(() => of(null))),
-      eventos: this.documentos.obtenerEventos(mes).pipe(catchError(() => of([]))),
+      eventos: this.calendarioPermitido()
+        ? this.documentos.obtenerEventos(mes).pipe(catchError(() => of([])))
+        : of([]),
     }).subscribe(({ kpis, eventos }) => {
       const items: Omit<Notificacion, 'leida'>[] = [];
 

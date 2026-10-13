@@ -23,7 +23,7 @@
         controlId="caso-especial-tipo"
       >
         <app-radio-group
-          [opciones]="opcionesTipo"
+          [opciones]="opcionesTipo()"
           [valor]="tipo()"
           (valorChange)="tipo.set($event)"
           ariaLabel="Tipo de caso especial"

@@ -18,6 +18,12 @@
 /** Longitud mínima del nombre completo del aspirante (Req 3.2). */
 export const NOMBRE_LONGITUD_MIN = 3;
 
+/** Longitud mínima de la contraseña del prospecto (debe coincidir con la política del backend). */
+export const PASSWORD_LONGITUD_MIN = 10;
+
+/** Longitud máxima de la contraseña del prospecto (evita DoS por hashing de entradas enormes). */
+export const PASSWORD_LONGITUD_MAX = 128;
+
 /** Longitud mínima del número de documento (Req 3.7). */
 export const DOCUMENTO_LONGITUD_MIN = 6;
 
@@ -35,47 +41,17 @@ export const TELEFONO_LONGITUD_MAX = 10;
  */
 export const CODIGO_PAIS_DEFECTO = '+57';
 
-/**
- * Códigos de país permitidos en el selector de teléfono (Req 3.4).
- * +57 por defecto más las 9 opciones definidas. Allowlist estricta.
- */
-export const CODIGOS_PAIS_PERMITIDOS: readonly string[] = [
-  '+57',
-  '+1',
-  '+52',
-  '+54',
-  '+56',
-  '+51',
-  '+593',
-  '+58',
-  '+55',
-  '+507',
-];
-
-/** Ciudades permitidas en el selector obligatorio de ciudad (Req 3.5). Allowlist estricta. */
-export const CIUDADES_PERMITIDAS: readonly string[] = [
-  'Bogotá',
-  'Medellín',
-  'Cali',
-  'Barranquilla',
-  'Cartagena',
-  'Bucaramanga',
-  'Pereira',
-  'Santa Marta',
-  'Manizales',
-  'Cúcuta',
-  'Ibagué',
-  'Villavicencio',
-  'Armenia',
-  'Pasto',
-  'Montería',
-];
-
 /** Acepta únicamente teléfonos compuestos por 7 a 10 dígitos (Req 3.4). */
 const PATRON_TELEFONO = /^\d{7,10}$/;
 
 /** Acepta únicamente documentos compuestos por 6 a 12 dígitos (Req 3.7). */
 const PATRON_DOCUMENTO = /^\d{6,12}$/;
+
+/**
+ * Política de contraseña fuerte: al menos una minúscula, una mayúscula y un dígito.
+ * Replica `CredentialValidator.PASSWORD_FUERTE` del backend (el backend revalida SIEMPRE).
+ */
+const PATRON_PASSWORD_FUERTE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
 
 /**
  * Patrón de correo electrónico válido (Req 3.3).
@@ -120,10 +96,10 @@ export function esCorreoValido(correo: string): boolean {
 
 /**
  * Valida el código de país del teléfono (Req 3.4): debe pertenecer a la
- * allowlist permitida. Función pura y total.
+ * allowlist del catálogo `codigo_pais`. Función pura y total.
  */
-export function esCodigoPaisValido(codigo: string): boolean {
-  return CODIGOS_PAIS_PERMITIDOS.includes(codigo);
+export function esCodigoPaisValido(codigo: string, validos: readonly string[]): boolean {
+  return validos.includes(codigo);
 }
 
 /**
@@ -136,10 +112,10 @@ export function esTelefonoValido(telefono: string): boolean {
 
 /**
  * Valida la ciudad (Req 3.5): selector obligatorio cuyo valor debe pertenecer a
- * la allowlist de ciudades permitidas. Función pura y total.
+ * las ciudades del catálogo `ciudad`. Función pura y total.
  */
-export function esCiudadValida(ciudad: string): boolean {
-  return CIUDADES_PERMITIDAS.includes(ciudad);
+export function esCiudadValida(ciudad: string, validas: readonly string[]): boolean {
+  return validas.includes(ciudad);
 }
 
 /**
@@ -148,6 +124,22 @@ export function esCiudadValida(ciudad: string): boolean {
  */
 export function esDocumentoValido(documento: string): boolean {
   return PATRON_DOCUMENTO.test(documento);
+}
+
+/**
+ * Valida la contraseña del prospecto replicando la política de alta del backend
+ * (`CredentialValidator.isPasswordSegura`): longitud entre {@link PASSWORD_LONGITUD_MIN} y
+ * {@link PASSWORD_LONGITUD_MAX}, con al menos una minúscula, una mayúscula y un dígito. Es
+ * validación de UX/fail-fast; el backend revalida SIEMPRE (Req 2.6, 3.23). Función pura y total.
+ *
+ * @param password contraseña en claro capturada en el formulario.
+ * @returns `true` si la contraseña satisface la política de alta.
+ */
+export function esPasswordValida(password: string): boolean {
+  if (password.length < PASSWORD_LONGITUD_MIN || password.length > PASSWORD_LONGITUD_MAX) {
+    return false;
+  }
+  return PATRON_PASSWORD_FUERTE.test(password);
 }
 
 /**
@@ -174,12 +166,15 @@ export function validarInformacionPersonal(datos: {
   readonly codigoPais: string;
   readonly telefono: string;
   readonly ciudad: string;
+  /** Allowlists del catálogo (`codigo_pais`, `ciudad`). */
+  readonly codigosPais: readonly string[];
+  readonly ciudades: readonly string[];
 }): ResultadoValidacionPersonal {
   const nombreValido = esNombreValido(datos.nombreCompleto);
   const correoValido = esCorreoValido(datos.correo);
-  const codigoPaisValido = esCodigoPaisValido(datos.codigoPais);
+  const codigoPaisValido = esCodigoPaisValido(datos.codigoPais, datos.codigosPais);
   const telefonoValido = esTelefonoValido(datos.telefono);
-  const ciudadValida = esCiudadValida(datos.ciudad);
+  const ciudadValida = esCiudadValida(datos.ciudad, datos.ciudades);
   return {
     nombreValido,
     correoValido,

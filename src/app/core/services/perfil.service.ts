@@ -1,32 +1,290 @@
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, catchError, forkJoin, map, of, tap } from 'rxjs';
 
-import type { EstadoCuenta, PerfilCuenta } from '../models/cuenta.model';
+import {
+  type DatosPersonalesEditables,
+  type DocumentoPerfil,
+  type EstadoCuenta,
+  type EstadoSarlaftPerfil,
+  type PerfilCuenta,
+} from '../models/cuenta.model';
+import type { TipoDocumentoRegistro } from '../models/registro-broker.model';
+import type { EstadoSarlaftRadicacion, ResultadoSarlaftRadicacion } from '../models/radicacion.model';
 import { SessionService } from './session.service';
+import { CatalogoService } from './catalogo.service';
+
+
+/**
+ * Forma exacta de la respuesta del backend `GET/PUT /api/v1/brokers/perfil`
+ * (`PerfilCuentaResponse`).
+ */
+interface PerfilCuentaBackend {
+  readonly id: string;
+  readonly estadoCuenta: EstadoCuenta;
+  readonly tipoDocumento: string;
+  readonly numeroDocumento: string;
+  readonly nombreCompleto: string;
+  readonly correo: string | null;
+  readonly telefono: string | null;
+  readonly fechaRegistro: string | null;
+}
+
+/**
+ * Propiedad parcial del perfil compartido de Cien Cuadras (Firestore) expuesto por
+ * GET /auth/perfil-compartido. Sólo interesa la `ciudad` para el perfil del broker,
+ * ya que este dato no se persiste en `portal.radicador`.
+ */
+interface PerfilCompartido {
+  readonly ciudad: string;
+}
+
+/** Estado SARLAFT que decide el backend → estado mostrado en el perfil (sin reglas en el cliente). */
+export function estadoSarlaftPerfil(estado: EstadoSarlaftRadicacion | string | null): EstadoSarlaftPerfil {
+  switch (estado) {
+    case 'ACTUALIZADO':
+    case 'puede_continuar':
+    case 'exceptuado':
+      return 'vigente';
+    case 'DESACTUALIZADO':
+    case 'CONSULTABLE':
+    case 'requiere_actualizacion':
+      return 'vencido';
+    default:
+      return 'sin_consultar';
+  }
+}
+
+/** Documentos en estado neutro (pendientes) mientras no exista persistencia por cuenta. */
+function documentosIniciales(tipos: readonly TipoDocumentoRegistro[] = []): DocumentoPerfil[] {
+  return tipos.map((tipo) => ({
+    tipo,
+    estado: 'pendiente',
+    archivo: '',
+    fechaCarga: null,
+  }));
+}
+
+/** Documento del expediente de legalización (`/brokers/legalizacion`). */
+interface DocumentoLegalizacion {
+  readonly tipo: TipoDocumentoRegistro;
+  readonly nombre: string;
+  readonly estado: string;
+  readonly fechaCarga: string;
+}
+
+/** Expediente de legalización del prospecto guardado en el servidor. */
+interface ExpedienteLegalizacion {
+  readonly estado: string;
+  readonly sarlaftEstado: string | null;
+  readonly sarlaftFecha: string | null;
+  readonly documentos: readonly DocumentoLegalizacion[];
+}
+
+/** Perfil base construido con los datos reales de la sesión del backend. */
+function perfilBase(parcial: Partial<PerfilCuenta>): PerfilCuenta {
+  return {
+    id: '',
+    estadoCuenta: 'PROSPECTO',
+    tipoDocumento: 'CC',
+    numeroDocumento: '',
+    nombreCompleto: '',
+    correo: '',
+    telefono: '',
+    ciudad: '',
+    comercialAsignado: '',
+    fechaIngreso: '',
+    fechaRegistro: null,
+    sarlaft: { estado: 'sin_consultar', fechaExpedicion: null, ultimaConsulta: null },
+    documentos: documentosIniciales(),
+    comisiones: { solicitudes: 0, monto: 0, acreditadas: false },
+    ...parcial,
+  };
+}
 
 /**
  * Servicio del perfil de la Cuenta.
  *
- * El estado de la Cuenta (`PROSPECTO`/`REGISTRADO`) proviene de la sesión real
- * emitida por el backend (`GET /api/v1/auth/session`), que `AuthService` publica
- * en `SessionService`.
- *
- * El detalle completo del perfil (datos personales, documentos y comisiones) aún
- * no tiene endpoint en el API_Backend, por lo que `perfil` permanece en `null`
- * hasta que exista el contrato. No se exponen datos simulados: la UI debe tratar
- * `null` como "sin información disponible".
+ * Los datos personales (nombre, correo, teléfono, documento) y el estado de la
+ * Cuenta provienen del backend real (`GET/PUT /api/v1/brokers/perfil`). La UI de
+ * etapas de vinculación usa el expediente de legalización (`/brokers/legalizacion`)
+ * y la consulta SARLAFT del backend (`/sarlaft/consultas`): el estado lo decide
+ * siempre el servidor.
  */
 @Injectable({ providedIn: 'root' })
 export class PerfilService {
+  private readonly http = inject(HttpClient);
   private readonly session = inject(SessionService);
+  private readonly catalogo = inject(CatalogoService);
+  private readonly baseUrl = '/api/v1';
+
+  /** Perfil inicializado con los datos reales de la sesión; se refresca con `cargar()`. */
+  private readonly _perfil = signal<PerfilCuenta>(
+    perfilBase({
+      estadoCuenta: this.session.perfil()?.estadoCuenta ?? 'PROSPECTO',
+      nombreCompleto: this.session.perfil()?.nombre ?? '',
+      documentos: documentosIniciales(this.catalogo.codigos<TipoDocumentoRegistro>('documento_legalizacion')),
+    }),
+  );
+
+  readonly perfil = this._perfil.asReadonly();
+  readonly estadoCuenta = computed<EstadoCuenta>(() => this._perfil().estadoCuenta);
+
+  /** Documentos aportados (en revisión o aprobados). */
+  readonly documentosAportados = computed(
+    () => this._perfil().documentos.filter((d) => d.estado !== 'pendiente').length,
+  );
+
+  /** Requisitos para la Transicion_Registro: 4 documentos aportados y SARLAFT vigente. */
+  readonly puedeCompletarRegistro = computed(() => {
+    const p = this._perfil();
+    return (
+      p.estadoCuenta === 'PROSPECTO' &&
+      p.documentos.every((d) => d.estado !== 'pendiente') &&
+      p.legalizacion !== 'EN_REVISION'
+    );
+  });
+
+  /** Carga el perfil de la cuenta autenticada desde el backend y lo publica. */
+  cargar(): Observable<PerfilCuenta> {
+    const perfilCuenta$ = this.http.get<PerfilCuentaBackend>(
+      `${this.baseUrl}/brokers/perfil`,
+      { withCredentials: true },
+    );
+    const ciudad$ = this.http
+      .get<PerfilCompartido>(`${this.baseUrl}/auth/perfil-compartido`, { withCredentials: true })
+      .pipe(
+        map((r) => (r?.ciudad ?? '').trim()),
+        catchError(() => of('')),
+      );
+    // Expediente real de legalización (documentos y SARLAFT guardados en el servidor).
+    const expediente$ = this.http
+      .get<ExpedienteLegalizacion>(`${this.baseUrl}/brokers/legalizacion`, { withCredentials: true })
+      .pipe(catchError(() => of(null)));
+    return forkJoin([perfilCuenta$, ciudad$, expediente$]).pipe(
+      map(([dto, ciudad, expediente]) => this.combinar(dto, { ciudad, ...this.desdeExpediente(expediente) })),
+      tap((perfil) => this._perfil.set(perfil)),
+    );
+  }
+
+  /** Actualiza los datos personales en el backend (`PUT /brokers/perfil`). La `ciudad` no es editable desde el perfil (viene del perfil compartido de Cien Cuadras). */
+  actualizarDatos(datos: DatosPersonalesEditables): Observable<PerfilCuenta> {
+    const body = {
+      nombreCompleto: datos.nombreCompleto,
+      correo: datos.correo,
+      telefono: datos.telefono,
+    };
+    return this.http
+      .put<PerfilCuentaBackend>(`${this.baseUrl}/brokers/perfil`, body, { withCredentials: true })
+      .pipe(
+        map((dto) => this.combinar(dto)),
+        tap((perfil) => this._perfil.set(perfil)),
+      );
+  }
 
   /**
-   * Detalle del perfil de la Cuenta. `null` mientras el backend no exponga el
-   * endpoint correspondiente (no se devuelven datos simulados).
+   * Reemplaza un documento: queda "en revisión". El documento de identidad NO
+   * se puede modificar desde el perfil. (Estado local hasta que exista endpoint
+   * de documentos por cuenta; el backend revalidará al enviar el registro.)
    */
-  readonly perfil = computed<PerfilCuenta | null>(() => null);
+  reemplazarDocumento(tipo: TipoDocumentoRegistro, archivo: File): Observable<PerfilCuenta> {
+    // El documento de identidad solo es inmodificable cuando YA tiene archivo cargado;
+    // si nunca se cargó, se permite el primer alta desde el perfil.
+    if (tipo === 'documentoIdentidad') {
+      const identidad = this._perfil().documentos.find((d) => d.tipo === 'documentoIdentidad');
+      if (identidad?.archivo) {
+        throw new Error('El documento de identidad ya está cargado y no se puede modificar.');
+      }
+    }
+    const cuerpo = new FormData();
+    cuerpo.append('tipo', tipo);
+    cuerpo.append('archivo', archivo);
+    return this.http
+      .post<DocumentoLegalizacion>(`${this.baseUrl}/brokers/legalizacion/documentos`, cuerpo, { withCredentials: true })
+      .pipe(
+        map((doc) => {
+          this._perfil.update((p) => ({
+            ...p,
+            documentos: p.documentos.map(
+              (d): DocumentoPerfil =>
+                d.tipo === tipo ? { ...d, estado: 'en_revision', archivo: doc.nombre, fechaCarga: doc.fechaCarga } : d,
+            ),
+          }));
+          return this._perfil();
+        }),
+      );
+  }
 
-  /** Estado de la Cuenta derivado de la sesión real del backend. */
-  readonly estadoCuenta = computed<EstadoCuenta | null>(
-    () => this.session.perfil()?.estadoCuenta ?? null,
-  );
+  /** Consulta el Conocimiento de Cliente del broker en el backend (`POST /sarlaft/consultas`); el backend decide. */
+  actualizarSarlaft(fechaExpedicion: string): Observable<PerfilCuenta> {
+    const p = this._perfil();
+    return this.http
+      .post<ResultadoSarlaftRadicacion>(
+        `${this.baseUrl}/sarlaft/consultas`,
+        { documento: p.numeroDocumento, tipoDocumento: p.tipoDocumento, fechaExpedicion },
+        { withCredentials: true },
+      )
+      .pipe(
+        map((r) => {
+          this._perfil.update((actual) => ({
+            ...actual,
+            sarlaft: { estado: estadoSarlaftPerfil(r.estado), fechaExpedicion, ultimaConsulta: r.fechaConsulta },
+          }));
+          return this._perfil();
+        }),
+      );
+  }
+
+  /**
+   * Transicion_Registro (Req 3.4–3.6): la misma Cuenta pasa a REGISTRADO. El
+   * backend es la fuente autoritativa del estado; aquí se refleja localmente para
+   * la navegación de la UI de vinculación.
+   */
+  completarRegistro(): Observable<PerfilCuenta> {
+    // El servidor consulta SARLAFT y deja la solicitud EN_REVISION: el área aprueba con sus
+    // validadores y solo entonces la cuenta pasa a REGISTRADO.
+    return this.http
+      .post<{ estado: string }>(`${this.baseUrl}/brokers/legalizacion/solicitud`, {}, { withCredentials: true })
+      .pipe(
+        map((solicitud) => {
+          this._perfil.update((p) => ({ ...p, legalizacion: solicitud.estado }));
+          return this._perfil();
+        }),
+      );
+  }
+
+  /** Documentos y SARLAFT del expediente del servidor sobre el perfil local. */
+  private desdeExpediente(e: ExpedienteLegalizacion | null): Partial<PerfilCuenta> {
+    if (!e) return {};
+    const previo = this._perfil();
+    return {
+      legalizacion: e.estado,
+      documentos: previo.documentos.map((d): DocumentoPerfil => {
+        const servidor = e.documentos.find((x) => x.tipo === d.tipo);
+        return servidor
+          ? { ...d, estado: servidor.estado === 'APROBADO' ? 'aprobado' : 'en_revision', archivo: servidor.nombre, fechaCarga: servidor.fechaCarga }
+          : d;
+      }),
+      ...(e.sarlaftEstado
+        ? { sarlaft: { ...previo.sarlaft, estado: estadoSarlaftPerfil(e.sarlaftEstado), ultimaConsulta: e.sarlaftFecha ?? previo.sarlaft.ultimaConsulta } }
+        : {}),
+    };
+  }
+
+  /** Combina la respuesta del backend con el estado local (SARLAFT/documentos/ciudad). */
+  private combinar(dto: PerfilCuentaBackend, extra: Partial<PerfilCuenta> = {}): PerfilCuenta {
+    const previo = this._perfil();
+    return {
+      ...previo,
+      id: dto.id,
+      estadoCuenta: dto.estadoCuenta,
+      tipoDocumento: (dto.tipoDocumento as PerfilCuenta['tipoDocumento']) ?? 'CC',
+      numeroDocumento: dto.numeroDocumento,
+      nombreCompleto: dto.nombreCompleto,
+      correo: dto.correo ?? '',
+      telefono: dto.telefono ?? '',
+      fechaRegistro: dto.fechaRegistro,
+      ...extra,
+    };
+  }
 }

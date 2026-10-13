@@ -14,7 +14,7 @@ export type TipoPersona = 'natural' | 'juridica';
 export type TipoDocumentoIdentidad = 'CC' | 'CE' | 'NIT' | 'PA';
 
 // Documentos obligatorios/ opcionales de Radicacion (Req 11, 12). Conjunto distinto
-// de los documentos de registro de broker (DOCUMENTOS_REGISTRO_BROKER).
+// de los documentos de registro de broker (catálogo documento_legalizacion).
 export type TipoDocumentoRadicacion =
   | 'cedulaPropietario'          // Persona_Natural (Req 11.1)
   | 'certificadoTradicion'       // Persona_Natural, vigencia ≤ 90 días (Req 11.1, 13.3)
@@ -26,71 +26,73 @@ export type TipoDocumentoRadicacion =
   | 'cedulaApoderado';           // caso apoderado (Req 10.2)
 
 /**
- * Resultado del Estudio de Arrendamiento (paso 2 del flujo de radicación).
- * Es una API-gate: solo `aprobado` permite continuar; `no_aprobado` bloquea el
- * proceso y expone la URL de Estudio Digital para que el inquilino lo realice.
+ * Estado de conjunto cerrado del Estudio Digital (paso 2 del flujo de radicación),
+ * tal cual lo deriva el backend (`EstudioResponse.estado`). Es una API-gate: solo
+ * `APROBADO` permite continuar; `NO_APROBADO` bloquea y expone la URL de Estudio
+ * Digital; `PENDIENTE` indica que el estudio sigue en trámite.
  */
-export type EstadoEstudioArrendamiento = 'pendiente' | 'aprobado' | 'no_aprobado';
+export type EstadoEstudioArrendamiento = 'PENDIENTE' | 'APROBADO' | 'NO_APROBADO';
 
-/** Datos del inquilino que ocupa el inmueble y debe tener el estudio aprobado (paso 1). */
-export interface DatosInquilino {
-  readonly nombre: string;
-  readonly cedula?: string;
-  readonly celular?: string;
-  readonly correo?: string;
-}
-
-/** Inmueble arrendado que ampara el estudio (lo devuelve la API de estudio). */
-export interface DatosInmueble {
-  readonly direccion: string;
-  readonly ciudad: string;
-  readonly destino: 'Vivienda' | 'Comercio';
-  readonly canon: number;
-  readonly administracion: number;
-  /** Nombre del propietario registrado en el estudio. */
-  readonly propietario?: string;
-}
-
-/** Resultado de la consulta a la API de Estudio de Arrendamiento (paso 2). */
+/**
+ * Resultado de la consulta a la API de Estudio Digital del Libertador (paso 2),
+ * alineado 1:1 con el DTO `EstudioResponse` del backend. Toda la PII
+ * (nombres/apellidos/documento del inquilino, inmueble) llega completa (sin enmascarar).
+ */
 export interface ResultadoEstudioArrendamiento {
+  /** Estado de conjunto cerrado derivado (APROBADO/NO_APROBADO/PENDIENTE). */
   readonly estado: EstadoEstudioArrendamiento;
+  /** Status del estudio tal cual lo entrega el sistema externo (texto libre). */
+  readonly status?: string;
+  /** Consecutivo del estudio consultado (alias: numeroEstudio). */
+  readonly consecutivo?: string;
   readonly numeroEstudio?: string;
+  /** Fecha ISO de la consulta. */
   readonly fechaConsulta: string;
-  /** Solo `no_aprobado`: URL de Estudio Digital para que el inquilino lo realice. */
-  readonly urlEstudioDigital?: string;
-  /** Inquilino del estudio. La PII llega enmascarada desde el backend. */
-  readonly inquilino?: DatosInquilino;
-  /** Inmueble y condiciones económicas del arrendamiento. */
-  readonly inmueble?: DatosInmueble;
-  /** Vigencia del estudio aprobado (ISO `yyyy-mm-dd`). */
+  /** Nombres del inquilino (o nulo). */
+  readonly nombresInquilino?: string;
+  /** Apellidos del inquilino (o nulo). */
+  readonly apellidosInquilino?: string;
+  /** Documento del inquilino (o nulo). */
+  readonly documentoInquilino?: string;
+  /** Nombre completo del inquilino (o nulo). */
+  readonly inquilino?: string;
+  /** Datos del inmueble (solo si APROBADO). */
+  readonly inmueble?: string;
+  /** Fecha de vigencia del estudio aprobado (alias: vigenteHasta). */
+  readonly fechaVigencia?: string;
   readonly vigenteHasta?: string;
+  /** Solo NO_APROBADO: URL de Estudio Digital (alias: enlaceEstudio). */
+  readonly urlEstudioDigital?: string;
+  readonly enlaceEstudio?: string;
+  /** Mensaje del sistema externo cuando no hay estudio (o nulo). */
+  readonly mensaje?: string;
 }
 
 // Datos base de la radicación (Req 10.1). El apoderado es el caso en que quien firma
 // el contrato no es el propietario (Req 10.2).
 export interface RadicacionRequest {
-  readonly tipoDocumentoPropietario: TipoDocumentoIdentidad; // tipo de documento del propietario (Req 10.1)
-  readonly numeroDocumentoPropietario: string;               // número de documento del propietario (Req 10.1)
-  readonly numeroEstudioArrendamiento: string;               // número de estudio de arrendamiento aprobado (Req 10.1)
-  readonly estadoEstudio?: EstadoEstudioArrendamiento;       // resultado de la API de estudio (paso 2)
-  readonly inquilino?: DatosInquilino;                       // inquilino que ocupa el inmueble (paso 1)
-  readonly tipoPersona: TipoPersona;                         // Persona_Natural / Persona_Juridica (Req 10.3, 10.4)
-  readonly firmaApoderado: boolean;                          // true si quien firma es apoderado (Req 10.2)
-  readonly tipoDocumentoApoderado?: TipoDocumentoIdentidad;  // solo caso apoderado: a quien se consulta SARLAFT
-  readonly numeroDocumentoApoderado?: string;                // solo caso apoderado
-  readonly sarlaftRequiereFormulario: boolean;               // solo Persona_Natural: marca que SARLAFT 4.0 exige cargar el formulario (Req 12.1, 12.2)
-  readonly estadoSarlaft?: EstadoSarlaftRadicacion;          // resultado de la API SARLAFT del paso 4
-  readonly documentos: DocumentoRadicacion[];
+  /** Referencia del contrato generado en el portal: toda radicación lo exige (backend 400/422). */
+  readonly contratoReferencia: string;
+  readonly numeroEstudioArrendamiento: string;
+  readonly tipoDocumentoInquilino: TipoDocumentoIdentidad;
+  readonly documentoInquilino: string;
+  /** Tipos de documento cargados, solo del vocabulario del backend y sin duplicados. */
+  readonly documentosCargados: readonly TipoDocumentoRadicacion[];
+  /** Autorización de tratamiento de datos (Habeas Data). */
+  readonly autorizacionDatos: boolean;
+  readonly tipoPersona: TipoPersona;
+  readonly firmaApoderado: boolean;
 }
 
 /**
- * Resultado de la API SARLAFT en el paso 4 de la radicación (3 salidas del flujo):
- * - `actualizado`: continúa a la carga de documentos.
- * - `desactualizado`: se envía una URL al propietario/apoderado para actualizar y
+ * Resultado de la API SARLAFT en el paso 4 de la radicación (3 salidas del flujo),
+ * alineado 1:1 con el enum `EstadoSarlaftRadicacion` del backend (MAYÚSCULAS):
+ * - `ACTUALIZADO`: continúa a la carga de documentos.
+ * - `DESACTUALIZADO`: se envía una URL al propietario/apoderado para actualizar y
  *   luego se reconsulta.
- * - `consultable`: el caso baja al Warehouse para revisión y termina en el portal.
+ * - `CONSULTABLE`: el caso baja a revisión de Cumplimiento y termina en el portal.
  */
-export type EstadoSarlaftRadicacion = 'actualizado' | 'desactualizado' | 'consultable';
+export type EstadoSarlaftRadicacion = 'ACTUALIZADO' | 'DESACTUALIZADO' | 'CONSULTABLE';
 
 /**
  * Persona a quien se consulta SARLAFT en la radicación: quien firma el contrato.
@@ -106,22 +108,33 @@ export interface ConsultaSarlaftRadicacionRequest {
   /** Documento de la persona consultada. */
   readonly tipoDocumento: TipoDocumentoIdentidad;
   readonly numeroDocumento: string;
+  /**
+   * Celular de la persona consultada (propietario/apoderado): destino del SMS con la URL de
+   * Conocimiento de Cliente cuando SARLAFT exige generarla. Nunca el del broker.
+   */
+  readonly telefono: string;
   readonly tipoPersona: TipoPersona;
   readonly numeroEstudioArrendamiento: string;
 }
 
-/** Respuesta de la API SARLAFT de la radicación. El backend decide la salida. */
+/**
+ * Respuesta de la API SARLAFT de la radicación, alineada 1:1 con el DTO
+ * `SarlaftSujetoResponse` del backend. El backend decide la salida.
+ */
 export interface ResultadoSarlaftRadicacion {
+  /** Sujeto consultado (PROPIETARIO/APODERADO). */
+  readonly sujeto?: string;
   readonly estado: EstadoSarlaftRadicacion;
-  readonly mensaje: string;
   /** Fecha ISO de la consulta. */
   readonly fechaConsulta: string;
-  /** Solo `desactualizado`: URL de actualización enviada al destinatario. */
+  /** Solo `DESACTUALIZADO`: URL de actualización para el sujeto. */
   readonly enlaceActualizacion?: string;
-  /** Solo `desactualizado`: correo enmascarado de la persona consultada. */
-  readonly correoDestinatario?: string;
-  /** Solo `consultable`: radicado con el que el caso queda en el Warehouse. */
-  readonly radicado?: string;
+  /** Solo `DESACTUALIZADO`: correo enmascarado de la persona consultada. */
+  readonly correoEnmascarado?: string;
+  /** Solo `CONSULTABLE`: radicado de la derivación a Cumplimiento. */
+  readonly radicadoCumplimiento?: string;
+  /** Mensaje de actualización de datos que devuelve SARLAFT (qué debe actualizar el tercero). */
+  readonly mensaje?: string;
 }
 
 /** Documento de radicación cargado, asociado a su tipo (Req 11, 12). */
@@ -132,23 +145,25 @@ export interface DocumentoRadicacion extends DocumentoCargado {
 // Presentación de documentos requeridos según tipo de persona, caso apoderado y SARLAFT
 // condicional (Req 10.2, 11.1, 11.2, 12.1–12.3). El envío se habilita solo si están
 // todos los obligatorios (Req 11.4). El backend revalida (Req 10.5, 13.5).
+// Los documentos y a quién aplican (NATURAL / JURIDICA / APODERADO / OPCIONAL) vienen del catálogo
+// `documento_radicacion` de la BD; aquí solo se combinan según la selección del broker.
 export function documentosRequeridosRadicacion(req: {
   readonly tipoPersona: TipoPersona;
   readonly firmaApoderado: boolean;
   readonly sarlaftRequiereFormulario: boolean;
+  readonly documentos: readonly { readonly codigo: string; readonly [columna: string]: unknown }[];
 }): readonly TipoDocumentoRadicacion[] {
-  const base: TipoDocumentoRadicacion[] =
-    req.tipoPersona === 'natural'
-      ? ['cedulaPropietario', 'certificadoTradicion']
-      : ['certificadoExistencia', 'cedulaRepresentanteLegal', 'formularioSarlaft'];
-  // Persona_Natural: el Formulario SARLAFT solo es obligatorio si el broker marca que
-  // la validación SARLAFT 4.0 requiere carga del formulario (Req 12.1, 12.2).
+  const de = (aplica: string): TipoDocumentoRadicacion[] =>
+    req.documentos.filter((d) => d['aplica'] === aplica).map((d) => d.codigo as TipoDocumentoRadicacion);
+  const base = de(req.tipoPersona === 'natural' ? 'NATURAL' : 'JURIDICA');
+  // Persona_Natural: el Formulario SARLAFT solo es obligatorio si la validación SARLAFT 4.0
+  // pide el formulario (Req 12.1, 12.2).
   if (req.tipoPersona === 'natural' && req.sarlaftRequiereFormulario) {
     base.push('formularioSarlaft');
   }
-  // Caso apoderado: se exigen Poder del apoderado y Cédula del apoderado (Req 10.2).
+  // Caso apoderado: documentos del catálogo que aplican al apoderado (Req 10.2).
   if (req.firmaApoderado) {
-    base.push('poderApoderado', 'cedulaApoderado');
+    base.push(...de('APODERADO'));
   }
   return base;
 }

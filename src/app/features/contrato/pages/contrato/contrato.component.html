@@ -7,7 +7,16 @@
       [tarjetas]="tarjetasConfirmacion()"
       textoVolver="Volver a Radicación"
       (volver)="volverARadicacion()"
-    ></app-success-screen>
+    >
+      <div accionesExito>
+        <app-boton variante="accent" icono="download" [disabled]="descargando()" (clicked)="descargarContrato()">
+          {{ descargando() ? 'Generando contrato…' : 'Descargar contrato (Word)' }}
+        </app-boton>
+        @if (errorDescarga()) {
+          <app-alert-banner variante="error" titulo="No se pudo descargar">{{ errorDescarga() }}</app-alert-banner>
+        }
+      </div>
+    </app-success-screen>
   } @else {
     <app-page-header
     eyebrow="Contratos"
@@ -27,6 +36,7 @@
 
     <!-- Paso 1: Datos del arrendador (Req 30.2) -->
     @if (pasoActual() === 0) {
+      <app-lector-contrato (leido)="precargarDesdeLectura($event)" />
       <div class="contrato-paso">
         <h2 class="contrato-paso-titulo">Datos del arrendador</h2>
         <div class="contrato-grid">
@@ -118,8 +128,20 @@
             />
           </app-form-field>
 
+
+          <app-form-field label="Ciudad de expedición del documento" controlId="arr-ciudad-exp">
+            <input
+              id="arr-ciudad-exp"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Bogotá D.C."
+              [ngModel]="arrCiudadExpedicion()"
+              (ngModelChange)="arrCiudadExpedicion.set($event)"
+            />
+          </app-form-field>
+
           <app-form-field
-            label="Dirección de residencia"
+            label="Dirección de notificación"
             [requerido]="true"
             controlId="arr-direccion"
             class="contrato-grid-full"
@@ -141,6 +163,39 @@
     @if (pasoActual() === 1) {
       <div class="contrato-paso">
         <h2 class="contrato-paso-titulo">Datos del arrendatario</h2>
+        <div class="contrato-estudio">
+          <p class="contrato-estudio__texto">
+            ¿Ya tienes el estudio digital aprobado? Trae sus datos: arrendatario, codeudores, propietario e inmueble.
+          </p>
+          <div class="contrato-grid">
+            <app-form-field label="Número de estudio digital" controlId="ate-estudio">
+              <input
+                id="ate-estudio"
+                type="text"
+                autocomplete="off"
+                placeholder="Consecutivo del estudio"
+                [ngModel]="estudioConsecutivo()"
+                (ngModelChange)="estudioConsecutivo.set($event)"
+              />
+            </app-form-field>
+            <app-form-field label="Documento del arrendatario evaluado" controlId="ate-estudio-doc">
+              <input
+                id="ate-estudio-doc"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                [ngModel]="ateNumeroIdentificacion()"
+                (ngModelChange)="ateNumeroIdentificacion.set($event)"
+              />
+            </app-form-field>
+          </div>
+          <app-boton variante="outline" icono="cloud_download" [disabled]="cargandoEstudio()" (clicked)="precargarDeEstudio()">
+            {{ cargandoEstudio() ? 'Consultando estudio…' : 'Traer datos del estudio' }}
+          </app-boton>
+          @if (mensajeEstudio(); as m) {
+            <app-alert-banner [variante]="m.tipo" [titulo]="m.titulo">{{ m.texto }}</app-alert-banner>
+          }
+        </div>
         <div class="contrato-grid">
           <app-form-field label="Nombres" [requerido]="true" controlId="ate-nombres">
             <input
@@ -245,6 +300,29 @@
               (ngModelChange)="ateOcupacion.set($event)"
             />
           </app-form-field>
+
+          <app-form-field label="Ciudad de expedición del documento" controlId="ate-ciudad-exp">
+            <input
+              id="ate-ciudad-exp"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Medellín"
+              [ngModel]="ateCiudadExpedicion()"
+              (ngModelChange)="ateCiudadExpedicion.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Dirección de notificación" controlId="ate-direccion" class="contrato-grid-full">
+            <input
+              id="ate-direccion"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: Calle 100 #15-30, Bogotá"
+              [ngModel]="ateDireccionNotificacion()"
+              (ngModelChange)="ateDireccionNotificacion.set($event)"
+            />
+          </app-form-field>
+
         </div>
       </div>
     }
@@ -295,14 +373,16 @@
           </app-form-field>
 
           <app-form-field label="Ciudad" [requerido]="true" controlId="inm-ciudad">
-            <input
+            <select
               id="inm-ciudad"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: Bogotá"
               [ngModel]="inmCiudad()"
               (ngModelChange)="inmCiudad.set($event)"
-            />
+            >
+              <option value="" disabled>Selecciona la ciudad</option>
+              @for (ciudad of ciudades(); track ciudad) {
+                <option [value]="ciudad">{{ ciudad }}</option>
+              }
+            </select>
           </app-form-field>
 
           <app-form-field
@@ -347,6 +427,18 @@
               (ngModelChange)="inmArea.set($event)"
             />
           </app-form-field>
+
+          <app-form-field label="Línea telefónica del inmueble (opcional)" controlId="inm-linea">
+            <input
+              id="inm-linea"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: 601 555 1234"
+              [ngModel]="inmLineaTelefonica()"
+              (ngModelChange)="inmLineaTelefonica.set($event)"
+            />
+          </app-form-field>
+
         </div>
       </div>
     }
@@ -453,6 +545,69 @@
           </app-form-field>
 
           <app-form-field
+            label="Método de pago del canon"
+            [requerido]="true"
+            controlId="con-metodo-pago"
+          >
+            <select
+              id="con-metodo-pago"
+              [ngModel]="conMetodoPago()"
+              (ngModelChange)="conMetodoPago.set($event)"
+            >
+              @for (metodo of metodosPago; track metodo.valor) {
+                <option [ngValue]="metodo.valor">{{ metodo.etiqueta }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          @if (conMetodoPago() !== 'efectivo') {
+            <app-form-field
+              label="Tipo de cuenta"
+              [requerido]="true"
+              controlId="con-tipo-cuenta"
+            >
+              <select
+                id="con-tipo-cuenta"
+                [ngModel]="conTipoCuenta()"
+                (ngModelChange)="conTipoCuenta.set($event)"
+              >
+                <option value="ahorros">Ahorros</option>
+                <option value="corriente">Corriente</option>
+              </select>
+            </app-form-field>
+
+            <app-form-field
+              label="Número de cuenta"
+              ayuda="Solo letras y números, máximo 34 caracteres"
+              [requerido]="true"
+              [error]="intento() && !numeroCuentaValido() ? 'Ingresa un número de cuenta válido' : ''"
+              controlId="con-numero-cuenta"
+            >
+              <input
+                id="con-numero-cuenta"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                maxlength="34"
+                [attr.aria-invalid]="intento() && !numeroCuentaValido()"
+                [ngModel]="conNumeroCuenta()"
+                (ngModelChange)="conNumeroCuenta.set($event)"
+              />
+            </app-form-field>
+
+            <app-form-field label="Banco" controlId="con-banco">
+              <input
+                id="con-banco"
+                type="text"
+                autocomplete="off"
+                placeholder="Ej: Banco de Bogotá"
+                [ngModel]="conBanco()"
+                (ngModelChange)="conBanco.set($event)"
+              />
+            </app-form-field>
+          }
+
+          <app-form-field
             label="Servicios incluidos (opcional)"
             controlId="con-servicios"
             class="contrato-grid-full"
@@ -480,10 +635,51 @@
               <strong>Incluir deudores solidarios (codeudores)</strong>
               <small>
                 Los deudores solidarios respaldan el cumplimiento de las obligaciones
-                del contrato. Podrás agregarlos en el siguiente paso.
+                del contrato. Se precargan del estudio digital; puedes ajustarlos.
               </small>
             </span>
           </label>
+          @if (conDeudoresSolidarios()) {
+            @for (deudor of deudores(); track $index; let i = $index) {
+              <fieldset class="contrato-deudor">
+                <legend>Deudor solidario {{ i + 1 }}</legend>
+                <div class="contrato-grid">
+                  <app-form-field label="Nombres" controlId="deu-nombres-{{ i }}">
+                    <input id="deu-nombres-{{ i }}" type="text" [ngModel]="deudor.nombres" (ngModelChange)="editarDeudor(i, 'nombres', $event)" />
+                  </app-form-field>
+                  <app-form-field label="Apellidos" controlId="deu-apellidos-{{ i }}">
+                    <input id="deu-apellidos-{{ i }}" type="text" [ngModel]="deudor.apellidos" (ngModelChange)="editarDeudor(i, 'apellidos', $event)" />
+                  </app-form-field>
+                  <app-form-field label="Tipo de identificación" controlId="deu-tipo-{{ i }}">
+                    <select id="deu-tipo-{{ i }}" [ngModel]="deudor.tipoIdentificacion" (ngModelChange)="editarDeudor(i, 'tipoIdentificacion', $event)">
+                      @for (tipo of tiposIdentificacion; track tipo.valor) {
+                        <option [value]="tipo.valor">{{ tipo.etiqueta }}</option>
+                      }
+                    </select>
+                  </app-form-field>
+                  <app-form-field label="Número de identificación" controlId="deu-numero-{{ i }}">
+                    <input id="deu-numero-{{ i }}" type="text" inputmode="numeric" [ngModel]="deudor.numeroIdentificacion" (ngModelChange)="editarDeudor(i, 'numeroIdentificacion', $event)" />
+                  </app-form-field>
+                  <app-form-field label="Ciudad de expedición" controlId="deu-ciudad-{{ i }}">
+                    <input id="deu-ciudad-{{ i }}" type="text" [ngModel]="deudor.ciudadExpedicion" (ngModelChange)="editarDeudor(i, 'ciudadExpedicion', $event)" />
+                  </app-form-field>
+                  <app-form-field label="Teléfono" controlId="deu-telefono-{{ i }}">
+                    <input id="deu-telefono-{{ i }}" type="tel" [ngModel]="deudor.telefono" (ngModelChange)="editarDeudor(i, 'telefono', $event)" />
+                  </app-form-field>
+                  <app-form-field label="Correo" controlId="deu-correo-{{ i }}">
+                    <input id="deu-correo-{{ i }}" type="email" [ngModel]="deudor.correo" (ngModelChange)="editarDeudor(i, 'correo', $event)" />
+                  </app-form-field>
+                  <app-form-field label="Dirección de notificación" controlId="deu-direccion-{{ i }}" class="contrato-grid-full">
+                    <input id="deu-direccion-{{ i }}" type="text" [ngModel]="deudor.direccionNotificacion" (ngModelChange)="editarDeudor(i, 'direccionNotificacion', $event)" />
+                  </app-form-field>
+                </div>
+                <app-boton variante="ghost" icono="delete" (clicked)="quitarDeudor(i)">Quitar deudor</app-boton>
+              </fieldset>
+            }
+            @if (deudores().length < 2) {
+              <app-boton variante="outline" icono="person_add" (clicked)="agregarDeudor()">Agregar deudor solidario</app-boton>
+            }
+          }
         </div>
       </div>
     }

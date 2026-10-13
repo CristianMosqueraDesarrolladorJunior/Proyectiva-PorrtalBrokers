@@ -13,4 +13,8 @@ export interface Poliza {
   readonly producto: string;
   readonly fechaVencimiento: string;
   readonly estado: EstadoPoliza;
+  /** Gestión del área en el Warehouse de renovaciones (Por renovar, En expedición, Renovada…), si la hay. */
+  readonly gestion?: string | null;
+  /** Valor literal del Warehouse (p. ej. "Autogestionado", "Desocupación"). */
+  readonly estadoWarehouse?: string | null;
 }

@@ -1,89 +1,37 @@
-// =============================================================================
-// CorreccionComponent — Corrección de Documentos (Req 32)
-// Sin valores hardcodeados: color/tamaño/peso/radio/espaciado/sombra vía
-// Design_Token (Req 25.3, 25.4, 37.11, 37.12). Foco visible y ARIA en la plantilla.
-// =============================================================================
-
-:host {
-  display: block;
-}
-
 .correccion {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  width: 100%;
+  max-width: 960px;
 }
 
-.correccion-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.correccion-titulo {
-  font-size: var(--text-heading);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-  margin: var(--space-0);
-}
-
-.correccion-subtitulo {
-  font-size: var(--text-body);
-  color: var(--color-muted);
-  line-height: var(--line-height-normal);
-  margin: var(--space-0);
-}
-
-.correccion-resumen {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.correccion__pedido {
   padding: var(--space-5);
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--sb-tint-accent-border);
+  border-radius: var(--radius-xl);
+  background: var(--sb-tint-accent-bg);
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-family-heading);
+    font-size: var(--text-title);
+    color: var(--sb-on-surface);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
 }
 
-.resumen-fila {
+.correccion__acciones {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.resumen-label {
-  font-size: var(--text-caption);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-muted);
-  text-transform: uppercase;
-}
-
-.resumen-valor {
-  font-size: var(--text-body);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text);
-}
-
-.correccion-paso {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.correccion-subtitulo-seccion {
-  font-size: var(--text-subtitle);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
-  margin: var(--space-0);
-}
-
-.correccion-acciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
   justify-content: flex-end;
-  margin-top: var(--space-2);
+  gap: var(--space-2);
 }

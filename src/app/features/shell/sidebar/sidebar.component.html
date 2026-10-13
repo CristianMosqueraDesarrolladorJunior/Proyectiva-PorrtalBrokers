@@ -72,7 +72,13 @@
           [attr.aria-label]="broker.nombre + ', ' + etiquetaEstadoActual() + '. Ver mi perfil'"
           (click)="solicitarCierre()"
         >
-          <div class="sidebar__avatar" aria-hidden="true">{{ iniciales(broker.nombre) }}</div>
+          <div class="sidebar__avatar" aria-hidden="true">
+            @if (foto(); as f) {
+              <img class="sidebar__avatar-img" [src]="f" alt="" />
+            } @else {
+              {{ iniciales(broker.nombre) }}
+            }
+          </div>
           <div class="sidebar__profile-text">
             <strong>{{ broker.nombre }}</strong>
             <span class="sidebar__estado" [class.sidebar__estado--prospecto]="estadoCuenta() === 'PROSPECTO'">
@@ -82,13 +88,27 @@
           <app-icon class="sidebar__profile-flecha" nombre="chevron_right" [tamano]="18" />
         </a>
       } @else {
-        <div class="sidebar__profile">
-          <div class="sidebar__avatar" aria-hidden="true">{{ iniciales(broker.nombre) }}</div>
-          <div class="sidebar__profile-text">
-            <strong>{{ broker.nombre }}</strong>
-            <span>{{ broker.rol }}</span>
+        <a
+          class="sidebar__profile sidebar__profile--enlace"
+          [routerLink]="base + '/perfil'"
+          routerLinkActive="sidebar__profile--activo"
+          [attr.title]="colapsado() ? (broker.nombre || etiquetaRol(broker.rol)) + ' · Mi perfil' : null"
+          [attr.aria-label]="(broker.nombre || etiquetaRol(broker.rol)) + ', ' + etiquetaRol(broker.rol) + '. Ver mi perfil'"
+          (click)="solicitarCierre()"
+        >
+          <div class="sidebar__avatar" aria-hidden="true">
+            @if (foto(); as f) {
+              <img class="sidebar__avatar-img" [src]="f" alt="" />
+            } @else {
+              {{ iniciales(broker.nombre || etiquetaRol(broker.rol)) }}
+            }
           </div>
-        </div>
+          <div class="sidebar__profile-text">
+            <strong>{{ broker.nombre || etiquetaRol(broker.rol) }}</strong>
+            <span>{{ etiquetaRol(broker.rol) }} · Mi perfil</span>
+          </div>
+          <app-icon class="sidebar__profile-flecha" nombre="chevron_right" [tamano]="18" />
+        </a>
       }
     }
 

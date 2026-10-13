@@ -5,6 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { CatalogoService } from '../../../core/services/catalogo.service';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -30,13 +31,6 @@ import {
   type ReferidoRequest,
 } from '../../../core/services/referidos.service';
 import { validarReferido } from '../referido-validacion';
-
-/** Opciones de producto de interés ofrecidas al Broker (fiel al prototipo, Req 15.1). */
-const PRODUCTOS_INTERES: readonly string[] = [
-  'Seguro de Hogar',
-  'Seguro de Vida',
-  'Seguro de Carros',
-];
 
 /** Estado del envío del Referido para controlar loaders y confirmación (Req 15.3). */
 type EstadoEnvioReferido = 'inactivo' | 'enviando' | 'exito';
@@ -82,7 +76,8 @@ export class ReferirComponent {
   private readonly router = inject(Router);
 
   /** Opciones de producto de interés para el selector (Req 15.1). */
-  protected readonly productos = PRODUCTOS_INTERES;
+  /** Productos referibles (catálogo `ramo_no_cotizable`, Req 15.1). */
+  protected readonly productos = inject(CatalogoService).opciones('ramo_no_cotizable').map((r) => r.descripcion);
 
   /** Resumen real de referidos del bróker (KPIs calculados del listado del API). */
   protected readonly kpis = signal<ReturnType<typeof calcularKpisReferidos> | null>(null);

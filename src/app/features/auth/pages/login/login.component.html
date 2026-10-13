@@ -16,24 +16,29 @@
         <p class="login-error" role="alert">{{ errorCredenciales() }}</p>
       }
 
+      @if (avisoRestablecimiento()) {
+        <p class="login-aviso" role="status">{{ avisoRestablecimiento() }}</p>
+      }
+
       <app-form-field
-        label="Cédula"
-        ayuda="Ingresa tu número de cédula"
-        controlId="login-cedula"
+        label="Cédula o correo"
+        ayuda="Ingresa tu número de cédula o tu correo electrónico"
+        controlId="login-usuario"
         [requerido]="true"
-        [error]="errorCedula"
+        [error]="errorUsuario"
       >
         <input
-          id="login-cedula"
+          id="login-usuario"
           class="login-input"
           type="text"
-          inputmode="numeric"
+          inputmode="email"
           autocomplete="username"
-          formControlName="cedula"
-          [attr.minlength]="cedulaLongitudMin"
-          [attr.maxlength]="cedulaLongitudMax"
-          [attr.aria-invalid]="!!errorCedula"
-          [attr.aria-describedby]="'login-cedula-ayuda'"
+          autocapitalize="none"
+          spellcheck="false"
+          formControlName="usuario"
+          [attr.maxlength]="usuarioLongitudMax"
+          [attr.aria-invalid]="!!errorUsuario"
+          [attr.aria-describedby]="'login-usuario-ayuda'"
         />
       </app-form-field>
 
@@ -60,6 +65,15 @@
       >
         {{ enviando() ? 'Ingresando...' : 'Ingresar' }}
       </app-boton>
+
+      <button
+        type="button"
+        class="login-olvido"
+        [disabled]="restableciendo()"
+        (click)="restablecerPassword()"
+      >
+        {{ restableciendo() ? 'Enviando enlace...' : '¿Es tu primera vez o no recuerdas tu contraseña?' }}
+      </button>
     </form>
 
     <footer class="login-footer">
@@ -79,7 +93,7 @@
         <app-icon nombre="admin_panel_settings" [tamano]="20" />
         <span id="login-interno-titulo">Consola de administración</span>
         <p>
-          Para administradores y comerciales de la operación. Ingresa arriba con la cédula y la clave que te
+          Para administradores y comerciales de la operación. Ingresa arriba con el usuario y la clave que te
           asignó el administrador: el portal te lleva a la consola de brokers.
         </p>
       </div>

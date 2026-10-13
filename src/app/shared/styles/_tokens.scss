@@ -144,6 +144,15 @@
   --color-line: rgba(15, 23, 42, 0.08);   // divisores y bordes finos
   --color-accent-soft: var(--sb-primary-fixed);  // naranja claro (orbe, confeti)
   --color-accent-tint: var(--sb-tint-accent-bg);
+
+  // Efecto glass (glassmorphism) para botones y superficies translúcidas.
+  --glass-blur: blur(10px) saturate(140%);
+  --glass-border: rgba(255, 255, 255, 0.35);        // borde claro tipo cristal
+  --glass-accent-bg: rgba(249, 115, 22, 0.82);       // naranja de marca translúcido
+  --glass-accent-hover-bg: rgba(234, 88, 12, 0.9);
+  --glass-neutral-bg: rgba(255, 255, 255, 0.14);     // vidrio neutro sobre fondos oscuros
+  --glass-neutral-strong-bg: rgba(255, 255, 255, 0.24);
+  --glass-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
   --gradient-accent: linear-gradient(90deg, var(--color-accent), var(--color-accent-hover));
   --gradient-orbe: conic-gradient(from 0deg, var(--color-accent), var(--sb-primary-fixed), var(--sb-tint-accent-bg), var(--color-accent));
   --radius-panel: 20px;                   // paneles y tarjetas grandes

@@ -1,68 +1,15 @@
 /**
- * Lógica PURA de habilitación de la notificación de No Renovación (Req 22.1, 22.3).
- *
- * Ubicación: junto al feature `renovacion`. Es lógica de presentación reutilizable,
- * sin dependencias de Angular ni de `HttpClient`, consumida por
- * `NoRenovacionComponent` y por la prueba de propiedad (Property 29, tarea 13.5).
- * El backend SIEMPRE revalida la No Renovación antes de registrarla (Req 22.2);
- * esta validación es únicamente por UX/fail-fast.
- *
- * Todas las funciones son puras, totales y deterministas: no leen estado externo,
- * de modo que el resultado es reproducible (preparado para PBT).
- *
- * Alinea con Property 29 (design.md):
- *   Para todo `NoRenovacionRequest`, el envío de la no renovación está habilitado
- *   si y solo si se ha seleccionado un motivo del conjunto definido (precio elevado,
- *   venta del inmueble, descontento con el servicio); las observaciones son opcionales y no afectan la habilitación.
- *
- * _Requirements: 22.1, 22.3_
+ * Habilitación de la No Renovación (Req 22.1, 22.3). Lógica pura: los motivos válidos llegan del catálogo
+ * `motivo_no_renovacion` (BD, mismos valores que el Warehouse de renovaciones); el front no los define.
+ * El backend revalida y escribe el motivo en la col E del Warehouse.
  */
 
-import type { MotivoNoRenovacion } from '../../core/models/renovacion.model';
-
-/**
- * Conjunto CERRADO de motivos válidos de No Renovación (Req 22.1).
- *
- * Es la única fuente de verdad de las opciones ofrecidas al Broker; cualquier
- * valor fuera de este conjunto no habilita el envío.
- */
-export const MOTIVOS_NO_RENOVACION: readonly MotivoNoRenovacion[] = [
-  'precioElevado',
-  'ventaInmueble',
-  'descontentoServicio',
-];
-
-/** Etiqueta legible de cada motivo de No Renovación para la UI (Req 22.1). */
-export const ETIQUETA_MOTIVO_NO_RENOVACION: Readonly<Record<MotivoNoRenovacion, string>> = {
-  precioElevado: 'Precio elevado de la póliza de arrendamiento',
-  ventaInmueble: 'Venta del inmueble arrendado',
-  descontentoServicio: 'Descontento con el servicio de protección del inmueble',
-};
-
-/**
- * Indica si un valor pertenece al conjunto cerrado de motivos de No Renovación
- * (Req 22.1). Función pura, total y determinista; acepta cualquier cadena o
- * `undefined` para uniformar el tratamiento de la selección aún sin realizar.
- *
- * @param valor Motivo seleccionado (o `undefined`/cadena arbitraria).
- * @returns `true` si el valor es un `MotivoNoRenovacion` del conjunto definido.
- */
-export function esMotivoNoRenovacionValido(
-  valor: string | undefined,
-): valor is MotivoNoRenovacion {
-  return valor !== undefined && (MOTIVOS_NO_RENOVACION as readonly string[]).includes(valor);
+/** `true` si el motivo elegido está entre los motivos activos del catálogo. */
+export function esMotivoNoRenovacionValido(valor: string | undefined, validos: readonly string[]): boolean {
+  return valor !== undefined && valor !== '' && validos.includes(valor);
 }
 
-/**
- * Decide si el envío de la No Renovación está habilitado (Req 22.1, 22.3).
- *
- * El envío está habilitado si y solo si se ha seleccionado un motivo del conjunto
- * definido. Las observaciones son opcionales y NO afectan la habilitación.
- * Función pura, total y determinista.
- *
- * @param motivo Motivo seleccionado por el Broker (o `undefined`).
- * @returns `true` si la No Renovación puede enviarse.
- */
-export function puedeEnviarNoRenovacion(motivo: string | undefined): boolean {
-  return esMotivoNoRenovacionValido(motivo);
+/** El envío se habilita solo con un motivo del catálogo; las observaciones son opcionales. */
+export function puedeEnviarNoRenovacion(motivo: string | undefined, validos: readonly string[]): boolean {
+  return esMotivoNoRenovacionValido(motivo, validos);
 }

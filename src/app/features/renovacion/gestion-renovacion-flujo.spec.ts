@@ -11,12 +11,13 @@ import {
 const FLUJOS: readonly FlujoGestion[] = ['digital', 'fisica', 'caso-especial', 'no-renovar', 'correccion'];
 
 describe('gestion-renovacion-flujo (proceso real de renovaciones)', () => {
-  it('todas las gestiones pasan por SARLAFT justo antes del éxito', () => {
-    for (const flujo of FLUJOS) {
+  it('las renovaciones y casos pasan por SARLAFT justo antes del éxito; no renovar no', () => {
+    for (const flujo of FLUJOS.filter((f) => f !== 'no-renovar')) {
       const etapas = ETAPAS_POR_FLUJO[flujo];
       expect(etapas[etapas.length - 1]).toBe('exito');
       expect(etapas[etapas.length - 2]).toBe('sarlaft');
     }
+    expect(ETAPAS_POR_FLUJO['no-renovar']).not.toContain('sarlaft');
   });
 
   it('la renovación física no pasa por detalles ni ajuste', () => {
@@ -36,7 +37,8 @@ describe('gestion-renovacion-flujo (proceso real de renovaciones)', () => {
     expect(siguienteEtapa('fisica', 'exito')).toBe('exito');
     expect(etapaAnterior('digital', 'ajuste')).toBe('detalles');
     expect(etapaAnterior('fisica', 'opciones')).toBe('opciones');
-    expect(indicePaso('no-renovar', 'sarlaft')).toBe(2);
+    expect(siguienteEtapa('no-renovar', 'captura')).toBe('exito');
+    expect(indicePaso('correccion', 'sarlaft')).toBe(3);
   });
 
   it('SARLAFT vigente solo con menos de 36 meses', () => {

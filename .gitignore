@@ -47,3 +47,6 @@ Thumbs.db
 build-log.txt
 graphify-out/
 src/graphify-out/
+
+# Artefactos locales
+verify_versions.txt

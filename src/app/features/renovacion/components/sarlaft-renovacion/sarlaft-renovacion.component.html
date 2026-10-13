@@ -6,16 +6,16 @@
   <header class="sarlaft-renov__header">
     <span class="material-symbols-outlined sarlaft-renov__icono" aria-hidden="true">verified_user</span>
     <div>
-      <h2 id="sarlaft-renov-titulo" class="sarlaft-renov__titulo">Validación SARLAFT</h2>
+      <h2 id="sarlaft-renov-titulo" class="sarlaft-renov__titulo">Validación de Conocimiento de Cliente</h2>
       <p class="sarlaft-renov__subtitulo">
-        Toda gestión de la póliza <strong>#{{ numeroPoliza }}</strong> exige un certificado SARLAFT
+        Toda gestión de la póliza <strong>#{{ numeroPoliza }}</strong> exige un certificado de Conocimiento de Cliente
         con menos de {{ mesesVigencia }} meses.
       </p>
     </div>
   </header>
 
   @if (validando()) {
-    <app-escalerita-loader texto="Validando SARLAFT…" />
+    <app-escalerita-loader texto="Validando Conocimiento de Cliente…" />
   } @else if (error()) {
     <app-alert-banner variante="error" titulo="Validación no disponible">{{ error() }}</app-alert-banner>
     <div class="sarlaft-renov__acciones">
@@ -40,7 +40,7 @@
     </dl>
 
     @if (r.estado === 'vigente') {
-      <app-alert-banner variante="success" titulo="SARLAFT vigente">
+      <app-alert-banner variante="success" titulo="Conocimiento de Cliente vigente">
         El certificado está vigente. Puedes continuar con la gestión de la póliza.
       </app-alert-banner>
       <div class="sarlaft-renov__acciones">
@@ -48,8 +48,8 @@
         <app-boton variante="accent" (clicked)="continuar()">{{ textoContinuar }}</app-boton>
       </div>
     } @else {
-      <app-alert-banner variante="error" titulo="Documento SARLAFT no vigente">
-        El certificado SARLAFT tiene una antigüedad de {{ mesesVigencia }} meses o más y no es válido
+      <app-alert-banner variante="error" titulo="Documento de Conocimiento de Cliente no vigente">
+        El certificado de Conocimiento de Cliente tiene una antigüedad de {{ mesesVigencia }} meses o más y no es válido
         para continuar. Solicítalo al cliente o descárgalo de su entidad financiera y cárgalo aquí.
       </app-alert-banner>
 

@@ -14,12 +14,6 @@ import type { TipoDocumentoIdentidad } from './radicacion.model';
 /** Estado de la Cuenta (Req 1.1). */
 export type EstadoCuenta = 'PROSPECTO' | 'REGISTRADO';
 
-/** Etiqueta visible del estado de la Cuenta. */
-export const ETIQUETA_ESTADO_CUENTA: Readonly<Record<EstadoCuenta, string>> = {
-  PROSPECTO: 'Prospecto',
-  REGISTRADO: 'Broker registrado',
-};
-
 /** Módulo del portal según la Matriz_Acceso (rutas bajo `/app`). */
 export interface ModuloPortal {
   readonly ruta: string;
@@ -27,36 +21,13 @@ export interface ModuloPortal {
   readonly icono: string;
 }
 
-/** Modulos_Prospecto: permitidos con estado `PROSPECTO` (Req 1.3, 8.3). */
-export const MODULOS_PROSPECTO: readonly ModuloPortal[] = [
-  { ruta: 'seguimiento', etiqueta: 'Seguimiento', icono: 'grid_view' },
-  { ruta: 'agente', etiqueta: 'Agente IA (radicación)', icono: 'smart_toy' },
-  { ruta: 'radicacion', etiqueta: 'Radicación de pólizas', icono: 'post_add' },
-  { ruta: 'cotizador', etiqueta: 'Cotizaciones', icono: 'calculate' },
-  { ruta: 'contrato', etiqueta: 'Contratos', icono: 'description' },
-  { ruta: 'documentos', etiqueta: 'Documentos', icono: 'folder_open' },
-  { ruta: 'ayuda', etiqueta: 'Ayuda', icono: 'help_outline' },
-];
-
-/** Modulos_Restringido: se desbloquean al pasar a `REGISTRADO` (Req 1.4). */
-export const MODULOS_RESTRINGIDOS: readonly ModuloPortal[] = [
-  { ruta: 'renovaciones', etiqueta: 'Renovaciones', icono: 'update' },
-  { ruta: 'referidos', etiqueta: 'Referir cliente', icono: 'person_add' },
-  { ruta: 'estado-referidos', etiqueta: 'Estado de referidos', icono: 'conversion_path' },
-  { ruta: 'nuevo-negocio', etiqueta: 'Nuevo negocio', icono: 'add_business' },
-  { ruta: 'coberturas', etiqueta: 'Coberturas', icono: 'shield' },
-  { ruta: 'calendario', etiqueta: 'Calendario', icono: 'calendar_today' },
-  { ruta: 'comisiones', etiqueta: 'Dashboard de comisiones', icono: 'payments' },
-];
-
-const RUTAS_RESTRINGIDAS = new Set(MODULOS_RESTRINGIDOS.map((m) => m.ruta));
-
 /**
- * Indica si la UI debe presentar un módulo como bloqueado para el estado dado.
- * Solo presentación: el servidor responde 403 si no está permitido (Req 1.10).
+ * Indica si la UI debe presentar un módulo como bloqueado para el estado dado. Los módulos restringidos al
+ * prospecto vienen del catálogo `modulo_portal` (`prospecto = false`). Solo presentación: el servidor responde
+ * 403 si no está permitido (Req 1.10).
  */
-export function moduloBloqueado(estado: EstadoCuenta, ruta: string): boolean {
-  return estado === 'PROSPECTO' && RUTAS_RESTRINGIDAS.has(ruta);
+export function moduloBloqueado(estado: EstadoCuenta, ruta: string, restringidas: readonly string[]): boolean {
+  return estado === 'PROSPECTO' && restringidas.includes(ruta);
 }
 
 /** Estado de revisión de un documento del perfil. */
@@ -91,6 +62,8 @@ export interface ComisionesRetroactivas {
 /** Perfil de la Cuenta mostrado en "Mi perfil" (datos mock hasta tener backend). */
 export interface PerfilCuenta {
   readonly id: string;
+  /** Solicitud de legalización: SIN_SOLICITUD · RADICADA · EN_REVISION · APROBADA · RECHAZADA. */
+  readonly legalizacion?: string;
   readonly estadoCuenta: EstadoCuenta;
   /** Documento de identidad: NO modificable desde el perfil. */
   readonly tipoDocumento: TipoDocumentoIdentidad;
@@ -108,10 +81,9 @@ export interface PerfilCuenta {
   readonly comisiones: ComisionesRetroactivas;
 }
 
-/** Datos personales editables desde el perfil (el documento no se incluye). */
+/** Datos personales editables desde el perfil (el documento de identidad y la ciudad no se incluyen: la ciudad es dato compartido de Cien Cuadras y no es modificable desde el perfil). */
 export interface DatosPersonalesEditables {
   readonly nombreCompleto: string;
   readonly correo: string;
   readonly telefono: string;
-  readonly ciudad: string;
 }

@@ -6,6 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { CatalogoService } from '../../../../core/services/catalogo.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import {
@@ -16,15 +17,14 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import type { Observable } from 'rxjs';
+import { Subject, catchError, debounceTime, of, switchMap, type Observable } from 'rxjs';
 
-import type { DocumentoCargado } from '../../../../core/models/documento.model';
 import type {
-  MotivoNoRenovacion,
   ResultadoSarlaftRenovacion,
   TipoCasoEspecial,
+  CondicionesRenovacion,
+  PropuestaRenovacion,
 } from '../../../../core/models/renovacion.model';
-import { CorreccionService } from '../../../../core/services/correccion.service';
 import { RenovacionService } from '../../../../core/services/renovacion.service';
 import type { Poliza } from '../../../../core/models/poliza.model';
 import {
@@ -38,10 +38,9 @@ import {
   TarjetaSeguimiento,
 } from '../../../../shared/components';
 import type { OpcionRadio } from '../../../../shared/components/radio-group/radio-group.component';
+import { FormatoRenovacionComponent } from '../../components/formato-renovacion/formato-renovacion.component';
 import { SarlaftRenovacionComponent } from '../../components/sarlaft-renovacion/sarlaft-renovacion.component';
 import {
-  ETIQUETA_TIPO_CASO_ESPECIAL,
-  TIPOS_CASO_ESPECIAL,
 } from '../../caso-especial-habilitacion';
 import {
   ETAPAS_POR_FLUJO,
@@ -53,8 +52,6 @@ import {
   type FlujoGestion,
 } from '../../gestion-renovacion-flujo';
 import {
-  ETIQUETA_MOTIVO_NO_RENOVACION,
-  MOTIVOS_NO_RENOVACION,
   puedeEnviarNoRenovacion,
 } from '../../no-renovacion-habilitacion';
 
@@ -63,6 +60,12 @@ type ModalidadDetalle = 'anterior' | 'ajustar' | null;
 
 /** Modo del paso Ajuste: bloqueado (mismos valores) o editable (con ajustes). */
 type ModoAjuste = 'bloqueado' | 'editable';
+
+/** `2026-04-01` → `01/04/2026`. */
+function fechaCorta(iso: string): string {
+  const [a, m, d] = iso.slice(0, 10).split('-');
+  return d && m && a ? `${d}/${m}/${a}` : iso;
+}
 
 /** Ruta de retorno al portafolio de renovaciones. */
 const RUTA_RENOVACIONES = '/app/renovaciones';
@@ -118,16 +121,18 @@ interface Confirmacion {
     RadioGroupComponent,
     SuccessScreenComponent,
     SarlaftRenovacionComponent,
+    FormatoRenovacionComponent,
   ],
   templateUrl: './gestion-renovacion.component.html',
   styleUrl: './gestion-renovacion.component.scss',
 })
 export class GestionRenovacionComponent {
+  private readonly catalogo = inject(CatalogoService);
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly renovacionService = inject(RenovacionService);
-  private readonly correccionService = inject(CorreccionService);
   private readonly destroyRef = inject(DestroyRef);
 
   // --- Estado del wizard ---------------------------------------------------
@@ -150,6 +155,14 @@ export class GestionRenovacionComponent {
   /** Póliza real del portafolio del backend que coincide con `numeroPoliza`. */
   private readonly polizaReal = signal<Poliza | null>(null);
 
+  /** Póliza que vence según el Warehouse (col B) y propuestas cotizadas por el backend. */
+  protected readonly condiciones = signal<CondicionesRenovacion | null>(null);
+
+  /** Propuesta vigente del paso Ajuste (se recotiza en el backend al cambiar valores o IPC). */
+  protected readonly propuesta = signal<PropuestaRenovacion | null>(null);
+  protected readonly cotizando = signal(false);
+  private readonly recotizar$ = new Subject<{ conCanon: boolean }>();
+
   /** Diálogo de confirmación antes de "No renovar". */
   protected readonly mostrarConfirmacionNoRenovar = signal(false);
 
@@ -166,17 +179,22 @@ export class GestionRenovacionComponent {
 
   // --- Caso especial y no renovar -----------------------------------------
 
-  protected readonly tipoCasoEspecial = signal<TipoCasoEspecial>('otroSi');
-  protected readonly opcionesCasoEspecial: readonly OpcionRadio[] = TIPOS_CASO_ESPECIAL.map(
-    (tipo) => ({ valor: tipo, etiqueta: ETIQUETA_TIPO_CASO_ESPECIAL[tipo] }),
+  protected readonly tipoCasoEspecial = signal<TipoCasoEspecial>('');
+  /** Procesos especiales que el broker puede iniciar (catálogo `tipo_caso_especial` con `para_broker`). */
+  protected readonly opcionesCasoEspecial = computed<readonly OpcionRadio[]>(() =>
+    this.catalogo
+      .opciones('tipo_caso_especial')
+      .filter((t) => t['para_broker'] === true)
+      .map((t) => ({ valor: t.codigo, etiqueta: t.descripcion })),
   );
 
   protected readonly motivoNoRenovacion = signal<string>('');
-  protected readonly opcionesMotivo: readonly OpcionRadio[] = MOTIVOS_NO_RENOVACION.map(
-    (motivo) => ({ valor: motivo, etiqueta: ETIQUETA_MOTIVO_NO_RENOVACION[motivo] }),
+  /** Motivos reales del Warehouse (catálogo `motivo_no_renovacion`); se envía el valor que escribe el área. */
+  protected readonly opcionesMotivo = computed<readonly OpcionRadio[]>(() =>
+    this.catalogo.opciones('motivo_no_renovacion').filter((m) => m['para_broker'] === true).map((m) => ({ valor: m.descripcion, etiqueta: m.descripcion })),
   );
   protected readonly motivoValido = computed(() =>
-    puedeEnviarNoRenovacion(this.motivoNoRenovacion()),
+    puedeEnviarNoRenovacion(this.motivoNoRenovacion(), this.opcionesMotivo().map((o) => o.valor)),
   );
 
   // --- Renovación digital --------------------------------------------------
@@ -204,23 +222,27 @@ export class GestionRenovacionComponent {
    */
   protected readonly poliza = computed<DatosPoliza>(() => {
     const real = this.polizaReal();
-    const f = this.formulario.getRawValue();
-    const vencimiento = real?.fechaVencimiento ? new Date(real.fechaVencimiento) : null;
+    const c = this.condiciones();
+    const vence = c?.vencimiento ?? real?.fechaVencimiento ?? null;
     return {
       numero: this.numeroPoliza(),
-      tipoCobertura: real?.producto ?? '—',
-      fechaVencimiento: vencimiento,
-      valorMensual: Number(f.valorCanon) || 0,
-      administracion: Number(f.administracion) || 0,
-      serviciosPublicos: Number(f.valorAseguradoServicios) || 0,
-      danosFaltantes: Number(f.valorAseguradoDyF) || 0,
+      tipoCobertura: c?.destino ? `${real?.producto ?? 'Arrendamiento'} · ${c.destino}` : (real?.producto ?? '—'),
+      fechaVencimiento: vence ? new Date(`${vence}T00:00:00`) : null,
+      valorMensual: c?.canon ?? 0,
+      administracion: c?.administracion ?? 0,
+      serviciosPublicos: c?.valorAseguradoServicios ?? 0,
+      danosFaltantes: c?.valorAseguradoDyf ?? 0,
     };
   });
 
-  protected readonly totalEstimado = computed(() => {
-    const p = this.poliza();
-    return p.valorMensual + p.administracion + p.serviciosPublicos + p.danosFaltantes;
-  });
+  /** Valor de renovar con las mismas condiciones (cotización «anterior» del backend). */
+  protected readonly totalEstimado = computed(() => this.condiciones()?.anterior.cotizacion.granTotal ?? 0);
+
+  /** Alertas de la cotización (las mismas que en Comercial renovaciones exigen proceso especial o corrección). */
+  protected readonly alertas = computed(() => this.propuesta()?.cotizacion.alertas ?? []);
+  protected readonly requiereOtroSi = computed(() =>
+    this.alertas().some((a) => a === 'ipc_supera_tope' || a === 'vigencia_restringida'),
+  );
 
   // --- Envío tras SARLAFT vigente -----------------------------------------
 
@@ -286,6 +308,20 @@ export class GestionRenovacionComponent {
   });
 
   constructor() {
+    this.recotizar$
+      .pipe(debounceTime(350), switchMap((o) => this.cotizarNueva(o.conCanon)), takeUntilDestroyed())
+      .subscribe((p) => {
+        this.cotizando.set(false);
+        if (p) {
+          this.propuesta.set(p);
+          this.formulario.patchValue({ valorCanon: p.canon }, { emitEvent: false });
+        }
+      });
+    this.formulario.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (!this.esBloqueado() && this.etapa() === 'ajuste') {
+        this.recotizar$.next({ conCanon: true });
+      }
+    });
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const numero = params.get('numeroPolizaInicial');
       this.numeroPoliza.set(numero && numero.trim().length > 0 ? numero.trim().replace(/^#/, '') : '');
@@ -314,6 +350,48 @@ export class GestionRenovacionComponent {
         },
         error: () => this.polizaReal.set(null),
       });
+    this.renovacionService
+      .condiciones(numero)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (c) => this.condiciones.set(c), error: () => this.condiciones.set(null) });
+  }
+
+  /** Cotiza la modalidad «nueva» con lo que hay en el formulario; sin canon, el backend lo calcula con el IPC. */
+  private cotizarNueva(conCanon: boolean): Observable<PropuestaRenovacion | null> {
+    const v = this.formulario.getRawValue();
+    const actual = this.propuesta();
+    this.cotizando.set(true);
+    return this.renovacionService
+      .cotizar(this.numeroPoliza(), {
+        modalidad: 'nueva',
+        ipc: Number(v.ipcAplicado ?? 0),
+        ...(conCanon ? { canon: Number(v.valorCanon) || 0 } : {}),
+        administracion: Number(v.administracion) || 0,
+        valorAseguradoServicios: Number(v.valorAseguradoServicios) || 0,
+        valorAseguradoDyF: Number(v.valorAseguradoDyF) || 0,
+        ...(actual ? { fechaInicio: actual.inicio, fechaFin: actual.fin } : {}),
+      })
+      .pipe(catchError(() => of(null)));
+  }
+
+  /** Carga en el formulario la propuesta elegida (valores, IPC y vigencias). */
+  private aplicarPropuesta(p: PropuestaRenovacion): void {
+    const c = this.condiciones();
+    const rango = (a: string | null | undefined, b: string | null | undefined) =>
+      a && b ? `${fechaCorta(a)} – ${fechaCorta(b)}` : '—';
+    this.propuesta.set(p);
+    this.formulario.patchValue(
+      {
+        valorCanon: p.canon,
+        administracion: p.administracion,
+        valorAseguradoServicios: p.valorAseguradoServicios,
+        valorAseguradoDyF: p.valorAseguradoDyf,
+        ipcAplicado: p.ipc,
+        periodoActual: rango(c?.vigencia, c?.vencimiento),
+        periodoProyectado: rango(p.inicio, p.fin),
+      },
+      { emitEvent: false },
+    );
   }
 
   // --- Opciones --------------------------------------------------------------
@@ -327,8 +405,8 @@ export class GestionRenovacionComponent {
     this.iniciar('digital', 'detalles');
   }
 
-  protected iniciarCasoEspecial(tipo: TipoCasoEspecial = 'otroSi'): void {
-    this.tipoCasoEspecial.set(tipo);
+  protected iniciarCasoEspecial(tipo?: TipoCasoEspecial): void {
+    this.tipoCasoEspecial.set(tipo ?? this.opcionesCasoEspecial()[0]?.valor ?? '');
     this.iniciar('caso-especial', 'captura');
   }
 
@@ -426,6 +504,10 @@ export class GestionRenovacionComponent {
     }
     const modo: ModoAjuste = modalidad === 'anterior' ? 'bloqueado' : 'editable';
     this.modoAjuste.set(modo);
+    const c = this.condiciones();
+    if (c) {
+      this.aplicarPropuesta(modalidad === 'anterior' ? c.anterior : c.nueva);
+    }
     if (modo === 'bloqueado') {
       this.formulario.disable();
     } else {
@@ -436,13 +518,15 @@ export class GestionRenovacionComponent {
 
   protected incrementarIpc(): void {
     const actual = Number(this.formulario.get('ipcAplicado')?.value ?? 0);
-    this.formulario.patchValue({ ipcAplicado: +(actual + 0.1).toFixed(1) });
+    this.formulario.patchValue({ ipcAplicado: +(actual + 0.1).toFixed(1) }, { emitEvent: false });
+    this.recotizar$.next({ conCanon: false });
   }
 
   protected decrementarIpc(): void {
     const actual = Number(this.formulario.get('ipcAplicado')?.value ?? 0);
     if (actual > 0) {
-      this.formulario.patchValue({ ipcAplicado: +(actual - 0.1).toFixed(1) });
+      this.formulario.patchValue({ ipcAplicado: +(actual - 0.1).toFixed(1) }, { emitEvent: false });
+      this.recotizar$.next({ conCanon: false });
     }
   }
 
@@ -467,20 +551,37 @@ export class GestionRenovacionComponent {
 
   /** Con SARLAFT vigente registra la gestión en el backend y muestra el éxito. */
   protected onSarlaftVigente(resultado: ResultadoSarlaftRenovacion): void {
+    this.enviar(resultado.validacionId);
+  }
+
+  /** No renovar se registra sin validar Conocimiento de Cliente. */
+  protected enviarNoRenovacion(): void {
+    if (this.motivoValido()) {
+      this.enviar('');
+    }
+  }
+
+  private enviar(validacionSarlaftId: string): void {
     if (this.enviando()) {
       return;
     }
     this.enviando.set(true);
     this.errorEnvio.set(null);
-    this.registrar(resultado.validacionId).subscribe({
+    this.registrar(validacionSarlaftId).subscribe({
       next: (respuesta) => {
         this.confirmacion.set({ radicado: respuesta.radicado, estado: respuesta.estado });
         this.enviando.set(false);
         this.etapa.set('exito');
       },
-      error: () => {
+      error: (err: { status?: number }) => {
         this.enviando.set(false);
-        this.errorEnvio.set('No se pudo registrar la gestión. Intenta nuevamente en unos minutos.');
+        this.errorEnvio.set(
+          err?.status === 422 && this.flujo() === 'correccion'
+            ? 'Esta póliza no tiene una corrección pendiente del área de renovaciones.'
+            : err?.status === 422 || err?.status === 400
+              ? 'Revisa los datos y documentos de la gestión: el área no los pudo recibir así.'
+              : 'No se pudo registrar la gestión. Intenta nuevamente en unos minutos.',
+        );
       },
     });
   }
@@ -511,7 +612,7 @@ export class GestionRenovacionComponent {
     const comentarios = this.comentarios().trim();
     const conComentarios = comentarios.length > 0 ? { comentarios } : {};
     const conObservaciones = comentarios.length > 0 ? { observaciones: comentarios } : {};
-    const documento = this.documentoCargado();
+    const archivo = this.archivo();
 
     switch (this.flujo()) {
       case 'fisica':
@@ -519,7 +620,7 @@ export class GestionRenovacionComponent {
           numeroPoliza,
           tipo: 'fisica',
           validacionSarlaftId,
-          ...(documento ? { formularioRenovacion: documento } : {}),
+          ...(archivo ? { formularioRenovacion: archivo } : {}),
           ...conComentarios,
         });
       case 'digital': {
@@ -530,6 +631,7 @@ export class GestionRenovacionComponent {
           tipo: 'digital',
           validacionSarlaftId,
           modalidad: this.esBloqueado() ? 'mismosValores' : 'conAjustes',
+          ...(this.propuesta() ? { fechaInicio: this.propuesta()!.inicio, fechaFin: this.propuesta()!.fin } : {}),
           ...(this.esBloqueado()
             ? {}
             : {
@@ -548,32 +650,22 @@ export class GestionRenovacionComponent {
         return this.renovacionService.casoEspecial({
           numeroPoliza,
           tipo: this.tipoCasoEspecial(),
-          documentoLegal: documento!,
-          ...conObservaciones,
+          documentos: archivo ? [archivo] : [],
+          observaciones: comentarios,
         });
       case 'no-renovar':
         return this.renovacionService.noRenovar({
           numeroPoliza,
-          motivo: this.motivoNoRenovacion() as MotivoNoRenovacion,
+          motivo: this.motivoNoRenovacion(),
           ...conObservaciones,
         });
       case 'correccion':
-        return this.correccionService.registrar({
-          referencia: numeroPoliza,
-          archivo: this.archivo()!,
+        return this.renovacionService.corregir({
+          numeroPoliza,
+          documentos: archivo ? [archivo] : [],
           ...conObservaciones,
         });
     }
   }
 
-  private documentoCargado(): DocumentoCargado | null {
-    const archivo = this.archivo();
-    return archivo
-      ? {
-          nombre: archivo.name,
-          tipoMime: archivo.type as DocumentoCargado['tipoMime'],
-          tamanoBytes: archivo.size,
-        }
-      : null;
-  }
 }

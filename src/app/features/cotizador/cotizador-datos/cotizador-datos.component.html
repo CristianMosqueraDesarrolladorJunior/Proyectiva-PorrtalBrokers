@@ -47,7 +47,7 @@
               [attr.aria-invalid]="errorDepartamento() ? 'true' : null"
             >
               <option value="" disabled>Selecciona</option>
-              @for (opcion of departamentos; track opcion) {
+              @for (opcion of departamentos(); track opcion) {
                 <option [value]="opcion">{{ opcion }}</option>
               }
             </select>
@@ -99,7 +99,6 @@
               nombre="canon"
               [valor]="canon()"
               [invalido]="!!errorCanon()"
-              [atajos]="atajosMonto"
               (valorChange)="canon.set($event)"
             />
           </app-form-field>
@@ -116,7 +115,11 @@
         </app-grid-layout>
 
         @if (tieneAdmin() === 'si') {
-          <app-form-field label="Valor mensual de administración" controlId="cot-administracion">
+          <app-form-field
+            label="Valor mensual de administración"
+            ayuda="Se suma al canon para el valor asegurado mensual"
+            controlId="cot-administracion"
+          >
             <app-money-input
               inputId="cot-administracion"
               nombre="administracion"
@@ -161,13 +164,10 @@
             <app-toggle-switch
               [checked]="aseguraIva()"
               (checkedChange)="aseguraIva.set($event)"
-              ariaLabel="Asegurar el IVA del canon (19%)"
+              [ariaLabel]="'Asegurar el IVA del canon (' + tarifaIvaCanon + '%)'"
             ></app-toggle-switch>
             <div class="cotizador-datos__iva-texto">
-              <span class="cotizador-datos__iva-label">Asegurar el IVA del canon (19%)</span>
-              @if (aseguraIva()) {
-                <span class="cotizador-datos__iva-valor">IVA estimado: {{ cop(ivaCanonEstimado()) }}</span>
-              }
+              <span class="cotizador-datos__iva-label">Asegurar el IVA del canon ({{ tarifaIvaCanon }}%)</span>
             </div>
           </div>
         }

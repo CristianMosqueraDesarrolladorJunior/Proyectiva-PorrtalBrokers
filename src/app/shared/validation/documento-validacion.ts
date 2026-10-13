@@ -22,27 +22,11 @@
  */
 
 import type { DocumentoCargado, TipoMimePermitido } from '../../core/models/documento.model';
-import {
-  DOCUMENTOS_REGISTRO_BROKER,
-  type ReglaDocumentoRegistro,
-  type TipoDocumentoRegistro,
-} from '../../core/models/registro-broker.model';
-import type { TipoDocumentoRadicacion } from '../../core/models/radicacion.model';
+import { MIMES_DOCUMENTO, type ReglaDocumentoRegistro } from '../../core/models/registro-broker.model';
 
 /** Límite general de tamaño de un documento: 10 MB (Req 13.2). */
 export const LIMITE_TAMANO_GENERAL_BYTES = 10_485_760;
 
-/** Límite de tamaño de la Autorización de Pago: 5 MB (Req 3.18). */
-export const LIMITE_TAMANO_AUTORIZACION_PAGO_BYTES = 5_242_880;
-
-/** Vigencia máxima de la Certificación Bancaria de registro: 30 días (Req 3.16). */
-export const VIGENCIA_MAX_CERTIFICACION_BANCARIA_DIAS = 30;
-
-/** Vigencia máxima del Certificado de Tradición y Libertad: 90 días (Req 13.3). */
-export const VIGENCIA_MAX_CERTIFICADO_TRADICION_DIAS = 90;
-
-/** Vigencia máxima del Certificado de existencia de Persona_Juridica: 30 días (Req 13.4). */
-export const VIGENCIA_MAX_CERTIFICADO_EXISTENCIA_DIAS = 30;
 
 /** Motivos tipados por los que un documento puede rechazarse (Property 4). */
 export type MotivoRechazoDocumento =
@@ -86,54 +70,18 @@ const EXTENSIONES_POR_MIME: Readonly<Record<TipoMimePermitido, readonly string[]
 };
 
 /**
- * Reglas de validación de los documentos de Radicación (Req 11, 12, 13).
- * Tamaño general 10 MB; vigencia solo para Tradición (≤ 90 días) y existencia (≤ 30 días).
- * El backend revalida (Req 13.5).
+ * Regla de carga de un documento a partir de su fila de catálogo (`documento_radicacion`):
+ * `tamano_max_bytes` y `vigencia_max_dias` vienen de la BD. El backend revalida (Req 13.5).
  */
-export const REGLAS_DOCUMENTO_RADICACION: Readonly<
-  Record<TipoDocumentoRadicacion, ReglaValidacionDocumento>
-> = {
-  cedulaPropietario: {
-    mimePermitidos: ['application/pdf', 'image/jpeg', 'image/png'],
-    tamanoMaxBytes: LIMITE_TAMANO_GENERAL_BYTES,
-    vigenciaMaxDias: null,
-  },
-  certificadoTradicion: {
-    mimePermitidos: ['application/pdf', 'image/jpeg', 'image/png'],
-    tamanoMaxBytes: LIMITE_TAMANO_GENERAL_BYTES,
-    vigenciaMaxDias: VIGENCIA_MAX_CERTIFICADO_TRADICION_DIAS,
-  },
-  certificadoExistencia: {
-    mimePermitidos: ['application/pdf', 'image/jpeg', 'image/png'],
-    tamanoMaxBytes: LIMITE_TAMANO_GENERAL_BYTES,
-    vigenciaMaxDias: VIGENCIA_MAX_CERTIFICADO_EXISTENCIA_DIAS,
-  },
-  cedulaRepresentanteLegal: {
-    mimePermitidos: ['application/pdf', 'image/jpeg', 'image/png'],
-    tamanoMaxBytes: LIMITE_TAMANO_GENERAL_BYTES,
-    vigenciaMaxDias: null,
-  },
-  formularioSarlaft: {
-    mimePermitidos: ['application/pdf', 'image/jpeg', 'image/png'],
-    tamanoMaxBytes: LIMITE_TAMANO_GENERAL_BYTES,
-    vigenciaMaxDias: null,
-  },
-  contratoArrendamientoFirmado: {
-    mimePermitidos: ['application/pdf', 'image/jpeg', 'image/png'],
-    tamanoMaxBytes: LIMITE_TAMANO_GENERAL_BYTES,
-    vigenciaMaxDias: null,
-  },
-  poderApoderado: {
-    mimePermitidos: ['application/pdf', 'image/jpeg', 'image/png'],
-    tamanoMaxBytes: LIMITE_TAMANO_GENERAL_BYTES,
-    vigenciaMaxDias: null,
-  },
-  cedulaApoderado: {
-    mimePermitidos: ['application/pdf', 'image/jpeg', 'image/png'],
-    tamanoMaxBytes: LIMITE_TAMANO_GENERAL_BYTES,
-    vigenciaMaxDias: null,
-  },
-};
+export function reglaDesdeCatalogo(fila: { readonly [columna: string]: unknown } | undefined): ReglaValidacionDocumento {
+  const tamano = Number(fila?.['tamano_max_bytes']);
+  const vigencia = fila?.['vigencia_max_dias'];
+  return {
+    mimePermitidos: MIMES_DOCUMENTO,
+    tamanoMaxBytes: Number.isFinite(tamano) && tamano > 0 ? tamano : LIMITE_TAMANO_GENERAL_BYTES,
+    vigenciaMaxDias: vigencia == null ? null : Number(vigencia),
+  };
+}
 
 /**
  * Extrae la extensión (en minúsculas, sin punto) del nombre de archivo.
@@ -229,7 +177,7 @@ export function validarDocumento(
 }
 
 /**
- * Adapta una `ReglaDocumentoRegistro` (del conjunto `DOCUMENTOS_REGISTRO_BROKER`)
+ * Adapta una `ReglaDocumentoRegistro` (de `documentosRegistroBroker`, catálogo de BD)
  * a la forma unificada `ReglaValidacionDocumento` que consume `validarDocumento`.
  * Función pura.
  */
@@ -243,49 +191,3 @@ export function reglaDeDocumentoRegistro(
   };
 }
 
-/** Conjunto exacto de tipos de documento obligatorios del registro de broker (Req 3.16). */
-const TIPOS_OBLIGATORIOS_REGISTRO: readonly TipoDocumentoRegistro[] = [
-  'documentoIdentidad',
-  'certificacionBancaria',
-  'autorizacionPago',
-  'rut',
-];
-
-/**
- * Confirma que el conjunto obligatorio de documentos de registro es EXACTAMENTE
- * los 4 definidos (Documento de Identidad, Certificación Bancaria, Autorización de
- * Pago y RUT), sin faltantes ni sobrantes ni duplicados (Property 4, Req 3.16).
- *
- * Función pura y total. Compara contra `DOCUMENTOS_REGISTRO_BROKER` sin depender del
- * orden de los elementos.
- *
- * @param tipos Conjunto de tipos de documento a verificar.
- * @returns `true` si contiene exactamente los 4 tipos obligatorios.
- */
-export function esConjuntoObligatorioRegistroCompleto(
-  tipos: readonly TipoDocumentoRegistro[],
-): boolean {
-  const esperados = new Set<TipoDocumentoRegistro>(TIPOS_OBLIGATORIOS_REGISTRO);
-  const recibidos = new Set<TipoDocumentoRegistro>(tipos);
-  if (recibidos.size !== esperados.size) {
-    return false;
-  }
-  for (const tipo of esperados) {
-    if (!recibidos.has(tipo)) {
-      return false;
-    }
-  }
-  // Verifica que `DOCUMENTOS_REGISTRO_BROKER` siga definiendo exactamente estos 4 tipos.
-  const definidos = new Set<TipoDocumentoRegistro>(
-    DOCUMENTOS_REGISTRO_BROKER.map((r) => r.tipo),
-  );
-  if (definidos.size !== esperados.size) {
-    return false;
-  }
-  for (const tipo of esperados) {
-    if (!definidos.has(tipo)) {
-      return false;
-    }
-  }
-  return true;
-}

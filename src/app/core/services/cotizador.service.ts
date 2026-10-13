@@ -1,11 +1,18 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 import {
   CotizacionRequest,
   CotizacionResult,
 } from '../models/cotizacion.model';
+
+/** Ciudad con cobertura tal cual la expone el backend (`CiudadResponse`). */
+interface CiudadCobertura {
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly departamento: string;
+}
 
 /**
  * Servicio del Cotizador (Req 7, 8, 9).
@@ -40,9 +47,13 @@ export class CotizadorService {
    */
   ciudadesPorDepartamento(departamento: string): Observable<readonly string[]> {
     const params = new HttpParams().set('departamento', departamento);
-    return this.http.get<readonly string[]>(
-      `${this.baseUrl}/cobertura/ciudades`,
-      { params, withCredentials: true },
-    );
+    // El backend devuelve objetos CiudadResponse {codigo, nombre, departamento};
+    // el selector del cotizador trabaja con los nombres de ciudad.
+    return this.http
+      .get<readonly CiudadCobertura[]>(`${this.baseUrl}/cobertura/ciudades`, {
+        params,
+        withCredentials: true,
+      })
+      .pipe(map((ciudades) => ciudades.map((ciudad) => ciudad.nombre)));
   }
 }

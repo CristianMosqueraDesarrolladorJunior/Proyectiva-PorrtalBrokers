@@ -9,18 +9,15 @@
   <!-- Contactos directos (Req 33.5) -->
   <h3 class="ayuda__seccion-titulo">Contactos directos</h3>
   <div class="contact-cards">
-    @for (contacto of contactos; track trackContacto($index, contacto)) {
+    @for (contacto of contactos; track contacto.codigo) {
       <div class="contact-card">
-        <span class="contact-avatar" aria-hidden="true">{{ contacto.avatar }}</span>
+        <span class="contact-avatar" aria-hidden="true">{{ contacto['icono'] }}</span>
         <div class="contact-card__cuerpo">
           <div class="contact-card__cabecera">
-            <strong>{{ contacto.nombre }}</strong>
-            @if (contacto.disponible) {
-              <span class="contact-badge">● Disponible</span>
-            }
+            <strong>{{ contacto.descripcion }}</strong>
           </div>
-          <p class="contact-card__desc">{{ contacto.descripcion }}</p>
-          <a class="contact-card__enlace" href="#" (click)="$event.preventDefault()">
+          <p class="contact-card__desc">{{ contacto['detalle'] }}</p>
+          <a class="contact-card__enlace" [href]="contacto['url']" target="_blank" rel="noopener noreferrer">
             Conectar ahora
           </a>
         </div>
@@ -31,30 +28,25 @@
   <!-- Canales oficiales (Req 33.5) -->
   <h3 class="ayuda__seccion-titulo">Canales oficiales</h3>
   <div class="doc-list">
-    <div class="doc-item">
-      <span class="doc-icon" aria-hidden="true">📨</span>
-      <div class="doc-info">
-        <strong>Portal PQRS</strong>
-        <small>Radica peticiones, quejas, reclamos, sugerencias o felicitaciones</small>
+    @for (canal of oficiales; track canal.codigo) {
+      <div class="doc-item">
+        <span class="doc-icon" aria-hidden="true">{{ canal['icono'] }}</span>
+        <div class="doc-info">
+          <strong>{{ canal.descripcion }}</strong>
+          <small>{{ canal['detalle'] }}</small>
+        </div>
+        <a class="doc-btn" [href]="canal['url']" target="_blank" rel="noopener noreferrer">↗ Abrir portal</a>
       </div>
-      <a
-        class="doc-btn"
-        [href]="pqrsUrl"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        ↗ Abrir portal
-      </a>
-    </div>
+    }
   </div>
 
   <!-- Preguntas frecuentes (Req 33.6) -->
   <h3 class="ayuda__seccion-titulo">Preguntas frecuentes de comercialización</h3>
   <div class="faq-list">
-    @for (faq of faqs; track trackFaq($index, faq)) {
+    @for (faq of faqs; track faq.codigo) {
       <details class="faq">
-        <summary>{{ faq.pregunta }}</summary>
-        <p>{{ faq.respuesta }}</p>
+        <summary>{{ faq.descripcion }}</summary>
+        <p>{{ faq['respuesta'] }}</p>
       </details>
     }
   </div>

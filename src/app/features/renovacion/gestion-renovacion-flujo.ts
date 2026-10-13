@@ -32,7 +32,8 @@ export const ETAPAS_POR_FLUJO: Readonly<Record<FlujoGestion, readonly EtapaGesti
   digital: ['opciones', 'detalles', 'ajuste', 'sarlaft', 'exito'],
   fisica: ['opciones', 'captura', 'sarlaft', 'exito'],
   'caso-especial': ['opciones', 'captura', 'sarlaft', 'exito'],
-  'no-renovar': ['opciones', 'captura', 'sarlaft', 'exito'],
+  // No renovar no valida Conocimiento de Cliente: el desistimiento se registra directo (como en Comercial renovaciones).
+  'no-renovar': ['opciones', 'captura', 'exito'],
   correccion: ['opciones', 'captura', 'observaciones', 'sarlaft', 'exito'],
 };
 
@@ -43,7 +44,7 @@ export interface PasoGestion {
 }
 
 const OPCIONES: PasoGestion = { etiqueta: 'Opciones', descripcion: 'Elige la gestión' };
-const SARLAFT: PasoGestion = { etiqueta: 'SARLAFT', descripcion: 'Vigencia < 36 meses' };
+const SARLAFT: PasoGestion = { etiqueta: 'Conocimiento de Cliente', descripcion: 'Vigencia < 36 meses' };
 
 /** Pasos del indicador por flujo (uno por etapa). */
 export const PASOS_POR_FLUJO: Readonly<Record<FlujoGestion, readonly PasoGestion[]>> = {
@@ -69,7 +70,6 @@ export const PASOS_POR_FLUJO: Readonly<Record<FlujoGestion, readonly PasoGestion
   'no-renovar': [
     OPCIONES,
     { etiqueta: 'Motivo', descripcion: 'Por qué no renueva' },
-    SARLAFT,
     { etiqueta: 'Recibida', descripcion: 'Radicado' },
   ],
   correccion: [

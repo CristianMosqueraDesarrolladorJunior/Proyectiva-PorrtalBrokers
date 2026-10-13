@@ -6,7 +6,7 @@
       class="dt-toolbar__input"
       [placeholder]="placeholderBusqueda"
       [ngModel]="busqueda()"
-      (ngModelChange)="busqueda.set($event)"
+      (ngModelChange)="buscar($event)"
       [attr.aria-label]="placeholderBusqueda"
     />
   </div>
@@ -22,6 +22,7 @@
             [class.dt-th--ordenable]="columna.ordenable"
             [class.dt-th--centro]="columna.alinear === 'centro'"
             [class.dt-th--derecha]="columna.alinear === 'derecha'"
+            [class.dt-fija]="columna.tipo === 'accion' || columna.tipo === 'acciones'"
             [attr.aria-sort]="
               columnaOrden() === columna.key
                 ? (direccionOrden() === 'asc' ? 'ascending' : 'descending')
@@ -40,7 +41,7 @@
       </tr>
     </thead>
     <tbody>
-      @for (fila of filasVisibles(); track trackFila($index)) {
+      @for (fila of filasMostradas(); track trackFila($index)) {
         <tr
           tabindex="0"
           (click)="onSeleccionarFila(fila)"
@@ -52,6 +53,7 @@
               [attr.data-label]="columna.header || null"
               [class.dt-td--centro]="columna.alinear === 'centro'"
               [class.dt-td--derecha]="columna.alinear === 'derecha'"
+              [class.dt-fija]="columna.tipo === 'accion' || columna.tipo === 'acciones'"
             >
               @switch (columna.tipo) {
                 @case ('badge') {
@@ -60,13 +62,37 @@
                     [conPunto]="true"
                   >{{ valorCelda(fila, columna) }}</app-badge-estado>
                 }
+                @case ('principal') {
+                  <span class="dt-principal">
+                    <span class="dt-principal__valor">{{ valorCelda(fila, columna) }}</span>
+                    @if (subCelda(fila, columna)) {
+                      <span class="dt-principal__sub">{{ subCelda(fila, columna) }}</span>
+                    }
+                  </span>
+                }
+                @case ('acciones') {
+                  <span class="dt-acciones" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                    @for (a of columna.acciones ?? []; track a.id) {
+                      <button
+                        type="button"
+                        class="dt-accion"
+                        [class.dt-accion--peligro]="a.tono === 'peligro'"
+                        [attr.aria-label]="a.etiqueta"
+                        [attr.title]="a.etiqueta"
+                        (click)="onAccion(fila, columna, a.id)"
+                      >
+                        <app-icon [nombre]="a.icono" [tamano]="18" />
+                      </button>
+                    }
+                  </span>
+                }
                 @case ('accion') {
                   <span (click)="$event.stopPropagation()">
                     <app-boton
                       variante="accent"
-                      [ariaLabel]="(columna.textoAccion || 'Gestionar') + ' fila'"
+                      [ariaLabel]="textoAccion(fila, columna) + ' fila'"
                       (clicked)="onAccion(fila, columna)"
-                    >{{ columna.textoAccion || 'Gestionar' }}</app-boton>
+                    >{{ textoAccion(fila, columna) }}</app-boton>
                   </span>
                 }
                 @default {
@@ -79,7 +105,7 @@
       } @empty {
         <tr>
           <td class="data-table__empty" [attr.colspan]="columnas.length">
-            No hay registros para mostrar.
+            {{ mensajeVacio }}
           </td>
         </tr>
       }
@@ -88,35 +114,35 @@
 </div>
 
 <div class="table-footer">
-  <span class="table-footer__total">Mostrando {{ filasVisibles().length }} de {{ total }}</span>
+  <span class="table-footer__total">Mostrando {{ filasMostradas().length }} de {{ totalRegistros() }}</span>
   <nav class="pagination" aria-label="Paginación">
     <button
       type="button"
       class="pg pg--nav"
-      [disabled]="paginaActual <= 1"
+      [disabled]="pagina() <= 1"
       aria-label="Página anterior"
-      (click)="irAPagina(paginaActual - 1)"
+      (click)="irAPagina(pagina() - 1)"
     >
       ‹
     </button>
-    @for (pagina of paginas; track pagina) {
+    @for (n of paginas; track n) {
       <button
         type="button"
         class="pg"
-        [class.active]="pagina === paginaActual"
-        [attr.aria-current]="pagina === paginaActual ? 'page' : null"
-        [attr.aria-label]="'Página ' + pagina"
-        (click)="irAPagina(pagina)"
+        [class.active]="n === pagina()"
+        [attr.aria-current]="n === pagina() ? 'page' : null"
+        [attr.aria-label]="'Página ' + n"
+        (click)="irAPagina(n)"
       >
-        {{ pagina }}
+        {{ n }}
       </button>
     }
     <button
       type="button"
       class="pg pg--nav"
-      [disabled]="paginaActual >= totalPaginas()"
+      [disabled]="pagina() >= totalPaginas()"
       aria-label="Página siguiente"
-      (click)="irAPagina(paginaActual + 1)"
+      (click)="irAPagina(pagina() + 1)"
     >
       ›
     </button>

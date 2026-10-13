@@ -1,20 +1,22 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { DocumentosService, type RecursoDescargable } from '../../core/services/documentos.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-/** Acción de un recurso descargable del prototipo: descargar PDF o abrir. */
-type AccionRecurso = 'pdf' | 'abrir';
+import { descargarArchivo } from '../../core/util/descargar-archivo';
 
 /** Recurso descargable de la Seccion_Documentos (Req 33.3, 33.4). */
 interface RecursoDoc {
   readonly icono: string;
   readonly titulo: string;
   readonly descripcion: string;
-  readonly accion: AccionRecurso;
-  readonly url: string;
+  readonly id: string;
+  readonly categoria: string;
 }
 
 /** Sección de documentos agrupada por categoría (Req 33.3). */
 interface SeccionDoc {
+  readonly id: string;
   readonly titulo: string;
   readonly recursos: readonly RecursoDoc[];
 }
@@ -34,56 +36,82 @@ interface SeccionDoc {
   templateUrl: './documentos.component.html',
   styleUrl: './documentos.component.scss',
 })
-export class DocumentosComponent {
-  /** Secciones de documentos del prototipo (Req 33.3). */
-  protected readonly secciones: readonly SeccionDoc[] = [
-    {
-      titulo: 'Formatos de renovación',
-      recursos: [
-        { icono: 'autorenew', titulo: 'Formato renovación · Persona natural', descripcion: 'Plantilla oficial', accion: 'pdf', url: '#' },
-        { icono: 'apartment', titulo: 'Formato renovación · Persona jurídica', descripcion: 'Plantilla oficial', accion: 'pdf', url: '#' },
-      ],
-    },
-    {
-      titulo: 'Cumplimiento y vinculación',
-      recursos: [
-        { icono: 'verified_user', titulo: 'SARLAFT · Persona natural', descripcion: 'Obligatorio · KYC/AML', accion: 'pdf', url: '#' },
-        { icono: 'verified_user', titulo: 'SARLAFT · Persona jurídica', descripcion: 'Obligatorio', accion: 'pdf', url: '#' },
-        { icono: 'lock', titulo: 'Formato de autorizaciones', descripcion: 'Habeas data y tratamiento de datos', accion: 'pdf', url: '#' },
-        { icono: 'article', titulo: 'Acta de junta de socios', descripcion: 'Personas jurídicas', accion: 'pdf', url: '#' },
-      ],
-    },
-    {
-      titulo: 'Contratos y formatos del cliente',
-      recursos: [
-        { icono: 'edit_document', titulo: 'Formato de contrato', descripcion: 'Plantilla editable', accion: 'pdf', url: '#' },
-        { icono: 'assignment', titulo: 'Formato de inventario', descripcion: 'Estado del inmueble', accion: 'pdf', url: '#' },
-      ],
-    },
-    {
-      titulo: 'Condiciones y comisiones',
-      recursos: [
-        { icono: 'description', titulo: 'Clausulados', descripcion: 'Coberturas, exclusiones y condiciones', accion: 'pdf', url: '#' },
-        { icono: 'payments', titulo: 'Instructivo de comisiones', descripcion: 'Tarifas y porcentajes', accion: 'pdf', url: '#' },
-      ],
-    },
-    {
-      titulo: 'Instructivos y guías',
-      recursos: [
-        { icono: 'menu_book', titulo: 'Instructivo de reclamación', descripcion: 'Paso a paso', accion: 'abrir', url: '#' },
-        { icono: 'menu_book', titulo: 'Instructivo de renovación', descripcion: 'Proceso completo', accion: 'abrir', url: '#' },
-      ],
-    },
-  ];
+export class DocumentosComponent implements OnInit {
+  private readonly documentosService = inject(DocumentosService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly recursos = signal<readonly RecursoDescargable[]>([]);
+  protected readonly cargando = signal(true);
+  protected readonly errorCarga = signal(false);
+  protected readonly errorDescarga = signal(false);
+  protected readonly descargandoId = signal<string | null>(null);
+
+  protected readonly secciones = computed(() => {
+    const categorias = [
+      { id: 'formatos-renovacion', titulo: 'Formatos de renovación' },
+      { id: 'cumplimiento', titulo: 'Cumplimiento y vinculación' },
+      { id: 'contratos', titulo: 'Contratos y formatos del cliente' },
+      { id: 'condiciones', titulo: 'Condiciones y comisiones' },
+      { id: 'instructivos', titulo: 'Instructivos y guías' },
+    ];
+    return categorias
+      .map((categoria) => ({
+        ...categoria,
+        recursos: this.recursos()
+          .filter((recurso) => recurso.categoria === categoria.id)
+          .map((recurso) => this.aRecursoDoc(recurso)),
+      }))
+      .filter((seccion) => seccion.recursos.length > 0);
+  });
+
+  ngOnInit(): void {
+    this.documentosService
+      .obtenerRecursos()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (recursos) => {
+          this.recursos.set(recursos);
+          this.cargando.set(false);
+        },
+        error: () => {
+          this.errorCarga.set(true);
+          this.cargando.set(false);
+        },
+      });
+  }
+
+  private aRecursoDoc(recurso: RecursoDescargable): RecursoDoc {
+    return {
+      id: recurso.id,
+      titulo: recurso.nombre,
+      descripcion: recurso.descripcion,
+      icono: recurso.icono,
+      categoria: recurso.categoria,
+    };
+  }
 
   /** Etiqueta del botón según la acción del recurso (↓ PDF / ↗ Abrir). */
   protected etiquetaAccion(recurso: RecursoDoc): string {
-    return recurso.accion === 'pdf' ? '↓ PDF' : '↗ Abrir';
+    return recurso.categoria === 'instructivos' ? '↗ Abrir' : '↓ PDF';
   }
 
-  /** Inicia la descarga o apertura del recurso en una pestaña nueva (Req 33.4). */
+  /** Descarga el PDF a través del API autenticado del portal (Req 33.4). */
   protected abrir(recurso: RecursoDoc): void {
-    window.open(recurso.url, '_blank', 'noopener,noreferrer');
+    this.errorDescarga.set(false);
+    this.descargandoId.set(recurso.id);
+    this.documentosService
+      .descargarRecurso(recurso.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (contenido) => {
+          const extension = contenido.type.includes('wordprocessingml') ? 'docx' : 'pdf';
+          descargarArchivo(contenido, `${recurso.titulo}.${extension}`);
+          this.descargandoId.set(null);
+        },
+        error: () => {
+          this.errorDescarga.set(true);
+          this.descargandoId.set(null);
+        },
+      });
   }
 
   /** trackBy de secciones. */

@@ -1,106 +1,102 @@
 <section class="vista" aria-labelledby="brokers-titulo">
-  <div class="vista__cabecera">
-    <app-page-header
-      [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
-      tituloId="brokers-titulo"
-      [titulo]="esAdmin ? 'Brokers' : 'Mis brokers'"
-      subtitulo="Estado de los negocios de cada broker e inmobiliaria. Toca una fila para ver el detalle."
-    ></app-page-header>
-  </div>
+  <app-page-header
+    [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
+    tituloId="brokers-titulo"
+    titulo="Brokers"
+    subtitulo="Brokers registrados y activos: contacto, comercial, acuerdo, producción y comisiones. Los prospectos están en su propia vista."
+  ></app-page-header>
+
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Brokers vinculados" [valor]="brokers().length" icono="verified_user" sub="Intermediarios registrados y activos" />
+    <app-kpi-card label="Primas emitidas" [valor]="compacto(totalIngreso())" icono="account_balance" sub="Pólizas expedidas por sus brokers" />
+    <app-kpi-card label="Comisión por pagar" [valor]="compacto(totalPendiente())" icono="schedule" tono="accent" sub="Cuentas de cobro radicadas" />
+  </app-grid-layout>
 
   @if (mensaje()) {
-    <p class="exito" role="status">
-      <app-icon nombre="check_circle" [tamano]="18" /> {{ mensaje() }}
-      <button type="button" class="btn-link" (click)="mensaje.set('')">Cerrar</button>
-    </p>
+    <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
   }
 
-  <div class="filtros" role="search">
-    <label class="filtros__busqueda">
-      Buscar
-      <input class="control" type="search" placeholder="Nombre de broker o comercial" [value]="busqueda()"
-        (change)="buscar(valor($event))" />
-    </label>
-  </div>
-
-  @if (cargando()) {
-    <p class="aviso" role="status">Cargando brokers…</p>
-  } @else if (error()) {
-    <p class="error" role="alert">No se pudo cargar la información. Intenta nuevamente.</p>
-  } @else {
-    <div class="tabla-envoltura">
-      <table class="tabla" aria-label="Brokers">
-        <thead>
-          <tr>
-            <th>Broker</th>
-            <th>Tipo</th>
-            @if (esAdmin) { <th>Comercial</th> }
-            <th class="num">Negocios</th>
-            <th>SARLAFT</th>
-            <th>Estado</th>
-            @if (esAdmin) { <th></th> }
-          </tr>
-        </thead>
-        <tbody>
-          @for (b of brokers(); track b.brokerId) {
-            <tr class="fila" tabindex="0" (click)="abrirDetalle(b)" (keydown.enter)="abrirDetalle(b)">
-              <td><div class="principal"><b>{{ b.broker }}</b><small>{{ b.brokerId }}</small></div></td>
-              <td><span class="chip" [class.chip--acento]="b.tipo === 'Inmobiliaria'">{{ b.tipo }}</span></td>
-              @if (esAdmin) { <td>{{ b.comercial }}</td> }
-              <td class="num">{{ b.numeroNegocios }}</td>
-              <td><app-badge-estado [variante]="varianteSarlaft(b.estadoSarlaft)">{{ etiquetaSarlaft(b.estadoSarlaft) }}</app-badge-estado></td>
-              <td><app-badge-estado [variante]="varianteEstado(b.estado)">{{ b.estado }}</app-badge-estado></td>
-              @if (esAdmin) {
-                <td (click)="$event.stopPropagation()">
-                  <button type="button" class="btn-sec" (click)="abrirReasignar(b)">
-                    <app-icon nombre="swap_horiz" [tamano]="18" /> Reasignar
-                  </button>
-                </td>
-              }
-            </tr>
-          } @empty {
-            <tr><td class="tabla__vacia" colspan="7">No hay información disponible.</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  }
+  <app-estado-vista
+    [cargando]="cargando()"
+    [error]="error()"
+    [vacio]="brokers().length === 0"
+    entidad="brokers"
+    iconoVacio="groups"
+    tituloVacio="Aún no hay brokers registrados"
+    descripcionVacio="Cuando un prospecto se aprueba aparece aquí."
+    (reintentar)="cargar()"
+  >
+    <app-data-table
+      [columnas]="columnas"
+      [filas]="filas()"
+      [total]="filas().length"
+      [tamanoPagina]="20"
+      [conBusqueda]="true"
+      placeholderBusqueda="Buscar por nombre, documento, correo o comercial…"
+      ariaLabel="Brokers registrados"
+      (accion)="gestionar($event)"
+    />
+  </app-estado-vista>
 </section>
 
-<app-drawer-detalle [abierto]="detalle() !== null" [titulo]="detalle()?.broker ?? ''" [filas]="filasDetalle()" (cerrar)="detalle.set(null)">
-  @if (detalle(); as b) {
-    <div class="detalle-acciones" acciones>
-      @if (esAdmin) {
-        <button type="button" class="btn-pri" (click)="abrirReasignar(b)"><app-icon nombre="swap_horiz" [tamano]="18" /> Reasignar comercial</button>
-      }
+<app-modal-dialog
+  [abierto]="seleccionado() !== null"
+  [titulo]="seleccionado()?.nombre ?? ''"
+  [subtitulo]="(seleccionado()?.tipo ?? '') + ' · ' + (seleccionado()?.documento ?? 'sin documento')"
+  eyebrow="Broker registrado"
+  tamano="lg"
+  [pestanas]="pestanas()"
+  [pestana]="pestana()"
+  (pestanaChange)="pestana.set($event)"
+  (cerrar)="seleccionado.set(null)"
+>
+  @if (seleccionado(); as b) {
+    <div cabecera>
+      <app-badge-estado variante="success" [conPunto]="true">Activo</app-badge-estado>
+      <app-badge-estado variante="info">{{ b.comercialNombre ?? 'Sin comercial' }}</app-badge-estado>
+      <app-badge-estado variante="warning">Acuerdo {{ b.porcentajeComision }} %</app-badge-estado>
     </div>
   }
-</app-drawer-detalle>
+  @if (seleccionado(); as b) {
+    @switch (pestana()) {
+      @case ('detalle') {
+        <app-ficha [secciones]="ficha()" />
+      }
+      @case ('acciones') {
+        <div class="form-modal">
+          <app-form-field label="Acuerdo de comisión" controlId="broker-acuerdo" ayuda="Aplica a las cuentas de cobro que genere desde ahora.">
+            <app-segmented-control [opciones]="opcionesAcuerdo" [valor]="acuerdo()" ariaLabel="Acuerdo de comisión" (valorChange)="acuerdo.set($event)" />
+          </app-form-field>
+          <div class="acciones-modal">
+            <app-boton variante="outline" icono="save" [disabled]="guardando() || acuerdo() === b.porcentajeComision + ''" (clicked)="guardarAcuerdo()">
+              Guardar acuerdo
+            </app-boton>
+          </div>
 
-<app-modal-dialog [abierto]="brokerAReasignar() !== null" titulo="Reasignar comercial" (cerrar)="cerrarReasignar()">
-  @if (brokerAReasignar(); as b) {
-    <div class="form">
-      <p class="aviso">
-        Vas a reasignar a <b>{{ b.broker }}</b>. El nuevo comercial verá sus negocios en su consola; el anterior deja de verlos.
-      </p>
-      @if (errorReasignacion()) {
-        <p class="error" role="alert">No se pudo reasignar. Intenta nuevamente.</p>
-      }
-      <label>
-        Nuevo comercial
-        <select class="control" (change)="comercialDestino.set(valor($event))">
-          <option value="">Selecciona…</option>
-          @for (c of comerciales(); track c.comercialId) {
-            <option [value]="c.comercialId">{{ c.nombre }}</option>
+          <app-form-field label="Reasignar comercial" controlId="broker-comercial" ayuda="Todos los negocios del broker pasan al nuevo comercial.">
+            <select id="broker-comercial" [value]="comercialDestino()" (change)="comercialDestino.set(valor($event))">
+              <option value="">Selecciona…</option>
+              @for (c of comerciales(); track c.codigo) {
+                @if (c.codigo !== b.comercialCodigo) {
+                  <option [value]="c.codigo">{{ c.nombre }} · {{ c.brokers }} brokers</option>
+                }
+              }
+            </select>
+          </app-form-field>
+          <div class="acciones-modal">
+            <app-boton variante="accent" icono="swap_horiz" [disabled]="guardando() || !comercialDestino()" (clicked)="reasignar()">
+              Reasignar broker y negocios
+            </app-boton>
+          </div>
+
+          @if (errorAccion()) {
+            <app-alert-banner variante="error" titulo="No se pudo completar">{{ errorAccion() }}</app-alert-banner>
           }
-        </select>
-      </label>
-    </div>
+        </div>
+      }
+      @case ('actividad') {
+        <app-bitacora [eventos]="actividad()" mensajeVacio="Este broker no tiene actividad registrada" />
+      }
+    }
   }
-  <div acciones class="acciones-modal">
-    <button type="button" class="btn-sec" (click)="cerrarReasignar()">Cancelar</button>
-    <button type="button" class="btn-pri" [disabled]="!comercialDestino() || guardandoReasignacion()" (click)="confirmarReasignar()">
-      {{ guardandoReasignacion() ? 'Reasignando…' : 'Confirmar reasignación' }}
-    </button>
-  </div>
 </app-modal-dialog>

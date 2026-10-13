@@ -10,7 +10,7 @@
  * de modo que el resultado es reproducible.
  *
  * Un Caso Especial se puede enviar si y solo si se ha seleccionado un tipo de
- * trámite del conjunto definido (Otro Sí / Cesión de Contrato) y el documento legal
+ * trámite del catálogo `tipo_caso_especial` habilitado para el broker y el documento legal
  * en PDF supera las validaciones de MIME, extensión y tamaño (Req 13, Req 23.1, 23.2).
  * Las observaciones son opcionales y no afectan la habilitación.
  *
@@ -18,26 +18,11 @@
  */
 
 import type { DocumentoCargado } from '../../core/models/documento.model';
-import type { TipoCasoEspecial } from '../../core/models/renovacion.model';
 import {
   LIMITE_TAMANO_GENERAL_BYTES,
   validarDocumento,
   type ReglaValidacionDocumento,
 } from '../../shared/validation/documento-validacion';
-
-/**
- * Conjunto CERRADO de tipos válidos de Caso Especial (Req 23).
- *
- * Es la única fuente de verdad de las opciones ofrecidas al Broker; cualquier
- * valor fuera de este conjunto no habilita el envío.
- */
-export const TIPOS_CASO_ESPECIAL: readonly TipoCasoEspecial[] = ['otroSi', 'cesionContrato'];
-
-/** Etiqueta legible de cada tipo de Caso Especial para la UI (Req 23). */
-export const ETIQUETA_TIPO_CASO_ESPECIAL: Readonly<Record<TipoCasoEspecial, string>> = {
-  otroSi: 'Otro Sí',
-  cesionContrato: 'Cesión de contrato',
-};
 
 /**
  * Regla de validación del documento legal del Caso Especial (Req 23.1, 23.2).
@@ -50,16 +35,9 @@ export const REGLA_DOCUMENTO_CASO_ESPECIAL: ReglaValidacionDocumento = {
   vigenciaMaxDias: null,
 };
 
-/**
- * Indica si un valor pertenece al conjunto cerrado de tipos de Caso Especial
- * (Req 23). Función pura, total y determinista; acepta cualquier cadena o
- * `undefined` para uniformar el tratamiento de la selección aún sin realizar.
- *
- * @param valor Tipo seleccionado (o `undefined`/cadena arbitraria).
- * @returns `true` si el valor es un `TipoCasoEspecial` del conjunto definido.
- */
-export function esTipoCasoEspecialValido(valor: string | undefined): valor is TipoCasoEspecial {
-  return valor !== undefined && (TIPOS_CASO_ESPECIAL as readonly string[]).includes(valor);
+/** `true` si el tipo está entre los procesos especiales del catálogo que puede iniciar el broker. */
+export function esTipoCasoEspecialValido(valor: string | undefined, validos: readonly string[]): boolean {
+  return valor !== undefined && validos.includes(valor);
 }
 
 /**
@@ -72,13 +50,15 @@ export function esTipoCasoEspecialValido(valor: string | undefined): valor is Ti
  *
  * @param tipo Tipo de trámite seleccionado por el Broker (o `undefined`).
  * @param documento Documento legal cargado (o `undefined` si aún no se carga).
+ * @param validos Códigos del catálogo que puede iniciar el broker.
  * @returns `true` si el Caso Especial puede enviarse.
  */
 export function puedeEnviarCasoEspecial(
   tipo: string | undefined,
   documento: DocumentoCargado | undefined,
+  validos: readonly string[],
 ): boolean {
-  if (!esTipoCasoEspecialValido(tipo) || documento === undefined) {
+  if (!esTipoCasoEspecialValido(tipo, validos) || documento === undefined) {
     return false;
   }
   // La fecha de referencia no afecta la validez porque la regla no exige vigencia.

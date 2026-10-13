@@ -4,6 +4,7 @@ import {
   EventEmitter,
   Input,
   Output,
+  inject,
 } from '@angular/core';
 
 import { AlertBannerComponent, BotonComponent } from '../../../../shared/components';
@@ -13,7 +14,7 @@ import {
 } from '../../../../core/models/cotizacion.model';
 
 import { formatearCop } from '../../../../shared/util/moneda';
-import { NOTA_TASAS } from '../../cotizador-catalogo';
+import { CatalogoService } from '../../../../core/services/catalogo.service';
 /**
  * Descripción de una columna del desglose de la Cotizacion (Req 8.1).
  * `key` identifica el campo del `ConceptoCotizacion`; `header` es la etiqueta visible.
@@ -70,7 +71,7 @@ export class CotizadorResultadoComponent {
   @Input() mostrarAcciones = true;
 
   /** Nota informativa de tasas bajo el desglose (prototipo). */
-  protected readonly notaTasas = NOTA_TASAS;
+  protected readonly notaTasas = inject(CatalogoService).texto('NOTA_TASAS_COTIZADOR');
 
   /** Emite la intención de descargar el PDF de la Cotizacion calculada (Req 9.1). */
   @Output() descargarPdf = new EventEmitter<void>();
@@ -84,9 +85,7 @@ export class CotizadorResultadoComponent {
   /** Columnas del desglose en el orden exacto del prototipo (Req 8.1). */
   protected readonly columnas: readonly ColumnaDesglose[] = [
     { key: 'concepto', header: 'CONCEPTO' },
-    { key: 'valorAsegurado', header: 'VALOR ASEGURADO' },
-    { key: 'meses', header: 'MESES' },
-    { key: 'baseCalculoPeriodo', header: 'BASE CÁLCULO PERIODO' },
+    { key: 'base', header: 'BASE DE CÁLCULO' },
     { key: 'tasa', header: 'TASA' },
     { key: 'primaNeta', header: 'PRIMA NETA' },
     { key: 'iva', header: 'IVA (19%)' },
@@ -139,9 +138,6 @@ export class CotizadorResultadoComponent {
     if (columna.key === 'concepto') {
       return String(valor);
     }
-    if (columna.key === 'meses') {
-      return String(valor);
-    }
     if (columna.key === 'tasa') {
       return this.formatearTasa(Number(valor));
     }
@@ -153,9 +149,10 @@ export class CotizadorResultadoComponent {
     return formatearCop(valor);
   }
 
-  /** Formatea la tasa (p. ej. 3.5) como porcentaje "3.5%". */
+  /** Formatea la tasa fraccionaria del backend (p. ej. 0.035) como porcentaje "3.5%". */
   protected formatearTasa(valor: number): string {
-    return `${valor}%`;
+    const porcentaje = valor <= 1 ? valor * 100 : valor;
+    return `${Number(porcentaje.toFixed(2))}%`;
   }
 
   /** trackBy de columnas para render eficiente. */

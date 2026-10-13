@@ -1,5 +1,8 @@
+import { CATALOGOS_PRUEBA } from '../../../../../testing/catalogo-prueba';
+import fc from 'fast-check';
 import {
   claveConsultaSarlaft,
+  construirPayloadRadicacion,
   documentosObligatoriosFaltantes,
   esNumeroDocumentoPropietarioValido,
   esNumeroEstudioValido,
@@ -18,6 +21,11 @@ import type { TipoDocumentoRadicacion } from '../../../../core/models/radicacion
  * (Req 10.1, 10.2, 11.1, 11.2, 11.3, 11.4, 12.1, 12.2, 12.3). Ejemplos y casos
  * borde que complementan la prueba de propiedad (Property 10, tarea 10.2).
  */
+/** Documentos de radicación del catálogo (`documento_radicacion`, BD local). */
+const DOCUMENTOS = CATALOGOS_PRUEBA.tablas['documento_radicacion'];
+const ETIQUETAS = Object.fromEntries(DOCUMENTOS.map((d) => [d.codigo, d.descripcion]));
+const VOCABULARIO_DOCUMENTOS_RADICACION = DOCUMENTOS.filter((d) => d['aplica'] !== 'OPCIONAL').map((d) => d.codigo);
+
 describe('radicacion-presentacion', () => {
   describe('validación de datos base (Req 10.1)', () => {
     it('acepta un número de documento de solo dígitos entre 5 y 15', () => {
@@ -57,7 +65,7 @@ describe('radicacion-presentacion', () => {
     it('Persona Natural exige exactamente 2 documentos base', () => {
       // When
       const faltantes = documentosObligatoriosFaltantes(
-        { tipoPersona: 'natural', firmaApoderado: false, sarlaftRequiereFormulario: false },
+        { tipoPersona: 'natural', firmaApoderado: false, sarlaftRequiereFormulario: false, documentos: DOCUMENTOS },
         sinCargar,
       );
       // Then
@@ -67,7 +75,7 @@ describe('radicacion-presentacion', () => {
     it('Persona Jurídica exige 3 documentos base incluido el Formulario SARLAFT (Req 12.3)', () => {
       // When
       const faltantes = documentosObligatoriosFaltantes(
-        { tipoPersona: 'juridica', firmaApoderado: false, sarlaftRequiereFormulario: false },
+        { tipoPersona: 'juridica', firmaApoderado: false, sarlaftRequiereFormulario: false, documentos: DOCUMENTOS },
         sinCargar,
       );
       // Then
@@ -81,7 +89,7 @@ describe('radicacion-presentacion', () => {
     it('Persona Natural con SARLAFT condicional agrega el Formulario SARLAFT (Req 12.1, 12.2)', () => {
       // When
       const faltantes = documentosObligatoriosFaltantes(
-        { tipoPersona: 'natural', firmaApoderado: false, sarlaftRequiereFormulario: true },
+        { tipoPersona: 'natural', firmaApoderado: false, sarlaftRequiereFormulario: true, documentos: DOCUMENTOS },
         sinCargar,
       );
       // Then
@@ -91,7 +99,7 @@ describe('radicacion-presentacion', () => {
     it('el caso apoderado agrega Poder y Cédula del apoderado (Req 10.2)', () => {
       // When
       const faltantes = documentosObligatoriosFaltantes(
-        { tipoPersona: 'natural', firmaApoderado: true, sarlaftRequiereFormulario: false },
+        { tipoPersona: 'natural', firmaApoderado: true, sarlaftRequiereFormulario: false, documentos: DOCUMENTOS },
         sinCargar,
       );
       // Then
@@ -105,6 +113,7 @@ describe('radicacion-presentacion', () => {
         tipoPersona: 'natural' as const,
         firmaApoderado: false,
         sarlaftRequiereFormulario: false,
+        documentos: DOCUMENTOS,
       };
       // When / Then
       expect(puedeEnviarRadicacion(entrada, sinCargar, true)).toBe(false);
@@ -116,6 +125,7 @@ describe('radicacion-presentacion', () => {
         tipoPersona: 'natural' as const,
         firmaApoderado: false,
         sarlaftRequiereFormulario: false,
+        documentos: DOCUMENTOS,
       };
       const cargados: readonly TipoDocumentoRadicacion[] = [
         'cedulaPropietario',
@@ -131,6 +141,7 @@ describe('radicacion-presentacion', () => {
         tipoPersona: 'natural' as const,
         firmaApoderado: false,
         sarlaftRequiereFormulario: false,
+        documentos: DOCUMENTOS,
       };
       const cargados: readonly TipoDocumentoRadicacion[] = [
         'cedulaPropietario',
@@ -143,7 +154,7 @@ describe('radicacion-presentacion', () => {
     it('el contrato de arrendamiento firmado nunca aparece como pendiente (Req 11.3)', () => {
       // When
       const faltantes = documentosObligatoriosFaltantes(
-        { tipoPersona: 'juridica', firmaApoderado: true, sarlaftRequiereFormulario: false },
+        { tipoPersona: 'juridica', firmaApoderado: true, sarlaftRequiereFormulario: false, documentos: DOCUMENTOS },
         sinCargar,
       );
       // Then
@@ -154,26 +165,26 @@ describe('radicacion-presentacion', () => {
   describe('etiquetas legibles (Req 11.4)', () => {
     it('traduce los tipos de documento a etiquetas legibles en español', () => {
       // When
-      const etiquetas = etiquetasDocumentos(['cedulaPropietario', 'formularioSarlaft']);
+      const etiquetas = etiquetasDocumentos(['cedulaPropietario', 'formularioSarlaft'], ETIQUETAS);
       // Then
-      expect([...etiquetas]).toEqual(['Cédula del propietario', 'Formulario SARLAFT']);
+      expect([...etiquetas]).toEqual(['Cédula del propietario', 'Formulario Conocimiento de Cliente (SARLAFT)']);
     });
   });
 
   describe('paso 4 SARLAFT (3 salidas)', () => {
     it('solo habilita documentos con SARLAFT actualizado', () => {
-      expect(permiteCargarDocumentos('actualizado')).toBe(true);
-      expect(permiteCargarDocumentos('desactualizado')).toBe(false);
-      expect(permiteCargarDocumentos('consultable')).toBe(false);
+      expect(permiteCargarDocumentos('ACTUALIZADO')).toBe(true);
+      expect(permiteCargarDocumentos('DESACTUALIZADO')).toBe(false);
+      expect(permiteCargarDocumentos('CONSULTABLE')).toBe(false);
       expect(permiteCargarDocumentos(null)).toBe(false);
     });
 
     it('ubica el stepper según datos, SARLAFT y documentos', () => {
-      expect(pasoActivoRadicacion(false, 'actualizado', 0)).toBe(0);
+      expect(pasoActivoRadicacion(false, 'ACTUALIZADO', 0)).toBe(0);
       expect(pasoActivoRadicacion(true, null, 2)).toBe(2);
-      expect(pasoActivoRadicacion(true, 'desactualizado', 2)).toBe(2);
-      expect(pasoActivoRadicacion(true, 'actualizado', 2)).toBe(3);
-      expect(pasoActivoRadicacion(true, 'actualizado', 0)).toBe(4);
+      expect(pasoActivoRadicacion(true, 'DESACTUALIZADO', 2)).toBe(2);
+      expect(pasoActivoRadicacion(true, 'ACTUALIZADO', 2)).toBe(3);
+      expect(pasoActivoRadicacion(true, 'ACTUALIZADO', 0)).toBe(4);
     });
 
     it('invalida la consulta si cambia firmante, documento o tipo de persona', () => {
@@ -196,5 +207,43 @@ describe('radicacion-presentacion', () => {
       expect(puedeConsultarSarlaftRadicacion(true, true, '80123456')).toBe(true);
       expect(puedeConsultarSarlaftRadicacion(false, true, '80123456')).toBe(false);
     });
+  });
+});
+
+describe('construirPayloadRadicacion (alineado 1:1 con el backend)', () => {
+  const claves = [
+    'autorizacionDatos', 'contratoReferencia', 'documentoInquilino', 'documentosCargados',
+    'firmaApoderado', 'numeroEstudioArrendamiento', 'tipoDocumentoInquilino', 'tipoPersona',
+  ];
+
+  it('solo envía claves del DTO y documentos saneados de la allowlist, sin duplicados', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.oneof(fc.constantFrom(...VOCABULARIO_DOCUMENTOS_RADICACION), fc.string())),
+        fc.option(fc.string(), { nil: null }),
+        fc.boolean(),
+        (documentos, contrato, autorizacion) => {
+          const payload = construirPayloadRadicacion({
+            contratoReferencia: contrato,
+            numeroEstudioArrendamiento: ' 123 ',
+            tipoDocumentoInquilino: 'CC',
+            documentoInquilino: '7332800',
+            documentosCargados: documentos,
+            autorizacionDatos: autorizacion,
+            tipoPersona: 'natural',
+            firmaApoderado: false,
+            vocabulario: VOCABULARIO_DOCUMENTOS_RADICACION,
+          });
+          expect(Object.keys(payload).sort()).toEqual(claves);
+          expect(payload.autorizacionDatos).toBe(autorizacion);
+          expect(payload.contratoReferencia).toBe((contrato ?? '').trim());
+          expect(new Set(payload.documentosCargados).size).toBe(payload.documentosCargados.length);
+          payload.documentosCargados.forEach((d) =>
+            expect(VOCABULARIO_DOCUMENTOS_RADICACION).toContain(d),
+          );
+        },
+      ),
+      { numRuns: 100 },
+    );
   });
 });

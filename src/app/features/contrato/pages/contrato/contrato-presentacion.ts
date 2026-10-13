@@ -27,6 +27,7 @@ import type {
   DatosInmueble,
   DuracionContratoMeses,
 } from '../../../../core/models/contrato.model';
+import type { TipoDocumentoIdentidad } from '../../../../core/models/radicacion.model';
 
 /** Índice del primer paso del Generador_Contrato (0-indexado). */
 export const PRIMER_PASO = 0;
@@ -45,8 +46,6 @@ export const PASOS_CONTRATO: readonly string[] = [
   'Condiciones económicas',
 ];
 
-/** Duraciones del contrato ofrecidas en meses (Req 30.5). */
-export const DURACIONES_CONTRATO: readonly DuracionContratoMeses[] = [12, 24, 36];
 
 /** Día de pago mensual mínimo permitido (Req 30.5). */
 export const DIA_PAGO_MIN = 1;
@@ -74,6 +73,11 @@ const PATRON_IDENTIFICACION = /^\d{6,12}$/;
  * Verdadero si y solo si contiene al menos un carácter no vacío tras recortar
  * espacios. Función pura y total.
  */
+/** Número de cuenta válido: 1 a 34 caracteres alfanuméricos (misma regla que el backend). */
+export function esNumeroCuentaValido(valor: string | undefined | null): boolean {
+  return typeof valor === 'string' && /^[A-Za-z0-9]{1,34}$/.test(valor.trim());
+}
+
 export function campoDiligenciado(valor: string | undefined | null): boolean {
   return typeof valor === 'string' && valor.trim().length > 0;
 }
@@ -168,7 +172,9 @@ export function esPasoCondicionesValido(datos: Partial<CondicionesEconomicas>): 
     esDuracionValida(datos.duracionMeses) &&
     esEnteroEnRango(datos.diaPagoMensual, DIA_PAGO_MIN, DIA_PAGO_MAX) &&
     campoDiligenciado(datos.fechaInicio) &&
-    campoDiligenciado(datos.reajusteAnual)
+    campoDiligenciado(datos.reajusteAnual) &&
+    campoDiligenciado(datos.metodoPago) &&
+    (datos.metodoPago === 'efectivo' || esNumeroCuentaValido(datos.numeroCuenta))
   );
 }
 
@@ -279,3 +285,10 @@ function esDuracionValida(
 ): valor is DuracionContratoMeses {
   return valor === 12 || valor === 24 || valor === 36;
 }
+
+/** Opción de identificación con su código y etiqueta legible (Req 30.2, 30.3). */
+export interface OpcionIdentificacion {
+  readonly valor: TipoDocumentoIdentidad;
+  readonly etiqueta: string;
+}
+

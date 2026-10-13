@@ -1,54 +1,21 @@
-import {
-  ETIQUETA_MOTIVO_NO_RENOVACION,
-  MOTIVOS_NO_RENOVACION,
-  esMotivoNoRenovacionValido,
-  puedeEnviarNoRenovacion,
-} from './no-renovacion-habilitacion';
+import { esMotivoNoRenovacionValido, puedeEnviarNoRenovacion } from './no-renovacion-habilitacion';
 
-describe('no-renovacion-habilitacion (lógica pura, Req 22.1, 22.3)', () => {
-  describe('MOTIVOS_NO_RENOVACION', () => {
-    it('define exactamente los 4 motivos del conjunto cerrado', () => {
-      // Given / When / Then
-      expect([...MOTIVOS_NO_RENOVACION].sort()).toEqual(
-        ['descontentoServicio', 'precioElevado', 'ventaInmueble'].sort(),
-      );
-    });
+/** Motivos reales del Warehouse de renovaciones (vienen del catálogo `motivo_no_renovacion`). */
+const MOTIVOS = ['Desocupación', 'Venta inmueble', 'No renueva'];
 
-    it('tiene una etiqueta legible por cada motivo', () => {
-      for (const motivo of MOTIVOS_NO_RENOVACION) {
-        expect(ETIQUETA_MOTIVO_NO_RENOVACION[motivo]?.length).toBeGreaterThan(0);
-      }
-    });
+describe('no-renovacion-habilitacion (lógica pura con catálogo, Req 22.1, 22.3)', () => {
+  it('acepta solo motivos del catálogo', () => {
+    for (const motivo of MOTIVOS) {
+      expect(esMotivoNoRenovacionValido(motivo, MOTIVOS)).toBe(true);
+    }
+    expect(esMotivoNoRenovacionValido(undefined, MOTIVOS)).toBe(false);
+    expect(esMotivoNoRenovacionValido('', MOTIVOS)).toBe(false);
+    expect(esMotivoNoRenovacionValido('desocupación', MOTIVOS)).toBe(false);
   });
 
-  describe('esMotivoNoRenovacionValido', () => {
-    it('acepta cada motivo del conjunto definido', () => {
-      for (const motivo of MOTIVOS_NO_RENOVACION) {
-        expect(esMotivoNoRenovacionValido(motivo)).toBe(true);
-      }
-    });
-
-    it('rechaza undefined, vacío y valores fuera del conjunto', () => {
-      expect(esMotivoNoRenovacionValido(undefined)).toBe(false);
-      expect(esMotivoNoRenovacionValido('')).toBe(false);
-      expect(esMotivoNoRenovacionValido('otroMotivo')).toBe(false);
-      expect(esMotivoNoRenovacionValido('precioelevado')).toBe(false);
-    });
-  });
-
-  describe('puedeEnviarNoRenovacion', () => {
-    it('habilita el envío solo con un motivo válido, sin importar observaciones', () => {
-      // Given / When / Then — con motivo válido, habilitado
-      expect(puedeEnviarNoRenovacion('precioElevado')).toBe(true);
-    });
-
-    it('impide el envío sin motivo seleccionado', () => {
-      expect(puedeEnviarNoRenovacion(undefined)).toBe(false);
-      expect(puedeEnviarNoRenovacion('')).toBe(false);
-    });
-
-    it('impide el envío con un motivo fuera del conjunto definido', () => {
-      expect(puedeEnviarNoRenovacion('costoBajo')).toBe(false);
-    });
+  it('habilita el envío solo con un motivo válido', () => {
+    expect(puedeEnviarNoRenovacion('Desocupación', MOTIVOS)).toBe(true);
+    expect(puedeEnviarNoRenovacion(undefined, MOTIVOS)).toBe(false);
+    expect(puedeEnviarNoRenovacion('Desocupación', [])).toBe(false);
   });
 });

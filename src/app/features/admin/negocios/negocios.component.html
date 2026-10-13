@@ -3,61 +3,107 @@
     [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="negocios-titulo"
     titulo="Negocios"
-    subtitulo="Solicitudes radicadas y su etapa. Toca una fila para ver el detalle."
+    subtitulo="Cada negocio con su propietario, inquilino e inmueble. El negocio termina cuando se expide la póliza."
   ></app-page-header>
 
-  <div class="filtros" role="search">
-    <label>
-      Etapa
-      <select class="control" (change)="filtrarEtapa(valor($event))">
-        <option value="" [selected]="!etapa()">Todas</option>
-        @for (e of etapasDisponibles; track e) {
-          <option [value]="e" [selected]="e === etapa()">{{ e }}</option>
-        }
-      </select>
-    </label>
-  </div>
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Solicitudes en curso" [valor]="enCurso()" icono="work_history" tono="accent" sub="En estudio, corrección o por expedir" />
+    <app-kpi-card label="Pólizas expedidas" [valor]="expedidos()" icono="workspace_premium" sub="Negocios cerrados con póliza" />
+    <app-kpi-card label="Primas emitidas" [valor]="compacto(primaExpedida())" icono="account_balance" sub="Valor total de las pólizas" />
+  </app-grid-layout>
 
-  @if (cargando()) {
-    <p class="aviso" role="status">Cargando negocios…</p>
-  } @else if (error()) {
-    <p class="error" role="alert">No se pudo cargar la información. Intenta nuevamente.</p>
-  } @else {
-    <div class="tabla-envoltura">
-      <table class="tabla" aria-label="Negocios">
-        <thead>
-          <tr>
-            <th>Radicado</th>
-            <th>Inquilino</th>
-            <th>Broker</th>
-            <th class="num">Valor asegurado</th>
-            <th>Etapa</th>
-            <th>Fecha</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (n of negocios(); track n.radicado) {
-            <tr class="fila" tabindex="0" (click)="detalle.set(n)" (keydown.enter)="detalle.set(n)">
-              <td><b>{{ n.radicado }}</b></td>
-              <td>{{ n.inquilino }}</td>
-              <td>{{ n.broker }}</td>
-              <td class="num">{{ cop(n.valorAsegurado) }}</td>
-              <td><app-badge-estado [variante]="varianteEtapa(n.etapa)">{{ n.etapa }}</app-badge-estado></td>
-              <td>{{ fechaCorta(n.fecha) }}</td>
-            </tr>
-          } @empty {
-            <tr><td class="tabla__vacia" colspan="6">No hay información disponible.</td></tr>
-          }
-        </tbody>
-      </table>
+  <app-barra-acciones>
+    <div filtros>
+      <app-segmented-control [opciones]="filtros" [valor]="filtro()" ariaLabel="Filtrar negocios" (valorChange)="filtro.set($event)" />
     </div>
+  </app-barra-acciones>
+
+  @if (mensaje()) {
+    <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
   }
+
+  <app-estado-vista
+    [cargando]="cargando()"
+    [error]="error()"
+    [vacio]="filas().length === 0"
+    entidad="negocios"
+    iconoVacio="work"
+    tituloVacio="No hay negocios en este filtro"
+    descripcionVacio="Los negocios aparecen cuando un broker o prospecto radica con contrato."
+    (reintentar)="cargar()"
+  >
+    <app-data-table
+      [columnas]="columnas"
+      [filas]="filas()"
+      [total]="filas().length"
+      [tamanoPagina]="20"
+      [conBusqueda]="true"
+      placeholderBusqueda="Buscar por radicado, propietario, inquilino, dirección o broker…"
+      ariaLabel="Negocios"
+      (accion)="gestionar($event)"
+    />
+  </app-estado-vista>
 </section>
 
-<app-drawer-detalle [abierto]="detalle() !== null" [titulo]="detalle()?.radicado ?? ''" [filas]="filasDetalle()" (cerrar)="detalle.set(null)">
-  @if (detalle(); as n) {
-    <div class="detalle-seccion">
-      <app-badge-estado [variante]="varianteEtapa(n.etapa)">{{ n.etapa }}</app-badge-estado>
+<app-modal-dialog
+  [abierto]="detalle() !== null"
+  [titulo]="'Negocio ' + (detalle()?.negocio?.radicado ?? '')"
+  [subtitulo]="(detalle()?.negocio?.propietario ?? '') + ' · ' + (detalle()?.negocio?.inmueble ?? '')"
+  eyebrow="Negocio"
+  tamano="xl"
+  [pestanas]="pestanas()"
+  [pestana]="pestana()"
+  (pestanaChange)="pestana.set($event)"
+  (cerrar)="detalle.set(null)"
+>
+  @if (detalle(); as d) {
+    <div cabecera>
+      <app-badge-estado [variante]="varianteEstado(d.negocio.estado)" [conPunto]="true">{{ etiquetaEstado[d.negocio.estado] ?? d.negocio.estado }}</app-badge-estado>
+      @if (d.negocio.numeroPoliza) {
+        <app-badge-estado variante="success">Póliza {{ d.negocio.numeroPoliza }}</app-badge-estado>
+      }
+      <app-badge-estado variante="info">{{ d.negocio.brokerEstado === 'PROSPECTO' ? 'De un prospecto' : 'De un broker registrado' }}</app-badge-estado>
     </div>
   }
-</app-drawer-detalle>
+  @if (detalle(); as d) {
+    @switch (pestana()) {
+      @case ('negocio') {
+        <app-ficha [secciones]="ficha()" />
+      }
+      @case ('gestion') {
+        @if (opcionesEstado().length) {
+          <div class="form-modal">
+            <app-form-field label="Nuevo estado" controlId="neg-estado" ayuda="Solo se expide lo aprobado; al expedir se emite la póliza y el negocio termina.">
+              <select id="neg-estado" [value]="estadoDestino()" (change)="estadoDestino.set(v($event))">
+                <option value="">Selecciona…</option>
+                @for (e of opcionesEstado(); track e) {
+                  <option [value]="e">{{ etiquetaEstado[e] }}</option>
+                }
+              </select>
+            </app-form-field>
+            <app-form-field label="Observación (queda en el historial)" controlId="neg-obs">
+              <textarea id="neg-obs" rows="3" maxlength="300" [value]="observacion()" (input)="observacion.set(v($event))"></textarea>
+            </app-form-field>
+            @if (errorAccion()) {
+              <app-alert-banner variante="error" titulo="No se pudo actualizar">{{ errorAccion() }}</app-alert-banner>
+            }
+          </div>
+        } @else {
+          <app-alert-banner variante="success" titulo="Negocio terminado" icono="task_alt">
+            Está en un estado final: ya no admite cambios.
+          </app-alert-banner>
+        }
+      }
+      @case ('historial') {
+        <app-bitacora [eventos]="d.historial" mensajeVacio="Sin gestiones registradas" />
+      }
+    }
+  }
+  @if (detalle() && pestana() === 'gestion' && opcionesEstado().length) {
+    <div acciones>
+      <app-boton variante="accent" icono="task_alt" [disabled]="guardando() || !estadoDestino()" (clicked)="aplicarEstado()">
+        {{ guardando() ? 'Guardando…' : 'Aplicar estado' }}
+      </app-boton>
+    </div>
+  }
+</app-modal-dialog>

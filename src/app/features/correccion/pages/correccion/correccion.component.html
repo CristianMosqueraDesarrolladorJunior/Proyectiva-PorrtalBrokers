@@ -1,104 +1,54 @@
 <section class="correccion" aria-labelledby="correccion-titulo">
   <app-page-header
-    eyebrow="Trámites"
+    eyebrow="Seguimiento"
     tituloId="correccion-titulo"
     titulo="Corrección de documentos"
-    subtitulo="Sube el documento corregido con tus observaciones para subsanar la observación previa y agilizar el trámite."
-  ></app-page-header>
-
-  <!-- Indicador de pasos (Req 32.1) -->
-  <app-step-tabs
-    [pasos]="pasos"
-    [pasoActivo]="pasoActual()"
-    [navegable]="pasoActual() < 2"
-    ariaLabel="Pasos de la corrección"
-    (pasoSeleccionado)="irAPaso($event)"
+    [subtitulo]="referencia() ? 'Solicitud ' + referencia() : 'Abre la corrección desde el detalle de tu solicitud en Seguimiento.'"
   />
 
-  <!-- Resumen del trámite: referencia, documento y motivo de corrección (Req 32.1) -->
-  <div class="correccion-resumen" aria-label="Resumen del trámite">
-    <div class="resumen-fila">
-      <span class="resumen-label">Referencia</span>
-      <span class="resumen-valor">{{ referencia() || '—' }}</span>
-    </div>
-    <div class="resumen-fila">
-      <span class="resumen-label">Documento</span>
-      <span class="resumen-valor">{{ documentoObservado() || '—' }}</span>
-    </div>
-    <div class="resumen-fila">
-      <span class="resumen-label">Motivo de corrección</span>
-      <span class="resumen-valor">{{ motivoCorreccion() || '—' }}</span>
-    </div>
-  </div>
-
-  @if (errorMensaje(); as error) {
-    <app-alert-banner variante="error" titulo="No se pudo continuar">
-      {{ error }}
+  @if (!referencia()) {
+    <app-alert-banner variante="warning" titulo="Sin solicitud seleccionada" icono="info">
+      Ve a Seguimiento, abre la solicitud en "Corrección pendiente" y pulsa "Actualizar documentos".
     </app-alert-banner>
-  }
+  } @else {
+    <app-estado-vista [cargando]="cargando()" [error]="error()" [vacio]="false" entidad="la solicitud" (reintentar)="cargar()">
+      @if (datos(); as d) {
+        @if (listo()) {
+          <app-alert-banner variante="success" titulo="Corrección enviada" icono="task_alt">
+            Tus documentos volvieron a revisión del área ({{ d.procedimiento.etiqueta }}). Te avisaremos cuando avance.
+          </app-alert-banner>
+          <div class="correccion__acciones">
+            <app-boton variante="accent" icono="arrow_back" (clicked)="volver()">Volver a Seguimiento</app-boton>
+          </div>
+        } @else if (d.procedimiento.estadoPortal !== 'EN_CORRECCION') {
+          <app-alert-banner variante="success" titulo="Esta solicitud no tiene correcciones pendientes" icono="info">
+            Estado actual: {{ d.procedimiento.etiqueta }}.
+          </app-alert-banner>
+        } @else {
+          <section class="correccion__pedido" aria-label="Qué pidió corregir el área">
+            <h2><app-icon nombre="rule" [tamano]="20" /> Qué debes corregir</h2>
+            <ul>
+              @for (c of d.procedimiento.correcciones; track $index) {
+                <li><strong>{{ c.documento }}</strong> — {{ c.observacion }}</li>
+              } @empty {
+                <li>El área pidió revisar los documentos cargados.</li>
+              }
+            </ul>
+          </section>
 
-  <!-- Paso 1: Subir documento corregido (Req 32.2, 32.3) -->
-  @if (pasoActual() === pasoSubir) {
-    <div class="correccion-paso">
-      <h2 class="correccion-subtitulo-seccion">Documento corregido</h2>
-      <app-doc-uploader
-        [reglas]="[reglaDocumento]"
-        [cargados]="archivosCargados()"
-        (archivoSeleccionado)="onArchivo($event)"
-      ></app-doc-uploader>
+          <app-doc-uploader [reglas]="reglas()" [cargados]="cargados()" [disabled]="enviando()" (archivoSeleccionado)="onArchivo($event)" />
 
-      <div class="correccion-acciones">
-        <app-boton
-          variante="primary"
-          [disabled]="!documentoCargado()"
-          (clicked)="avanzarAObservaciones()"
-        >
-          Continuar
-        </app-boton>
-      </div>
-    </div>
-  }
-
-  <!-- Paso 2: Observaciones adicionales (Req 32.4) -->
-  @if (pasoActual() === pasoObservaciones) {
-    <div class="correccion-paso">
-      <h2 class="correccion-subtitulo-seccion">Observaciones</h2>
-      <app-form-field
-        label="Observaciones adicionales"
-        ayuda="Opcional. Describe los cambios realizados en el documento."
-        controlId="correccion-observaciones"
-      >
-        <textarea
-          id="correccion-observaciones"
-          rows="4"
-          [ngModel]="observaciones()"
-          (ngModelChange)="observaciones.set($event)"
-        ></textarea>
-      </app-form-field>
-
-      <div class="correccion-acciones">
-        <app-boton variante="back" (clicked)="volverASubirDocumento()">
-          Volver
-        </app-boton>
-        <app-boton
-          variante="primary"
-          [disabled]="!envioHabilitado() || enviando()"
-          (clicked)="enviar()"
-        >
-          {{ enviando() ? 'Enviando…' : 'Enviar corrección' }}
-        </app-boton>
-      </div>
-    </div>
-  }
-
-  <!-- Paso 3: Confirmación con radicado y tiempo estimado (Req 32.6) -->
-  @if (pasoActual() === pasoConfirmacion && envioExitoso()) {
-    <app-success-screen
-      titulo="¡Corrección enviada!"
-      mensaje="Tu documento corregido fue registrado correctamente. El equipo revisará el trámite en el tiempo estimado."
-      [tarjetas]="tarjetasConfirmacion()"
-      textoVolver="Registrar otra corrección"
-      (volver)="nuevaCorreccion()"
-    ></app-success-screen>
+          @if (errorEnvio()) {
+            <app-alert-banner variante="error" titulo="No se pudo enviar la corrección">{{ errorEnvio() }}</app-alert-banner>
+          }
+          <div class="correccion__acciones">
+            <app-boton variante="ghost" (clicked)="volver()">Cancelar</app-boton>
+            <app-boton variante="accent" icono="upload_file" [disabled]="!puedeEnviar() || enviando()" (clicked)="enviar()">
+              {{ enviando() ? 'Enviando…' : 'Enviar corrección al área' }}
+            </app-boton>
+          </div>
+        }
+      }
+    </app-estado-vista>
   }
 </section>

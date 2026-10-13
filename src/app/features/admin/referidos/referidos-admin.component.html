@@ -1,0 +1,94 @@
+<section class="vista" aria-labelledby="referidos-admin-titulo">
+  <app-page-header
+    [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
+    tituloId="referidos-admin-titulo"
+    titulo="Referidos"
+    subtitulo="Clientes que los brokers refieren para otros ramos, con su gestión e historial."
+  ></app-page-header>
+
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Referidos" [valor]="referidos().length" icono="share" sub="Clientes de otros ramos" />
+    <app-kpi-card label="En gestión" [valor]="conteo('EN_PROCESO')" icono="pending_actions" tono="accent" sub="Contacto comercial en curso" />
+    <app-kpi-card label="Convertidos" [valor]="conteo('ACEPTADA')" icono="verified" sub="Aceptaron la oferta" />
+  </app-grid-layout>
+
+  <app-barra-acciones>
+    <div filtros>
+      <app-segmented-control [opciones]="filtros" [valor]="filtro()" ariaLabel="Filtrar referidos" (valorChange)="filtro.set($event)" />
+    </div>
+  </app-barra-acciones>
+
+  @if (mensaje()) {
+    <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
+  }
+
+  <app-estado-vista
+    [cargando]="cargando()"
+    [error]="error()"
+    [vacio]="filas().length === 0"
+    entidad="referidos"
+    iconoVacio="share"
+    tituloVacio="No hay referidos en este filtro"
+    descripcionVacio="Los brokers refieren clientes desde su portal."
+    (reintentar)="cargar()"
+  >
+    <app-data-table
+      [columnas]="columnas"
+      [filas]="filas()"
+      [total]="filas().length"
+      [tamanoPagina]="20"
+      [conBusqueda]="true"
+      placeholderBusqueda="Buscar por radicado, referido o broker…"
+      ariaLabel="Referidos"
+      (accion)="gestionar($event)"
+    />
+  </app-estado-vista>
+</section>
+
+<app-modal-dialog
+  [abierto]="seleccionado() !== null"
+  [titulo]="seleccionado()?.nombre ?? ''"
+  [subtitulo]="(seleccionado()?.radicado ?? '') + ' · ' + (seleccionado()?.ramo ?? '')"
+  eyebrow="Referido"
+  tamano="lg"
+  [pestanas]="pestanas()"
+  [pestana]="pestana()"
+  (pestanaChange)="pestana.set($event)"
+  (cerrar)="seleccionado.set(null)"
+>
+  @if (seleccionado(); as r) {
+    <div cabecera>
+      <app-badge-estado [variante]="(estados[r.estado ?? ''] ?? { variante: 'info' }).variante" [conPunto]="true">
+        {{ (estados[r.estado ?? ''] ?? { etiqueta: r.estado ?? 'Sin estado' }).etiqueta }}
+      </app-badge-estado>
+    </div>
+  }
+  @if (seleccionado(); as r) {
+    @switch (pestana()) {
+      @case ('detalle') {
+        <app-ficha [secciones]="ficha()" />
+      }
+      @case ('gestion') {
+        <div class="form-modal">
+          <app-form-field label="Estado" controlId="ref-estado">
+            <app-segmented-control [opciones]="opcionesEstado" [valor]="estadoDestino()" ariaLabel="Estado del referido" (valorChange)="estadoDestino.set($event)" />
+          </app-form-field>
+          <app-form-field label="Nota (queda en el historial)" controlId="ref-nota">
+            <textarea id="ref-nota" rows="3" maxlength="300" [value]="nota()" (input)="nota.set(v($event))"></textarea>
+          </app-form-field>
+          @if (errorAccion()) {
+            <app-alert-banner variante="error" titulo="No se pudo actualizar">{{ errorAccion() }}</app-alert-banner>
+          }
+        </div>
+      }
+      @case ('historial') {
+        <app-bitacora [eventos]="r.historial" mensajeVacio="Sin gestiones registradas" />
+      }
+    }
+  }
+  @if (seleccionado() && pestana() === 'gestion') {
+    <div acciones>
+      <app-boton variante="accent" icono="save" [disabled]="guardando()" (clicked)="guardar()">Guardar</app-boton>
+    </div>
+  }
+</app-modal-dialog>

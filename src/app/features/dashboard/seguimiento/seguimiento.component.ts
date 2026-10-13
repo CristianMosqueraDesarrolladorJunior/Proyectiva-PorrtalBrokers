@@ -5,6 +5,9 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { SessionService } from '../../../core/services/session.service';
+import { moduloBloqueado } from '../../../core/models/cuenta.model';
+import { CatalogoService } from '../../../core/services/catalogo.service';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -38,23 +41,6 @@ import { estadoABadge } from '../../../shared/pipes/estado-badge';
 import { formatearCop } from '../../../shared/util/moneda';
 /** Tamaño de página del Seguimiento: 10 solicitudes por página (Req 6.5). */
 const TAMANO_PAGINA = 10;
-
-/** Etiqueta legible de cada estado de Solicitud (Req 6.3). */
-const ETIQUETA_ESTADO: Readonly<Record<string, string>> = {
-  radicada: 'Radicada',
-  en_revision: 'En revisión',
-  aprobada: 'Aprobada',
-  bloqueada: 'Bloqueada',
-  observada: 'Observada',
-};
-
-/** Opciones de producto para el filtro (Req 6.2). */
-const PRODUCTOS: readonly string[] = [
-  'Arrendamiento Residencial',
-  'Arrendamiento Comercial',
-  'Seguro de Hogar',
-  'Crédito',
-];
 
 /** Opciones de estado para el filtro (Req 6.2). */
 const ESTADOS: readonly { readonly valor: string; readonly etiqueta: string }[] = [
@@ -102,14 +88,17 @@ const ESTADOS: readonly { readonly valor: string; readonly etiqueta: string }[] 
 })
 export class SeguimientoComponent {
   private readonly dashboardService = inject(DashboardService);
+  private readonly catalogo = inject(CatalogoService);
+  private readonly session = inject(SessionService);
   private readonly router = inject(Router);
 
   /** Tamaño de página expuesto a la plantilla (Req 6.5). */
   protected readonly tamanoPagina = TAMANO_PAGINA;
 
   /** Opciones de producto y estado para los filtros (Req 6.2). */
-  protected readonly productos = PRODUCTOS;
-  protected readonly estados = ESTADOS;
+  /** Filtros desde los catálogos (`producto` y estados del seguimiento). */
+  protected readonly productos = this.catalogo.opciones('producto').map((p) => p.descripcion);
+  protected readonly estados = this.catalogo.seguimiento().map((e) => ({ valor: e.codigo, etiqueta: e.descripcion }));
 
   /** Columnas de la tabla de solicitudes con sort y acción "Gestionar" (Req 6.1). */
   protected readonly columnas: readonly ColumnaTabla[] = [
@@ -117,9 +106,9 @@ export class SeguimientoComponent {
     { key: 'cliente', header: 'Cliente', ordenable: true },
     { key: 'producto', header: 'Producto', ordenable: true },
     { key: 'estadoLabel', header: 'Estado', tipo: 'badge', ordenable: true },
-    { key: 'estadoPago', header: 'Pago póliza' },
+    { key: 'estadoPago', header: 'Pago de comisión' },
     { key: 'fecha', header: 'Fecha', ordenable: true },
-    { key: 'comisionLabel', header: 'Comisión', alinear: 'derecha' },
+    { key: 'comisionLabel', header: 'Comisión (área)', alinear: 'derecha' },
     { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Gestionar', alinear: 'derecha' },
   ];
 
@@ -150,12 +139,14 @@ export class SeguimientoComponent {
       referencia: s.referencia,
       cliente: s.cliente,
       producto: s.producto,
-      estadoLabel: ETIQUETA_ESTADO[s.estado] ?? s.estado,
+      estadoLabel: this.catalogo.etiquetaSeguimiento(s.estado),
       estadoLabelVariante: estadoABadge(s.estado).replace('badge-', ''),
       estadoPago: s.estadoPago,
       fecha: s.fecha,
       comisionLabel: s.comision > 0 ? this.formatearCop(s.comision) : '—',
       gestionar: '',
+      // "Gestionar" solo cuando el broker debe corregir; el resto solo se consulta.
+      gestionarTexto: s.estado === 'observada' ? '' : 'Ver detalle',
     })),
   );
 
@@ -222,10 +213,14 @@ export class SeguimientoComponent {
 
   /** Obtiene comisiones y KPIs del backend (Req 5.2, 5.3, 5.6). */
   private cargarDashboard(): void {
-    this.dashboardService.obtenerComisiones().subscribe({
-      next: (c) => this.comisiones.set(c),
-      error: () => this.comisiones.set(null),
-    });
+    // Las comisiones son un módulo restringido para el prospecto (catálogo `modulo_portal`): no se piden.
+    const estado = this.session.perfil()?.estadoCuenta;
+    if (!estado || !moduloBloqueado(estado, 'comisiones', this.catalogo.modulosRestringidos().map((m) => m.ruta))) {
+      this.dashboardService.obtenerComisiones().subscribe({
+        next: (c) => this.comisiones.set(c),
+        error: () => this.comisiones.set(null),
+      });
+    }
     this.dashboardService.obtenerKpis().subscribe({
       next: (k) => this.kpis.set(k),
       error: () => this.kpis.set(null),

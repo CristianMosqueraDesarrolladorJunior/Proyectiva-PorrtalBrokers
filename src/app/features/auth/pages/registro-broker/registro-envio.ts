@@ -18,7 +18,6 @@
  * _Requirements: 3.16, 3.19_
  */
 
-import { DOCUMENTOS_REGISTRO_BROKER } from '../../../../core/models/registro-broker.model';
 import type { TipoDocumentoRegistro } from '../../../../core/models/registro-broker.model';
 
 /**
@@ -26,16 +25,18 @@ import type { TipoDocumentoRegistro } from '../../../../core/models/registro-bro
  * obligatorios de registro (Req 3.16, 3.19).
  *
  * Función pura y total. No depende del orden; verifica que cada tipo definido en
- * `DOCUMENTOS_REGISTRO_BROKER` esté presente en el conjunto de documentos válidos.
+ * `requeridos` (catálogo `documento_legalizacion`) esté presente en el conjunto de documentos válidos.
  *
  * @param tiposValidos tipos de documento que han sido cargados y validados con éxito.
+ * @param requeridos tipos exigidos por el catálogo.
  * @returns `true` si los 4 documentos obligatorios están cargados y válidos.
  */
 export function documentosRegistroCompletos(
   tiposValidos: readonly TipoDocumentoRegistro[],
+  requeridos: readonly TipoDocumentoRegistro[],
 ): boolean {
   const recibidos = new Set<TipoDocumentoRegistro>(tiposValidos);
-  return DOCUMENTOS_REGISTRO_BROKER.every((regla) => recibidos.has(regla.tipo));
+  return requeridos.length > 0 && requeridos.every((tipo) => recibidos.has(tipo));
 }
 
 /**
@@ -47,16 +48,18 @@ export function documentosRegistroCompletos(
  * @param personalValido validez de la sección Información Personal (Req 3.2–3.5).
  * @param sarlaftExitosa verdadero si la Consulta_SARLAFT finalizó con éxito (Req 3.15).
  * @param tiposDocumentosValidos tipos de documento cargados y validados con éxito.
+ * @param requeridos tipos exigidos por el catálogo.
  * @returns `true` si el envío debe habilitarse.
  */
 export function puedeEnviarSolicitud(
   personalValido: boolean,
   sarlaftExitosa: boolean,
   tiposDocumentosValidos: readonly TipoDocumentoRegistro[],
+  requeridos: readonly TipoDocumentoRegistro[],
 ): boolean {
   return (
     personalValido &&
     sarlaftExitosa &&
-    documentosRegistroCompletos(tiposDocumentosValidos)
+    documentosRegistroCompletos(tiposDocumentosValidos, requeridos)
   );
 }

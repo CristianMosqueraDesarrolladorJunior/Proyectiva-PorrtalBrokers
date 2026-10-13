@@ -1,3 +1,4 @@
+import { proveerCatalogosPrueba } from '../../../../../testing/catalogo-prueba';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { CotizadorResultadoComponent } from './cotizador-resultado.component';
@@ -8,26 +9,28 @@ describe('CotizadorResultadoComponent', () => {
   let component: CotizadorResultadoComponent;
 
   const resultado: CotizacionResult = {
+    referencia: 'COT-TEST1234',
+    estado: 'COTIZADA',
     conceptos: [
       {
         concepto: 'Arrendamiento',
-        valorAsegurado: 2_000_000,
-        meses: 12,
-        baseCalculoPeriodo: 24_000_000,
-        tasa: 3.5,
+        base: 24_000_000,
+        tasa: 0.035,
         primaNeta: 840_000,
         iva: 159_600,
         total: 999_600,
       },
     ],
-    primaNetaTotal: 840_000,
-    ivaTotal: 159_600,
+    primaNeta: 840_000,
+    iva: 159_600,
     total: 999_600,
+    comisionEstimada: 99_960,
   };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CotizadorResultadoComponent],
+      providers: [proveerCatalogosPrueba()],
     }).compileComponents();
     fixture = TestBed.createComponent(CotizadorResultadoComponent);
     component = fixture.componentInstance;
@@ -42,7 +45,7 @@ describe('CotizadorResultadoComponent', () => {
     expect(fixture.nativeElement.querySelector('app-alert-banner')).toBeNull();
   });
 
-  it('muestra las 8 columnas del desglose en orden (Req 8.1)', () => {
+  it('muestra las 6 columnas del desglose en orden (Req 8.1)', () => {
     // Given / When
     component.resultado = resultado;
     fixture.detectChanges();
@@ -52,9 +55,7 @@ describe('CotizadorResultadoComponent', () => {
     ).map((th) => (th as HTMLElement).textContent?.trim());
     expect(headers).toEqual([
       'CONCEPTO',
-      'VALOR ASEGURADO',
-      'MESES',
-      'BASE CÁLCULO PERIODO',
+      'BASE DE CÁLCULO',
       'TASA',
       'PRIMA NETA',
       'IVA (19%)',

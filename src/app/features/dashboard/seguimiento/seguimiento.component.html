@@ -36,8 +36,6 @@
         label="Primas generadas"
         [valor]="kpis() ? formatearCop(kpis()!.primasGeneradas) : '—'"
         icono="trending_up"
-        delta="+12.4%"
-        [deltaPositivo]="true"
         sub="COP en primas brutas"
       />
       <app-kpi-card
@@ -45,15 +43,13 @@
         [valor]="kpis()?.totalRadicadas ?? '—'"
         icono="contract"
         variante="exito"
-        delta="91% efectividad"
-        [deltaPositivo]="true"
         sub="Solicitudes gestionadas"
       />
       <app-kpi-card
         label="En revisión"
         [valor]="kpis()?.enRevision ?? '—'"
         icono="pending_actions"
-        sub="En mesa de suscripción · ~45 min"
+        sub="En revisión del área"
       />
       <!-- KPI de alerta con estilo danger (Req 5.4) -->
       <app-kpi-card
@@ -61,9 +57,7 @@
         [valor]="kpis()?.bloqueadas ?? '—'"
         icono="warning"
         variante="alerta"
-        delta="Falta doc. SARLAFT"
-        [deltaPositivo]="false"
-        sub="Subsanar ahora"
+        sub="Desistidas o anuladas"
       />
     </div>
   </div>
@@ -78,11 +72,12 @@
           placeholder="Nombre, ref o cédula..."
           [ngModel]="busqueda()"
           (ngModelChange)="busqueda.set($event)"
+          (keyup.enter)="aplicarFiltros()"
         />
       </label>
       <label class="seg-filtro">
         <span>Producto</span>
-        <select [ngModel]="producto()" (ngModelChange)="producto.set($event)">
+        <select [ngModel]="producto()" (ngModelChange)="producto.set($event); aplicarFiltros()">
           <option value="">Todos</option>
           @for (p of productos; track p) {
             <option [value]="p">{{ p }}</option>
@@ -91,7 +86,7 @@
       </label>
       <label class="seg-filtro">
         <span>Estado</span>
-        <select [ngModel]="estado()" (ngModelChange)="estado.set($event)">
+        <select [ngModel]="estado()" (ngModelChange)="estado.set($event); aplicarFiltros()">
           <option value="">Todos</option>
           @for (e of estados; track e.valor) {
             <option [value]="e.valor">{{ e.etiqueta }}</option>
@@ -100,11 +95,11 @@
       </label>
       <label class="seg-filtro">
         <span>Desde</span>
-        <input type="date" [ngModel]="fechaDesde()" (ngModelChange)="fechaDesde.set($event)" />
+        <input type="date" [ngModel]="fechaDesde()" [max]="fechaHasta() || null" (ngModelChange)="fechaDesde.set($event); aplicarFiltros()" />
       </label>
       <label class="seg-filtro">
         <span>Hasta</span>
-        <input type="date" [ngModel]="fechaHasta()" (ngModelChange)="fechaHasta.set($event)" />
+        <input type="date" [ngModel]="fechaHasta()" [min]="fechaDesde() || null" (ngModelChange)="fechaHasta.set($event); aplicarFiltros()" />
       </label>
     </div>
     <div class="seg-filtros-acciones">
@@ -133,8 +128,6 @@
     [total]="total()"
     [paginaActual]="paginaActual()"
     [tamanoPagina]="tamanoPagina"
-    [conBusqueda]="true"
-    placeholderBusqueda="Buscar por cliente, referencia o producto..."
     ariaLabel="Tabla de solicitudes de seguimiento"
     (cambioPagina)="onCambioPagina($event)"
     (seleccionFila)="onSeleccionFila($event)"

@@ -44,7 +44,8 @@ export interface AvisoSarlaftEnlaceDigital {
 }
 
 /** Motivo de la No Renovación; conjunto cerrado del proceso real de renovaciones. */
-export type MotivoNoRenovacion = 'precioElevado' | 'ventaInmueble' | 'descontentoServicio';
+/** Motivo de no renovación: valor del catálogo `motivo_no_renovacion` (igual al del Warehouse). */
+export type MotivoNoRenovacion = string;
 
 /** Notificación de No Renovación radicada por el Broker (Req 22). */
 export interface NoRenovacionRequest {
@@ -53,15 +54,22 @@ export interface NoRenovacionRequest {
   readonly observaciones?: string;       // opcional (Req 22.1)
 }
 
-/** Tipo de Caso Especial de renovación (Req 23). */
-export type TipoCasoEspecial = 'otroSi' | 'cesionContrato';
+/** Proceso especial: código del catálogo `tipo_caso_especial` (OTRO_SI, CESION…), igual al `procesoEspecial` del Warehouse. */
+export type TipoCasoEspecial = string;
 
-/** Solicitud de Caso Especial (Otro Sí / Cesión) con documento legal PDF (Req 23). */
+/** Solicitud de Caso Especial (Otro Sí / Cesión) con sus documentos de soporte (Req 23). */
 export interface CasoEspecialRequest {
   readonly numeroPoliza: string;
   readonly tipo: TipoCasoEspecial;
-  readonly documentoLegal: DocumentoCargado; // PDF (Req 23.1, 23.2)
-  readonly observaciones?: string;           // Req 23.1
+  readonly documentos: readonly File[]; // van a documentosProceso del Warehouse
+  readonly observaciones: string;       // obligatorias, como en Comercial renovaciones
+}
+
+/** Corrección de una renovación devuelta por Gestión Documental (estado CORRECCION). */
+export interface CorreccionRenovacionRequest {
+  readonly numeroPoliza: string;
+  readonly documentos: readonly File[];
+  readonly observaciones?: string;
 }
 
 // --- Gestión de renovación (wizard /renovaciones/detalle) -------------------
@@ -98,13 +106,123 @@ export interface AjustesRenovacion {
   readonly ipcAplicado: number;
 }
 
+/** Detalle financiero de la cotización (mismos campos que guarda Comercial renovaciones en la col F). */
+export interface CotizacionRenovacion {
+  readonly meses: number;
+  readonly dias: number;
+  readonly aseguradoCanon: number;
+  readonly primaNetaCanon: number;
+  readonly ivaCanon: number;
+  readonly totalCanon: number;
+  readonly primaNetaServ: number;
+  readonly ivaServ: number;
+  readonly totalServ: number;
+  readonly primaNetaDyF: number;
+  readonly ivaDyF: number;
+  readonly totalDyF: number;
+  readonly granTotal: number;
+  /** `ipc_supera_tope`, `vigencia_restringida`, `dyf_bajo_minimo`. */
+  readonly alertas: readonly string[];
+}
+
+/** Propuesta de nueva vigencia que calcula el backend. */
+export interface PropuestaRenovacion {
+  readonly modalidad: 'anterior' | 'nueva';
+  readonly inicio: string; // ISO yyyy-mm-dd
+  readonly fin: string;
+  readonly ipc: number;
+  readonly canon: number;
+  readonly administracion: number;
+  readonly valorAseguradoServicios: number;
+  readonly valorAseguradoDyf: number;
+  readonly cotizacion: CotizacionRenovacion;
+}
+
+/** Póliza que vence (col B del Warehouse de renovaciones) y reglas de la renovación digital. */
+export interface CondicionesRenovacion {
+  readonly poliza: string;
+  readonly asegurado: string | null;
+  readonly destino: string | null;
+  readonly vigencia: string | null;
+  readonly vencimiento: string | null;
+  readonly canon: number;
+  readonly administracion: number;
+  readonly valorAseguradoServicios: number;
+  readonly valorAseguradoDyf: number;
+  readonly ipcDefecto: number;
+  readonly topeIpc: number;
+  readonly vigenciaMinimaMeses: number;
+  readonly anterior: PropuestaRenovacion;
+  readonly nueva: PropuestaRenovacion;
+}
+
+/** Datos que se recotizan en el paso Ajuste (modalidad «nueva»). */
+export interface CotizacionRenovacionRequest {
+  readonly modalidad: 'anterior' | 'nueva';
+  readonly ipc?: number;
+  readonly canon?: number;
+  readonly administracion?: number;
+  readonly valorAseguradoServicios?: number;
+  readonly valorAseguradoDyF?: number;
+  readonly fechaInicio?: string;
+  readonly fechaFin?: string;
+}
+
 /** Solicitud de renovación física o digital enviada tras SARLAFT vigente. */
 export interface SolicitudRenovacionRequest {
   readonly numeroPoliza: string;
   readonly tipo: TipoSolicitudRenovacion;
-  readonly formularioRenovacion?: DocumentoCargado; // física
+  readonly formularioRenovacion?: File;             // física: formato diligenciado y firmado
   readonly modalidad?: ModalidadRenovacion;         // digital
   readonly ajustes?: AjustesRenovacion;             // digital con ajustes
+  readonly fechaInicio?: string;                    // nueva vigencia (ISO)
+  readonly fechaFin?: string;
   readonly comentarios?: string;
   readonly validacionSarlaftId: string;
+}
+
+/** Datos para rellenar el formato oficial de renovación de Bolívar (renovación física). */
+export interface FormatoRenovacionRequest {
+  readonly destino: 'vivienda' | 'comercio';
+  readonly canonActual: number;
+  readonly canonNuevo: number;
+  readonly administracion?: number;
+  readonly fechaRenovacion: string; // ISO yyyy-mm-dd
+}
+
+/** Formato generado y guardado (GCS privado); el PDF se descarga con sesión. */
+export interface FormatoRenovacionResponse {
+  readonly id: string;
+  readonly numeroPoliza: string;
+  readonly requiereOtroSi: boolean;
+  readonly generadoEn: string;
+}
+
+/** Datos de una de las 3 partes del contrato en la inducción. */
+export interface ParteInduccion {
+  readonly nombre: string;
+  readonly tipoIdentificacion: string;
+  readonly numeroIdentificacion: string;
+  readonly telefono: string;
+  readonly correo: string;
+}
+
+/** Inducción de una póliza ya vencida: las 3 partes; contrato y paz y salvo van como archivos. */
+export interface InduccionRequest {
+  readonly propietario: ParteInduccion;
+  readonly inquilino: ParteInduccion;
+  readonly deudorSolidario?: ParteInduccion;
+  readonly observaciones?: string;
+}
+
+/** Inducción en la consola del área (`GET /admin/inducciones`). */
+export interface InduccionAdminResponse {
+  readonly id: string;
+  readonly numeroPoliza: string;
+  readonly radicado: string;
+  readonly estado: string;
+  readonly fecha: string;
+  readonly broker: string;
+  readonly comercial: string;
+  readonly enviada: boolean;
 }

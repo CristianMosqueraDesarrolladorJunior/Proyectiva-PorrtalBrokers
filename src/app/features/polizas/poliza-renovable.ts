@@ -14,18 +14,12 @@
 import { EstadoPoliza } from '../../core/models/poliza.model';
 
 /**
- * Conjunto de estados de Poliza desde los que se puede iniciar la Renovacion
- * (Req 16.4). Fuente única del criterio de habilitación.
- */
-const ESTADOS_RENOVABLES: readonly EstadoPoliza[] = ['Próxima a renovar', 'A punto de vencer'];
-
-/**
  * Indica si una Poliza en el estado dado permite iniciar el flujo de Renovacion.
  *
  * @param estado Estado de la Poliza (Req 16.3).
  * @returns `true` si el estado es "Próxima a renovar" o "A punto de vencer"
  *          (Req 16.4); `false` en cualquier otro caso (incluye "Renovada").
  */
-export function esPolizaRenovable(estado: EstadoPoliza): boolean {
-  return ESTADOS_RENOVABLES.includes(estado);
+export function esPolizaRenovable(estado: EstadoPoliza, renovables: readonly string[]): boolean {
+  return renovables.includes(estado);
 }

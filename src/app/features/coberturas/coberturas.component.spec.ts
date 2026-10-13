@@ -1,3 +1,4 @@
+import { proveerCatalogosPrueba } from '../../../testing/catalogo-prueba';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
@@ -48,7 +49,7 @@ describe('CoberturasComponent (Req 14)', () => {
     listar: () => ReturnType<CoberturasService['listar']>,
   ): CoberturasComponentInterno {
     TestBed.configureTestingModule({
-      providers: [{ provide: CoberturasService, useValue: { listar } }],
+      providers: [{ provide: CoberturasService, useValue: { listar } }, proveerCatalogosPrueba()],
     });
     return TestBed.createComponent(CoberturasComponent)
       .componentInstance as CoberturasComponentInterno;

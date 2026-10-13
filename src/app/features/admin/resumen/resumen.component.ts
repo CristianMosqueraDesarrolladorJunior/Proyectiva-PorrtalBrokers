@@ -1,75 +1,138 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval, startWith, switchMap } from 'rxjs';
 
-import { ResumenAdminResponse } from '../../../core/models/admin.model';
+import type { Movimiento, ResumenConsola } from '../../../core/models/consola.model';
 import { AdminService } from '../../../core/services/admin.service';
-import { fechaCorta } from '../../../core/services/admin.helpers';
+import { celdasFechas, copCompacto } from '../../../core/services/admin.helpers';
+import { ConsolaService } from '../../../core/services/consola.service';
 import { SessionService } from '../../../core/services/session.service';
 import {
-  IconComponent,
+  DataTableComponent,
+  EstadoVistaComponent,
+  FormSectionCardComponent,
+  GridLayoutComponent,
   KpiCardComponent,
   PageHeaderComponent,
+  RankingBarrasComponent,
 } from '../../../shared/components';
-import type { TonoKpiCard } from '../../../shared/components';
+import type { ColumnaTabla, FilaTabla, ItemRanking } from '../../../shared/components';
+
+/** Refresco de los movimientos en vivo. */
+const REFRESCO_MS = 30_000;
 
 /**
- * Resumen de la consola (Req 16): KPIs, radicados por comercial y actividad
- * reciente, tal como los entrega el API_Backend (`AdminService`). No hay
- * cálculos ni agregaciones en el cliente.
+ * Resumen del comportamiento del negocio: dinero que entra (brokers vs prospectos), comisión cobrada,
+ * pagada y pendiente, brokers top y los movimientos del sistema en vivo. Comercial: solo su cartera.
  */
 @Component({
   selector: 'app-admin-resumen',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeaderComponent, KpiCardComponent, IconComponent],
+  imports: [
+    DataTableComponent,
+    EstadoVistaComponent,
+    FormSectionCardComponent,
+    GridLayoutComponent,
+    KpiCardComponent,
+    PageHeaderComponent,
+    RankingBarrasComponent,
+  ],
   templateUrl: './resumen.component.html',
-  styleUrls: ['../admin-comun.scss', './resumen.component.scss'],
+  styleUrls: ['../admin-comun.scss'],
 })
 export class ResumenComponent {
-  private readonly admin = inject(AdminService);
+  private readonly consola = inject(ConsolaService);
   private readonly session = inject(SessionService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly esAdmin = this.admin.esAdmin();
+  protected readonly esAdmin = inject(AdminService).esAdmin();
   protected readonly perfil = this.session.perfil;
+  protected readonly compacto = copCompacto;
 
-  // --- Estado de carga ---
-  protected readonly resumen = signal<ResumenAdminResponse | null>(null);
+  /** Retención = renovadas / pólizas con decisión cerrada (renovadas + no renovadas). */
+  protected retencion(r: ResumenConsola): number {
+    const cerradas = r.indicadores.renovadas + r.indicadores.noRenovadas;
+    return cerradas ? Math.round((r.indicadores.renovadas / cerradas) * 100) : 0;
+  }
+
+  protected readonly resumen = signal<ResumenConsola | null>(null);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
 
-  protected readonly fechaCorta = fechaCorta;
+  protected readonly movimientos = signal<readonly Movimiento[]>([]);
+  protected readonly actualizado = signal<Date | null>(null);
+
+  protected readonly columnasMovimientos: readonly ColumnaTabla[] = [
+    { key: 'fecha', header: 'Fecha', ordenable: true },
+    { key: 'tipo', header: 'Movimiento', tipo: 'badge', ordenable: true },
+    { key: 'descripcion', header: 'Detalle' },
+    { key: 'broker', header: 'Broker', ordenable: true },
+    { key: 'referencia', header: 'Referencia' },
+  ];
+
+  protected readonly filasMovimientos = computed<readonly FilaTabla[]>(() =>
+    this.movimientos().map((m) => ({
+      fecha: celdasFechas(m.fecha, m.fecha).creado,
+      fechaOrden: m.fecha,
+      tipo: m.tipo,
+      tipoVariante: m.tipo === 'Pago' ? 'success' : m.tipo === 'Prospecto' ? 'warning' : 'info',
+      descripcion: m.descripcion,
+      broker: m.broker ?? '—',
+      referencia: m.referencia ?? '—',
+    })),
+  );
+
+  protected readonly topBrokers = computed<readonly ItemRanking[]>(() =>
+    (this.resumen()?.topBrokers ?? []).map((b) => ({
+      etiqueta: `${b.nombre}${b.estado === 'PROSPECTO' ? ' · prospecto' : ''}`,
+      valor: b.primas,
+      valorTexto: `${copCompacto(b.primas)} · ${b.polizas} pólizas`,
+    })),
+  );
+
+  protected readonly dinero = computed<readonly ItemRanking[]>(() => {
+    const r = this.resumen();
+    if (!r) return [];
+    return [
+      { etiqueta: 'Ingresos de brokers registrados', valor: r.ingresosBrokers, valorTexto: copCompacto(r.ingresosBrokers) },
+      { etiqueta: 'Ingresos de prospectos', valor: r.ingresosProspectos, valorTexto: copCompacto(r.ingresosProspectos) },
+      { etiqueta: 'Comisión cobrada por brokers', valor: r.comisionCobrada, valorTexto: copCompacto(r.comisionCobrada) },
+      { etiqueta: 'Comisión ya pagada', valor: r.comisionPagada, valorTexto: copCompacto(r.comisionPagada) },
+      { etiqueta: 'Comisión pendiente de pago', valor: r.comisionPendiente, valorTexto: copCompacto(r.comisionPendiente) },
+    ];
+  });
 
   constructor() {
     this.cargarResumen();
+    // Movimientos en vivo: primera carga inmediata y luego cada 30 s mientras la vista esté abierta.
+    interval(REFRESCO_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.consola.movimientos(50)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (m) => {
+          this.movimientos.set(m);
+          this.actualizado.set(new Date());
+        },
+        error: () => this.movimientos.set([]),
+      });
   }
 
-  /** Máximo de radicados para dimensionar las barras (mínimo 1). */
-  protected maxRadicados(): number {
-    const r = this.resumen();
-    if (!r) return 1;
-    return Math.max(1, ...r.radicadosPorComercial.map((x) => x.radicados));
-  }
-
-  /** Tono de la tarjeta de KPI según su bandera de alerta. */
-  protected tonoKpi(alerta: boolean): TonoKpiCard {
-    return alerta ? 'danger' : 'none';
-  }
-
-  /** Obtiene el resumen de administración desde el backend. */
-  private cargarResumen(): void {
+  protected cargarResumen(): void {
     this.cargando.set(true);
     this.error.set(false);
-    this.admin
-      .obtenerResumen()
+    this.consola
+      .resumen()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (resumen) => {
-          this.resumen.set(resumen);
+        next: (r) => {
+          this.resumen.set(r);
           this.cargando.set(false);
         },
         error: () => {
-          this.resumen.set(null);
           this.cargando.set(false);
           this.error.set(true);
         },

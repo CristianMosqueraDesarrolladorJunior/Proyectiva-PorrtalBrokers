@@ -1,182 +1,183 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { CatalogoService } from '../../../core/services/catalogo.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import type { Observable } from 'rxjs';
 
-import { BrokerAdminResponse, ComercialResponse } from '../../../core/models/admin.model';
+import type { BrokerConsola, ComercialConsola, Movimiento } from '../../../core/models/consola.model';
 import { AdminService } from '../../../core/services/admin.service';
+import { COLUMNA_GESTIONAR, COLUMNAS_FECHAS, celdasFechas, cop, copCompacto } from '../../../core/services/admin.helpers';
+import { ConsolaService } from '../../../core/services/consola.service';
+import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion';
 import {
+  AlertBannerComponent,
   BadgeEstadoComponent,
-  DrawerDetalleComponent,
-  IconComponent,
+  BitacoraComponent,
+  BotonComponent,
+  DataTableComponent,
+  EstadoVistaComponent,
+  FichaComponent,
+  FormFieldComponent,
+  GridLayoutComponent,
+  KpiCardComponent,
   ModalDialogComponent,
   PageHeaderComponent,
+  SegmentedControlComponent,
 } from '../../../shared/components';
-import type { FilaDetalle, VarianteBadge } from '../../../shared/components';
+import type { AccionFila, ColumnaTabla, FilaTabla, OpcionSegmentada, SeccionFicha, Tab } from '../../../shared/components';
 
 /**
- * Brokers de la cartera visible (Req 16). El Administrador ve todos y puede
- * reasignar un broker a un comercial; el Comercial ve solo los suyos.
- *
- * Toda la información proviene del API_Backend de forma asíncrona
- * (`AdminService`). La búsqueda se envía al servidor como parámetro (no se
- * filtra en el cliente). Solo se presentan los campos del `BrokerAdminResponse`.
+ * Brokers REGISTRADOS y activos (los prospectos viven en su propia vista). Un botón por fila abre el
+ * modal de operación: detalle completo, acuerdo de comisión, reasignación de comercial (arrastra sus
+ * negocios) y actividad. Comercial: solo su cartera y solo lectura.
  */
 @Component({
   selector: 'app-admin-brokers',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeaderComponent, BadgeEstadoComponent, DrawerDetalleComponent, ModalDialogComponent, IconComponent],
+  imports: [
+    AlertBannerComponent,
+    BadgeEstadoComponent,
+    BitacoraComponent,
+    BotonComponent,
+    DataTableComponent,
+    EstadoVistaComponent,
+    FichaComponent,
+    FormFieldComponent,
+    GridLayoutComponent,
+    KpiCardComponent,
+    ModalDialogComponent,
+    PageHeaderComponent,
+    SegmentedControlComponent,
+  ],
   templateUrl: './brokers.component.html',
-  styleUrls: ['../admin-comun.scss', './brokers.component.scss'],
+  styleUrls: ['../admin-comun.scss'],
 })
 export class BrokersComponent {
   private readonly admin = inject(AdminService);
+  private readonly consola = inject(ConsolaService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly esAdmin = this.admin.esAdmin();
+  protected readonly compacto = copCompacto;
 
-  // --- Estado de carga de brokers ---
-  protected readonly brokers = signal<readonly BrokerAdminResponse[]>([]);
+  protected readonly brokers = signal<readonly BrokerConsola[]>([]);
+  protected readonly comerciales = signal<readonly ComercialConsola[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
-
-  // --- Comerciales activos para el selector de reasignación ---
-  protected readonly comerciales = signal<readonly ComercialResponse[]>([]);
-
-  // --- Búsqueda (se envía al backend) ---
-  protected readonly busqueda = signal('');
-
-  // --- Detalle (drawer) ---
-  protected readonly detalle = signal<BrokerAdminResponse | null>(null);
-
-  // --- Reasignación ---
-  protected readonly brokerAReasignar = signal<BrokerAdminResponse | null>(null);
-  protected readonly comercialDestino = signal('');
-  protected readonly guardandoReasignacion = signal(false);
-  protected readonly errorReasignacion = signal(false);
   protected readonly mensaje = signal('');
 
-  constructor() {
-    this.cargarBrokers();
-    if (this.esAdmin) {
-      this.cargarComerciales();
-    }
-  }
+  protected readonly columnas: readonly ColumnaTabla[] = [
+    { key: 'broker', header: 'Broker', tipo: 'principal', ordenable: true },
+    { key: 'contacto', header: 'Contacto', tipo: 'principal' },
+    { key: 'comercial', header: 'Comercial', ordenable: true },
+    { key: 'acuerdo', header: 'Acuerdo', alinear: 'derecha' },
+    { key: 'negocios', header: 'Negocios', alinear: 'derecha', ordenable: true },
+    { key: 'ingreso', header: 'Ingreso', alinear: 'derecha', ordenable: true },
+    { key: 'comision', header: 'Comisión pagada / cobrada', alinear: 'derecha' },
+    ...COLUMNAS_FECHAS,
+    COLUMNA_GESTIONAR,
+  ];
 
-  /** Lee el texto de un input/select. */
-  protected valor(evento: Event): string {
-    return (evento.target as HTMLInputElement | HTMLSelectElement).value;
-  }
+  protected readonly filas = computed<readonly FilaTabla[]>(() =>
+    this.brokers().map((b) => ({
+      broker: b.nombre,
+      brokerSub: `${b.tipo} · ${b.documento ?? 'sin documento'}`,
+      contacto: b.correo ?? '—',
+      contactoSub: b.celular ?? '',
+      comercial: b.comercialNombre ?? 'Sin asignar',
+      acuerdo: `${b.porcentajeComision} %`,
+      negocios: `${b.negocios} · ${b.polizas} pólizas`,
+      negociosOrden: b.negocios,
+      ingreso: cop(b.primas),
+      ingresoOrden: b.primas,
+      comision: `${cop(b.comisionPagada)} / ${cop(b.comisionCobrada)}`,
+      ...celdasFechas(b.creado, b.ultimoMovimiento),
+      gestionar: '',
+    })),
+  );
 
-  /** Filas de detalle del broker seleccionado (solo campos del backend). */
-  protected filasDetalle(): readonly FilaDetalle[] {
-    const b = this.detalle();
+  protected readonly totalIngreso = computed(() => this.brokers().reduce((t, b) => t + b.primas, 0));
+  protected readonly totalPendiente = computed(() =>
+    this.brokers().reduce((t, b) => t + Math.max(0, b.comisionCobrada - b.comisionPagada), 0),
+  );
+
+  // --- Modal de operación ---
+  protected readonly seleccionado = signal<BrokerConsola | null>(null);
+  protected readonly pestana = signal('detalle');
+  protected readonly pestanas = computed<readonly Tab[]>(() => [
+    { id: 'detalle', etiqueta: 'Detalle' },
+    ...(this.esAdmin ? [{ id: 'acciones', etiqueta: 'Acciones' }] : []),
+    { id: 'actividad', etiqueta: 'Actividad' },
+  ]);
+  protected readonly actividad = signal<readonly Movimiento[]>([]);
+  protected readonly acuerdo = signal('20');
+  protected readonly comercialDestino = signal('');
+  protected readonly guardando = signal(false);
+  protected readonly errorAccion = signal('');
+  /** Acuerdos de comisión (catálogo `acuerdo_comision`). */
+  protected readonly opcionesAcuerdo: readonly OpcionSegmentada[] = inject(CatalogoService)
+    .opciones('acuerdo_comision')
+    .map((a) => ({ valor: a.codigo, etiqueta: a.descripcion }));
+
+  protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
+    const b = this.seleccionado();
     if (!b) return [];
     return [
-      { etiqueta: 'Identificación', valor: b.brokerId },
-      { etiqueta: 'Tipo', valor: b.tipo },
-      { etiqueta: 'Comercial', valor: b.comercial },
-      { etiqueta: 'Negocios', valor: String(b.numeroNegocios) },
-      { etiqueta: 'SARLAFT', valor: this.etiquetaSarlaft(b.estadoSarlaft) },
-      { etiqueta: 'Estado', valor: b.estado },
+      {
+        titulo: 'Datos del broker',
+        icono: 'badge',
+        datos: [
+          { etiqueta: 'Nombre', valor: b.nombre },
+          { etiqueta: 'Tipo', valor: b.tipo },
+          { etiqueta: 'Documento', valor: b.documento },
+          { etiqueta: 'Correo', valor: b.correo },
+          { etiqueta: 'Celular', valor: b.celular },
+          { etiqueta: 'Comercial', valor: b.comercialNombre ?? 'Sin asignar' },
+          { etiqueta: 'Acuerdo de comisión', valor: `${b.porcentajeComision} % sobre el valor sin IVA` },
+        ],
+      },
+      {
+        titulo: 'Producción asegurada',
+        icono: 'trending_up',
+        datos: [
+          { etiqueta: 'Negocios radicados', valor: b.negocios },
+          { etiqueta: 'Pólizas expedidas', valor: b.polizas },
+          { etiqueta: 'Ingreso al negocio', valor: cop(b.primas) },
+          { etiqueta: 'Comisión cobrada', valor: cop(b.comisionCobrada), destacado: true },
+          { etiqueta: 'Comisión pagada', valor: cop(b.comisionPagada) },
+          { etiqueta: 'Pendiente de pago', valor: cop(Math.max(0, b.comisionCobrada - b.comisionPagada)) },
+        ],
+      },
+      {
+        titulo: 'Trazabilidad',
+        icono: 'event',
+        datos: [
+          { etiqueta: 'Creado', valor: celdasFechas(b.creado, b.ultimoMovimiento).creado },
+          { etiqueta: 'Último movimiento', valor: celdasFechas(b.creado, b.ultimoMovimiento).ultimoMovimiento },
+        ],
+      },
     ];
-  }
+  });
 
-  /** Dispara la búsqueda contra el backend. */
-  protected buscar(termino: string): void {
-    this.busqueda.set(termino);
-    this.cargarBrokers();
-  }
-
-  protected abrirDetalle(b: BrokerAdminResponse): void {
-    this.detalle.set(b);
-  }
-
-  protected abrirReasignar(b: BrokerAdminResponse): void {
-    this.brokerAReasignar.set(b);
-    this.comercialDestino.set('');
-    this.errorReasignacion.set(false);
-  }
-
-  protected cerrarReasignar(): void {
-    this.brokerAReasignar.set(null);
-  }
-
-  /** Confirma la reasignación de un broker al comercial destino (Req 16.3). */
-  protected confirmarReasignar(): void {
-    const broker = this.brokerAReasignar();
-    const destino = this.comercialDestino();
-    if (!broker || !destino) return;
-    this.guardandoReasignacion.set(true);
-    this.errorReasignacion.set(false);
-    this.admin
-      .asignarComercial(broker.brokerId, destino)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (actualizado) => {
-          this.guardandoReasignacion.set(false);
-          this.brokerAReasignar.set(null);
-          this.mensaje.set(`Broker ${actualizado.broker} reasignado a ${actualizado.comercial}.`);
-          this.cargarBrokers();
-        },
-        error: () => {
-          this.guardandoReasignacion.set(false);
-          this.errorReasignacion.set(true);
-        },
-      });
-  }
-
-  /** Variante de badge para el estado SARLAFT (`ok` / `rev` / `pend`). */
-  protected varianteSarlaft(estado: string): VarianteBadge {
-    switch (estado) {
-      case 'ok':
-        return 'success';
-      case 'rev':
-        return 'warning';
-      case 'pend':
-        return 'danger';
-      default:
-        return 'info';
+  constructor() {
+    this.cargar();
+    if (this.esAdmin) {
+      this.consola
+        .comerciales()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: (c) => this.comerciales.set(c.filter((x) => x.activo)), error: () => this.comerciales.set([]) });
     }
   }
 
-  /** Etiqueta legible del estado SARLAFT. */
-  protected etiquetaSarlaft(estado: string): string {
-    switch (estado) {
-      case 'ok':
-        return 'Aprobado';
-      case 'rev':
-        return 'En revisión';
-      case 'pend':
-        return 'Pendiente';
-      default:
-        return estado;
-    }
-  }
-
-  /** Variante de badge para el estado del broker. */
-  protected varianteEstado(estado: string): VarianteBadge {
-    switch (estado) {
-      case 'Activo':
-        return 'success';
-      case 'En registro':
-        return 'warning';
-      case 'Inactivo':
-        return 'danger';
-      default:
-        return 'info';
-    }
-  }
-
-  /** Obtiene los brokers visibles (con el término de búsqueda al backend). */
-  private cargarBrokers(): void {
+  protected cargar(): void {
     this.cargando.set(true);
     this.error.set(false);
-    this.admin
-      .listarBrokers(this.busqueda())
+    this.consola
+      .brokers()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (brokers) => {
-          this.brokers.set(brokers);
+        next: (b) => {
+          this.brokers.set(b);
           this.cargando.set(false);
         },
         error: () => {
@@ -187,14 +188,54 @@ export class BrokersComponent {
       });
   }
 
-  /** Obtiene los comerciales activos para el selector de reasignación. */
-  private cargarComerciales(): void {
-    this.admin
-      .listarComerciales()
+  protected gestionar(evento: AccionFila): void {
+    const b = this.brokers().at(evento.indice);
+    if (!b) return;
+    this.seleccionado.set(b);
+    this.pestana.set('detalle');
+    this.acuerdo.set(String(b.porcentajeComision));
+    this.comercialDestino.set('');
+    this.errorAccion.set('');
+    this.actividad.set([]);
+    this.consola
+      .actividadBroker(b.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (comerciales) => this.comerciales.set(comerciales.filter((c) => c.activo)),
-        error: () => this.comerciales.set([]),
-      });
+      .subscribe({ next: (a) => this.actividad.set(a), error: () => this.actividad.set([]) });
+  }
+
+  protected valor(evento: Event): string {
+    return (evento.target as HTMLSelectElement).value;
+  }
+
+  protected guardarAcuerdo(): void {
+    const b = this.seleccionado();
+    if (!b) return;
+    this.ejecutar(this.admin.cambiarComision(b.id, Number(this.acuerdo())),
+      `Acuerdo de ${b.nombre} actualizado al ${this.acuerdo()} %.`);
+  }
+
+  protected reasignar(): void {
+    const b = this.seleccionado();
+    if (!b || !this.comercialDestino()) return;
+    const destino = this.comerciales().find((c) => c.codigo === this.comercialDestino());
+    this.ejecutar(this.admin.asignarComercial(b.id, this.comercialDestino()),
+      `${b.nombre} y todos sus negocios pasaron a ${destino?.nombre ?? this.comercialDestino()}.`);
+  }
+
+  private ejecutar(accion: Observable<unknown>, exito: string): void {
+    this.guardando.set(true);
+    this.errorAccion.set('');
+    accion.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.seleccionado.set(null);
+        this.mensaje.set(exito);
+        this.cargar();
+      },
+      error: (err: unknown) => {
+        this.guardando.set(false);
+        this.errorAccion.set(mensajeErrorIntegracion(err));
+      },
+    });
   }
 }

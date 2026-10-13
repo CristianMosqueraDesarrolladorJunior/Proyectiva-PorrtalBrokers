@@ -1,0 +1,124 @@
+// Solo la disposición propia de la vista; lo visual viene de los componentes compartidos.
+@use '../../shared/styles/mixins' as mx;
+
+:host {
+  display: block;
+}
+
+.comisiones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.comisiones__kpis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.comisiones__exito {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.comisiones__acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.comisiones__letras {
+  margin: 0;
+  font-size: var(--text-caption);
+  line-height: var(--line-height-normal);
+  color: var(--sb-on-slate);
+  opacity: 0.8;
+}
+
+// --- Filas de pólizas ---
+.filas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-lg);
+  background: var(--sb-surface-low);
+
+  @include mx.respond-to('mobile') {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+}
+
+.fila__numero {
+  display: grid;
+  place-items: center;
+  width: var(--section-number-size);
+  height: var(--section-number-size);
+  margin-top: var(--space-6);
+  border-radius: var(--radius-full);
+  background: var(--sb-slate);
+  color: var(--sb-on-slate);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-bold);
+}
+
+.fila__comision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: var(--grid-kpi-min-col);
+  padding-top: var(--space-6);
+
+  strong {
+    font-size: var(--text-subtitle);
+    color: var(--sb-tertiary);
+  }
+}
+
+.fila__etiqueta {
+  font-size: var(--text-caption);
+  color: var(--sb-secondary);
+}
+
+.filas__pie {
+  display: flex;
+  margin-top: var(--space-3);
+}
+
+.lista {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.comisiones__proveedores {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-accent);
+  color: var(--color-on-accent, #fff);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.comisiones__proveedores:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

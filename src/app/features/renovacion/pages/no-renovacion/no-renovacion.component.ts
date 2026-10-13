@@ -6,6 +6,7 @@ import {
   Input,
   signal,
 } from '@angular/core';
+import { CatalogoService } from '../../../../core/services/catalogo.service';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -19,13 +20,10 @@ import {
 import type { OpcionRadio } from '../../../../shared/components/radio-group/radio-group.component';
 import type { TarjetaSeguimiento } from '../../../../shared/components/success-screen/success-screen.component';
 import type {
-  MotivoNoRenovacion,
   NoRenovacionRequest,
 } from '../../../../core/models/renovacion.model';
 import { RenovacionService } from '../../../../core/services/renovacion.service';
 import {
-  ETIQUETA_MOTIVO_NO_RENOVACION,
-  MOTIVOS_NO_RENOVACION,
   puedeEnviarNoRenovacion,
 } from '../../no-renovacion-habilitacion';
 
@@ -68,14 +66,17 @@ type EstadoEnvioNoRenovacion = 'inactivo' | 'enviando' | 'exito';
   styleUrl: './no-renovacion.component.scss',
 })
 export class NoRenovacionComponent {
+  private readonly catalogo = inject(CatalogoService);
+
   private readonly renovacionService = inject(RenovacionService);
 
   /** Número de póliza sobre la que se notifica la No Renovación (Req 22). */
   @Input() numeroPoliza = '';
 
   /** Opciones de motivo presentadas como tarjetas de selección (Req 22.1). */
-  protected readonly opcionesMotivo: readonly OpcionRadio[] = MOTIVOS_NO_RENOVACION.map(
-    (motivo) => ({ valor: motivo, etiqueta: ETIQUETA_MOTIVO_NO_RENOVACION[motivo] }),
+  /** Motivos reales del Warehouse (catálogo `motivo_no_renovacion`); se envía el valor que escribe el área. */
+  protected readonly opcionesMotivo = computed<readonly OpcionRadio[]>(() =>
+    this.catalogo.opciones('motivo_no_renovacion').filter((m) => m['para_broker'] === true).map((m) => ({ valor: m.descripcion, etiqueta: m.descripcion })),
   );
 
   /** Motivo seleccionado por el Broker (vacío mientras no elige) (Req 22.1). */
@@ -98,7 +99,7 @@ export class NoRenovacionComponent {
 
   /** Verdadero si el envío está habilitado: hay un motivo del conjunto (Req 22.1, 22.3). */
   protected readonly envioHabilitado = computed(() =>
-    puedeEnviarNoRenovacion(this.motivo()),
+    puedeEnviarNoRenovacion(this.motivo(), this.opcionesMotivo().map((o) => o.valor)),
   );
 
   /** Verdadero mientras se envía la No Renovación (bloquea el botón, Req 22.2). */
@@ -136,7 +137,7 @@ export class NoRenovacionComponent {
     const observaciones = this.observaciones().trim();
     const request: NoRenovacionRequest = {
       numeroPoliza: this.numeroPoliza,
-      motivo: this.motivo() as MotivoNoRenovacion,
+      motivo: this.motivo(),
       ...(observaciones.length > 0 ? { observaciones } : {}),
     };
 

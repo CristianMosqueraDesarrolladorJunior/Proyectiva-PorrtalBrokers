@@ -1,6 +1,8 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
-import { SessionService } from '../services/session.service';
+import { Observable, map } from 'rxjs';
+
+import { perfilDeLaSesion } from './rehidratar-sesion';
 
 /**
  * Guard funcional de autenticación (patrón `inject()`, análogo a `actorGuard` de PROYECTIVA).
@@ -10,14 +12,12 @@ import { SessionService } from '../services/session.service';
  * consulta a `SessionService`, que mantiene el perfil en memoria sin exponer el token
  * en JavaScript (Req 28.1).
  *
- * @returns `true` si el Broker está autenticado; en caso contrario un `UrlTree` hacia `/login`.
+ * Tras recargar la página el perfil se rehidrata desde la cookie (`GET /auth/session`):
+ * una sesión vigente no obliga a volver a iniciar sesión.
+ *
+ * @returns `true` si hay sesión; en caso contrario un `UrlTree` hacia `/login`.
  */
-export const authGuard: CanActivateFn = (): boolean | UrlTree => {
-  const session = inject(SessionService);
+export const authGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
   const router = inject(Router);
-
-  if (session.autenticado()) {
-    return true;
-  }
-  return router.createUrlTree(['/login']);
+  return perfilDeLaSesion().pipe(map((perfil) => (perfil ? true : router.createUrlTree(['/login']))));
 };

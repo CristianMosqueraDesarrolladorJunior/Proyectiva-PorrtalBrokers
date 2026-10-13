@@ -36,3 +36,40 @@ export function fechaCorta(iso: string): string {
   const [a, m, d] = iso.slice(0, 10).split('-');
   return `${+d} ${MESES[+m - 1] ?? m} ${a}`;
 }
+
+/** "2026-10-10T13:05:00-05:00" → "10 oct 2026, 1:05 p. m." (hora local). Vacío → "—". */
+export function fechaHora(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const hora = d.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
+  return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}, ${hora}`;
+}
+
+/**
+ * Matriz de fechas estándar de toda tabla de la consola: Creado y Último movimiento, ordenables por
+ * su valor real (`creadoOrden`, `ultimoMovimientoOrden`).
+ */
+export const COLUMNAS_FECHAS = [
+  { key: 'creado', header: 'Creado', ordenable: true },
+  { key: 'ultimoMovimiento', header: 'Último movimiento', ordenable: true },
+] as const;
+
+/** Celdas de la matriz de fechas para una fila. */
+export function celdasFechas(creado: string | null | undefined, ultimo: string | null | undefined) {
+  return {
+    creado: fechaHora(creado),
+    creadoOrden: creado ?? '',
+    ultimoMovimiento: fechaHora(ultimo ?? creado),
+    ultimoMovimientoOrden: ultimo ?? creado ?? '',
+  };
+}
+
+/** Columna única de acción: un solo botón por fila que abre el modal de operación. */
+export const COLUMNA_GESTIONAR = {
+  key: 'gestionar',
+  header: '',
+  tipo: 'accion',
+  textoAccion: 'Gestionar',
+  alinear: 'derecha',
+} as const;

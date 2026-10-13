@@ -26,6 +26,7 @@ import {
   type SujetoSarlaft,
   type TipoDocumentoIdentidad,
   type TipoDocumentoRadicacion,
+  type RadicacionRequest,
   type TipoPersona,
 } from '../../../../core/models/radicacion.model';
 
@@ -38,57 +39,13 @@ export const DOCUMENTO_PROPIETARIO_LONGITUD_MAX = 15;
 /** Patrón del número de documento del propietario: solo dígitos, 5–15 (Req 10.1). */
 const PATRON_DOCUMENTO_PROPIETARIO = /^\d{5,15}$/;
 
-/** Etiqueta legible de cada documento de radicación mostrada en el uploader (Req 11, 12). */
-export const ETIQUETA_DOCUMENTO_RADICACION: Readonly<
-  Record<TipoDocumentoRadicacion, string>
-> = {
-  cedulaPropietario: 'Cédula del propietario',
-  certificadoTradicion: 'Certificado de Tradición y Libertad',
-  certificadoExistencia: 'Certificado de existencia',
-  cedulaRepresentanteLegal: 'Cédula del Representante Legal',
-  formularioSarlaft: 'Formulario SARLAFT',
-  contratoArrendamientoFirmado: 'Contrato de arrendamiento firmado',
-  poderApoderado: 'Poder del apoderado',
-  cedulaApoderado: 'Cédula del apoderado',
-};
-
-/** Texto de ayuda mostrado bajo cada documento en el uploader (Req 11, 12, 13). */
-export const DESCRIPCION_DOCUMENTO_RADICACION: Readonly<
-  Record<TipoDocumentoRadicacion, string>
-> = {
-  cedulaPropietario: 'Documento de identidad del propietario del inmueble',
-  certificadoTradicion: 'Vigencia no mayor a 90 días',
-  certificadoExistencia: 'Vigencia no mayor a 30 días',
-  cedulaRepresentanteLegal: 'Documento de identidad del representante legal',
-  formularioSarlaft: 'Formulario SARLAFT 4.0 diligenciado',
-  contratoArrendamientoFirmado: 'Opcional — Formato PDF o imagen',
-  poderApoderado: 'Poder que faculta al apoderado para firmar',
-  cedulaApoderado: 'Documento de identidad del apoderado',
-};
-
-/** Tipos de documento de identidad seleccionables para el propietario (Req 10.1). */
-export const TIPOS_DOCUMENTO_IDENTIDAD: readonly TipoDocumentoIdentidad[] = [
-  'CC',
-  'CE',
-  'NIT',
-  'PA',
-];
-
-/** Etiqueta legible de cada tipo de documento de identidad (Req 10.1). */
-export const ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD: Readonly<
-  Record<TipoDocumentoIdentidad, string>
-> = {
-  CC: 'Cédula de ciudadanía',
-  CE: 'Cédula de extranjería',
-  NIT: 'NIT',
-  PA: 'Pasaporte',
-};
-
 /** Entrada mínima para derivar el conjunto obligatorio y el estado de envío. */
 export interface EntradaRadicacion {
   readonly tipoPersona: TipoPersona;
   readonly firmaApoderado: boolean;
   readonly sarlaftRequiereFormulario: boolean;
+  /** Filas del catálogo `documento_radicacion`. */
+  readonly documentos: readonly { readonly codigo: string; readonly [columna: string]: unknown }[];
 }
 
 /** Resultado tipado de la validación de los datos base de la radicación (Req 10.1). */
@@ -182,8 +139,9 @@ export function puedeEnviarRadicacion(
 /** Etiqueta legible de la lista de documentos pendientes para el mensaje de UI (Req 11.4). */
 export function etiquetasDocumentos(
   tipos: readonly TipoDocumentoRadicacion[],
+  etiquetas: Readonly<Record<string, string>>,
 ): readonly string[] {
-  return tipos.map((tipo) => ETIQUETA_DOCUMENTO_RADICACION[tipo]);
+  return tipos.map((tipo) => etiquetas[tipo] ?? tipo);
 }
 
 // --- Paso 4: Validación SARLAFT (3 salidas del flujo de radicación) ---------
@@ -192,20 +150,10 @@ export function etiquetasDocumentos(
 export const PASOS_RADICACION: readonly string[] = [
   'Datos y estudio',
   'Firmante',
-  'SARLAFT',
+  'Conocimiento de Cliente',
   'Documentos',
   'Envío',
 ];
-
-/** Etiqueta del estado SARLAFT para el checklist lateral. */
-export const ETIQUETA_ESTADO_SARLAFT: Readonly<Record<EstadoSarlaftRadicacion, string>> = {
-  actualizado: 'Actualizado',
-  desactualizado: 'Pendiente de actualizar',
-  consultable: 'Consultable',
-};
-
-/** Tipos de documento del apoderado: siempre persona natural (sin NIT). */
-export const TIPOS_DOCUMENTO_APODERADO: readonly TipoDocumentoIdentidad[] = ['CC', 'CE', 'PA'];
 
 /**
  * A quién se consulta SARLAFT en la radicación: si firma un apoderado, al
@@ -252,7 +200,7 @@ export function claveConsultaSarlaft(
  * consultable termina el trámite en el Warehouse. Función pura y total.
  */
 export function permiteCargarDocumentos(estado: EstadoSarlaftRadicacion | null): boolean {
-  return estado === 'actualizado';
+  return estado === 'ACTUALIZADO';
 }
 
 /**
@@ -273,4 +221,40 @@ export function pasoActivoRadicacion(
     return 2;
   }
   return faltantes > 0 ? 3 : 4;
+}
+
+
+/** Datos de pantalla necesarios para armar el envío de la radicación. */
+export interface EntradaPayloadRadicacion {
+  readonly contratoReferencia: string | null | undefined;
+  readonly numeroEstudioArrendamiento: string;
+  readonly tipoDocumentoInquilino: TipoDocumentoIdentidad;
+  readonly documentoInquilino: string;
+  readonly documentosCargados: readonly string[];
+  readonly autorizacionDatos: boolean;
+  readonly tipoPersona: TipoPersona;
+  readonly firmaApoderado: boolean;
+  /** Códigos que acepta el backend en `documentosCargados` (catálogo, sin los opcionales). */
+  readonly vocabulario: readonly string[];
+}
+
+/**
+ * Construye el payload de radicación con EXACTAMENTE las claves del `RadicacionRequest` del backend.
+ * Los documentos se filtran contra la allowlist y se deduplican. Función pura y total.
+ */
+export function construirPayloadRadicacion(e: EntradaPayloadRadicacion): RadicacionRequest {
+  const permitidos = new Set<string>(e.vocabulario);
+  const documentos = [...new Set(e.documentosCargados.map((d) => d.trim()))].filter((d) =>
+    permitidos.has(d),
+  ) as TipoDocumentoRadicacion[];
+  return {
+    contratoReferencia: (e.contratoReferencia ?? '').trim(),
+    numeroEstudioArrendamiento: e.numeroEstudioArrendamiento.trim(),
+    tipoDocumentoInquilino: e.tipoDocumentoInquilino,
+    documentoInquilino: e.documentoInquilino.trim(),
+    documentosCargados: documentos,
+    autorizacionDatos: e.autorizacionDatos,
+    tipoPersona: e.tipoPersona,
+    firmaApoderado: e.firmaApoderado,
+  };
 }

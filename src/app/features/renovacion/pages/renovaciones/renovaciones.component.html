@@ -2,77 +2,49 @@
   <app-page-header
     eyebrow="Portafolio"
     titulo="Gestión de Renovaciones"
-    subtitulo="Consulta y gestiona las renovaciones de tus pólizas."
+    subtitulo="Consulta y gestiona las renovaciones de tus pólizas. Las vencidas pasan por inducción."
   ></app-page-header>
 
-  @if (error()) {
-    <app-alert-banner variante="error" titulo="No se pudo cargar">
-      {{ error() }}
-    </app-alert-banner>
-  }
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Pólizas en portafolio" [valor]="portafolio()?.total ?? '—'" icono="folder_open" sub="Total de pólizas activas" />
+    <app-kpi-card label="Renovadas" [valor]="portafolio()?.renovadas ?? '—'" icono="task_alt" variante="exito" sub="Al día con renovaciones" />
+    <app-kpi-card label="Próximas a renovar" [valor]="portafolio()?.proximasARenovar ?? '—'" icono="event_upcoming" sub="En los próximos 30 días" />
+    <app-kpi-card label="A punto de vencer" [valor]="portafolio()?.aPuntoDeVencer ?? '—'" icono="warning" variante="alerta" sub="Requieren atención inmediata" />
+  </app-grid-layout>
 
-  <!-- KPIs del portafolio: 4 tarjetas KpiCard del mismo tamaño (Req 17) -->
-  <!-- Mismo estilo/tamaño que el Dashboard de Seguimiento: KpiCardComponent. -->
-  <div class="renovaciones__kpis">
-    <app-kpi-card
-      label="Pólizas en portafolio"
-      [valor]="portafolio()?.total ?? '—'"
-      icono="folder_open"
-      sub="Total de pólizas activas"
-    />
-    <app-kpi-card
-      label="Renovadas"
-      [valor]="portafolio()?.renovadas ?? '—'"
-      icono="task_alt"
-      variante="exito"
-      sub="Al día con renovaciones"
-    />
-    <app-kpi-card
-      label="Próximas a renovar"
-      [valor]="portafolio()?.proximasARenovar ?? '—'"
-      icono="event_upcoming"
-      sub="En los próximos 30 días"
-    />
-    <app-kpi-card
-      label="A punto de vencer"
-      [valor]="portafolio()?.aPuntoDeVencer ?? '—'"
-      icono="warning"
-      variante="alerta"
-      sub="Requieren atención inmediata"
-    />
-  </div>
-
-  <!-- Buscar cliente (Req 16.1) -->
-  <div class="renov-buscador">
-    <h4 class="renov-buscador__titulo">Buscar cliente</h4>
-    <div class="renov-buscador__campo">
-      <input
-        type="text"
-        inputmode="numeric"
-        placeholder="Ingresa la cédula del cliente"
-        [ngModel]="cedula()"
-        (ngModelChange)="cedula.set($event)"
-        aria-label="Cédula del cliente"
-      />
-      <button type="button" class="renov-buscador__btn" (click)="cargar()">Buscar</button>
+  <app-barra-acciones>
+    <div filtros>
+      <app-form-field label="Buscar póliza" controlId="renov-busqueda">
+        <input
+          id="renov-busqueda"
+          type="search"
+          autocomplete="off"
+          placeholder="Número de póliza"
+          [value]="busqueda()"
+          (input)="busqueda.set($any($event.target).value)"
+        />
+      </app-form-field>
     </div>
-  </div>
+  </app-barra-acciones>
 
-  <!-- Listado de pólizas (Req 16.2, 17) -->
-  <h4 class="renovaciones__listado-titulo">Listado de pólizas</h4>
-  <p class="renovaciones__listado-sub">Visualiza el estado actual de todas tus pólizas.</p>
-
-  @if (cargando()) {
-    <app-escalerita-loader texto="Cargando pólizas..."></app-escalerita-loader>
-  } @else {
+  <app-estado-vista
+    [cargando]="cargando()"
+    [error]="error()"
+    [vacio]="filas().length === 0"
+    entidad="pólizas"
+    iconoVacio="autorenew"
+    [tituloVacio]="busqueda() ? 'Ninguna póliza coincide con la búsqueda' : 'No tienes pólizas por renovar'"
+    descripcionVacio="Cuando tus pólizas se acerquen al vencimiento aparecerán aquí."
+    (reintentar)="cargar()"
+  >
     <app-data-table
       [columnas]="columnas"
       [filas]="filas()"
-      [total]="portafolio()?.total ?? filas().length"
+      [total]="filas().length"
       [tamanoPagina]="filas().length || 1"
       ariaLabel="Listado de pólizas para renovación"
       (seleccionFila)="onSeleccionFila($event)"
       (accion)="onGestionar($event)"
     ></app-data-table>
-  }
+  </app-estado-vista>
 </section>

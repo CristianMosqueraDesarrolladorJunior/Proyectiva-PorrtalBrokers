@@ -1,0 +1,107 @@
+<section class="induccion" aria-labelledby="induccion-titulo">
+  @if (confirmacion()) {
+    <app-success-screen
+      titulo="Inducción enviada"
+      mensaje="El área de renovaciones recibió los datos de las partes, el contrato y el paz y salvo. Te avisaremos por correo cuando quede expedida."
+      [tarjetas]="tarjetasExito()"
+      textoVolver="Volver a Renovaciones"
+      (volver)="volver()"
+    ></app-success-screen>
+  } @else {
+    <app-page-header
+      eyebrow="Renovaciones · Inducción"
+      tituloId="induccion-titulo"
+      titulo="Inducción de póliza vencida"
+      [subtitulo]="'Póliza #' + numeroPoliza() + ' · Ya venció, así que se induce de nuevo con las partes del contrato vigente.'"
+    >
+      <div acciones>
+        <app-boton variante="ghost" icono="arrow_back" (clicked)="volver()">Volver</app-boton>
+      </div>
+    </app-page-header>
+
+    <app-layout-resumen etiquetaLateral="Resumen de la inducción">
+      <div principal class="induccion__pasos">
+        <app-form-section-card [numero]="1" icono="description" titulo="Contrato de arrendamiento" subtitulo="Lo leemos y precargamos las partes; revisa y corrige lo que haga falta.">
+          <app-lector-contrato
+            titulo="Sube el contrato vigente"
+            (leido)="onLectura($event)"
+            (archivo)="contrato.set($event)"
+          />
+        </app-form-section-card>
+
+        @for (clave of clavesVisibles(); track clave; let i = $index) {
+          <app-form-section-card
+            [numero]="i + 2"
+            [icono]="clave === 'propietario' ? 'home' : clave === 'inquilino' ? 'person' : 'group'"
+            [titulo]="etiquetaParte[clave]"
+            [subtitulo]="precargado() ? 'Precargado del contrato · confírmalo' : 'Datos como aparecen en el contrato'"
+          >
+            @if (clave === 'deudorSolidario') {
+              <div class="induccion__toggle">
+                <span>El contrato tiene deudor solidario</span>
+                <app-toggle-switch [checked]="conDeudor()" ariaLabel="El contrato tiene deudor solidario" (checkedChange)="conDeudor.set($event)" />
+              </div>
+            }
+            <div class="induccion__grid">
+              <app-form-field class="induccion__ancho" label="Nombre completo" [controlId]="clave + '-nombre'" [requerido]="true" [error]="errorDe(clave, 'nombre')">
+                <input [id]="clave + '-nombre'" type="text" autocomplete="off" [value]="partes()[clave].nombre" (input)="actualizarParte(clave, 'nombre', valorDe($event))" />
+              </app-form-field>
+              <app-form-field label="Tipo de identificación" [controlId]="clave + '-tipo'">
+                <select [id]="clave + '-tipo'" [value]="partes()[clave].tipoIdentificacion" (change)="actualizarParte(clave, 'tipoIdentificacion', valorDe($event))">
+                  @for (t of tiposIdentificacion; track t.valor) {
+                    <option [value]="t.valor" [selected]="t.valor === partes()[clave].tipoIdentificacion">{{ t.etiqueta }}</option>
+                  }
+                </select>
+              </app-form-field>
+              <app-form-field label="Número de identificación" [controlId]="clave + '-numero'" [requerido]="true" [error]="errorDe(clave, 'número de identificación')">
+                <input [id]="clave + '-numero'" type="text" inputmode="numeric" autocomplete="off" [value]="partes()[clave].numeroIdentificacion" (input)="actualizarParte(clave, 'numeroIdentificacion', valorDe($event))" />
+              </app-form-field>
+              <app-form-field label="Celular" [controlId]="clave + '-telefono'" [requerido]="true" [error]="errorDe(clave, 'teléfono')">
+                <input [id]="clave + '-telefono'" type="tel" autocomplete="off" [value]="partes()[clave].telefono" (input)="actualizarParte(clave, 'telefono', valorDe($event))" />
+              </app-form-field>
+              <app-form-field label="Correo" [controlId]="clave + '-correo'" [requerido]="true" [error]="errorDe(clave, 'correo')">
+                <input [id]="clave + '-correo'" type="email" autocomplete="off" [value]="partes()[clave].correo" (input)="actualizarParte(clave, 'correo', valorDe($event))" />
+              </app-form-field>
+            </div>
+          </app-form-section-card>
+        }
+
+        @if (!conDeudor()) {
+          <div class="induccion__toggle">
+            <span>El contrato tiene deudor solidario</span>
+            <app-toggle-switch [checked]="conDeudor()" ariaLabel="El contrato tiene deudor solidario" (checkedChange)="conDeudor.set($event)" />
+          </div>
+        }
+
+        <app-form-section-card [numero]="clavesVisibles().length + 2" icono="verified" titulo="Paz y salvo" subtitulo="Confirma que el inquilino está al día con el arriendo.">
+          <app-doc-uploader [reglas]="reglaPazYSalvo" [cargados]="cargadosPazYSalvo()" (archivoSeleccionado)="onPazYSalvo($event)" />
+          <app-form-field label="Observaciones para el área (opcional)" controlId="induccion-obs">
+            <textarea id="induccion-obs" rows="3" maxlength="500" [value]="observaciones()" (input)="observaciones.set(valorDe($event))"></textarea>
+          </app-form-field>
+        </app-form-section-card>
+      </div>
+
+      <div lateral>
+        <app-summary-card titulo="Inducción" [principal]="avance()" [filas]="resumen()">
+          <div acciones class="induccion__acciones">
+            @if (intento() && errores().length > 0) {
+              <app-alert-banner variante="error" titulo="Falta completar">
+                <ul class="induccion__lista">
+                  @for (e of errores(); track e) {
+                    <li>{{ e }}</li>
+                  }
+                </ul>
+              </app-alert-banner>
+            }
+            @if (errorEnvio()) {
+              <app-alert-banner variante="error" titulo="No se pudo enviar">{{ errorEnvio() }}</app-alert-banner>
+            }
+            <app-boton variante="accent" icono="send" [disabled]="enviando()" (clicked)="enviar()">
+              {{ enviando() ? 'Enviando…' : 'Enviar inducción' }}
+            </app-boton>
+          </div>
+        </app-summary-card>
+      </div>
+    </app-layout-resumen>
+  }
+</section>

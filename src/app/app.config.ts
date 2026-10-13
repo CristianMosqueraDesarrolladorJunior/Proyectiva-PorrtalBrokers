@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -10,6 +10,7 @@ import {
   errorInterceptor,
   timeoutRetryInterceptor
 } from './core/interceptors';
+import { CatalogoService } from './core/services/catalogo.service';
 
 /**
  * Configuración raíz de la aplicación standalone del Portal de Autogestión de Brokers.
@@ -34,6 +35,10 @@ export const appConfig: ApplicationConfig = {
         timeoutRetryInterceptor,
         errorInterceptor
       ])
-    )
+    ),
+    // Catálogos de negocio desde la BD (sin bloquear el arranque: si fallan, se reintentan al usarlos).
+    provideAppInitializer(() => {
+      inject(CatalogoService).cargar().subscribe();
+    }),
   ]
 };

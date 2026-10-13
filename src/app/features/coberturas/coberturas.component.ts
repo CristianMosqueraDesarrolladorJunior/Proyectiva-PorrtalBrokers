@@ -1,3 +1,4 @@
+import { CatalogoService } from '../../core/services/catalogo.service';
 import { CurrencyPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 
@@ -51,6 +52,8 @@ interface EstadoCobertura {
 })
 export class CoberturasComponent {
   private readonly coberturasService = inject(CoberturasService);
+  /** Escalón del monto asegurado (`PASO_MONTO_COBERTURA`, catálogo de BD). */
+  private readonly pasoMonto = inject(CatalogoService).parametro('PASO_MONTO_COBERTURA');
 
   /** Estado de las coberturas del catálogo con su selección y monto. */
   protected readonly coberturas = signal<readonly EstadoCobertura[]>([]);
@@ -107,7 +110,7 @@ export class CoberturasComponent {
    * @param id identificador de la Cobertura.
    */
   protected incrementar(id: string): void {
-    this.actualizarMonto(id, (monto) => incrementarMonto(monto));
+    this.actualizarMonto(id, (monto) => incrementarMonto(monto, this.pasoMonto));
   }
 
   /**
@@ -116,7 +119,7 @@ export class CoberturasComponent {
    * @param id identificador de la Cobertura.
    */
   protected decrementar(id: string): void {
-    this.actualizarMonto(id, (monto) => decrementarMonto(monto));
+    this.actualizarMonto(id, (monto) => decrementarMonto(monto, this.pasoMonto));
   }
 
   /**

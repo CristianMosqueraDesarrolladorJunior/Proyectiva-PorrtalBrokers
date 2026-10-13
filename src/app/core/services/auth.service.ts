@@ -2,9 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
-import { LoginRequest, PerfilBroker } from '../models/broker.model';
+import { LoginRequest, PerfilBroker, PerfilCompartido } from '../models/broker.model';
 import type { ResultadoSarlaftRadicacion } from '../models/radicacion.model';
 import {
+  CrearProspectoPayload,
   RegistroProspectoRequest,
   ResultadoSarlaft,
   SolicitudRegistroBroker,
@@ -45,7 +46,7 @@ export class AuthService {
 
   /**
    * Autentica al Broker y, si es exitoso, publica su perfil en `SessionService` (Req 1, 4.3).
-   * @param request credenciales de login (cédula y contraseña).
+   * @param request credenciales de login (cédula o correo, y contraseña).
    * @returns el `PerfilBroker` autenticado.
    */
   login(request: LoginRequest): Observable<PerfilBroker> {
@@ -54,6 +55,38 @@ export class AuthService {
         withCredentials: true,
       })
       .pipe(tap((perfil) => this.session.establecerPerfil(perfil)));
+  }
+
+  /**
+   * Inicia sesión con el token que entrega Cien Cuadras al broker ya autenticado.
+   * El backend verifica el token y establece la cookie `HttpOnly`; el token no se
+   * guarda en JavaScript.
+   * @param idToken token emitido por el proveedor de identidad compartido.
+   * @returns el `PerfilBroker` autenticado.
+   */
+  ingresarConToken(idToken: string): Observable<PerfilBroker> {
+    return this.http
+      .post<PerfilBroker>(`${this.baseUrl}/auth/sso`, { idToken }, { withCredentials: true })
+      .pipe(tap((perfil) => this.session.establecerPerfil(perfil)));
+  }
+
+  /**
+   * Solicita el correo para crear o cambiar la contraseña. El backend responde
+   * igual exista o no la cuenta.
+   * @param usuario cédula o correo.
+   */
+  restablecerPassword(usuario: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/auth/restablecimiento`, { usuario });
+  }
+
+  /**
+   * Datos que el usuario de la sesión ya registró en Cien Cuadras, para
+   * autocompletar el onboarding. Emite `null` cuando no hay datos (204).
+   */
+  perfilCompartido(): Observable<PerfilCompartido | null> {
+    return this.http.get<PerfilCompartido | null>(`${this.baseUrl}/auth/perfil-compartido`, {
+      withCredentials: true,
+    });
   }
 
   /**
@@ -99,7 +132,19 @@ export class AuthService {
    * @returns radicado y estado de la cuenta creada.
    */
   registrarProspecto(datos: RegistroProspectoRequest): Observable<RegistroBrokerResponse> {
-    return this.http.post<RegistroBrokerResponse>(`${this.baseUrl}/brokers/prospectos`, datos, {
+    // Mapea el modelo del front al contrato REST del backend (CrearProspectoRequest):
+    // documento -> cedula, nombreCompleto -> nombre. El backend ignora codigoPais/ciudad/tipoDocumento.
+    const payload: CrearProspectoPayload = {
+      cedula: datos.documento,
+      nombre: datos.nombreCompleto,
+      telefono: datos.telefono,
+      correo: datos.correo,
+      ciudad: datos.ciudad,
+      tipoDocumento: datos.tipoDocumento,
+      codigoPais: datos.codigoPais,
+      password: datos.password,
+    };
+    return this.http.post<RegistroBrokerResponse>(`${this.baseUrl}/brokers/prospectos`, payload, {
       withCredentials: true,
     });
   }
@@ -130,5 +175,17 @@ export class AuthService {
       request,
       { withCredentials: true },
     );
+  }
+
+  /** Cambia la clave del usuario de la sesión (obligatorio tras una credencial generada por el portal). */
+  cambiarClave(actual: string, nueva: string): Observable<void> {
+    return this.http
+      .post<void>(`${this.baseUrl}/auth/clave`, { actual, nueva }, { withCredentials: true })
+      .pipe(
+        tap(() => {
+          const perfil = this.session.perfil();
+          if (perfil) this.session.establecerPerfil({ ...perfil, debeCambiarClave: false });
+        }),
+      );
   }
 }

@@ -6,9 +6,10 @@ import { Observable } from 'rxjs';
  * Categoría de recursos descargables de la Seccion_Documentos (Req 33.4).
  */
 export type CategoriaRecurso =
-  | 'formatos'
-  | 'plantillas'
-  | 'clausulados'
+  | 'formatos-renovacion'
+  | 'cumplimiento'
+  | 'contratos'
+  | 'condiciones'
   | 'instructivos';
 
 /**
@@ -17,7 +18,10 @@ export type CategoriaRecurso =
 export interface RecursoDescargable {
   readonly id: string;
   readonly nombre: string;
+  readonly descripcion: string;
   readonly categoria: CategoriaRecurso;
+  /** Nombre del Material Symbol. */
+  readonly icono: string;
   readonly url: string;
 }
 
@@ -31,34 +35,9 @@ export interface EventoCalendario {
 }
 
 /**
- * Contacto de la Seccion_Ayuda (Req 33.5).
- */
-export interface ContactoAyuda {
-  readonly canal: string;
-  readonly valor: string;
-}
-
-/**
- * Pregunta frecuente de la Seccion_Ayuda (Req 33.6).
- */
-export interface Faq {
-  readonly pregunta: string;
-  readonly respuesta: string;
-}
-
-/**
- * Contenido de la Seccion_Ayuda: contactos, PQRS y FAQs (Req 33.5, 33.6).
- */
-export interface AyudaResponse {
-  readonly contactos: readonly ContactoAyuda[];
-  readonly pqrs: string;
-  readonly faqs: readonly Faq[];
-}
-
-/**
  * Servicio de las secciones Documentos, Calendario y Ayuda (Req 33).
  *
- * Obtiene recursos descargables, eventos del calendario y contenido de ayuda desde
+ * Obtiene recursos descargables y eventos del calendario desde
  * el API_Backend vía `HttpClient` con `withCredentials`.
  */
 @Injectable({ providedIn: 'root' })
@@ -78,6 +57,17 @@ export class DocumentosService {
   }
 
   /**
+   * Descarga un recurso institucional usando la sesión autenticada del portal.
+   * @param id identificador estable devuelto por obtenerRecursos().
+   */
+  descargarRecurso(id: string): Observable<Blob> {
+    return this.http.get(
+      `${this.baseUrl}/documentos/recursos/${encodeURIComponent(id)}/descarga`,
+      { responseType: 'blob', withCredentials: true },
+    );
+  }
+
+  /**
    * Obtiene los eventos y vencimientos del mes indicado (Req 33.1, 33.2).
    * @param mes mes consultado (formato `YYYY-MM`).
    * @returns eventos del calendario del mes.
@@ -88,15 +78,5 @@ export class DocumentosService {
       `${this.baseUrl}/calendario/eventos`,
       { params, withCredentials: true },
     );
-  }
-
-  /**
-   * Obtiene las FAQs y contactos de la Seccion_Ayuda (Req 33.5, 33.6).
-   * @returns contactos, PQRS y preguntas frecuentes.
-   */
-  obtenerAyuda(): Observable<AyudaResponse> {
-    return this.http.get<AyudaResponse>(`${this.baseUrl}/ayuda/faqs`, {
-      withCredentials: true,
-    });
   }
 }

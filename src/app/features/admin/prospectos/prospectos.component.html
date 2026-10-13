@@ -1,0 +1,154 @@
+<section class="vista" aria-labelledby="prospectos-titulo">
+  <app-page-header
+    [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
+    tituloId="prospectos-titulo"
+    titulo="Prospectos"
+    subtitulo="Aspirantes operando o en legalización. Al aprobarlos pasan a Brokers; los brokers registrados nunca aparecen aquí."
+  >
+    @if (esAdmin) {
+      <div acciones>
+        <app-boton variante="accent" icono="person_add" (clicked)="abrirAlta()">Nuevo prospecto</app-boton>
+      </div>
+    }
+  </app-page-header>
+
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Prospectos" [valor]="prospectos().length" icono="person_search" sub="Intermediarios en vinculación" />
+    <app-kpi-card label="Por aprobar" [valor]="enLegalizacion()" icono="fact_check" tono="accent" sub="Documentos y SARLAFT en revisión" />
+    <app-kpi-card label="Estudios de riesgo" [valor]="totalEstudios()" icono="query_stats" sub="Solicitados por prospectos" />
+    <app-kpi-card label="Comisión en curso" [valor]="compacto(totalComision())" icono="payments" sub="Se causa al expedir la póliza" />
+  </app-grid-layout>
+
+  @if (mensaje()) {
+    <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
+  }
+
+  <app-estado-vista
+    [cargando]="cargando()"
+    [error]="error()"
+    [vacio]="prospectos().length === 0"
+    entidad="prospectos"
+    iconoVacio="person_search"
+    tituloVacio="No hay prospectos operando ni en legalización"
+    descripcionVacio="Cuando alguien se registre o lo crees desde aquí, aparecerá en esta vista."
+    (reintentar)="cargar()"
+  >
+    <app-data-table
+      [columnas]="columnas"
+      [filas]="filas()"
+      [total]="filas().length"
+      [tamanoPagina]="20"
+      [conBusqueda]="true"
+      placeholderBusqueda="Buscar por nombre, documento, correo o comercial…"
+      ariaLabel="Prospectos"
+      (accion)="gestionar($event)"
+    />
+  </app-estado-vista>
+</section>
+
+<!-- Alta con credenciales generadas -->
+<app-modal-dialog
+  [abierto]="creando()"
+  titulo="Nuevo prospecto"
+  subtitulo="Se crea su cuenta, se le asigna un comercial por rotación y se generan sus primeras credenciales."
+  eyebrow="Prospectos"
+  tamano="md"
+  (cerrar)="cerrarAlta()"
+>
+  @if (credencial(); as c) {
+    <app-credencial-unica [usuario]="c.usuario" [credencial]="c.credencial" />
+  } @else {
+    <app-form-persona [enviando]="enviandoAlta()" ayudaCorreo="Con este correo y su cédula ingresa al portal." (enviar)="crear($event)" />
+    @if (errorAlta()) {
+      <app-alert-banner variante="error" titulo="No se pudo crear">{{ errorAlta() }}</app-alert-banner>
+    }
+  }
+  @if (credencial()) {
+    <div acciones>
+      <app-boton variante="accent" icono="done" (clicked)="cerrarAlta()">Ya la copié</app-boton>
+    </div>
+  }
+</app-modal-dialog>
+
+<!-- Expediente del prospecto -->
+<app-modal-dialog
+  [abierto]="expediente() !== null"
+  [titulo]="expediente()?.prospecto?.nombre ?? ''"
+  [subtitulo]="'Cédula ' + (expediente()?.prospecto?.documento ?? '—') + ' · ' + (expediente()?.prospecto?.correo ?? '')"
+  eyebrow="Expediente del prospecto"
+  tamano="xl"
+  [pestanas]="pestanas()"
+  [pestana]="pestana()"
+  (pestanaChange)="pestana.set($event)"
+  (cerrar)="cerrarExpediente()"
+>
+  @if (expediente(); as e) {
+    <div cabecera>
+      <app-badge-estado [variante]="e.faltantes.length ? 'warning' : 'success'" [conPunto]="true">
+        {{ e.faltantes.length ? e.faltantes.length + ' pendientes para aprobar' : 'Listo para aprobar' }}
+      </app-badge-estado>
+      <app-badge-estado variante="info">SARLAFT: {{ e.prospecto.sarlaftEstado ?? 'sin consulta' }}</app-badge-estado>
+    </div>
+  }
+  @if (expediente(); as e) {
+    @switch (pestana()) {
+      @case ('expediente') {
+        <app-ficha [secciones]="ficha()" />
+      }
+      @case ('documentos') {
+        <div class="expediente-docs">
+          <ul class="lista-docs">
+            @for (d of e.documentos; track d.id) {
+              <li>
+                <button type="button" class="lista-docs__item" [class.lista-docs__item--activo]="documentoAbierto()?.id === d.id" (click)="verDocumento(d)">
+                  <strong>{{ etiquetaDocumento(d.tipo) }}</strong>
+                  <small>{{ d.nombre }} · {{ fechaHora(d.fechaCarga) }}</small>
+                </button>
+              </li>
+            } @empty {
+              <li class="lista-docs__vacio">El prospecto aún no ha cargado documentos.</li>
+            }
+          </ul>
+          <app-visor-archivo
+            [archivo]="archivo()"
+            [cargando]="cargandoArchivo()"
+            [nombre]="documentoAbierto()?.nombre ?? 'documento'"
+            mensajeVacio="Elige un documento de la lista para verlo."
+          />
+        </div>
+      }
+      @case ('actividad') {
+        <app-bitacora [eventos]="e.actividad" mensajeVacio="Este prospecto aún no ha operado en el portal" />
+      }
+      @case ('decision') {
+        <div class="form-modal">
+          @if (faltantes().length) {
+            <app-alert-banner variante="warning" titulo="Aún no se puede aprobar" icono="rule">
+              <ul class="lista-validadores">
+                @for (f of faltantes(); track f) {
+                  <li>{{ f }}</li>
+                }
+              </ul>
+            </app-alert-banner>
+          } @else {
+            <app-alert-banner variante="success" titulo="Cumple todos los validadores" icono="verified">
+              Documentos completos, SARLAFT que permite continuar y datos de contacto. Al aprobar pasa a broker registrado.
+            </app-alert-banner>
+          }
+          @if (errorDecision()) {
+            <app-alert-banner variante="error" titulo="No se pudo completar">{{ errorDecision() }}</app-alert-banner>
+          }
+        </div>
+      }
+    }
+  }
+  @if (expediente() && pestana() === 'decision') {
+    <div acciones>
+      <app-boton variante="ghost" icono="block" [disabled]="decidiendo()" (clicked)="decidir(false)">Rechazar legalización</app-boton>
+      <app-boton variante="outline" icono="policy" [disabled]="decidiendo()" (clicked)="consultarSarlaft()">Consultar SARLAFT ahora</app-boton>
+      <app-boton variante="accent" icono="verified" [disabled]="decidiendo() || faltantes().length > 0" (clicked)="decidir(true)">
+        {{ decidiendo() ? 'Procesando…' : 'Aprobar y pasar a broker' }}
+      </app-boton>
+    </div>
+  }
+</app-modal-dialog>

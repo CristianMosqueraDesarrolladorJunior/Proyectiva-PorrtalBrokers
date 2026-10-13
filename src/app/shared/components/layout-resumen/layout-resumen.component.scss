@@ -1,0 +1,39 @@
+@use '../../styles/mixins' as mx;
+
+.lr {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--grid-dash-side-col);
+  gap: var(--space-5);
+  align-items: start;
+
+  @include mx.respond-to('tablet') {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @include mx.respond-to('mobile') {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lr__principal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.lr__lateral {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--space-4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+
+  @include mx.respond-to('tablet') {
+    position: static;
+    order: -1;
+  }
+  @include mx.respond-to('mobile') {
+    position: static;
+    order: -1;
+  }
+}

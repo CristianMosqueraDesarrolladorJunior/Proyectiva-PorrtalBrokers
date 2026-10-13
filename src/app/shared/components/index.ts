@@ -22,6 +22,7 @@ export type {
   ColumnaTabla,
   FilaTabla,
   AccionFila,
+  AccionColumna,
   DireccionOrden,
 } from './data-table/data-table.component';
 export { ToggleSwitchComponent } from './toggle-switch/toggle-switch.component';
@@ -109,3 +110,20 @@ export { SkeletonComponent } from './skeleton/skeleton.component';
 export { StickyActionsComponent } from './sticky-actions/sticky-actions.component';
 export { ModalDialogComponent } from './modal-dialog/modal-dialog.component';
 export { InfoTipComponent } from './info-tip/info-tip.component';
+export { EmptyStateComponent } from './empty-state/empty-state.component';
+export { EstadoVistaComponent } from './estado-vista/estado-vista.component';
+export { BarraAccionesComponent } from './barra-acciones/barra-acciones.component';
+export { RankingBarrasComponent } from './ranking-barras/ranking-barras.component';
+export type { ItemRanking } from './ranking-barras/ranking-barras.component';
+export { LayoutResumenComponent } from './layout-resumen/layout-resumen.component';
+export { FichaComponent } from './ficha/ficha.component';
+export type { DatoFicha, SeccionFicha } from './ficha/ficha.component';
+export { CredencialUnicaComponent } from './credencial-unica/credencial-unica.component';
+export { VisorArchivoComponent } from './visor-archivo/visor-archivo.component';
+export { BitacoraComponent } from './bitacora/bitacora.component';
+export type { EventoBitacora } from './bitacora/bitacora.component';
+export type { TamanoModal } from './modal-dialog/modal-dialog.component';
+export type { Tab } from './tabs/tabs.component';
+export { FotoPerfilComponent } from './foto-perfil/foto-perfil.component';
+export { FormClaveComponent, CLAVE_FUERTE } from './form-clave/form-clave.component';
+export type { CambioClave } from './form-clave/form-clave.component';

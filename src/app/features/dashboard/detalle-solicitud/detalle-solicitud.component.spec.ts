@@ -1,3 +1,4 @@
+import { CATALOGOS_PRUEBA, proveerCatalogosPrueba } from '../../../../testing/catalogo-prueba';
 import { SimpleChange } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
@@ -47,6 +48,7 @@ describe('DetalleSolicitudComponent', () => {
     TestBed.configureTestingModule({
       imports: [DetalleSolicitudComponent],
       providers: [
+        proveerCatalogosPrueba(),
         provideHttpClient(withInterceptorsFromDi()),
         provideHttpClientTesting(),
       ],
@@ -56,14 +58,41 @@ describe('DetalleSolicitudComponent', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    // El procedimiento del área es opcional para estas pruebas: si quedó pendiente se responde 404.
+    httpMock
+      .match((r) => r.url.endsWith('/procedimiento'))
+      .forEach((r) => r.flush(null, { status: 404, statusText: 'Not Found' }));
+    httpMock.verify();
+  });
+
+  it('muestra lo que el área pidió corregir y habilita la corrección', () => {
+    fixture.detectChanges();
+    seleccionar(componente, 'REF-001');
+    httpMock.expectOne('/api/v1/solicitudes/REF-001').flush(detalle);
+    httpMock.expectOne('/api/v1/radicaciones/REF-001/procedimiento').flush({
+      procedimiento: {
+        codigo: 'REF-001', estadoPortal: 'EN_CORRECCION', estadoWarehouse: 'Pendiente Corrección Documental',
+        etiqueta: 'Corrección pendiente', requiereAccion: true,
+        correcciones: [{ documento: 'CTL', observacion: 'Debe tener menos de 30 días' }],
+        observacion: null, numeroPoliza: null, asesor: null, enviada: true, documentosRequeridos: [], documentos: [],
+      },
+      eventos: [{ fecha: '2026-10-11T10:00:00-05:00', descripcion: 'El área pidió corregir: CTL' }],
+    });
+    fixture.detectChanges();
+    const html: string = fixture.nativeElement.textContent;
+    expect(html).toContain('Qué debes corregir');
+    expect(html).toContain('Debe tener menos de 30 días');
+    expect(html).toContain('Corrección pendiente');
+    expect(html).toContain('Actualizar documentos');
+  });
 
   it('no consulta ni abre el drawer sin referencia', () => {
     // When
     fixture.detectChanges();
     // Then
     httpMock.expectNone('/api/v1/solicitudes/REF-001');
-    expect(fixture.nativeElement.querySelector('.drawer')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it('obtiene el Detalle_Solicitud por referencia con withCredentials (Req 34.4)', () => {
@@ -86,7 +115,7 @@ describe('DetalleSolicitudComponent', () => {
     fixture.detectChanges();
     // Then
     const html: string = fixture.nativeElement.textContent;
-    expect(fixture.nativeElement.querySelector('.drawer')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).not.toBeNull();
     expect(html).toContain('M**** P****');
     expect(html).toContain('Arrendamiento');
     expect(fixture.nativeElement.querySelector('app-timeline')).not.toBeNull();
@@ -102,11 +131,11 @@ describe('DetalleSolicitudComponent', () => {
     httpMock.expectOne('/api/v1/solicitudes/REF-001').flush(detalle);
     fixture.detectChanges();
     // When
-    fixture.nativeElement.querySelector('.drawer-footer__close').click();
+    fixture.nativeElement.querySelector('.md__cerrar').click();
     fixture.detectChanges();
     // Then
     expect(cerrarSpy).toHaveBeenCalledTimes(1);
-    expect(fixture.nativeElement.querySelector('.drawer')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it('muestra un mensaje genérico si falla la consulta del detalle', () => {
@@ -125,7 +154,8 @@ describe('DetalleSolicitudComponent', () => {
   describe('construirFilasDetalle', () => {
     it('mapea los 7 campos en el orden del prototipo con estado legible (Req 34.1)', () => {
       // When
-      const filas = construirFilasDetalle(detalle);
+      const etiqueta = (e: string) => CATALOGOS_PRUEBA.seguimiento.find((i) => i.codigo === e)?.descripcion ?? e;
+      const filas = construirFilasDetalle(detalle, etiqueta);
       // Then
       expect(filas.map((f) => f.etiqueta)).toEqual([
         'Referencia',
@@ -136,7 +166,7 @@ describe('DetalleSolicitudComponent', () => {
         'Fecha',
         'Comisión',
       ]);
-      expect(filas[3].valor).toBe('En revisión');
+      expect(filas[3].valor).toBe('En revisión del área');
       expect(filas[1].valor).toBe('M**** P****');
     });
   });

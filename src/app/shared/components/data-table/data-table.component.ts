@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 
 import { BadgeEstadoComponent, VarianteBadge } from '../badge-estado/badge-estado.component';
 import { BotonComponent } from '../boton/boton.component';
+import { IconComponent } from '../icon/icon.component';
 
 /**
  * Definición de una columna de la tabla de datos (Req 35.5).
@@ -25,7 +26,9 @@ export interface ColumnaTabla {
    * `'accion'` renderiza un botón de acción por fila (emite `accion`). Por
    * defecto, `'texto'`.
    */
-  readonly tipo?: 'texto' | 'badge' | 'accion';
+  readonly tipo?: 'texto' | 'badge' | 'accion' | 'principal' | 'acciones';
+  /** Solo `tipo: 'acciones'`: botones de icono de la fila (editar, cambiar estado, desactivar…). */
+  readonly acciones?: readonly AccionColumna[];
   /** Habilita el ordenamiento por esta columna (Req UX de tabla reutilizable). */
   readonly ordenable?: boolean;
   /** Etiqueta del botón cuando `tipo === 'accion'`. */
@@ -44,6 +47,17 @@ export type DireccionOrden = 'asc' | 'desc';
 export interface AccionFila {
   readonly indice: number;
   readonly columna: string;
+  /** Id de la acción pulsada (solo columnas `tipo: 'acciones'`). */
+  readonly accion?: string;
+}
+
+/** Acción de icono de una columna `tipo: 'acciones'`. */
+export interface AccionColumna {
+  readonly id: string;
+  readonly etiqueta: string;
+  readonly icono: string;
+  /** `peligro` pinta la acción destructiva en rojo. */
+  readonly tono?: 'neutral' | 'peligro';
 }
 
 /**
@@ -65,7 +79,7 @@ export interface AccionFila {
   selector: 'app-data-table',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, BadgeEstadoComponent, BotonComponent],
+  imports: [FormsModule, BadgeEstadoComponent, BotonComponent, IconComponent],
   templateUrl: './data-table.component.html',
   styleUrl: './data-table.component.scss',
 })
@@ -77,6 +91,7 @@ export class DataTableComponent {
   @Input({ required: true })
   set filas(valor: readonly FilaTabla[]) {
     this._filas.set(valor ?? []);
+    this.paginaLocal.set(1);
   }
   get filas(): readonly FilaTabla[] {
     return this._filas();
@@ -100,6 +115,9 @@ export class DataTableComponent {
 
   /** Texto accesible de la tabla para lectores de pantalla. */
   @Input() ariaLabel = 'Tabla de datos';
+
+  /** Texto de la fila vacía (sin registros o sin coincidencias con la búsqueda). */
+  @Input() mensajeVacio = 'No hay registros para mostrar.';
 
   /** Emite la página solicitada (1-indexada) al cambiar de página. */
   @Output() cambioPagina = new EventEmitter<number>();
@@ -126,20 +144,30 @@ export class DataTableComponent {
     if (texto) {
       filas = filas.filter((fila) =>
         this.columnas.some((c) =>
-          String(fila[c.key] ?? '').toLowerCase().includes(texto),
+          `${fila[c.key] ?? ''} ${fila[`${c.key}Sub`] ?? ''}`.toLowerCase().includes(texto),
         ),
       );
     }
     const clave = this.columnaOrden();
     if (clave) {
       const dir = this.direccionOrden() === 'asc' ? 1 : -1;
-      filas.sort((a, b) => comparar(a[clave], b[clave]) * dir);
+      // `{key}Orden` (opcional) ordena por el valor real: fechas ISO o montos sin formato.
+      const valor = (f: FilaTabla) => f[`${clave}Orden`] ?? f[clave];
+      filas.sort((a, b) => comparar(valor(a), valor(b)) * dir);
     }
     return filas;
   });
 
   /** Número total de páginas, mínimo 1 para evitar estados vacíos. */
-  protected readonly totalPaginas = computed(() => this.calcularTotalPaginas());
+  protected totalPaginas(): number {
+    return this.calcularTotalPaginas();
+  }
+
+  /** Búsqueda incrustada: vuelve a la primera página. */
+  protected buscar(texto: string): void {
+    this.busqueda.set(texto);
+    this.paginaLocal.set(1);
+  }
 
   /** Lista de números de página para los controles de paginación. */
   protected get paginas(): number[] {
@@ -147,12 +175,43 @@ export class DataTableComponent {
     return Array.from({ length: paginas }, (_, indice) => indice + 1);
   }
 
+  /** Página mostrada en paginación local (cuando el contenedor entrega todas las filas). */
+  private readonly paginaLocal = signal(1);
+
+  /**
+   * Paginación local: si el contenedor entrega TODAS las filas (`total` ≤ filas recibidas) la tabla
+   * pagina, busca y ordena sobre ellas; si no, la paginación la resuelve el backend (`cambioPagina`).
+   */
+  protected esLocal(): boolean {
+    return this.total <= this._filas().length;
+  }
+
+  /** Registros del listado (tras la búsqueda incrustada en modo local). */
+  protected totalRegistros(): number {
+    return this.esLocal() ? this.filasVisibles().length : this.total;
+  }
+
+  /** Página vigente (1-indexada). */
+  protected pagina(): number {
+    return this.esLocal() ? Math.min(this.paginaLocal(), this.calcularTotalPaginas()) : this.paginaActual;
+  }
+
+  /** Filas de la página vigente. */
+  protected filasMostradas(): readonly FilaTabla[] {
+    const filas = this.filasVisibles();
+    if (!this.esLocal() || this.tamanoPagina <= 0) {
+      return filas;
+    }
+    const inicio = (this.pagina() - 1) * this.tamanoPagina;
+    return filas.slice(inicio, inicio + this.tamanoPagina);
+  }
+
   /** Calcula el total de páginas a partir de total y tamaño de página. */
   private calcularTotalPaginas(): number {
     if (this.tamanoPagina <= 0) {
       return 1;
     }
-    return Math.max(1, Math.ceil(this.total / this.tamanoPagina));
+    return Math.max(1, Math.ceil(this.totalRegistros() / this.tamanoPagina));
   }
 
   /** Alterna el ordenamiento por una columna ordenable. */
@@ -182,7 +241,11 @@ export class DataTableComponent {
   /** Solicita la navegación a la página indicada si es válida y distinta. */
   protected irAPagina(pagina: number): void {
     const paginas = Math.max(1, this.calcularTotalPaginas());
-    if (pagina < 1 || pagina > paginas || pagina === this.paginaActual) {
+    if (pagina < 1 || pagina > paginas || pagina === this.pagina()) {
+      return;
+    }
+    if (this.esLocal()) {
+      this.paginaLocal.set(pagina);
       return;
     }
     this.cambioPagina.emit(pagina);
@@ -194,8 +257,13 @@ export class DataTableComponent {
   }
 
   /** Notifica la acción de una fila desde la columna de acción. */
-  protected onAccion(fila: FilaTabla, columna: ColumnaTabla): void {
-    this.accion.emit({ indice: this.indiceOriginal(fila), columna: columna.key });
+  protected onAccion(fila: FilaTabla, columna: ColumnaTabla, accion?: string): void {
+    this.accion.emit({ indice: this.indiceOriginal(fila), columna: columna.key, accion });
+  }
+
+  /** Subtítulo de una celda `principal` (`{key}Sub` en la fila). */
+  protected subCelda(fila: FilaTabla, columna: ColumnaTabla): string | number {
+    return fila[`${columna.key}Sub`] ?? '';
   }
 
   /** Devuelve el valor a mostrar en una celda de forma segura. */
@@ -228,6 +296,12 @@ export class DataTableComponent {
   /** trackBy de filas. */
   protected trackFila(indice: number): number {
     return indice;
+  }
+
+  /** Texto del botón de acción: `{key}Texto` en la fila lo reemplaza (p. ej. "Ver detalle" en casos cerrados). */
+  protected textoAccion(fila: FilaTabla, columna: ColumnaTabla): string {
+    const propio = fila[columna.key + 'Texto'];
+    return typeof propio === 'string' && propio ? propio : columna.textoAccion || 'Gestionar';
   }
 }
 

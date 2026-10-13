@@ -13,10 +13,9 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { rutaInicio } from '../../../../core/guards/rol.guard';
 import { LoginRequest } from '../../../../core/models/broker.model';
 import {
-  CEDULA_LONGITUD_MAX,
-  CEDULA_LONGITUD_MIN,
-  esCedulaValida,
+  USUARIO_LONGITUD_MAX,
   esPasswordValida,
+  esUsuarioValido,
   validarLogin,
 } from './login-validacion';
 
@@ -25,22 +24,38 @@ const RUTA_REGISTRO_BROKER = '/registro-broker';
 
 /**
  * Mensaje de error genérico de credenciales inválidas (Req 1.2, 1.3).
- * No revela cuál campo es incorrecto ni si la cédula existe.
+ * No revela cuál campo es incorrecto ni si el usuario existe.
  */
 const MENSAJE_CREDENCIALES_INVALIDAS =
-  'Cédula o contraseña incorrectas. Verifica tus datos e intenta de nuevo.';
+  'Usuario o contraseña incorrectos. Verifica tus datos e intenta de nuevo.';
+
+/** Mensaje cuando el servicio de ingreso no responde (no es un error de credenciales). */
+const MENSAJE_SERVICIO_NO_DISPONIBLE =
+  'No pudimos validar tu ingreso en este momento. Intenta de nuevo en unos minutos.';
+
+/**
+ * Confirmación del restablecimiento de contraseña. Es la misma exista o no la
+ * cuenta, para no revelar qué usuarios están registrados.
+ */
+const MENSAJE_RESTABLECIMIENTO =
+  'Si tu cédula o correo están registrados, te enviamos un correo con el enlace para crear o cambiar tu contraseña.';
+
+/** Mensaje cuando se pide restablecer la contraseña sin haber escrito el usuario. */
+const MENSAJE_USUARIO_REQUERIDO =
+  'Escribe tu cédula o tu correo para enviarte el enlace.';
 
 /** Tipado del formulario reactivo de login. */
 interface FormularioLogin {
-  readonly cedula: FormControl<string>;
+  readonly usuario: FormControl<string>;
   readonly password: FormControl<string>;
 }
 
 /**
- * Página de login del Broker (`/login`) (Req 1, 2).
+ * Página de login unificado (`/login`) (Req 1, 2).
  *
- * Reutiliza los Componentes_Compartidos `FormFieldComponent` y `BotonComponent`
- * (sin duplicar marcado) y delega la validación de cliente en la lógica pura
+ * El usuario ingresa con su cédula o su correo y su contraseña. Reutiliza los
+ * Componentes_Compartidos `FormFieldComponent` y `BotonComponent` (sin duplicar
+ * marcado) y delega la validación de cliente en la lógica pura
  * `login-validacion.ts` (Req 1.4). El botón de ingreso permanece deshabilitado
  * mientras el formulario sea inválido; ante credenciales inválidas muestra un
  * mensaje genérico sin revelar el campo (Req 1.2, 1.3).
@@ -61,15 +76,12 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Longitud mínima de cédula expuesta al template (Req 1.4). */
-  protected readonly cedulaLongitudMin = CEDULA_LONGITUD_MIN;
-
-  /** Longitud máxima de cédula expuesta al template (Req 1.4). */
-  protected readonly cedulaLongitudMax = CEDULA_LONGITUD_MAX;
+  /** Longitud máxima del usuario expuesta al template. */
+  protected readonly usuarioLongitudMax = USUARIO_LONGITUD_MAX;
 
   /** Formulario reactivo de credenciales. */
   protected readonly formulario = new FormGroup<FormularioLogin>({
-    cedula: new FormControl('', {
+    usuario: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -79,15 +91,21 @@ export class LoginComponent {
     }),
   });
 
-  /** Mensaje de error genérico mostrado ante credenciales inválidas (Req 1.2). */
+  /** Mensaje de error mostrado ante un ingreso fallido (Req 1.2). */
   protected readonly errorCredenciales = signal('');
+
+  /** Mensaje informativo tras solicitar el restablecimiento de contraseña. */
+  protected readonly avisoRestablecimiento = signal('');
 
   /** Indica que hay una solicitud de login en curso (deshabilita el envío). */
   protected readonly enviando = signal(false);
 
-  /** Verdadero si la cédula ingresada es válida (Req 1.4). */
-  protected get cedulaValida(): boolean {
-    return esCedulaValida(this.formulario.controls.cedula.value);
+  /** Indica que hay una solicitud de restablecimiento en curso. */
+  protected readonly restableciendo = signal(false);
+
+  /** Verdadero si el usuario ingresado es una cédula o un correo válidos (Req 1.4). */
+  protected get usuarioValido(): boolean {
+    return esUsuarioValido(this.formulario.controls.usuario.value);
   }
 
   /** Verdadero si la contraseña ingresada no está vacía (Req 1.4). */
@@ -97,20 +115,17 @@ export class LoginComponent {
 
   /** Verdadero si el formulario completo es válido para enviar (Req 1.4). */
   protected get formularioValido(): boolean {
-    const { cedula, password } = this.formulario.getRawValue();
-    return validarLogin(cedula, password).formularioValido;
+    const { usuario, password } = this.formulario.getRawValue();
+    return validarLogin(usuario, password).formularioValido;
   }
 
-  /** Mensaje de error del campo cédula, solo tras interacción del usuario. */
-  protected get errorCedula(): string {
-    const control = this.formulario.controls.cedula;
+  /** Mensaje de error del campo usuario, solo tras interacción del usuario. */
+  protected get errorUsuario(): string {
+    const control = this.formulario.controls.usuario;
     if (!control.touched && !control.dirty) {
       return '';
     }
-    if (this.cedulaValida) {
-      return '';
-    }
-    return `La cédula debe contener solo dígitos, entre ${CEDULA_LONGITUD_MIN} y ${CEDULA_LONGITUD_MAX} caracteres.`;
+    return this.usuarioValido ? '' : 'Ingresa tu número de cédula o un correo válido.';
   }
 
   /** Mensaje de error del campo contraseña, solo tras interacción del usuario. */
@@ -131,13 +146,14 @@ export class LoginComponent {
    */
   protected iniciarSesion(): void {
     this.errorCredenciales.set('');
+    this.avisoRestablecimiento.set('');
     if (!this.formularioValido || this.enviando()) {
       this.formulario.markAllAsTouched();
       return;
     }
 
     const credenciales: LoginRequest = {
-      cedula: this.formulario.controls.cedula.value,
+      usuario: this.formulario.controls.usuario.value.trim(),
       password: this.formulario.controls.password.value,
     };
 
@@ -149,11 +165,45 @@ export class LoginComponent {
         next: (perfil) => {
           this.enviando.set(false);
           // Broker → /app; Administrador y Comercial → consola /admin.
-          void this.router.navigate([rutaInicio(perfil?.rol)]);
+          void this.router.navigate([perfil?.debeCambiarClave ? '/cambiar-clave' : rutaInicio(perfil?.rol)]);
+        },
+        error: (error: { status?: number }) => {
+          this.enviando.set(false);
+          this.errorCredenciales.set(
+            error?.status === 503 ? MENSAJE_SERVICIO_NO_DISPONIBLE : MENSAJE_CREDENCIALES_INVALIDAS,
+          );
+        },
+      });
+  }
+
+  /**
+   * Solicita el correo para crear o cambiar la contraseña ("primera vez" u
+   * olvido). El mensaje es el mismo exista o no la cuenta.
+   */
+  protected restablecerPassword(): void {
+    this.errorCredenciales.set('');
+    this.avisoRestablecimiento.set('');
+    if (this.restableciendo()) {
+      return;
+    }
+    if (!this.usuarioValido) {
+      this.formulario.controls.usuario.markAsTouched();
+      this.errorCredenciales.set(MENSAJE_USUARIO_REQUERIDO);
+      return;
+    }
+
+    this.restableciendo.set(true);
+    this.auth
+      .restablecerPassword(this.formulario.controls.usuario.value.trim())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.restableciendo.set(false);
+          this.avisoRestablecimiento.set(MENSAJE_RESTABLECIMIENTO);
         },
         error: () => {
-          this.enviando.set(false);
-          this.errorCredenciales.set(MENSAJE_CREDENCIALES_INVALIDAS);
+          this.restableciendo.set(false);
+          this.errorCredenciales.set(MENSAJE_SERVICIO_NO_DISPONIBLE);
         },
       });
   }

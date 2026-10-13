@@ -1,3 +1,4 @@
+import { CatalogoService } from '../../core/services/catalogo.service';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -116,8 +117,14 @@ export class ConsultaPolizasComponent {
    * @param poliza Poliza a evaluar.
    * @returns `true` si su estado es "Próxima a renovar" o "A punto de vencer".
    */
+  /** Estados renovables (catálogo `estado_poliza`, por código o etiqueta). */
+  private readonly renovables = inject(CatalogoService)
+    .opciones('estado_poliza')
+    .filter((e) => e['renovable'] === true)
+    .flatMap((e) => [e.codigo, e.descripcion]);
+
   protected esRenovable(poliza: Poliza): boolean {
-    return esPolizaRenovable(poliza.estado);
+    return esPolizaRenovable(poliza.estado, this.renovables);
   }
 
   /** Columnas del DataTable de pólizas con sort, insignia de estado y acción (Req 16.2, 16.3). */

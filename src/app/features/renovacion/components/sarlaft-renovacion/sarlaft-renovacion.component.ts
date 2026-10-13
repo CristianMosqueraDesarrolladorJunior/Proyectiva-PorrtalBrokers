@@ -18,7 +18,6 @@ import {
   BotonComponent,
   DocUploaderComponent,
   EscaleritaLoaderComponent,
-  InfoBoxComponent,
 } from '../../../../shared/components';
 import type {
   ArchivoSeleccionado,
@@ -47,7 +46,6 @@ import { MESES_VIGENCIA_SARLAFT } from '../../gestion-renovacion-flujo';
     BotonComponent,
     DocUploaderComponent,
     EscaleritaLoaderComponent,
-    InfoBoxComponent,
   ],
   templateUrl: './sarlaft-renovacion.component.html',
   styleUrl: './sarlaft-renovacion.component.scss',
@@ -77,7 +75,7 @@ export class SarlaftRenovacionComponent implements OnInit {
   protected readonly reglaActualizacion: readonly ReglaDocumentoUploader[] = [
     {
       id: 'sarlaft-actualizado',
-      etiqueta: 'Certificado SARLAFT actualizado',
+      etiqueta: 'Certificado de Conocimiento de Cliente actualizado',
       descripcion: 'PDF, JPG o PNG · máx. 5 MB',
       obligatorio: true,
     },
@@ -123,7 +121,7 @@ export class SarlaftRenovacionComponent implements OnInit {
           this.validando.set(false);
         },
         error: () => {
-          this.error.set('No fue posible validar SARLAFT en este momento. Intenta nuevamente.');
+          this.error.set('No fue posible validar Conocimiento de Cliente en este momento. Intenta nuevamente.');
           this.validando.set(false);
         },
       });

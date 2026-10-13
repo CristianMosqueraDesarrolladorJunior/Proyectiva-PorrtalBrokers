@@ -9,7 +9,7 @@ import { PerfilBroker } from '../../../../core/models/broker.model';
 describe('LoginComponent', () => {
   let fixture: ComponentFixture<LoginComponent>;
   let component: LoginComponent;
-  let authSpy: { login: jest.Mock };
+  let authSpy: { login: jest.Mock; restablecerPassword: jest.Mock };
   let routerSpy: { navigate: jest.Mock };
 
   const perfil: PerfilBroker = { nombre: 'Ana Broker', rol: 'BROKER' };
@@ -25,7 +25,7 @@ describe('LoginComponent', () => {
   };
 
   beforeEach(async () => {
-    authSpy = { login: jest.fn() };
+    authSpy = { login: jest.fn(), restablecerPassword: jest.fn() };
     routerSpy = { navigate: jest.fn().mockResolvedValue(true) };
 
     await TestBed.configureTestingModule({
@@ -47,7 +47,7 @@ describe('LoginComponent', () => {
 
   it('mantiene el botón de ingreso deshabilitado mientras el formulario es inválido', () => {
     // Given: cédula inválida (menos de 6 dígitos) y contraseña vacía
-    escribir('#login-cedula', '123');
+    escribir('#login-usuario', '123');
     fixture.detectChanges();
     // When
     const boton = query('.boton') as HTMLButtonElement;
@@ -57,7 +57,7 @@ describe('LoginComponent', () => {
 
   it('habilita el botón de ingreso cuando cédula (6-10 dígitos) y contraseña son válidas', () => {
     // Given / When
-    escribir('#login-cedula', '1023018112');
+    escribir('#login-usuario', '1023018112');
     escribir('#login-password', 'secreta');
     fixture.detectChanges();
     // Then
@@ -70,7 +70,7 @@ describe('LoginComponent', () => {
     authSpy.login.mockReturnValue(
       throwError(() => ({ status: 401 })),
     );
-    escribir('#login-cedula', '1023018112');
+    escribir('#login-usuario', '1023018112');
     escribir('#login-password', 'secreta');
     fixture.detectChanges();
     // When
@@ -79,7 +79,7 @@ describe('LoginComponent', () => {
     // Then
     const error = query('.login-error');
     expect(error).toBeTruthy();
-    expect(error.textContent).toContain('Cédula o contraseña incorrectas');
+    expect(error.textContent).toContain('Usuario o contraseña incorrectos');
     expect(error.textContent?.toLowerCase()).not.toContain('cédula no existe');
     expect(routerSpy.navigate).not.toHaveBeenCalled();
   });
@@ -87,7 +87,7 @@ describe('LoginComponent', () => {
   it('autentica con AuthService y navega al shell tras un login exitoso', () => {
     // Given
     authSpy.login.mockReturnValue(of(perfil));
-    escribir('#login-cedula', '1023018112');
+    escribir('#login-usuario', '1023018112');
     escribir('#login-password', 'secreta');
     fixture.detectChanges();
     // When
@@ -95,7 +95,7 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
     // Then
     expect(authSpy.login).toHaveBeenCalledWith({
-      cedula: '1023018112',
+      usuario: '1023018112',
       password: 'secreta',
     });
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/app']);
@@ -104,11 +104,63 @@ describe('LoginComponent', () => {
 
   it('lleva a la consola /admin cuando el usuario es Administrador o Comercial', () => {
     authSpy.login.mockReturnValue(of({ nombre: 'Admin', rol: 'ADMINISTRADOR' } as PerfilBroker));
-    escribir('#login-cedula', '1000000001');
+    escribir('#login-usuario', '1000000001');
     escribir('#login-password', 'Admin#2026');
     fixture.detectChanges();
     query('.login-form').dispatchEvent(new Event('submit'));
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/admin']);
+  });
+
+  it('habilita el ingreso con un correo válido y lo envía sin espacios en los extremos', () => {
+    // Given
+    authSpy.login.mockReturnValue(of(perfil));
+    escribir('#login-usuario', ' broker.prueba@ejemplo.com ');
+    escribir('#login-password', 'secreta');
+    fixture.detectChanges();
+    // When
+    query('.login-form').dispatchEvent(new Event('submit'));
+    // Then
+    expect(authSpy.login).toHaveBeenCalledWith({
+      usuario: 'broker.prueba@ejemplo.com',
+      password: 'secreta',
+    });
+  });
+
+  it('mantiene deshabilitado el ingreso si el usuario no es cédula ni correo', () => {
+    escribir('#login-usuario', 'broker.prueba@');
+    escribir('#login-password', 'secreta');
+    fixture.detectChanges();
+    expect((query('.boton') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('distingue la caída del servicio de ingreso de un error de credenciales', () => {
+    authSpy.login.mockReturnValue(throwError(() => ({ status: 503 })));
+    escribir('#login-usuario', '1023018112');
+    escribir('#login-password', 'secreta');
+    fixture.detectChanges();
+    query('.login-form').dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+    expect(query('.login-error').textContent).toContain('No pudimos validar tu ingreso');
+  });
+
+  it('solicita el restablecimiento de contraseña y confirma sin revelar si la cuenta existe', () => {
+    // Given
+    authSpy.restablecerPassword.mockReturnValue(of(undefined));
+    escribir('#login-usuario', '1023018112');
+    fixture.detectChanges();
+    // When
+    query('.login-olvido').click();
+    fixture.detectChanges();
+    // Then
+    expect(authSpy.restablecerPassword).toHaveBeenCalledWith('1023018112');
+    expect(query('.login-aviso').textContent).toContain('Si tu cédula o correo están registrados');
+  });
+
+  it('pide el usuario antes de solicitar el restablecimiento', () => {
+    query('.login-olvido').click();
+    fixture.detectChanges();
+    expect(authSpy.restablecerPassword).not.toHaveBeenCalled();
+    expect(query('.login-error').textContent).toContain('Escribe tu cédula o tu correo');
   });
 
   it('no invoca a AuthService cuando el formulario es inválido al enviar', () => {

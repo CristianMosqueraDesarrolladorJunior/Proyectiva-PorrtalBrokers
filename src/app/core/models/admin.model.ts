@@ -18,13 +18,8 @@ export interface BrokerAdminResponse {
   readonly estadoSarlaft: string;
   /** Estado del broker: `Activo` / `En registro` / `Inactivo`. */
   readonly estado: string;
-}
-
-/** Comercial (`GET /admin/comerciales`, `POST /admin/comerciales`). */
-export interface ComercialResponse {
-  readonly comercialId: string;
-  readonly nombre: string;
-  readonly activo: boolean;
+  /** Acuerdo de comisión (20 o 25 %); ausente mientras el backend no lo exponga. */
+  readonly porcentajeComision?: number;
 }
 
 /** Negocio administrado con el inquilino enmascarado (`GET /admin/negocios`). */
@@ -38,38 +33,9 @@ export interface NegocioAdminResponse {
   readonly etapa: string;
   /** Fecha ISO-8601 (`YYYY-MM-DD`). */
   readonly fecha: string;
+  /** Estado de gestión (`cat_estado_solicitud`): `RADICADA`, `EN_GESTION`, …, `EXPEDIDA`. */
+  readonly estado?: string | null;
+  /** Póliza expedida (13 dígitos) cuando el negocio ya se emitió. */
+  readonly numeroPoliza?: string | null;
 }
 
-/** Resumen de administración (`GET /admin/resumen`). */
-export interface ResumenAdminResponse {
-  readonly kpis: readonly KpiResponse[];
-  readonly radicadosPorComercial: readonly RadicadosPorComercialResponse[];
-  readonly actividadReciente: readonly ActividadRecienteResponse[];
-}
-
-/** Tarjeta de KPI del resumen. */
-export interface KpiResponse {
-  readonly etiqueta: string;
-  readonly valor: string;
-  readonly detalle: string;
-  readonly alerta: boolean;
-}
-
-/** Radicados del mes por comercial (barra). */
-export interface RadicadosPorComercialResponse {
-  readonly comercial: string;
-  readonly radicados: number;
-}
-
-/** Item de actividad reciente. */
-export interface ActividadRecienteResponse {
-  readonly texto: string;
-  /** Fecha ISO-8601 (`YYYY-MM-DD`). */
-  readonly fecha: string;
-  readonly alerta: boolean;
-}
-
-/** Etapas de negocio del conjunto cerrado del backend (para el filtro de la vista Negocios). */
-export const ETAPAS_NEGOCIO = ['Estudio', 'SARLAFT', 'Documentos', 'Radicado', 'Emitida'] as const;
-
-export type EtapaNegocio = (typeof ETAPAS_NEGOCIO)[number];

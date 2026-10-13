@@ -1,88 +1,136 @@
 <section class="vista" aria-labelledby="comerciales-titulo">
-  <div class="vista__cabecera">
-    <app-page-header
-      eyebrow="Consola de administración"
-      tituloId="comerciales-titulo"
-      titulo="Comerciales"
-      subtitulo="Comerciales que acompañan a los brokers en los procesos y la radicación."
-    ></app-page-header>
-    @if (esAdmin) {
-      <div class="cabecera-acciones">
-        <button type="button" class="btn-pri" (click)="nuevo()">
-          <app-icon nombre="person_add" [tamano]="18" /> Nuevo comercial
-        </button>
-      </div>
-    }
-  </div>
-
-  @if (cargando()) {
-    <p class="aviso" role="status">Cargando comerciales…</p>
-  } @else if (error()) {
-    <p class="error" role="alert">No se pudo cargar la información. Intenta nuevamente.</p>
-  } @else {
-    <div class="tarjetas">
-      @for (c of comerciales(); track c.comercialId) {
-        <article class="tarjeta" [class.tarjeta--inactiva]="!c.activo">
-          <header>
-            <span class="avatar" aria-hidden="true">{{ c.nombre.slice(0, 1) }}</span>
-            <div class="tarjeta__titulo">
-              <h3>{{ c.nombre }}</h3>
-              <small>{{ c.comercialId }}</small>
-            </div>
-            @if (c.activo) {
-              <app-badge-estado variante="success">Activo</app-badge-estado>
-            } @else {
-              <app-badge-estado variante="danger">Inactivo</app-badge-estado>
-            }
-          </header>
-
-          @if (esAdmin) {
-            <footer>
-              <button type="button" class="btn-sec" (click)="editar(c)">
-                <app-icon nombre="edit" [tamano]="18" /> Editar
-              </button>
-            </footer>
-          }
-        </article>
-      } @empty {
-        <p class="aviso">No hay información disponible.</p>
-      }
+  <app-page-header
+    eyebrow="Consola de administración"
+    tituloId="comerciales-titulo"
+    titulo="Comerciales"
+    subtitulo="Equipo comercial, su cartera y su acceso. Los prospectos nuevos se reparten entre los activos por rotación."
+  >
+    <div acciones>
+      <app-boton variante="accent" icono="person_add" (clicked)="abrirAlta()">Nuevo comercial</app-boton>
     </div>
+  </app-page-header>
+
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Equipo comercial" [valor]="comerciales().length" icono="badge" [sub]="activos() + ' reciben prospectos por rotación'" />
+    <app-kpi-card label="Brokers en cartera" [valor]="totalBrokers()" icono="groups" sub="Intermediarios asignados" />
+    <app-kpi-card label="Primas de las carteras" [valor]="compacto(totalIngreso())" icono="account_balance" sub="Pólizas expedidas" />
+  </app-grid-layout>
+
+  @if (mensaje()) {
+    <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
   }
+
+  <app-estado-vista
+    [cargando]="cargando()"
+    [error]="error()"
+    [vacio]="comerciales().length === 0"
+    entidad="comerciales"
+    iconoVacio="badge"
+    tituloVacio="Aún no hay comerciales"
+    descripcionVacio="Crea el primero: recibirá su credencial al instante."
+    (reintentar)="cargar()"
+  >
+    <app-data-table
+      [columnas]="columnas"
+      [filas]="filas()"
+      [total]="filas().length"
+      [tamanoPagina]="20"
+      [conBusqueda]="true"
+      placeholderBusqueda="Buscar por nombre, código, cédula o correo…"
+      ariaLabel="Comerciales"
+      (accion)="gestionar($event)"
+    />
+  </app-estado-vista>
 </section>
 
-@if (esAdmin) {
-  <app-modal-dialog
-    [abierto]="form() !== null"
-    [titulo]="form()?.edicion ? 'Editar comercial' : 'Nuevo comercial'"
-    (cerrar)="cerrarForm()"
-  >
-    @if (form(); as f) {
-      <form class="form" (submit)="$event.preventDefault(); guardar()">
-        @if (errorForm()) {
-          <p class="error" role="alert">Revisa los datos. No se pudo guardar el comercial.</p>
-        }
-        <label>
-          Identificación del comercial
-          <input class="control" type="text" autocomplete="off" [value]="f.comercialId"
-            [readonly]="f.edicion" (input)="actualizarCampo('comercialId', $event)" />
-        </label>
-        <label>
-          Nombre completo
-          <input class="control" type="text" autocomplete="off" [value]="f.nombre"
-            (input)="actualizarCampo('nombre', $event)" />
-        </label>
-        <label class="check">
-          <input type="checkbox" [checked]="f.activo" (change)="alternarActivo($event)" />
-          Activo
-        </label>
-      </form>
+<app-modal-dialog
+  [abierto]="creando()"
+  titulo="Nuevo comercial"
+  subtitulo="Al crear, el portal genera sus primeras credenciales y lo suma a la rotación de prospectos."
+  eyebrow="Comerciales"
+  tamano="md"
+  (cerrar)="cerrarAlta()"
+>
+  @if (credencial(); as c) {
+    <app-credencial-unica [usuario]="c.usuario" [credencial]="c.credencial" />
+  } @else {
+    <app-form-persona [enviando]="enviandoAlta()" ayudaCorreo="Será su usuario para entrar a la consola." (enviar)="crear($event)" />
+    @if (errorAlta()) {
+      <app-alert-banner variante="error" titulo="No se pudo crear">{{ errorAlta() }}</app-alert-banner>
     }
-    <div acciones class="acciones-modal">
-      <button type="button" class="btn-sec" (click)="cerrarForm()">Cancelar</button>
-      <button type="button" class="btn-pri" [disabled]="guardando()" (click)="guardar()">
-        {{ guardando() ? 'Guardando…' : 'Guardar' }}
-      </button>
+  }
+  @if (credencial()) {
+    <div acciones>
+      <app-boton variante="accent" icono="done" (clicked)="cerrarAlta()">Ya la copié</app-boton>
     </div>
-  </app-modal-dialog>
-}
+  }
+</app-modal-dialog>
+
+<app-modal-dialog
+  [abierto]="seleccionado() !== null"
+  [titulo]="seleccionado()?.nombre ?? ''"
+  [subtitulo]="(seleccionado()?.codigo ?? '') + ' · ' + (seleccionado()?.correo ?? 'sin correo')"
+  eyebrow="Comercial"
+  tamano="lg"
+  [pestanas]="pestanas"
+  [pestana]="pestana()"
+  (pestanaChange)="pestana.set($event)"
+  (cerrar)="seleccionado.set(null)"
+>
+  @if (seleccionado(); as c) {
+    <div cabecera>
+      <app-badge-estado [variante]="c.activo ? 'success' : 'danger'" [conPunto]="true">{{ c.activo ? 'Activo' : 'Inactivo' }}</app-badge-estado>
+      <app-badge-estado variante="info">{{ c.brokers }} brokers · {{ c.prospectos }} prospectos</app-badge-estado>
+    </div>
+  }
+  @if (seleccionado(); as c) {
+    @switch (pestana()) {
+      @case ('detalle') {
+        <app-ficha [secciones]="ficha()" />
+      }
+      @case ('editar') {
+        <div class="form-modal">
+          <app-form-field label="Nombre completo" controlId="com-nombre" [requerido]="true">
+            <input id="com-nombre" type="text" maxlength="160" [value]="nombre()" (input)="nombre.set(v($event))" />
+          </app-form-field>
+          <div class="form-modal__fila">
+            <app-form-field label="Correo" controlId="com-correo" [requerido]="true">
+              <input id="com-correo" type="email" maxlength="254" [value]="correo()" (input)="correo.set(v($event))" />
+            </app-form-field>
+            <app-form-field label="Teléfono" controlId="com-telefono" [requerido]="true">
+              <input id="com-telefono" type="tel" maxlength="10" [value]="telefono()" (input)="telefono.set(v($event))" />
+            </app-form-field>
+          </div>
+          <div class="acciones-modal">
+            <app-boton variante="accent" icono="save" [disabled]="guardando() || !datosValidos()" (clicked)="guardarDatos()">Guardar cambios</app-boton>
+          </div>
+        </div>
+      }
+      @case ('acceso') {
+        <div class="form-modal">
+          @if (credencialNueva(); as cred) {
+            <app-credencial-unica [usuario]="cred.usuario" [credencial]="cred.credencial" />
+          } @else {
+            <app-alert-banner variante="warning" titulo="Nueva credencial" icono="key">
+              Genera una contraseña temporal: la anterior deja de servir y deberá cambiarla al entrar.
+            </app-alert-banner>
+            <div class="acciones-modal">
+              <app-boton variante="outline" icono="key" [disabled]="guardando()" (clicked)="restablecerAcceso()">Generar nueva credencial</app-boton>
+            </div>
+          }
+          <app-alert-banner [variante]="c.activo ? 'error' : 'success'" [titulo]="c.activo ? 'Desactivar comercial' : 'Activar comercial'" icono="power_settings_new">
+            {{ c.activo ? 'Sale de la rotación de prospectos y pierde el acceso a la consola. Su cartera se conserva.' : 'Vuelve a la rotación y recupera el acceso.' }}
+          </app-alert-banner>
+          <div class="acciones-modal">
+            <app-boton [variante]="c.activo ? 'ghost' : 'accent'" icono="power_settings_new" [disabled]="guardando()" (clicked)="cambiarActivo()">
+              {{ c.activo ? 'Desactivar' : 'Activar' }}
+            </app-boton>
+          </div>
+        </div>
+      }
+    }
+    @if (errorAccion()) {
+      <app-alert-banner variante="error" titulo="No se pudo completar">{{ errorAccion() }}</app-alert-banner>
+    }
+  }
+</app-modal-dialog>

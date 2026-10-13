@@ -141,6 +141,27 @@
   margin-top: var(--space-2);
 }
 
+// Los dos CTA del paso 1 ("Continuar como broker" / "Registrarme como
+// prospecto") en una sola línea, con el mismo ancho cada uno.
+.registro-acciones--fila {
+  flex-flow: row wrap;
+
+  app-boton {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  app-boton button {
+    width: 100%;
+  }
+}
+
+@media (width <= 479px) {
+  .registro-acciones--fila {
+    flex-direction: column;
+  }
+}
+
 .registro-error {
   margin: var(--space-0);
   padding: var(--space-3) var(--space-4);
@@ -263,52 +284,101 @@
   }
 }
 
-// --- Tu avance (abajo) ---
-.registro-progreso {
+// --- Etapas del proceso (arriba, parte de la instrucción de unirse) ---
+.registro-pasos {
   display: flex;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: var(--space-2);
-  margin: var(--space-6) var(--space-0) var(--space-0);
-  padding: var(--space-4) var(--space-0) var(--space-0);
-  border-top: 1px solid var(--color-border);
+  margin: var(--space-5) var(--space-0) var(--space-0);
+  padding: var(--space-4);
+  border: 1px solid var(--sb-tint-accent-border);
+  border-radius: var(--radius-lg);
+  background: var(--sb-tint-accent-bg);
   list-style: none;
+  counter-reset: paso;
+}
 
-  li {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--text-caption);
-    color: var(--color-muted);
+.registro-pasos__item {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-muted);
 
-    &.activo {
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text);
-    }
+  // Línea conectora entre etapas (hasta la siguiente).
+  .registro-pasos__linea {
+    position: absolute;
+    top: calc(var(--section-number-size) / 2);
+    left: calc(var(--section-number-size) + var(--space-2));
+    right: calc(-1 * var(--space-2));
+    height: 2px;
+    background: var(--sb-tint-accent-border);
+  }
+
+  &.hecho .registro-pasos__linea {
+    background: var(--color-accent);
   }
 }
 
-.registro-progreso__nodo {
+.registro-pasos__nodo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: var(--section-number-size);
   height: var(--section-number-size);
   flex-shrink: 0;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--sb-tint-accent-border);
   border-radius: var(--radius-full);
   background: var(--color-card);
+  color: var(--color-muted);
   font-weight: var(--font-weight-bold);
 
-  .activo & {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+  app-icon {
+    color: inherit;
   }
 
+  // Etapa activa: resaltada con el acento de la marca (naranja de la paleta).
+  .activo & {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--sb-on-primary);
+    box-shadow: 0 0 0 4px var(--sb-tint-accent-bg);
+  }
+
+  // Etapa completada: acento sólido con check.
   .hecho & {
-    border-color: var(--color-primary);
-    background: var(--color-primary);
-    color: var(--color-card);
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--sb-on-primary);
+  }
+}
+
+.registro-pasos__texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--line-height-tight);
+
+  small {
+    font-size: var(--text-caption);
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  b {
+    font-size: var(--text-body-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .activo & b {
+    color: var(--color-accent-hover);
   }
 }
 
@@ -368,7 +438,17 @@
     grid-template-columns: 1fr;
   }
 
-  .registro-progreso {
+  // En móvil las etapas se apilan y se ocultan las líneas y las etiquetas de paso.
+  .registro-pasos {
     flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .registro-pasos__linea {
+    display: none;
+  }
+
+  .registro-pasos__texto small {
+    display: none;
   }
 }

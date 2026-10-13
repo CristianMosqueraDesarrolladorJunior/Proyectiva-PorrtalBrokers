@@ -9,6 +9,9 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { BorradorRadicacionService } from '../../core/services/borrador-radicacion.service';
+import { mensajeErrorIntegracion } from '../../core/util/errores-integracion';
+import { construirPayloadRadicacion } from '../radicacion/pages/radicacion/radicacion-presentacion';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -38,16 +41,9 @@ import type {
 } from '../../shared/components/doc-uploader/doc-uploader.component';
 import type { Tab } from '../../shared/components/tabs/tabs.component';
 import { formatearCop } from '../../shared/util/moneda';
+import { reglaDesdeCatalogo, validarDocumento } from '../../shared/validation/documento-validacion';
+import { CatalogoService } from '../../core/services/catalogo.service';
 import {
-  REGLAS_DOCUMENTO_RADICACION,
-  validarDocumento,
-} from '../../shared/validation/documento-validacion';
-import {
-  DESCRIPCION_DOCUMENTO_RADICACION,
-  ETIQUETA_DOCUMENTO_RADICACION,
-  ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD,
-  TIPOS_DOCUMENTO_APODERADO,
-  TIPOS_DOCUMENTO_IDENTIDAD,
   esNumeroDocumentoPropietarioValido,
   sujetoSarlaft,
 } from '../radicacion/pages/radicacion/radicacion-presentacion';
@@ -99,13 +95,13 @@ interface DockSarlaft {
   readonly resultado: 'ok' | 'alerta' | 'fin' | null;
 }
 
-const PASOS = ['Datos del negocio', 'Estudio', 'Firmante', 'SARLAFT y documentos', 'Radicación'] as const;
+const PASOS = ['Datos del negocio', 'Estudio', 'Firmante', 'Conocimiento de Cliente y documentos', 'Radicación'] as const;
 
 const RECORRIDO = [
   { icono: 'person', titulo: 'Datos del negocio', tiempo: '~20s' },
   { icono: 'task_alt', titulo: 'Estudio', tiempo: '~20s' },
   { icono: 'draw', titulo: 'Firmante', tiempo: '~15s' },
-  { icono: 'verified_user', titulo: 'SARLAFT y documentos', tiempo: '~40s' },
+  { icono: 'verified_user', titulo: 'Conocimiento de Cliente y documentos', tiempo: '~40s' },
   { icono: 'send', titulo: 'Radicación', tiempo: '~10s' },
 ] as const;
 
@@ -119,8 +115,6 @@ const LISTAS_SARLAFT = [
 
 const PASOS_ENVIO = ['Empaquetando expediente…', 'Enviando a la aseguradora…', 'Generando número de radicado…'];
 
-/** Documentos que van en la sección del apoderado. */
-const TIPOS_APODERADO: readonly TipoDocumentoRadicacion[] = ['poderApoderado', 'cedulaApoderado'];
 
 const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmado';
 
@@ -166,6 +160,7 @@ function normalizar(texto: string): string {
 })
 export class AgenteComponent {
   private readonly radicacion = inject(RadicacionService);
+  private readonly borrador = inject(BorradorRadicacionService);
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -193,13 +188,19 @@ export class AgenteComponent {
   protected readonly mensaje = signal('');
 
   // --- Paso 1: datos del propietario ---
-  protected readonly tiposDocumento = TIPOS_DOCUMENTO_IDENTIDAD;
-  protected readonly tiposDocumentoApoderado = TIPOS_DOCUMENTO_APODERADO;
-  protected readonly etiquetaTipoDocumento = ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD;
+  private readonly catalogo = inject(CatalogoService);
+  protected readonly tiposDocumento = this.catalogo.codigos<TipoDocumentoIdentidad>('tipo_documento', 'propietario');
+  protected readonly tiposDocumentoApoderado = this.catalogo.codigos<TipoDocumentoIdentidad>('tipo_documento', 'apoderado');
+  protected readonly etiquetaTipoDocumento = this.catalogo.etiquetas('tipo_documento');
+  /** Documentos de radicación (catálogo `documento_radicacion`). */
+  private readonly documentosCatalogo = this.catalogo.opciones('documento_radicacion');
+  private readonly etiquetaDocumento = this.catalogo.etiquetas('documento_radicacion');
+  private readonly tiposApoderado = this.documentosCatalogo
+    .filter((d) => d['aplica'] === 'APODERADO')
+    .map((d) => d.codigo as TipoDocumentoRadicacion);
   protected readonly tipoDocumentoPropietario = signal<TipoDocumentoIdentidad>('CC');
   protected readonly numeroDocumentoPropietario = signal('');
   protected readonly errorDocumento = signal('');
-  protected readonly autocompletando = signal(false);
   protected readonly documentoValido = computed(() =>
     esNumeroDocumentoPropietarioValido(this.numeroDocumentoPropietario()),
   );
@@ -210,15 +211,15 @@ export class AgenteComponent {
   protected readonly estudio = signal<ResultadoEstudioArrendamiento | null>(null);
   protected readonly errorEstudio = signal<string | null>(null);
   protected readonly selloDibujado = signal(false);
-  protected readonly estudioAprobado = computed(() => this.estudio()?.estado === 'aprobado');
+  protected readonly estudioAprobado = computed(() => this.estudio()?.estado === 'APROBADO');
+  /** Documento del inquilino requerido junto al número de estudio para consultar. */
+  protected readonly documentoInquilinoEstudio = signal('');
   protected readonly puedeConsultarEstudio = computed(
-    () => this.numeroEstudio().trim().length > 0 && !this.consultandoEstudio(),
+    () =>
+      this.numeroEstudio().trim().length > 0 &&
+      this.documentoInquilinoEstudio().trim().length > 0 &&
+      !this.consultandoEstudio(),
   );
-  /** Canon + administración: base mensual del valor asegurado. */
-  protected readonly mensualidad = computed(() => {
-    const i = this.estudio()?.inmueble;
-    return i ? i.canon + i.administracion : 0;
-  });
 
   // --- Paso 3: firmante y tipo de persona ---
   protected readonly opcionesFirmante: readonly OpcionRadio[] = [
@@ -234,6 +235,8 @@ export class AgenteComponent {
   protected readonly tipoPersona = signal<TipoPersona>('natural');
   protected readonly tipoDocumentoApoderado = signal<TipoDocumentoIdentidad>('CC');
   protected readonly numeroDocumentoApoderado = signal('');
+  /** Celular del firmante (propietario/apoderado): destino del SMS de la URL de Conocimiento. */
+  protected readonly telefonoSarlaft = signal('');
   protected readonly firmaCompleta = computed(
     () => !this.firmaApoderado() || esNumeroDocumentoPropietarioValido(this.numeroDocumentoApoderado()),
   );
@@ -251,22 +254,22 @@ export class AgenteComponent {
   protected readonly archivosCargados = signal<Readonly<Record<string, string>>>({});
   private readonly tiposValidos = signal<ReadonlySet<TipoDocumentoRadicacion>>(new Set());
   protected readonly errorArchivo = signal<string | null>(null);
-  protected readonly cargandoDemo = signal(false);
 
   private readonly obligatorios = computed(() =>
     documentosRequeridosRadicacion({
       tipoPersona: this.tipoPersona(),
       firmaApoderado: this.firmaApoderado(),
       sarlaftRequiereFormulario: false,
+      documentos: this.documentosCatalogo,
     }),
   );
   protected readonly reglasObligatorias = computed(() =>
     this.obligatorios()
-      .filter((t) => !TIPOS_APODERADO.includes(t))
+      .filter((t) => !this.tiposApoderado.includes(t))
       .map((t) => this.regla(t, true)),
   );
   protected readonly reglasApoderado = computed(() =>
-    this.firmaApoderado() ? TIPOS_APODERADO.map((t) => this.regla(t, true)) : [],
+    this.firmaApoderado() ? this.tiposApoderado.map((t) => this.regla(t, true)) : [],
   );
   protected readonly reglaOpcional = [this.regla(DOCUMENTO_OPCIONAL, false)];
   protected readonly totalDocumentos = computed(() => this.obligatorios().length);
@@ -293,9 +296,8 @@ export class AgenteComponent {
     const e = this.estudio();
     return [
       { etiqueta: 'Propietario', valor: `${this.tipoDocumentoPropietario()} ${this.numeroDocumentoPropietario()}` },
-      { etiqueta: 'Inquilino', valor: e?.inquilino?.nombre ?? '—' },
-      { etiqueta: 'Inmueble', valor: e?.inmueble ? `${e.inmueble.direccion} · ${e.inmueble.ciudad}` : '—' },
-      { etiqueta: 'Canon + administración', valor: formatearCop(this.mensualidad()) },
+      { etiqueta: 'Inquilino', valor: e?.inquilino ?? e?.nombresInquilino ?? '—' },
+      { etiqueta: 'Inmueble', valor: e?.inmueble ?? '—' },
       { etiqueta: 'Estudio', valor: this.numeroEstudio() },
       {
         etiqueta: 'Firma',
@@ -309,8 +311,8 @@ export class AgenteComponent {
   protected readonly checklistFinal = computed(() => [
     'Datos del propietario completos',
     'Estudio de arrendamiento aprobado',
-    `SARLAFT del ${this.etiquetaSujeto()} actualizado`,
-    ...this.obligatorios().map((t) => ETIQUETA_DOCUMENTO_RADICACION[t]),
+    `Conocimiento de Cliente del ${this.etiquetaSujeto()} actualizado`,
+    ...this.obligatorios().map((t) => this.etiquetaDocumento[t] ?? t),
   ]);
 
   /** Sugerencias rápidas para la caja de mensajes según el paso. */
@@ -325,7 +327,7 @@ export class AgenteComponent {
       case 'sarlaft-pendiente':
         return ['Volver a consultar'];
       case 'documentos':
-        return this.documentosCompletos() ? ['Continuar'] : ['Usar documentos de demo'];
+        return this.documentosCompletos() ? ['Continuar'] : [];
       case 'radicar':
         return this.declarado() ? ['Radicar negocio'] : ['Acepto la declaración'];
       case 'exito':
@@ -373,7 +375,7 @@ export class AgenteComponent {
   // Recorrido
   // ===========================================================================
 
-  /** Reinicia la demo desde la bienvenida. */
+  /** Reinicia el flujo desde la bienvenida. */
   protected reiniciar(): void {
     this.corrida++;
     this.cola = Promise.resolve();
@@ -410,7 +412,7 @@ export class AgenteComponent {
     this.escena.set('bienvenida');
     this.encolar(async () => {
       await this.decir(`¡Hola, **${this.nombreBroker()}**! 👋 Soy **Brok**, tu asistente de Proyectiva.`);
-      await this.decir('Vamos a radicar la póliza de arrendamiento de tu cliente. Yo consulto el estudio, el SARLAFT y valido los documentos; tú me das los datos del negocio.');
+      await this.decir('Vamos a radicar la póliza de arrendamiento de tu cliente. Yo consulto el estudio, el Conocimiento de Cliente y valido los documentos; tú me das los datos del negocio.');
       await this.decir('Puedes usar la pantalla o escribirme abajo. Empecemos por el propietario.');
       await this.esperar(1000);
       await this.entrarDatos();
@@ -442,7 +444,7 @@ export class AgenteComponent {
   protected onNumeroDocumento(valor: string): void {
     this.numeroDocumentoPropietario.set(valor.replace(/\D/g, '').slice(0, 15));
     this.errorDocumento.set('');
-    if (this.documentoValido() && this.escena() === 'datos' && !this.autocompletando()) {
+    if (this.documentoValido() && this.escena() === 'datos') {
       this.encolar(() => this.guiarContinuar());
     }
   }
@@ -451,22 +453,6 @@ export class AgenteComponent {
     if (this.numeroDocumentoPropietario() && !this.documentoValido()) {
       this.errorDocumento.set('El documento debe tener entre 5 y 15 dígitos.');
     }
-  }
-
-  /** Escribe el documento de demostración carácter a carácter. */
-  protected async autocompletarDocumento(): Promise<void> {
-    if (this.autocompletando()) {
-      return;
-    }
-    this.autocompletando.set(true);
-    try {
-      await this.escribir('1095836251', (v) => this.numeroDocumentoPropietario.set(v));
-    } catch {
-      // Cancelado por reinicio.
-    } finally {
-      this.autocompletando.set(false);
-    }
-    this.encolar(() => this.guiarContinuar());
   }
 
   protected continuarDatos(): void {
@@ -493,21 +479,6 @@ export class AgenteComponent {
     this.errorEstudio.set(null);
   }
 
-  protected async autocompletarEstudio(): Promise<void> {
-    if (this.autocompletando()) {
-      return;
-    }
-    this.autocompletando.set(true);
-    try {
-      await this.escribir('EST-2026-001234', (v) => this.onNumeroEstudio(v));
-    } catch {
-      // Cancelado por reinicio.
-    } finally {
-      this.autocompletando.set(false);
-    }
-    this.encolar(() => this.guiarA(this.elemento('brok-consultar-estudio'), 'Consulta el estudio'));
-  }
-
   /** Paso 2: consulta la API de estudio. El backend decide la salida. */
   protected consultarEstudio(): void {
     if (!this.puedeConsultarEstudio()) {
@@ -525,7 +496,14 @@ export class AgenteComponent {
       let resultado: ResultadoEstudioArrendamiento;
       try {
         const [r] = await Promise.all([
-          this.llamar(firstValueFrom(this.radicacion.consultarEstudio(this.numeroEstudio().trim()))),
+          this.llamar(
+            firstValueFrom(
+              this.radicacion.consultarEstudio(
+                this.numeroEstudio().trim(),
+                this.documentoInquilinoEstudio().trim(),
+              ),
+            ),
+          ),
           this.esperar(900),
         ]);
         resultado = r;
@@ -547,23 +525,21 @@ export class AgenteComponent {
       this.estadoBrok.set('Te escucho en pantalla');
       this.estudio.set(resultado);
 
-      if (resultado.estado === 'no_aprobado') {
+      if (resultado.estado === 'NO_APROBADO') {
         await this.decir('El estudio **no está aprobado**. El inquilino debe realizar el **Estudio Digital**; te dejo el enlace para compartírselo.');
         return;
       }
-      if (resultado.estado === 'pendiente') {
+      if (resultado.estado === 'PENDIENTE') {
         await this.decir('El estudio aún está **en proceso**. Cuando la aseguradora lo resuelva, vuelve a consultarlo.');
         return;
       }
       await this.esperar(150);
       this.selloDibujado.set(true);
-      const inq = resultado.inquilino;
+      const inq = resultado.inquilino ?? resultado.nombresInquilino;
       const inm = resultado.inmueble;
-      await this.decir(`¡Estudio **aprobado** ✅! El inquilino es **${inq?.nombre ?? 'el titular del estudio'}**.`);
+      await this.decir(`¡Estudio **aprobado** ✅! El inquilino es **${inq ?? 'el titular del estudio'}**.`);
       if (inm) {
-        await this.decir(
-          `El inmueble es ${inm.destino.toLowerCase()} en **${inm.direccion}, ${inm.ciudad}**, con canon de **${formatearCop(inm.canon)}** y administración de ${formatearCop(inm.administracion)}.`,
-        );
+        await this.decir(`El inmueble registrado en el estudio es: ${inm}.`);
       }
       await this.guiarA(this.elemento('brok-continuar-estudio'), 'Continúa al firmante');
       await this.decir('Si todo coincide, dale a **Continuar**.');
@@ -589,7 +565,7 @@ export class AgenteComponent {
     if (valor === 'apoderado') {
       this.encolar(async () => {
         await this.guiarA(this.elemento('brok-num-doc-apo'), 'Documento del apoderado');
-        await this.decir('Como firma un **apoderado**, el SARLAFT se le consulta a él. Escribe su documento.');
+        await this.decir('Como firma un **apoderado**, el Conocimiento de Cliente se le consulta a él. Escribe su documento.');
       });
     }
   }
@@ -609,7 +585,7 @@ export class AgenteComponent {
     this.encolar(async () => {
       this.quitarFoco();
       this.paso.set(4);
-      this.divisor('Etapa 4 · SARLAFT y documentos');
+      this.divisor('Etapa 4 · Conocimiento de Cliente y documentos');
       await this.correrSarlaft();
     });
   }
@@ -621,8 +597,8 @@ export class AgenteComponent {
     this.consultandoSarlaft.set(true);
     const filas = LISTAS_SARLAFT.map((texto): FilaChecklist => ({ texto, estado: 'cargando' }));
     this.dock.set({ progreso: 0, filas, resultado: null });
-    const checklist = this.checklist(`Validación SARLAFT del ${this.etiquetaSujeto()}`, LISTAS_SARLAFT);
-    this.estadoBrok.set('Validando SARLAFT…');
+    const checklist = this.checklist(`Validación de Conocimiento de Cliente del ${this.etiquetaSujeto()}`, LISTAS_SARLAFT);
+    this.estadoBrok.set('Validando Conocimiento de Cliente…');
     this.pensando.set(true);
 
     const documento = this.firmaApoderado()
@@ -633,6 +609,7 @@ export class AgenteComponent {
         sujeto: sujetoSarlaft(this.firmaApoderado()),
         tipoDocumento: documento.tipo,
         numeroDocumento: documento.numero.trim(),
+        telefono: this.telefonoSarlaft().trim(),
         tipoPersona: this.tipoPersona(),
         numeroEstudioArrendamiento: this.numeroEstudio().trim(),
       }),
@@ -655,28 +632,28 @@ export class AgenteComponent {
       this.dock.set(null);
       this.escena.set('firma');
       this.paso.set(3);
-      await this.decir('No fue posible consultar SARLAFT en este momento. Inténtalo de nuevo.');
+      await this.decir('No fue posible consultar Conocimiento de Cliente en este momento. Inténtalo de nuevo.');
       return;
     }
     const ultima = LISTAS_SARLAFT.length - 1;
-    this.marcarSarlaft(checklist, ultima, resultado.estado === 'actualizado' ? 'ok' : 'alerta');
+    this.marcarSarlaft(checklist, ultima, resultado.estado === 'ACTUALIZADO' ? 'ok' : 'alerta');
     await this.esperar(400);
     this.consultandoSarlaft.set(false);
     this.pensando.set(false);
     this.estadoBrok.set('Te escucho en pantalla');
     this.sarlaft.set(resultado);
 
-    if (resultado.estado === 'actualizado') {
+    if (resultado.estado === 'ACTUALIZADO') {
       this.dock.update((d) => (d ? { ...d, resultado: 'ok' } : d));
-      await this.decir(`Listo: el **SARLAFT** del ${this.etiquetaSujeto()} está **actualizado**. Sin coincidencias en listas restrictivas ni PEP.`);
-      await this.decir('Todo está en orden ✅ Estudio aprobado y SARLAFT actualizado.');
+      await this.decir(`Listo: el **Conocimiento de Cliente** del ${this.etiquetaSujeto()} está **actualizado**. Sin coincidencias en listas restrictivas ni PEP.`);
+      await this.decir('Todo está en orden ✅ Estudio aprobado y Conocimiento de Cliente actualizado.');
       this.escena.set('todo-ok');
       await this.esperar(2300);
       await this.entrarDocumentos();
-    } else if (resultado.estado === 'desactualizado') {
+    } else if (resultado.estado === 'DESACTUALIZADO') {
       this.dock.update((d) => (d ? { ...d, resultado: 'alerta' } : d));
       this.escena.set('sarlaft-pendiente');
-      await this.decir(`El SARLAFT del ${this.etiquetaSujeto()} está **desactualizado**. Le enviamos la URL de actualización; cuando la diligencie, vuelve a consultar.`);
+      await this.decir(`El Conocimiento de Cliente del ${this.etiquetaSujeto()} está **desactualizado**. Le enviamos la URL de actualización; cuando la diligencie, vuelve a consultar.`);
       await this.guiarA(this.elemento('brok-reconsultar'), 'Vuelve a consultar aquí');
     } else {
       this.dock.update((d) => (d ? { ...d, resultado: 'fin' } : d));
@@ -727,7 +704,7 @@ export class AgenteComponent {
     await this.esperar(400);
     this.accionLista(accion);
     await this.guiarA(this.elemento('brok-docs'), 'Carga aquí cada documento');
-    await this.decir(`Necesito **${this.totalDocumentos()} documentos** del negocio. Cárgalos uno a uno o usa los de demo.`);
+    await this.decir(`Necesito **${this.totalDocumentos()} documentos** del negocio. Cárgalos uno a uno en el panel.`);
     await this.esperar(500);
     this.quitarFoco();
   }
@@ -738,13 +715,13 @@ export class AgenteComponent {
   }
 
   private procesarArchivo(tipo: TipoDocumentoRadicacion, archivo: File): void {
-    const regla = { ...REGLAS_DOCUMENTO_RADICACION[tipo], vigenciaMaxDias: null };
+    const regla = { ...reglaDesdeCatalogo(this.documentosCatalogo.find((d) => d.codigo === tipo)), vigenciaMaxDias: null };
     const resultado = validarDocumento(
       { nombre: archivo.name, tipoMime: archivo.type as never, tamanoBytes: archivo.size, fechaEmision: undefined },
       regla,
       new Date().toISOString(),
     );
-    const etiqueta = ETIQUETA_DOCUMENTO_RADICACION[tipo];
+    const etiqueta = this.etiquetaDocumento[tipo] ?? tipo;
     if (!resultado.valido) {
       this.errorArchivo.set(`«${archivo.name}» no cumple los requisitos de ${etiqueta}: usa PDF, JPG o PNG dentro del tamaño permitido.`);
       this.encolar(() => this.decir(`Ese archivo no lo pude procesar para **${etiqueta}**. Súbelo en PDF, JPG o PNG, por favor.`));
@@ -761,32 +738,6 @@ export class AgenteComponent {
         await this.guiarA(this.elemento('brok-continuar-docs'), 'Continuar');
       }
     });
-  }
-
-  /** Carga documentos PDF de demostración en cada casilla pendiente. */
-  protected async usarDocumentosDemo(): Promise<void> {
-    if (this.cargandoDemo()) {
-      return;
-    }
-    this.cargandoDemo.set(true);
-    const corrida = this.corrida;
-    try {
-      for (const tipo of [...this.obligatorios()]) {
-        if (this.corrida !== corrida) {
-          return;
-        }
-        if (this.tiposValidos().has(tipo)) {
-          continue;
-        }
-        const contenido = new Blob([`%PDF-1.4 documento demo ${tipo} `.repeat(40)], { type: 'application/pdf' });
-        this.procesarArchivo(tipo, new File([contenido], `${tipo}-demo.pdf`, { type: 'application/pdf' }));
-        await this.esperar(650);
-      }
-    } catch {
-      // Cancelado por reinicio.
-    } finally {
-      this.cargandoDemo.set(false);
-    }
   }
 
   protected continuarDocumentos(): void {
@@ -819,23 +770,27 @@ export class AgenteComponent {
       this.quitarFoco();
       this.enviando.set(true);
       this.errorEnvio.set(null);
-      const inq = this.estudio()?.inquilino;
+      const contratoReferencia = this.borrador.contrato()?.referencia;
+      if (!contratoReferencia) {
+        this.enviando.set(false);
+        this.errorEnvio.set('Genera el contrato de arrendamiento antes de radicar.');
+        await this.decir('Antes de radicar necesitas generar el contrato de arrendamiento.');
+        return;
+      }
       const envio = firstValueFrom(
-        this.radicacion.radicar({
-          tipoDocumentoPropietario: this.tipoDocumentoPropietario(),
-          numeroDocumentoPropietario: this.numeroDocumentoPropietario(),
-          numeroEstudioArrendamiento: this.numeroEstudio().trim(),
-          estadoEstudio: 'aprobado',
-          ...(inq ? { inquilino: { nombre: inq.nombre } } : {}),
-          tipoPersona: this.tipoPersona(),
-          firmaApoderado: this.firmaApoderado(),
-          ...(this.firmaApoderado()
-            ? { tipoDocumentoApoderado: this.tipoDocumentoApoderado(), numeroDocumentoApoderado: this.numeroDocumentoApoderado().trim() }
-            : {}),
-          sarlaftRequiereFormulario: false,
-          estadoSarlaft: 'actualizado',
-          documentos: [],
-        }),
+        this.radicacion.radicar(
+          construirPayloadRadicacion({
+            contratoReferencia,
+            numeroEstudioArrendamiento: this.numeroEstudio(),
+            tipoDocumentoInquilino: 'CC',
+            documentoInquilino: this.documentoInquilinoEstudio(),
+            documentosCargados: [...this.tiposValidos()],
+            autorizacionDatos: this.declarado(),
+            tipoPersona: this.tipoPersona(),
+            firmaApoderado: this.firmaApoderado(),
+            vocabulario: this.documentosCatalogo.filter((d) => d['aplica'] !== 'OPCIONAL').map((d) => d.codigo),
+          }),
+        ),
       );
       let respuesta: { radicado: string };
       try {
@@ -851,7 +806,7 @@ export class AgenteComponent {
           throw e;
         }
         this.enviando.set(false);
-        this.errorEnvio.set('No se pudo registrar la radicación. Intenta nuevamente en unos minutos.');
+        this.errorEnvio.set(mensajeErrorIntegracion(e));
         await this.decir('No pude registrar la radicación. Inténtalo de nuevo en unos minutos.');
         return;
       }
@@ -998,18 +953,14 @@ export class AgenteComponent {
           this.reconsultarSarlaft();
           return;
         }
-        this.responder('Cuando el firmante actualice su SARLAFT, escribe **volver a consultar**.');
+        this.responder('Cuando el firmante actualice su Conocimiento de Cliente, escribe **volver a consultar**.');
         return;
       case 'documentos':
-        if (quiere(/\bdemo\b/)) {
-          void this.usarDocumentosDemo();
-          return;
-        }
         if (quiere(continuar) && this.documentosCompletos()) {
           this.continuarDocumentos();
           return;
         }
-        this.responder(`Llevas **${this.documentosValidados()} de ${this.totalDocumentos()}** documentos. Cárgalos en el panel o escribe **demo** para usar los de prueba.`);
+        this.responder(`Llevas **${this.documentosValidados()} de ${this.totalDocumentos()}** documentos. Cárgalos en el panel.`);
         return;
       case 'radicar':
         if (quiere(/\b(acept|declar|autoriz)/) && !this.declarado()) {
@@ -1275,13 +1226,6 @@ export class AgenteComponent {
     return valor;
   }
 
-  private async escribir(texto: string, fijar: (valor: string) => void): Promise<void> {
-    for (let i = 0; i <= texto.length; i++) {
-      fijar(texto.slice(0, i));
-      await this.esperar(45 + Math.random() * 35);
-    }
-  }
-
   private movimientoReducido(): boolean {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
@@ -1295,8 +1239,8 @@ export class AgenteComponent {
   private regla(tipo: TipoDocumentoRadicacion, obligatorio: boolean): ReglaDocumentoUploader {
     return {
       id: tipo,
-      etiqueta: ETIQUETA_DOCUMENTO_RADICACION[tipo],
-      descripcion: DESCRIPCION_DOCUMENTO_RADICACION[tipo],
+      etiqueta: this.etiquetaDocumento[tipo] ?? tipo,
+      descripcion: String(this.documentosCatalogo.find((d) => d.codigo === tipo)?.['ayuda'] ?? ''),
       obligatorio,
     };
   }

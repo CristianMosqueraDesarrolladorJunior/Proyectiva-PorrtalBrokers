@@ -6,6 +6,7 @@ import {
   Input,
   signal,
 } from '@angular/core';
+import { CatalogoService } from '../../../../core/services/catalogo.service';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -31,10 +32,8 @@ import {
   type MotivoRechazoDocumento,
 } from '../../../../shared/validation/documento-validacion';
 import {
-  ETIQUETA_TIPO_CASO_ESPECIAL,
   puedeEnviarCasoEspecial,
   REGLA_DOCUMENTO_CASO_ESPECIAL,
-  TIPOS_CASO_ESPECIAL,
 } from '../../caso-especial-habilitacion';
 
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
@@ -91,16 +90,20 @@ const MENSAJE_RECHAZO: Readonly<Record<MotivoRechazoDocumento, string>> = {
   styleUrl: './caso-especial.component.scss',
 })
 export class CasoEspecialComponent {
+  private readonly catalogo = inject(CatalogoService);
+
   private readonly renovacionService = inject(RenovacionService);
 
   /** Número de póliza sobre la que se tramita el Caso Especial (Req 23). */
   @Input() numeroPoliza = '';
 
-  /** Opciones de tipo de trámite presentadas como tarjetas de selección (Req 23). */
-  protected readonly opcionesTipo: readonly OpcionRadio[] = TIPOS_CASO_ESPECIAL.map((tipo) => ({
-    valor: tipo,
-    etiqueta: ETIQUETA_TIPO_CASO_ESPECIAL[tipo],
-  }));
+  /** Procesos especiales que el broker puede iniciar (catálogo `tipo_caso_especial` con `para_broker`). */
+  protected readonly opcionesTipo = computed<readonly OpcionRadio[]>(() =>
+    this.catalogo
+      .opciones('tipo_caso_especial')
+      .filter((t) => t['para_broker'] === true)
+      .map((t) => ({ valor: t.codigo, etiqueta: t.descripcion })),
+  );
 
   /** Regla de presentación del documento legal en el uploader (Req 23.1). */
   protected readonly reglasDocumento: readonly ReglaDocumentoUploader[] = [
@@ -152,7 +155,7 @@ export class CasoEspecialComponent {
 
   /** Verdadero si el envío está habilitado: tipo del conjunto + documento PDF válido (Req 23.1, 23.2). */
   protected readonly envioHabilitado = computed(() =>
-    puedeEnviarCasoEspecial(this.tipo(), this.documento()),
+    puedeEnviarCasoEspecial(this.tipo(), this.documento(), this.opcionesTipo().map((o) => o.valor)),
   );
 
   /** Verdadero mientras se envía el Caso Especial (bloquea el botón, Req 23.3). */
@@ -190,11 +193,16 @@ export class CasoEspecialComponent {
     const resultado = validarDocumento(documento, REGLA_DOCUMENTO_CASO_ESPECIAL, '');
     if (!resultado.valido) {
       this.documento.set(undefined);
+      this.archivo = null;
       this.errorDocumento.set(MENSAJE_RECHAZO[resultado.motivo ?? 'mime_no_permitido']);
       return;
     }
     this.documento.set(documento);
+    this.archivo = archivo;
   }
+
+  /** Archivo real que se sube al Warehouse (documentosProceso). */
+  private archivo: File | null = null;
 
   /**
    * Envía la solicitud de Caso Especial si el tipo y el documento son válidos
@@ -205,17 +213,17 @@ export class CasoEspecialComponent {
   protected enviar(): void {
     this.intentoEnvio.set(true);
     this.errorEnvio.set('');
-    const documento = this.documento();
-    if (!this.envioHabilitado() || documento === undefined) {
+    const observaciones = this.observaciones().trim();
+    // Comercial renovaciones exige observaciones en todo proceso especial.
+    if (!this.envioHabilitado() || this.archivo === null || observaciones.length === 0) {
       return;
     }
 
-    const observaciones = this.observaciones().trim();
     const request: CasoEspecialRequest = {
       numeroPoliza: this.numeroPoliza,
-      tipo: this.tipo() as TipoCasoEspecial,
-      documentoLegal: documento,
-      ...(observaciones.length > 0 ? { observaciones } : {}),
+      tipo: this.tipo(),
+      documentos: [this.archivo],
+      observaciones,
     };
 
     this.estadoEnvio.set('enviando');

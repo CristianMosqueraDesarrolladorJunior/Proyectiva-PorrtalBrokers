@@ -12,12 +12,21 @@ const ACCESOS_ADMIN: readonly AccesoSidebar[] = [
   { ruta: 'brokers', icono: 'groups', etiqueta: 'Brokers' },
   { ruta: 'negocios', icono: 'description', etiqueta: 'Negocios' },
   { ruta: 'comerciales', icono: 'badge', etiqueta: 'Comerciales' },
+  { ruta: 'prospectos', icono: 'how_to_reg', etiqueta: 'Prospectos' },
+  { ruta: 'polizas', icono: 'policy', etiqueta: 'Pólizas' },
+  { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
+  // "Referidos" queda oculto del menú (la ruta sigue existiendo).
+  { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
 ];
 
 const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
   { ruta: 'resumen', icono: 'monitoring', etiqueta: 'Mi resumen' },
   { ruta: 'brokers', icono: 'groups', etiqueta: 'Mis brokers' },
+  { ruta: 'prospectos', icono: 'how_to_reg', etiqueta: 'Mis prospectos' },
   { ruta: 'negocios', icono: 'description', etiqueta: 'Negocios' },
+  { ruta: 'polizas', icono: 'policy', etiqueta: 'Pólizas' },
+  { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
+  { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
 ];
 
 /**

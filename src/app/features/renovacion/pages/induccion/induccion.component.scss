@@ -1,0 +1,51 @@
+// Solo la disposición propia de la vista; lo visual viene de los componentes compartidos.
+@use '../../../../shared/styles/mixins' as mx;
+
+:host {
+  display: block;
+}
+
+.induccion,
+.induccion__pasos,
+.induccion__acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.induccion__acciones {
+  gap: var(--space-3);
+}
+
+.induccion__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+
+  @include mx.respond-to('mobile') {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.induccion__ancho {
+  grid-column: 1 / -1;
+}
+
+.induccion__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-lg);
+  background: var(--sb-surface-low);
+  font-size: var(--text-body);
+  color: var(--sb-on-surface);
+}
+
+.induccion__lista {
+  margin: 0;
+  padding-left: var(--space-5);
+}

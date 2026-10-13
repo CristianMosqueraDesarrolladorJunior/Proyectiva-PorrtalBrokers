@@ -1,0 +1,115 @@
+<section class="vista" aria-labelledby="perfil-titulo">
+  <app-page-header
+    [eyebrow]="esComercial() ? 'Mi cartera' : 'Consola de administración'"
+    tituloId="perfil-titulo"
+    titulo="Mi perfil"
+    subtitulo="Tu foto, tus datos de contacto y la seguridad de tu acceso a la consola."
+  />
+
+  <app-estado-vista [cargando]="cargando()" [error]="error() !== null" [vacio]="false" entidad="tu perfil" (reintentar)="cargar()">
+    @if (perfil(); as p) {
+      <article class="pf-hero">
+        <app-foto-perfil
+          [foto]="foto()"
+          [nombre]="p.nombre"
+          [tamano]="112"
+          [cargando]="subiendoFoto()"
+          (elegida)="subirFoto($event)"
+          (quitar)="quitarFoto()"
+        />
+        <div class="pf-hero__datos">
+          <div class="pf-hero__nombre">
+            <h2>{{ p.nombre }}</h2>
+            <app-badge-estado [variante]="esComercial() ? 'info' : 'success'" [conPunto]="true">
+              {{ esComercial() ? 'Comercial' : 'Administrador' }}
+            </app-badge-estado>
+          </div>
+          <p class="pf-hero__cargo">{{ p.cargo || (esComercial() ? 'Ejecutivo comercial de pólizas de arrendamiento' : 'Administración de la consola de brokers') }}</p>
+          <ul class="pf-hero__meta">
+            <li><app-icon nombre="mail" [tamano]="16" /> {{ p.identificador }}</li>
+            @if (p.codigoComercial) {
+              <li><app-icon nombre="badge" [tamano]="16" /> Código {{ p.codigoComercial }}</li>
+            }
+            <li><app-icon nombre="event" [tamano]="16" /> En la consola desde {{ fechaHora(p.creado) }}</li>
+            <li><app-icon nombre="update" [tamano]="16" /> Actualizado {{ fechaHora(p.actualizado) }}</li>
+          </ul>
+        </div>
+        <div class="pf-hero__progreso" [attr.aria-label]="'Perfil completo al ' + completitud() + '%'">
+          <span class="pf-hero__pct">{{ completitud() }}%</span>
+          <span class="pf-hero__barra"><span [style.width.%]="completitud()"></span></span>
+          <small>Perfil diligenciado</small>
+        </div>
+      </article>
+      @if (errorFoto()) {
+        <app-alert-banner variante="error" titulo="No se pudo actualizar la foto">{{ errorFoto() }}</app-alert-banner>
+      }
+
+      <div class="pf-rejilla">
+        <section class="pf-panel" aria-labelledby="pf-datos">
+          <header class="pf-panel__cab">
+            <span class="pf-panel__icono"><app-icon nombre="person" [tamano]="20" /></span>
+            <div>
+              <h3 id="pf-datos">Información personal y laboral</h3>
+              <p>Así te verán los brokers y el equipo en la consola.</p>
+            </div>
+          </header>
+          <form class="pf-form" (submit)="$event.preventDefault(); guardar()" novalidate>
+            <app-form-field label="Nombre completo" controlId="pf-nombre" [requerido]="true">
+              <input id="pf-nombre" autocomplete="name" maxlength="80" [value]="valor('nombre')" (input)="poner('nombre', $event)" />
+            </app-form-field>
+            <app-form-field label="Correo de acceso" controlId="pf-correo" ayuda="Es tu usuario de ingreso; lo cambia el administrador.">
+              <input id="pf-correo" [value]="p.identificador" readonly />
+            </app-form-field>
+            <app-form-field label="Cédula" controlId="pf-documento" ayuda="Solo números.">
+              <input id="pf-documento" inputmode="numeric" maxlength="12" [value]="valor('documento')" (input)="poner('documento', $event)" />
+            </app-form-field>
+            <app-form-field label="Teléfono" controlId="pf-telefono" ayuda="Celular o fijo, solo números.">
+              <input id="pf-telefono" type="tel" inputmode="numeric" autocomplete="tel" maxlength="12" [value]="valor('telefono')" (input)="poner('telefono', $event)" />
+            </app-form-field>
+            <app-form-field label="Cargo" controlId="pf-cargo">
+              <input id="pf-cargo" maxlength="80" autocomplete="organization-title" [value]="valor('cargo')" (input)="poner('cargo', $event)" />
+            </app-form-field>
+            <app-form-field label="Área" controlId="pf-area">
+              <input id="pf-area" maxlength="80" [value]="valor('area')" (input)="poner('area', $event)" />
+            </app-form-field>
+            <app-form-field label="Ciudad" controlId="pf-ciudad">
+              <input id="pf-ciudad" maxlength="80" autocomplete="address-level2" [value]="valor('ciudad')" (input)="poner('ciudad', $event)" />
+            </app-form-field>
+            @if (errorDatos()) {
+              <app-alert-banner variante="error" titulo="No se pudo guardar">{{ errorDatos() }}</app-alert-banner>
+            }
+            @if (mensaje()) {
+              <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
+            }
+            <div class="pf-form__acciones">
+              <app-boton variante="ghost" [disabled]="!cambios() || guardando()" (clicked)="descartar()">Descartar</app-boton>
+              <app-boton variante="accent" type="submit" icono="save" [disabled]="!cambios() || guardando()">
+                {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+              </app-boton>
+            </div>
+          </form>
+        </section>
+
+        <section class="pf-panel" aria-labelledby="pf-seguridad">
+          <header class="pf-panel__cab">
+            <span class="pf-panel__icono pf-panel__icono--seguridad"><app-icon nombre="lock" [tamano]="20" /></span>
+            <div>
+              <h3 id="pf-seguridad">Seguridad del acceso</h3>
+              <p>Cambia tu contraseña. Te pediremos la actual para confirmar que eres tú.</p>
+            </div>
+          </header>
+          @if (claveCambiada()) {
+            <app-alert-banner variante="success" titulo="Contraseña actualizada" icono="verified_user">
+              Úsala desde tu próximo ingreso.
+            </app-alert-banner>
+          }
+          <app-form-clave id="pf-clave" [enviando]="cambiandoClave()" [error]="errorClave()" (guardar)="cambiarClave($event)" />
+          <ul class="pf-consejos">
+            <li><app-icon nombre="check" [tamano]="16" /> Mínimo 10 caracteres con mayúscula, minúscula y número.</li>
+            <li><app-icon nombre="check" [tamano]="16" /> No la compartas: la consola muestra datos completos de asegurados.</li>
+          </ul>
+        </section>
+      </div>
+    }
+  </app-estado-vista>
+</section>

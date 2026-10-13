@@ -4,11 +4,17 @@ import { Observable } from 'rxjs';
 
 import {
   CasoEspecialRequest,
+  FormatoRenovacionRequest,
+  FormatoRenovacionResponse,
+  InduccionRequest,
   ConsultaSarlaftRenovacionRequest,
   NoRenovacionRequest,
   ResultadoSarlaftRenovacion,
   SolicitudRenovacionRequest,
-  RenovacionRequest,
+  CorreccionRenovacionRequest,
+  CondicionesRenovacion,
+  CotizacionRenovacionRequest,
+  PropuestaRenovacion,
 } from '../models/renovacion.model';
 import { Poliza } from '../models/poliza.model';
 
@@ -38,6 +44,17 @@ export interface PortafolioRenovaciones {
  * Registra las operaciones del flujo de renovación en el API_Backend vía `HttpClient`
  * con `withCredentials`. El backend revalida los datos capturados.
  */
+/** Campos de texto de un multipart; omite los vacíos. */
+function formulario(campos: Readonly<Record<string, string | number | undefined>>): FormData {
+  const datos = new FormData();
+  for (const [clave, valor] of Object.entries(campos)) {
+    if (valor !== undefined && valor !== null && String(valor).trim() !== '') {
+      datos.append(clave, String(valor));
+    }
+  }
+  return datos;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RenovacionService {
   private readonly http = inject(HttpClient);
@@ -49,17 +66,6 @@ export class RenovacionService {
    */
   portafolio(): Observable<PortafolioRenovaciones> {
     return this.http.get<PortafolioRenovaciones>(`${this.baseUrl}/portafolio`, {
-      withCredentials: true,
-    });
-  }
-
-  /**
-   * Registra una Renovacion de póliza (Req 17–21).
-   * @param request datos del propietario, póliza, modalidad y documentos.
-   * @returns confirmación con radicado y estado.
-   */
-  renovar(request: RenovacionRequest): Observable<RenovacionResponse> {
-    return this.http.post<RenovacionResponse>(this.baseUrl, request, {
       withCredentials: true,
     });
   }
@@ -83,11 +89,16 @@ export class RenovacionService {
    * @returns confirmación con radicado y estado.
    */
   casoEspecial(request: CasoEspecialRequest): Observable<RenovacionResponse> {
-    return this.http.post<RenovacionResponse>(
-      `${this.baseUrl}/casosEspeciales`,
-      request,
-      { withCredentials: true },
-    );
+    const datos = formulario({ numeroPoliza: request.numeroPoliza, tipo: request.tipo, observaciones: request.observaciones });
+    request.documentos.forEach((d) => datos.append('documentos', d, d.name));
+    return this.http.post<RenovacionResponse>(`${this.baseUrl}/casosEspeciales`, datos, { withCredentials: true });
+  }
+
+  /** Reenvía una renovación devuelta a corrección: queda «Caso Corregido» para el analista que la pidió. */
+  corregir(request: CorreccionRenovacionRequest): Observable<RenovacionResponse> {
+    const datos = formulario({ numeroPoliza: request.numeroPoliza, observaciones: request.observaciones });
+    request.documentos.forEach((d) => datos.append('documentos', d, d.name));
+    return this.http.post<RenovacionResponse>(`${this.baseUrl}/correcciones`, datos, { withCredentials: true });
   }
 
   /**
@@ -105,8 +116,77 @@ export class RenovacionService {
 
   /** Registra una renovación física o digital tras el SARLAFT vigente. */
   solicitar(request: SolicitudRenovacionRequest): Observable<RenovacionResponse> {
-    return this.http.post<RenovacionResponse>(`${this.baseUrl}/solicitudes`, request, {
+    const datos = formulario({
+      numeroPoliza: request.numeroPoliza,
+      tipo: request.tipo,
+      modalidad: request.modalidad,
+      comentarios: request.comentarios,
+      fechaInicio: request.fechaInicio,
+      fechaFin: request.fechaFin,
+      ...request.ajustes,
+    });
+    if (request.formularioRenovacion) {
+      datos.append('formulario', request.formularioRenovacion, request.formularioRenovacion.name);
+    }
+    return this.http.post<RenovacionResponse>(`${this.baseUrl}/solicitudes`, datos, { withCredentials: true });
+  }
+
+  /** Póliza que vence (col B del Warehouse) con las propuestas «anterior» y «nueva» ya cotizadas. */
+  condiciones(numeroPoliza: string): Observable<CondicionesRenovacion> {
+    return this.http.get<CondicionesRenovacion>(`${this.baseUrl}/${encodeURIComponent(numeroPoliza)}/condiciones`, {
       withCredentials: true,
+    });
+  }
+
+  /** Recotiza la nueva vigencia con las reglas de Comercial renovaciones (las calcula el backend). */
+  cotizar(numeroPoliza: string, request: CotizacionRenovacionRequest): Observable<PropuestaRenovacion> {
+    return this.http.post<PropuestaRenovacion>(
+      `${this.baseUrl}/${encodeURIComponent(numeroPoliza)}/cotizacion`,
+      request,
+      { withCredentials: true },
+    );
+  }
+
+  /** Genera el formato oficial de Bolívar relleno (el backend revalida el tope IPC). */
+  generarFormato(numeroPoliza: string, request: FormatoRenovacionRequest): Observable<FormatoRenovacionResponse> {
+    return this.http.post<FormatoRenovacionResponse>(
+      `${this.baseUrl}/${encodeURIComponent(numeroPoliza)}/formato`,
+      request,
+      { withCredentials: true },
+    );
+  }
+
+  /** PDF del último formato generado para la póliza. */
+  descargarFormato(numeroPoliza: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/${encodeURIComponent(numeroPoliza)}/formato/pdf`, {
+      withCredentials: true,
+      responseType: 'blob',
+    });
+  }
+
+  /** Envía la inducción de una póliza vencida (multipart: datos + contrato + paz y salvo). */
+  enviarInduccion(
+    numeroPoliza: string,
+    datos: InduccionRequest,
+    contrato: File,
+    pazYSalvo: File,
+  ): Observable<RenovacionResponse> {
+    const cuerpo = new FormData();
+    cuerpo.append('datos', new Blob([JSON.stringify(datos)], { type: 'application/json' }));
+    cuerpo.append('contrato', contrato);
+    cuerpo.append('pazYSalvo', pazYSalvo);
+    return this.http.post<RenovacionResponse>(
+      `${this.baseUrl}/${encodeURIComponent(numeroPoliza)}/induccion`,
+      cuerpo,
+      { withCredentials: true },
+    );
+  }
+
+  /** Contrato o paz y salvo de una inducción (dueño o área). */
+  descargarArchivoInduccion(id: string, documento: 'contrato' | 'pazYSalvo'): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/inducciones/${encodeURIComponent(id)}/${documento}`, {
+      withCredentials: true,
+      responseType: 'blob',
     });
   }
 }

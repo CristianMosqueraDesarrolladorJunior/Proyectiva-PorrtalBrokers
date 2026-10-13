@@ -1,0 +1,175 @@
+<section class="comisiones" aria-labelledby="comisiones-titulo">
+  <app-page-header
+    eyebrow="Comisiones"
+    tituloId="comisiones-titulo"
+    titulo="Mis comisiones"
+    subtitulo="Genera tu cuenta de cobro y cárgala en la plataforma de proveedores de Seguros Bolívar para el pago."
+  >
+    <div acciones>
+      @if (proveedores; as p) {
+        <a class="comisiones__proveedores" [href]="p['url']" target="_blank" rel="noopener noreferrer">
+          Ir a la plataforma de proveedores <span aria-hidden="true">↗</span>
+        </a>
+      }
+    </div>
+  </app-page-header>
+
+  @if (bloqueado()) {
+    <app-empty-state
+      icono="lock"
+      titulo="Disponible al completar tu registro"
+      descripcion="Las comisiones y las cuentas de cobro se habilitan cuando tu cuenta pasa a broker registrado. Completa tus documentos desde tu perfil."
+    >
+      <div acciones>
+        <app-boton variante="accent" icono="badge" (clicked)="irAMiPerfil()">Completar mi registro</app-boton>
+      </div>
+    </app-empty-state>
+  } @else {
+    <app-grid-layout tipo="dash-grid">
+      <app-commission-breakdown-card
+        [valorEstimado]="periodo()?.valorEstimado ?? 0"
+        [periodo]="periodo()?.periodo ?? ''"
+        [polizasRadicadas]="periodo()?.polizasRadicadas ?? 0"
+        [desglose]="periodo()?.desglose ?? []"
+      />
+      <div class="comisiones__kpis">
+        <app-kpi-card
+          label="Tu acuerdo"
+          [valor]="porcentaje() + ' %'"
+          icono="handshake"
+          [sub]="porcentajeConfirmado() ? 'Sobre el valor sin IVA' : 'Estimado · lo confirma el área'"
+        />
+        <app-kpi-card label="Cuentas generadas" [valor]="historial().length" icono="receipt_long" sub="Historial" />
+      </div>
+    </app-grid-layout>
+
+    @if (generada(); as cuenta) {
+      <app-alert-banner variante="success" titulo="Cuenta de cobro generada" icono="task_alt">
+        <span class="comisiones__exito">
+          {{ cuenta.polizas }} pólizas · {{ pesos(cuenta.totalComision) }} ({{ cuenta.enLetras }}).
+          {{ cuenta.enviada ? 'Ya la enviamos al área.' : 'Quedó lista; el envío al área está pendiente.' }}
+          <app-boton variante="ghost" icono="download" (clicked)="descargar(cuenta.id)">Descargar PDF</app-boton>
+          Descárgala y cárgala en la plataforma de proveedores para el pago.
+          @if (proveedores; as p) {
+          <a class="comisiones__proveedores" [href]="p['url']" target="_blank" rel="noopener noreferrer">
+            Ir a la plataforma de proveedores <span aria-hidden="true">↗</span>
+          </a>
+        }
+        </span>
+      </app-alert-banner>
+    }
+
+    <app-layout-resumen etiquetaLateral="Resumen de la cuenta de cobro">
+      <div principal>
+        <app-form-section-card
+          [numero]="1"
+          icono="receipt_long"
+          titulo="Pólizas a cobrar"
+          [subtitulo]="'Hasta ' + maximoFilas + ' pólizas por cuenta. El valor es el pagado por el propietario, con IVA.'"
+        >
+          <ol class="filas">
+            @for (fila of filasCrudas(); track $index; let i = $index) {
+              <li class="fila">
+                <span class="fila__numero" aria-hidden="true">{{ i + 1 }}</span>
+                <app-form-field label="Número de póliza" [controlId]="'cc-poliza-' + i" ayuda="13 dígitos · empieza por 5010">
+                  <input
+                    [id]="'cc-poliza-' + i"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    maxlength="17"
+                    placeholder="5010000123456"
+                    [value]="fila.poliza"
+                    (input)="actualizarFila(i, 'poliza', valorDe($event))"
+                  />
+                </app-form-field>
+                <app-form-field label="Valor pagado" [controlId]="'cc-valor-' + i">
+                  <app-money-input
+                    [inputId]="'cc-valor-' + i"
+                    [valor]="fila.valor"
+                    (valorChange)="actualizarFila(i, 'valor', $event)"
+                  />
+                </app-form-field>
+                <div class="fila__comision" aria-live="polite">
+                  <span class="fila__etiqueta">Comisión</span>
+                  <strong>{{ comisionFila(i) }}</strong>
+                </div>
+                <app-boton
+                  variante="ghost"
+                  icono="delete"
+                  [ariaLabel]="'Quitar la fila ' + (i + 1)"
+                  (clicked)="quitarFila(i)"
+                ></app-boton>
+              </li>
+            }
+          </ol>
+
+          <div class="filas__pie">
+            <app-boton
+              variante="ghost"
+              icono="add"
+              [disabled]="filasCrudas().length >= maximoFilas"
+              (clicked)="agregarFila()"
+            >Agregar póliza</app-boton>
+          </div>
+
+          @if (revision().avisos.length > 0) {
+            <app-alert-banner variante="warning" titulo="Revisa antes de enviar">
+              <ul class="lista">
+                @for (aviso of revision().avisos; track aviso) {
+                  <li>{{ aviso }}</li>
+                }
+              </ul>
+            </app-alert-banner>
+          }
+          @if (intento() && revision().errores.length > 0) {
+            <app-alert-banner variante="error" titulo="Falta corregir">
+              <ul class="lista">
+                @for (error of revision().errores; track error) {
+                  <li>{{ error }}</li>
+                }
+              </ul>
+            </app-alert-banner>
+          }
+          @if (errorEnvio()) {
+            <app-alert-banner variante="error" titulo="No se pudo generar la cuenta">{{ errorEnvio() }}</app-alert-banner>
+          }
+        </app-form-section-card>
+      </div>
+
+      <div lateral>
+        <app-summary-card titulo="Cuenta de cobro" [principal]="resumenPrincipal()" [filas]="resumenFilas()">
+          <div acciones class="comisiones__acciones">
+            <p class="comisiones__letras">{{ enLetras() }}</p>
+            <app-boton variante="accent" icono="send" [disabled]="generando()" (clicked)="generar()">
+              {{ generando() ? 'Generando…' : 'Generar y enviar' }}
+            </app-boton>
+          </div>
+        </app-summary-card>
+      </div>
+    </app-layout-resumen>
+
+    <app-form-section-card [numero]="2" icono="history" titulo="Cuentas generadas" subtitulo="Descarga el PDF de cualquier cuenta anterior.">
+      <app-estado-vista
+        [cargando]="cargandoHistorial()"
+        [error]="errorHistorial()"
+        [vacio]="historial().length === 0"
+        entidad="cuentas de cobro"
+        [lineas]="3"
+        iconoVacio="receipt_long"
+        tituloVacio="Aún no has generado cuentas de cobro"
+        descripcionVacio="La primera que generes aparecerá aquí con su PDF."
+        (reintentar)="cargarHistorial()"
+      >
+        <app-data-table
+          [columnas]="columnasHistorial"
+          [filas]="filasHistorial()"
+          [total]="filasHistorial().length"
+          [tamanoPagina]="filasHistorial().length || 1"
+          ariaLabel="Cuentas de cobro generadas"
+          (accion)="onAccionHistorial($event)"
+        />
+      </app-estado-vista>
+    </app-form-section-card>
+  }
+</section>

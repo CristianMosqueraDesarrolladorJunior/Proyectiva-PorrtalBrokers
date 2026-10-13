@@ -5,6 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { CatalogoService } from '../../../core/services/catalogo.service';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -40,13 +41,6 @@ const PASOS_NUEVO_NEGOCIO: readonly string[] = [
   'Datos cliente',
   'Precios',
   'Confirmación',
-];
-
-/** Opciones de frecuencia de pago del paso 2 (Req 31.4). */
-const FRECUENCIAS: readonly { readonly valor: Frecuencia; readonly etiqueta: string }[] = [
-  { valor: 'mensual', etiqueta: 'Mensual' },
-  { valor: 'trimestral', etiqueta: 'Trimestral' },
-  { valor: 'anual', etiqueta: 'Anual' },
 ];
 
 /** Estado del envío del Nuevo_Negocio para controlar loaders y confirmación (Req 31.7). */
@@ -97,7 +91,10 @@ export class NuevoNegocioComponent {
   protected readonly pasos = PASOS_NUEVO_NEGOCIO;
 
   /** Opciones de frecuencia de pago (Req 31.4). */
-  protected readonly frecuencias = FRECUENCIAS;
+  /** Frecuencias de pago (catálogo `frecuencia_pago`, Req 31.4). */
+  protected readonly frecuencias = inject(CatalogoService)
+    .opciones('frecuencia_pago')
+    .map((f) => ({ valor: f.codigo.toLowerCase() as Frecuencia, etiqueta: f.descripcion }));
 
   /** Índice del paso activo (0 = Datos cliente, 1 = Precios, 2 = Confirmación). */
   protected readonly pasoActual = signal(0);

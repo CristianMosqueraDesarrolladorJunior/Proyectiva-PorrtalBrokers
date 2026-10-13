@@ -1,3 +1,4 @@
+import { CatalogoService } from '../../../core/services/catalogo.service';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -10,19 +11,23 @@ import {
   signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { catchError, finalize, of } from 'rxjs';
 
 import { DashboardService } from '../../../core/services/dashboard.service';
+import { RadicacionService, type ProcedimientoResponse } from '../../../core/services/radicacion.service';
+import { BitacoraComponent, type EventoBitacora } from '../../../shared/components/bitacora/bitacora.component';
 import {
   DetalleSolicitud,
   HitoTimeline,
 } from '../../../core/models/solicitud.model';
-import {
-  DrawerDetalleComponent,
-  FilaDetalle,
-} from '../../../shared/components/drawer-detalle/drawer-detalle.component';
+import type { FilaDetalle } from '../../../shared/components/drawer-detalle/drawer-detalle.component';
 import { TimelineComponent } from '../../../shared/components/timeline/timeline.component';
 import { BotonComponent } from '../../../shared/components/boton/boton.component';
+import { ModalDialogComponent } from '../../../shared/components/modal-dialog/modal-dialog.component';
+import { FichaComponent, type SeccionFicha } from '../../../shared/components/ficha/ficha.component';
+import { BadgeEstadoComponent } from '../../../shared/components/badge-estado/badge-estado.component';
+import { AlertBannerComponent } from '../../../shared/components/alert-banner/alert-banner.component';
+import { IconComponent } from '../../../shared/components/icon/icon.component';
 
 /**
  * DetalleSolicitudComponent — Detalle_Solicitud del Seguimiento (Req 34).
@@ -31,27 +36,33 @@ import { BotonComponent } from '../../../shared/components/boton/boton.component
  * (Req 6.4), obtiene el Detalle_Solicitud desde el API_Backend mediante
  * `DashboardService`/`HttpClient` (`GET /api/v1/solicitudes/{referencia}`,
  * Req 34.4) y lo presenta reutilizando el `DrawerDetalleComponent` (Req 39.2)
- * con los campos enmascarados —referencia, cliente, producto, estado,
+ * con los datos completos —referencia, cliente, producto, estado,
  * canon o pago, fecha y comisión (Req 34.1, 34.5)— junto con un
  * `TimelineComponent` con los hitos del trámite (Req 34.2).
  *
  * Al pulsar "Cerrar" o el control de cierre del drawer, oculta el detalle y
  * emite `cerrar` para que el contenedor regrese a la tabla (Req 34.3).
  *
- * Standalone + `inject()`; los datos llegan enmascarados desde el backend y el
+ * Standalone + `inject()`; los datos llegan completos desde el backend y el
  * componente no persiste PII ni deriva cálculos autoritativos en el cliente.
  */
 @Component({
   selector: 'app-detalle-solicitud',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DrawerDetalleComponent, TimelineComponent, BotonComponent],
+  imports: [BitacoraComponent, ModalDialogComponent, FichaComponent, BadgeEstadoComponent, AlertBannerComponent, IconComponent, TimelineComponent, BotonComponent],
   templateUrl: './detalle-solicitud.component.html',
   styleUrl: './detalle-solicitud.component.scss',
 })
 export class DetalleSolicitudComponent implements OnChanges {
   private readonly dashboardService = inject(DashboardService);
+  private readonly catalogo = inject(CatalogoService);
   private readonly router = inject(Router);
+  private readonly radicacion = inject(RadicacionService);
+
+  /** Procedimiento real del área (Warehouse): estado, qué corregir, póliza y bitácora. */
+  protected readonly procedimiento = signal<ProcedimientoResponse | null>(null);
+  protected readonly bitacora = signal<readonly EventoBitacora[]>([]);
 
   /** Referencia de la solicitud seleccionada; `null` mantiene el drawer cerrado. */
   @Input() referencia: string | null = null;
@@ -73,6 +84,12 @@ export class DetalleSolicitudComponent implements OnChanges {
 
   /** Hitos del trámite mostrados en la línea de tiempo (Req 34.2). */
   protected readonly hitos = signal<readonly HitoTimeline[]>([]);
+
+  /** Detalle presentado en secciones colapsables (mismo componente de ficha de la consola). */
+  protected readonly secciones = signal<readonly SeccionFicha[]>([]);
+  protected readonly referenciaVista = signal('');
+  protected readonly etiquetaEstado = signal('');
+  protected readonly varianteEstado = signal<'success' | 'warning' | 'danger' | 'info'>('info');
 
   /**
    * Estado actual de la solicitud cargada. Se usa para habilitar la gestión de corrección de
@@ -118,6 +135,10 @@ export class DetalleSolicitudComponent implements OnChanges {
    */
   private abrirDetalle(referencia: string): void {
     this.abierto.set(true);
+    this.radicacion
+      .procedimiento(referencia)
+      .pipe(catchError(() => of(null)))
+      .subscribe((p) => this.aplicarProcedimiento(p));
     this.cargando.set(true);
     this.error.set(null);
     this.dashboardService
@@ -131,16 +152,22 @@ export class DetalleSolicitudComponent implements OnChanges {
   }
 
   /**
-   * Mapea el detalle recibido (enmascarado) a filas de presentación e hitos.
+   * Mapea el detalle recibido a filas de presentación e hitos.
    * @param detalle detalle de la solicitud con su línea de tiempo.
    */
   private aplicarDetalle(detalle: DetalleSolicitud): void {
-    this.filas.set(construirFilasDetalle(detalle));
+    this.filas.set(construirFilasDetalle(detalle, (e) => this.catalogo.etiquetaSeguimiento(e)));
+    this.secciones.set(construirSecciones(detalle, (e) => this.catalogo.etiquetaSeguimiento(e)));
+    this.referenciaVista.set(detalle.referencia);
+    this.etiquetaEstado.set(this.catalogo.etiquetaSeguimiento(detalle.estado));
+    this.varianteEstado.set(VARIANTE_ESTADO[detalle.estado] ?? 'info');
     this.hitos.set(detalle.timeline);
     this.estadoActual.set(detalle.estado);
     this.referenciaCargada.set(detalle.referencia);
     // "observada" = la revisión solicitó actualizar/corregir documentos (gestión de corrección).
     this.puedeCorregir.set(detalle.estado === 'observada');
+    // Si el procedimiento del área ya llegó, su estado prevalece sobre el del resumen.
+    if (this.procedimiento()) this.aplicarProcedimiento(this.procedimiento());
   }
 
   /**
@@ -159,11 +186,31 @@ export class DetalleSolicitudComponent implements OnChanges {
   }
 
   /** Restablece el estado interno al cerrar el detalle. */
+  /** El estado del área manda: la corrección se habilita solo si el Warehouse la pidió. */
+  private aplicarProcedimiento(p: ProcedimientoResponse | null): void {
+    this.procedimiento.set(p);
+    this.bitacora.set(
+      (p?.eventos ?? []).map((e) => ({ fecha: e.fecha, tipo: 'Gestión', descripcion: e.descripcion })),
+    );
+    if (!p) return;
+    this.etiquetaEstado.set(p.procedimiento.etiqueta);
+    this.varianteEstado.set(
+      p.procedimiento.estadoPortal === 'EXPEDIDA' ? 'success'
+        : p.procedimiento.estadoPortal === 'EN_CORRECCION' ? 'warning'
+        : p.procedimiento.estadoPortal === 'ANULADA' ? 'danger' : 'info',
+    );
+    this.puedeCorregir.set(p.procedimiento.estadoPortal === 'EN_CORRECCION');
+  }
+
   private reiniciar(): void {
+    this.procedimiento.set(null);
+    this.bitacora.set([]);
     this.abierto.set(false);
     this.cargando.set(false);
     this.error.set(null);
     this.filas.set([]);
+    this.secciones.set([]);
+    this.referenciaVista.set('');
     this.hitos.set([]);
     this.estadoActual.set(null);
     this.referenciaCargada.set(null);
@@ -184,13 +231,14 @@ const ETIQUETAS_DETALLE = {
 
 /**
  * Construye las filas etiqueta/valor del Detalle_Solicitud a partir del detalle
- * enmascarado recibido del backend (Req 34.1, 34.5). Función pura y total.
+ * recibido del backend (Req 34.1, 34.5). Función pura y total.
  *
- * @param detalle detalle de la solicitud (PII ya enmascarada por el backend).
+ * @param detalle detalle de la solicitud (datos completos).
  * @returns filas de presentación en el orden definido por el prototipo.
  */
 export function construirFilasDetalle(
   detalle: DetalleSolicitud,
+  etiquetaEstado: (estado: string) => string = (estado) => estado,
 ): readonly FilaDetalle[] {
   return [
     { etiqueta: ETIQUETAS_DETALLE.referencia, valor: detalle.referencia },
@@ -203,23 +251,11 @@ export function construirFilasDetalle(
   ];
 }
 
-/** Etiquetas legibles de estado para la vista de detalle (Req 34.1). */
-const ETIQUETAS_ESTADO: Readonly<Record<string, string>> = {
-  radicada: 'Radicada',
-  en_revision: 'En revisión',
-  aprobada: 'Aprobada',
-  bloqueada: 'Bloqueada',
-  observada: 'Observada',
+const VARIANTE_ESTADO: Readonly<Record<string, 'success' | 'warning' | 'danger' | 'info'>> = {
+  aprobada: 'success',
+  observada: 'warning',
+  bloqueada: 'danger',
 };
-
-/**
- * Devuelve la etiqueta legible de un estado de solicitud.
- * @param estado estado de la solicitud.
- * @returns etiqueta legible; el propio estado si no tiene mapeo.
- */
-function etiquetaEstado(estado: string): string {
-  return ETIQUETAS_ESTADO[estado] ?? estado;
-}
 
 /**
  * Formatea el valor de comisión como moneda colombiana para su presentación.
@@ -232,4 +268,38 @@ function formatearComision(comision: number): string {
     currency: 'COP',
     maximumFractionDigits: 0,
   }).format(comision);
+}
+
+/** Secciones de la ficha del negocio que ve el broker (lenguaje de póliza de arrendamiento). */
+export function construirSecciones(
+  detalle: DetalleSolicitud,
+  etiquetaEstado: (estado: string) => string = (estado) => estado,
+): readonly SeccionFicha[] {
+  return [
+    {
+      titulo: 'Solicitud de póliza',
+      icono: 'description',
+      descripcion: 'Lo que radicaste para asegurar el arrendamiento',
+      datos: [
+        { etiqueta: 'Referencia', valor: detalle.referencia },
+        { etiqueta: 'Producto', valor: detalle.producto },
+        { etiqueta: 'Fecha de radicación', valor: detalle.fecha },
+        { etiqueta: 'Estado', valor: etiquetaEstado(detalle.estado) },
+      ],
+    },
+    {
+      titulo: 'Tomador del negocio',
+      icono: 'person',
+      datos: [{ etiqueta: 'Cliente', valor: detalle.cliente, ancho: true }],
+    },
+    {
+      titulo: 'Valores y comisión',
+      icono: 'payments',
+      descripcion: 'Tu comisión se causa cuando se expide la póliza',
+      datos: [
+        { etiqueta: 'Canon / pago de la póliza', valor: detalle.estadoPago },
+        { etiqueta: 'Tu comisión', valor: formatearComision(detalle.comision), destacado: true },
+      ],
+    },
+  ];
 }

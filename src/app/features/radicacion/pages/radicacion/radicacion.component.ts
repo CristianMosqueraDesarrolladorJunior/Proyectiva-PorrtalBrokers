@@ -1,7 +1,9 @@
+import { concat, switchMap, toArray } from 'rxjs';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -10,23 +12,25 @@ import { Router } from '@angular/router';
 
 import {
   documentosRequeridosRadicacion,
-  type RadicacionRequest,
+  type ResultadoEstudioArrendamiento,
   type ResultadoSarlaftRadicacion,
   type TipoDocumentoIdentidad,
   type TipoDocumentoRadicacion,
   type TipoPersona,
 } from '../../../../core/models/radicacion.model';
 import { RadicacionService } from '../../../../core/services/radicacion.service';
-import {
-  REGLAS_DOCUMENTO_RADICACION,
-  validarDocumento,
-} from '../../../../shared/validation/documento-validacion';
+import { BorradorRadicacionService } from '../../../../core/services/borrador-radicacion.service';
+import { formatearCop } from '../../../../shared/util/moneda';
+import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
+import { reglaDesdeCatalogo, validarDocumento } from '../../../../shared/validation/documento-validacion';
+import { CatalogoService } from '../../../../core/services/catalogo.service';
 import {
   AlertBannerComponent,
   BotonComponent,
   DocUploaderComponent,
   FormFieldComponent,
   InfoBoxComponent,
+  ToggleSwitchComponent,
   RadioGroupComponent,
   TabsComponent,
   PageHeaderComponent,
@@ -46,11 +50,8 @@ import type {
 import type { Tab } from '../../../../shared/components/tabs/tabs.component';
 import {
   claveConsultaSarlaft,
-  DESCRIPCION_DOCUMENTO_RADICACION,
+  construirPayloadRadicacion,
   documentosObligatoriosFaltantes,
-  ETIQUETA_DOCUMENTO_RADICACION,
-  ETIQUETA_ESTADO_SARLAFT,
-  ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD,
   etiquetasDocumentos,
   PASOS_RADICACION,
   pasoActivoRadicacion,
@@ -58,8 +59,6 @@ import {
   puedeConsultarSarlaftRadicacion,
   puedeEnviarRadicacion,
   sujetoSarlaft,
-  TIPOS_DOCUMENTO_APODERADO,
-  TIPOS_DOCUMENTO_IDENTIDAD,
   validarDatosRadicacion,
 } from './radicacion-presentacion';
 
@@ -103,6 +102,7 @@ const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmad
     BotonComponent,
     AlertBannerComponent,
     InfoBoxComponent,
+    ToggleSwitchComponent,
     PageHeaderComponent,
     FormSectionCardComponent,
     StepTabsComponent,
@@ -117,6 +117,15 @@ const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmad
 export class RadicacionComponent {
   private readonly radicacionService = inject(RadicacionService);
   private readonly router = inject(Router);
+  private readonly borrador = inject(BorradorRadicacionService);
+
+  /** Cotización elegida en "Radicar esta cotización" (solo lectura en esta pantalla). */
+  protected readonly cotizacion = this.borrador.cotizacion;
+  /** Contrato generado: toda radicación lo exige. */
+  protected readonly contratoReferencia = computed(() => this.borrador.contrato()?.referencia ?? null);
+  /** Declaración de autorización de tratamiento de datos (Habeas Data), exigida por el backend. */
+  protected readonly autorizacionDatos = signal(false);
+  protected readonly formatearCop = formatearCop;
 
   /** Pestañas de tipo de persona (Persona Natural / Persona Jurídica) (Req 10.3, 10.4). */
   protected readonly tabs: readonly Tab[] = [
@@ -130,19 +139,44 @@ export class RadicacionComponent {
     { valor: 'apoderado', etiqueta: 'Apoderado' },
   ];
 
-  /** Tipos de documento de identidad seleccionables para el propietario (Req 10.1). */
-  protected readonly tiposDocumento = TIPOS_DOCUMENTO_IDENTIDAD;
+  private readonly catalogo = inject(CatalogoService);
 
-  /** Tipos de documento del apoderado (persona natural). */
-  protected readonly tiposDocumentoApoderado = TIPOS_DOCUMENTO_APODERADO;
+  /** Tipos de documento del propietario y del apoderado (catálogo `tipo_documento`, Req 10.1). */
+  protected readonly tiposDocumento = this.catalogo.codigos<TipoDocumentoIdentidad>('tipo_documento', 'propietario');
+  protected readonly tiposDocumentoApoderado = this.catalogo.codigos<TipoDocumentoIdentidad>('tipo_documento', 'apoderado');
+  protected readonly etiquetaTipoDocumento = this.catalogo.etiquetas('tipo_documento');
 
-  /** Etiqueta legible de cada tipo de documento de identidad (Req 10.1). */
-  protected readonly etiquetaTipoDocumento = ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD;
+  /** Documentos de radicación (catálogo `documento_radicacion`): etiquetas, ayudas, reglas y a quién aplican. */
+  private readonly documentosCatalogo = this.catalogo.opciones('documento_radicacion');
+  private readonly etiquetaDocumento = this.catalogo.etiquetas('documento_radicacion');
 
   // --- Estado de los datos base de la radicación (Req 10.1) ---
   protected readonly tipoDocumentoPropietario = signal<TipoDocumentoIdentidad>('CC');
   protected readonly numeroDocumentoPropietario = signal('');
   protected readonly numeroEstudioArrendamiento = signal('');
+
+  // --- Paso 2: consulta del Estudio Digital del Libertador (inquilino) ---
+  /** Documento/cédula del inquilino, requerido junto al número de estudio para consultar. */
+  protected readonly documentoInquilino = signal('');
+  /** Consulta de estudio en curso. */
+  protected readonly consultandoEstudio = signal(false);
+  /** Resultado del estudio consultado (autollena el contrato). */
+  protected readonly resultadoEstudio = signal<ResultadoEstudioArrendamiento | null>(null);
+  /** Error técnico de la consulta de estudio. */
+  protected readonly errorEstudio = signal<string | null>(null);
+
+  /** El estudio consultado está aprobado: habilita continuar. */
+  protected readonly estudioAprobado = computed(
+    () => this.resultadoEstudio()?.estado === 'APROBADO',
+  );
+
+  /** Habilita el botón de consulta de estudio: número + cédula del inquilino presentes. */
+  protected readonly puedeConsultarEstudio = computed(
+    () =>
+      this.numeroEstudioArrendamiento().trim().length > 0 &&
+      this.documentoInquilino().trim().length > 0 &&
+      !this.consultandoEstudio(),
+  );
 
   // --- Estado del tipo de persona y opciones condicionales (Req 10.2, 10.3, 12.1) ---
   protected readonly tipoPersona = signal<TipoPersona>('natural');
@@ -154,10 +188,19 @@ export class RadicacionComponent {
   protected readonly sarlaftRequiereFormulario = signal(false);
 
   /**
+   * Celular de quien firma (propietario/apoderado): destino del SMS de la URL de Conocimiento de
+   * Cliente cuando SARLAFT exige generarla (fase 2). Se envía al servicio de generar URL vía MS.
+   */
+  protected readonly telefonoSarlaft = signal('');
+
+  /**
    * Documentos cargados: mapa tipo -> nombre de archivo (para el uploader) y
    * mapa tipo -> resultado de validación (para bloquear inválidos).
    */
   protected readonly archivosCargados = signal<Readonly<Record<string, string>>>({});
+
+  /** Archivos elegidos (en memoria): se suben al radicar; el borrador solo guarda sus nombres. */
+  private readonly archivos = new Map<TipoDocumentoRadicacion, File>();
   private readonly tiposValidos = signal<ReadonlySet<TipoDocumentoRadicacion>>(new Set());
 
   /** Mensaje de error de envío (por ejemplo, tras un fallo del backend). */
@@ -234,16 +277,19 @@ export class RadicacionComponent {
 
   /** Salida 3: el caso es consultable y el trámite termina en el Warehouse. */
   protected readonly casoConsultable = computed(() =>
-    this.estadoSarlaft() === 'consultable' ? this.resultadoSarlaft() : null,
+    this.estadoSarlaft() === 'CONSULTABLE' ? this.resultadoSarlaft() : null,
   );
 
-  /** Datos completos para consultar: propietario, estudio y, si aplica, apoderado. */
+  /**
+   * Datos completos para consultar: propietario, estudio, teléfono del firmante y, si aplica,
+   * documento del apoderado. El teléfono es necesario para la fase 2 (generar URL por SMS).
+   */
   protected readonly datosSarlaftCompletos = computed(() =>
     puedeConsultarSarlaftRadicacion(
       this.datosValidos(),
       this.firmaApoderado(),
       this.numeroDocumentoApoderado(),
-    ),
+    ) && this.telefonoSarlaft().trim().length >= 7,
   );
 
   /** Habilita el botón de consulta SARLAFT. */
@@ -257,14 +303,14 @@ export class RadicacionComponent {
       tipoPersona: this.tipoPersona(),
       firmaApoderado: this.firmaApoderado(),
       sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+      documentos: this.documentosCatalogo,
     }),
   );
 
-  /** Documentos del apoderado (Poder y Cédula), mostrados en su sección (Req 10.2). */
-  private readonly tiposApoderado: readonly TipoDocumentoRadicacion[] = [
-    'poderApoderado',
-    'cedulaApoderado',
-  ];
+  /** Documentos del apoderado, mostrados en su sección (catálogo, `aplica = APODERADO`, Req 10.2). */
+  private readonly tiposApoderado = this.documentosCatalogo
+    .filter((d) => d['aplica'] === 'APODERADO')
+    .map((d) => d.codigo as TipoDocumentoRadicacion);
 
   /** Reglas del uploader para los documentos del apoderado (Req 10.2). */
   protected readonly reglasApoderado = computed<readonly ReglaDocumentoUploader[]>(() =>
@@ -311,6 +357,7 @@ export class RadicacionComponent {
         tipoPersona: this.tipoPersona(),
         firmaApoderado: this.firmaApoderado(),
         sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+        documentos: this.documentosCatalogo,
       },
       this.cargadosValidos(),
     ),
@@ -318,17 +365,25 @@ export class RadicacionComponent {
 
   /** Etiquetas legibles de los documentos pendientes para el mensaje de UI (Req 11.4). */
   protected readonly etiquetasFaltantes = computed(() =>
-    etiquetasDocumentos(this.faltantes()),
+    etiquetasDocumentos(this.faltantes(), this.etiquetaDocumento),
   );
 
-  /** Habilitación del envío: SARLAFT actualizado y documentos completos (Req 11.4). */
+  /**
+   * Habilitación del envío: estudio APROBADO, SARLAFT actualizado y documentos
+   * completos (Req 11.4). Un estudio NO_APROBADO (rechazado) o PENDIENTE (en trámite)
+   * bloquea la radicación: no se puede radicar una póliza sin estudio aprobado.
+   */
   protected readonly envioHabilitado = computed(() =>
+    this.autorizacionDatos() &&
+    this.contratoReferencia() !== null &&
+    this.estudioAprobado() &&
     this.documentosHabilitados() &&
     puedeEnviarRadicacion(
       {
         tipoPersona: this.tipoPersona(),
         firmaApoderado: this.firmaApoderado(),
         sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+        documentos: this.documentosCatalogo,
       },
       this.cargadosValidos(),
       this.datosValidos(),
@@ -364,8 +419,10 @@ export class RadicacionComponent {
     },
     { label: 'Firmante', valor: this.firmaApoderado() ? 'Apoderado' : 'Propietario' },
     {
-      label: this.firmaApoderado() ? 'SARLAFT (apoderado)' : 'SARLAFT',
-      valor: this.estadoSarlaft() ? ETIQUETA_ESTADO_SARLAFT[this.estadoSarlaft()!] : 'Sin consultar',
+      label: this.firmaApoderado() ? 'Conocimiento de Cliente (apoderado)' : 'Conocimiento de Cliente',
+      valor: this.estadoSarlaft()
+        ? this.catalogo.etiqueta('sarlaft_resultado', this.estadoSarlaft()!.toLowerCase())
+        : 'Sin consultar',
     },
     {
       label: 'Tipo de persona',
@@ -384,6 +441,55 @@ export class RadicacionComponent {
 
   protected readonly confirmarCancelar = signal(false);
 
+  constructor() {
+    this.restaurarBorrador();
+    // Todo cambio del formulario queda en el borrador: al volver del contrato no se pierde nada.
+    effect(() => this.borrador.formulario.set(this.instantanea()));
+  }
+
+  /** Estado del formulario serializable (sin archivos binarios: solo nombres y tipos válidos). */
+  private instantanea(): Readonly<Record<string, unknown>> {
+    return {
+      tipoDocumentoPropietario: this.tipoDocumentoPropietario(),
+      numeroDocumentoPropietario: this.numeroDocumentoPropietario(),
+      numeroEstudioArrendamiento: this.numeroEstudioArrendamiento(),
+      documentoInquilino: this.documentoInquilino(),
+      resultadoEstudio: this.resultadoEstudio(),
+      tipoPersona: this.tipoPersona(),
+      firmaApoderado: this.firmaApoderado(),
+      tipoDocumentoApoderado: this.tipoDocumentoApoderado(),
+      numeroDocumentoApoderado: this.numeroDocumentoApoderado(),
+      sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+      telefonoSarlaft: this.telefonoSarlaft(),
+      consultaSarlaft: this.consultaSarlaft(),
+      archivosCargados: this.archivosCargados(),
+      tiposValidos: [...this.tiposValidos()],
+      autorizacionDatos: this.autorizacionDatos(),
+    };
+  }
+
+  private restaurarBorrador(): void {
+    const f = this.borrador.formulario() as Record<string, never> | null;
+    if (!f) {
+      return;
+    }
+    this.tipoDocumentoPropietario.set(f['tipoDocumentoPropietario'] ?? 'CC');
+    this.numeroDocumentoPropietario.set(f['numeroDocumentoPropietario'] ?? '');
+    this.numeroEstudioArrendamiento.set(f['numeroEstudioArrendamiento'] ?? '');
+    this.documentoInquilino.set(f['documentoInquilino'] ?? '');
+    this.resultadoEstudio.set(f['resultadoEstudio'] ?? null);
+    this.tipoPersona.set(f['tipoPersona'] ?? 'natural');
+    this.firmaApoderado.set(f['firmaApoderado'] ?? false);
+    this.tipoDocumentoApoderado.set(f['tipoDocumentoApoderado'] ?? 'CC');
+    this.numeroDocumentoApoderado.set(f['numeroDocumentoApoderado'] ?? '');
+    this.sarlaftRequiereFormulario.set(f['sarlaftRequiereFormulario'] ?? false);
+    this.telefonoSarlaft.set(f['telefonoSarlaft'] ?? '');
+    this.consultaSarlaft.set(f['consultaSarlaft'] ?? null);
+    this.archivosCargados.set(f['archivosCargados'] ?? {});
+    this.tiposValidos.set(new Set(f['tiposValidos'] ?? []));
+    this.autorizacionDatos.set(f['autorizacionDatos'] ?? false);
+  }
+
   protected cancelar(): void {
     if (this.hayAvance()) {
       this.confirmarCancelar.set(true);
@@ -394,7 +500,42 @@ export class RadicacionComponent {
 
   protected salir(): void {
     this.confirmarCancelar.set(false);
+    this.borrador.limpiar();
     void this.router.navigate(['/app/seguimiento']);
+  }
+
+  /**
+   * Consulta el Estudio Digital del Libertador (paso 2) con el número de estudio
+   * (consecutivo) y la cédula del inquilino. El backend consulta el estudio real,
+   * enmascara la PII y devuelve el estado (APROBADO/NO_APROBADO/PENDIENTE) junto con
+   * los datos del inquilino e inmueble que servirán para poblar el contrato (Req 5.3–5.6).
+   */
+  protected consultarEstudio(): void {
+    if (!this.puedeConsultarEstudio()) {
+      return;
+    }
+    this.consultandoEstudio.set(true);
+    this.errorEstudio.set(null);
+    this.resultadoEstudio.set(null);
+
+    this.radicacionService
+      .consultarEstudio(
+        this.numeroEstudioArrendamiento().trim(),
+        this.documentoInquilino().trim(),
+        this.tipoDocumentoPropietario(),
+      )
+      .subscribe({
+        next: (resultado) => {
+          this.resultadoEstudio.set(resultado);
+          this.consultandoEstudio.set(false);
+        },
+        error: () => {
+          this.errorEstudio.set(
+            'No fue posible consultar el estudio en este momento. Verifica el número y la cédula del inquilino e intenta nuevamente.',
+          );
+          this.consultandoEstudio.set(false);
+        },
+      });
   }
 
   /**
@@ -418,6 +559,7 @@ export class RadicacionComponent {
         sujeto: this.sujetoSarlaft(),
         tipoDocumento: documento.tipo,
         numeroDocumento: documento.numero.trim(),
+        telefono: this.telefonoSarlaft().trim(),
         tipoPersona: this.tipoPersona(),
         numeroEstudioArrendamiento: this.numeroEstudioArrendamiento().trim(),
       })
@@ -428,7 +570,7 @@ export class RadicacionComponent {
         },
         error: () => {
           this.errorSarlaft.set(
-            'No fue posible consultar SARLAFT en este momento. Intenta nuevamente.',
+            'No fue posible consultar Conocimiento de Cliente en este momento. Intenta nuevamente.',
           );
           this.consultandoSarlaft.set(false);
         },
@@ -481,7 +623,8 @@ export class RadicacionComponent {
    */
   protected onArchivo(evento: ArchivoSeleccionado): void {
     const tipo = evento.id as TipoDocumentoRadicacion;
-    const regla = REGLAS_DOCUMENTO_RADICACION[tipo];
+    // La vigencia (CTL ≤ 90 días, existencia ≤ 30) la verifica el área sobre la fecha de expedición del documento.
+    const regla = { ...reglaDesdeCatalogo(this.documentosCatalogo.find((d) => d.codigo === tipo)), vigenciaMaxDias: null };
     const hoyIso = new Date().toISOString();
     const resultado = validarDocumento(
       {
@@ -497,12 +640,13 @@ export class RadicacionComponent {
 
     if (!resultado.valido) {
       this.errorEnvio.set(
-        `El archivo de "${ETIQUETA_DOCUMENTO_RADICACION[tipo]}" no cumple los requisitos de carga.`,
+        `El archivo de "${this.etiquetaDocumento[tipo] ?? tipo}" no cumple los requisitos de carga.`,
       );
       return;
     }
 
     this.errorEnvio.set(null);
+    this.archivos.set(tipo, evento.archivo);
     this.archivosCargados.update((actual) => ({
       ...actual,
       [tipo]: evento.archivo.name,
@@ -522,31 +666,46 @@ export class RadicacionComponent {
     this.enviando.set(true);
     this.errorEnvio.set(null);
 
-    const request: RadicacionRequest = {
-      tipoDocumentoPropietario: this.tipoDocumentoPropietario(),
-      numeroDocumentoPropietario: this.numeroDocumentoPropietario(),
+    const request = construirPayloadRadicacion({
+      contratoReferencia: this.contratoReferencia(),
       numeroEstudioArrendamiento: this.numeroEstudioArrendamiento(),
+      tipoDocumentoInquilino: 'CC',
+      documentoInquilino: this.documentoInquilino(),
+      documentosCargados: [...this.cargadosValidos()],
+      autorizacionDatos: this.autorizacionDatos(),
       tipoPersona: this.tipoPersona(),
       firmaApoderado: this.firmaApoderado(),
-      ...(this.firmaApoderado()
-        ? {
-            tipoDocumentoApoderado: this.tipoDocumentoApoderado(),
-            numeroDocumentoApoderado: this.numeroDocumentoApoderado().trim(),
-          }
-        : {}),
-      sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
-      estadoSarlaft: 'actualizado',
-      documentos: [],
-    };
+      vocabulario: this.documentosCatalogo.filter((d) => d['aplica'] !== 'OPCIONAL').map((d) => d.codigo),
+    });
 
-    this.radicacionService.radicar(request).subscribe({
-      next: (respuesta) => {
-        this.radicado.set(respuesta.radicado);
+    // Radica, sube cada documento y envía al área (fila en el Warehouse en "Pendiente Validación Documental").
+    let codigo = '';
+    this.radicacionService
+      .radicar(request)
+      .pipe(
+        switchMap((respuesta) => {
+          codigo = respuesta.radicado;
+          const tipos = this.cargadosValidos().filter((t) => this.archivos.has(t));
+          return concat(...tipos.map((t) => this.radicacionService.subirDocumento(codigo, t, this.archivos.get(t)!))).pipe(
+            toArray(),
+            switchMap(() => this.radicacionService.enviarAlArea(codigo)),
+          );
+        }),
+      )
+      .subscribe({
+      next: () => {
+        this.radicado.set(codigo);
         this.enviando.set(false);
+        // Radicada: el borrador (cotización, contrato y formulario) ya no aplica.
+        this.borrador.limpiar();
+        this.archivos.clear();
       },
-      error: () => {
+      error: (err: unknown) => {
+        // Se conserva el formulario; el mensaje orienta la corrección sin detalle técnico. Si ya quedó radicada,
+        // se informa el código: los documentos se pueden reenviar desde Seguimiento.
         this.errorEnvio.set(
-          'No se pudo registrar la radicación. Intenta nuevamente en unos minutos.',
+          (codigo ? `La solicitud ${codigo} quedó radicada pero no se pudo enviar al área: ` : '') +
+            mensajeErrorIntegracion(err),
         );
         this.enviando.set(false);
       },
@@ -555,9 +714,24 @@ export class RadicacionComponent {
 
   /**
    * Abre el Generador_Contrato de arrendamiento navegando a su ruta (Req 11.5, 30.1).
+   *
+   * <p>Si ya se consultó el Estudio Digital, lleva su resultado como estado de
+   * navegación para que el contrato autollene los campos del inquilino, el inmueble
+   * y el propietario desde los datos del estudio (todos enmascarados por el backend).</p>
    */
   protected crearContrato(): void {
-    void this.router.navigate(['/app/contrato']);
+    const estudio = this.resultadoEstudio();
+    void this.router.navigate(['/app/contrato'], {
+      state: estudio
+        ? {
+            estudio,
+            propietario: {
+              tipoDocumento: this.tipoDocumentoPropietario(),
+              numeroDocumento: this.numeroDocumentoPropietario().trim(),
+            },
+          }
+        : undefined,
+    });
   }
 
   /** Construye la regla de presentación del uploader para un documento (Req 35.7). */
@@ -567,8 +741,8 @@ export class RadicacionComponent {
   ): ReglaDocumentoUploader {
     return {
       id: tipo,
-      etiqueta: ETIQUETA_DOCUMENTO_RADICACION[tipo],
-      descripcion: DESCRIPCION_DOCUMENTO_RADICACION[tipo],
+      etiqueta: this.etiquetaDocumento[tipo] ?? tipo,
+      descripcion: String(this.documentosCatalogo.find((d) => d.codigo === tipo)?.['ayuda'] ?? ''),
       obligatorio,
     };
   }

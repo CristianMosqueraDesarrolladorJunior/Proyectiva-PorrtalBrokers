@@ -2,67 +2,88 @@
   <app-page-header
     [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="resumen-titulo"
-    [titulo]="esAdmin ? 'Estado de la operación' : 'Hola, ' + (perfil()?.nombre ?? '')"
-    subtitulo="Indicadores de la cartera, radicados por comercial y actividad reciente."
+    [titulo]="esAdmin ? 'Comportamiento del negocio' : 'Hola, ' + (perfil()?.nombre ?? '')"
+    subtitulo="Primas emitidas, cartera asegurada, suscripción, retención de renovaciones y comisiones de intermediarios, con la actividad en vivo."
   ></app-page-header>
 
-  @if (resumen(); as r) {
-    @if (r.kpis.length > 0) {
-      <div class="kpis">
-        @for (k of r.kpis; track k.etiqueta) {
-          <app-kpi-card [label]="k.etiqueta" [valor]="k.valor" [sub]="k.detalle" [tono]="tonoKpi(k.alerta)" />
-        }
+  <app-estado-vista
+    [cargando]="cargando()"
+    [error]="error()"
+    [vacio]="!resumen()"
+    entidad="resumen"
+    [lineas]="3"
+    [altoLinea]="120"
+    (reintentar)="cargarResumen()"
+  >
+    @if (resumen(); as r) {
+      <div class="resumen">
+        <h2 class="resumen__grupo">Producción y primas</h2>
+        <app-grid-layout tipo="kpi-grid">
+          <app-kpi-card label="Primas emitidas" [valor]="compacto(r.ingresos)" icono="account_balance" [sub]="r.polizasExpedidas + ' pólizas de arrendamiento expedidas'" variante="exito" />
+          <app-kpi-card label="Canon mensual asegurado" [valor]="compacto(r.indicadores.canonAsegurado)" icono="home_work" sub="Amparo básico de las pólizas vigentes" />
+          <app-kpi-card label="Valor asegurado" [valor]="compacto(r.indicadores.valorAsegurado)" icono="shield" sub="Suma asegurada total de la cartera" />
+          <app-kpi-card label="Primas por canal" [valor]="compacto(r.ingresosBrokers)" icono="verified_user" [sub]="'Brokers · ' + compacto(r.ingresosProspectos) + ' de prospectos'" />
+        </app-grid-layout>
+
+        <h2 class="resumen__grupo">Solicitudes en suscripción</h2>
+        <app-grid-layout tipo="kpi-grid">
+          <app-kpi-card label="En estudio de riesgo" [valor]="r.indicadores.enEstudio" icono="query_stats" sub="Radicadas y en análisis" />
+          <app-kpi-card label="Con corrección documental" [valor]="r.indicadores.enCorreccion" icono="rule" [tono]="r.indicadores.enCorreccion > 0 ? 'accent' : 'none'" sub="Esperan documentos del broker" />
+          <app-kpi-card label="Aprobadas por expedir" [valor]="r.indicadores.aprobadasSinExpedir" icono="task_alt" sub="Listas para emitir póliza" />
+          <app-kpi-card label="Documentos en el expediente" [valor]="r.indicadores.documentosCargados" icono="folder_open" [sub]="r.indicadores.legalizacionesEnRevision + ' legalizaciones de broker por revisar'" />
+        </app-grid-layout>
+
+        <h2 class="resumen__grupo">Renovaciones y retención</h2>
+        <app-grid-layout tipo="kpi-grid">
+          <app-kpi-card label="Retención de pólizas" [valor]="retencion(r) + '%'" icono="autorenew" [sub]="r.indicadores.renovadas + ' renovadas de ' + (r.indicadores.renovadas + r.indicadores.noRenovadas) + ' cerradas'" [variante]="retencion(r) >= 50 ? 'exito' : 'alerta'" />
+          <app-kpi-card label="Renovaciones en gestión" [valor]="r.indicadores.renovacionesEnGestion" icono="pending_actions" [sub]="r.indicadores.renovacionesTotal + ' pólizas en el Warehouse de renovaciones'" />
+          <app-kpi-card label="Desocupaciones" [valor]="r.indicadores.desocupaciones" icono="logout" [tono]="r.indicadores.desocupaciones > 0 ? 'danger' : 'none'" sub="Inmuebles que el arrendatario entrega" />
+          <app-kpi-card label="Casos especiales" [valor]="r.indicadores.casosEspeciales" icono="emergency" sub="Requieren decisión técnica" />
+        </app-grid-layout>
+
+        <h2 class="resumen__grupo">Comisiones a intermediarios</h2>
+        <app-grid-layout tipo="kpi-grid">
+          <app-kpi-card label="Comisión pagada" [valor]="compacto(r.comisionPagada)" icono="paid" sub="Consignada a los brokers" />
+          <app-kpi-card label="Comisión por pagar" [valor]="compacto(r.comisionPendiente)" icono="schedule" [tono]="r.comisionPendiente > 0 ? 'danger' : 'none'" sub="Cuentas de cobro radicadas" />
+          <app-kpi-card label="Brokers activos" [valor]="r.brokersActivos" icono="groups" [sub]="r.prospectos + ' prospectos en vinculación'" />
+          <app-kpi-card label="Negocios en curso" [valor]="r.negociosEnCurso" icono="work_history" sub="Radicados aún sin póliza" />
+        </app-grid-layout>
+
+        <app-grid-layout tipo="dash-grid">
+          <app-ranking-barras
+            etiqueta="Producción"
+            titulo="Brokers top por ingreso"
+            icono="leaderboard"
+            mensajeVacio="Todavía no hay pólizas expedidas."
+            [items]="topBrokers()"
+          />
+          <app-ranking-barras
+            etiqueta="Dinero"
+            titulo="Ingresos y comisiones"
+            icono="savings"
+            mensajeVacio="Sin movimientos de dinero."
+            [items]="dinero()"
+          />
+        </app-grid-layout>
       </div>
-    } @else {
-      <p class="aviso">No hay indicadores disponibles.</p>
     }
+  </app-estado-vista>
 
-    <div class="grid-2">
-      <div class="panel">
-        <h3>Radicados por comercial</h3>
-        @if (r.radicadosPorComercial.length > 0) {
-          <ul class="estados">
-            @for (rc of r.radicadosPorComercial; track rc.comercial) {
-              <li>
-                <div class="estados__fila">
-                  <span>{{ rc.comercial }}</span>
-                  <b>{{ rc.radicados }}</b>
-                </div>
-                <div class="estados__pista">
-                  <div class="estados__barra estados__barra--info" [style.width.%]="(rc.radicados / maxRadicados()) * 100"></div>
-                </div>
-              </li>
-            }
-          </ul>
-        } @else {
-          <p class="aviso">No hay información disponible.</p>
-        }
-      </div>
-
-      <div class="panel">
-        <h3>Actividad reciente</h3>
-        @if (r.actividadReciente.length > 0) {
-          <ul class="mini-lista">
-            @for (a of r.actividadReciente; track a.texto + a.fecha) {
-              <li [class.alerta]="a.alerta">
-                <span>
-                  <b>{{ a.texto }}</b>
-                  <small>{{ fechaCorta(a.fecha) }}</small>
-                </span>
-                @if (a.alerta) {
-                  <app-icon nombre="warning" [tamano]="18" />
-                }
-              </li>
-            }
-          </ul>
-        } @else {
-          <p class="aviso">No hay actividad reciente.</p>
-        }
-      </div>
-    </div>
-  } @else if (cargando()) {
-    <p class="aviso" role="status">Cargando resumen…</p>
-  } @else if (error()) {
-    <p class="error" role="alert">No se pudo cargar la información. Intenta nuevamente.</p>
-  }
+  <app-form-section-card
+    [numero]="1"
+    icono="monitoring"
+    titulo="Movimientos en vivo"
+    [subtitulo]="'Se actualiza cada 30 segundos' + (actualizado() ? ' · última lectura ' + actualizado()!.toLocaleTimeString('es-CO') : '')"
+  >
+    <app-data-table
+      [columnas]="columnasMovimientos"
+      [filas]="filasMovimientos()"
+      [total]="filasMovimientos().length"
+      [tamanoPagina]="15"
+      [conBusqueda]="true"
+      placeholderBusqueda="Buscar por broker, tipo o referencia…"
+      mensajeVacio="Aún no hay movimientos."
+      ariaLabel="Movimientos en vivo"
+    />
+  </app-form-section-card>
 </section>

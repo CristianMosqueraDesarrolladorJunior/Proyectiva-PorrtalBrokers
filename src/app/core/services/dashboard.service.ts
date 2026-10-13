@@ -120,7 +120,7 @@ export class DashboardService {
 
   /**
    * Obtiene el Detalle_Solicitud (con línea de tiempo) por su referencia (Req 34.4).
-   * La PII llega enmascarada desde el backend (Req 34.5).
+   * Los datos llegan completos (el broker ve sus negocios sin enmascarar).
    * @param referencia identificador de la solicitud seleccionada.
    * @returns el detalle de la solicitud con sus hitos.
    */

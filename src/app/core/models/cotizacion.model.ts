@@ -27,24 +27,31 @@ export interface CoberturaSeleccion {
   readonly montoAsegurado: number;    // pasos de 500000, mínimo 0
 }
 
-/** Concepto individual del desglose de la Cotizacion calculado por el Motor_Tarifas (Req 8.2–8.5). */
+/**
+ * Concepto individual del desglose de la Cotizacion calculado por el Motor_Tarifas (Req 8.2–8.5).
+ * Alineado 1:1 con el DTO `ConceptoResponse` del backend (`concepto`, `base`, `tasa`, `primaNeta`,
+ * `iva`, `total`).
+ */
 export interface ConceptoCotizacion {
   readonly concepto: string;
-  readonly valorAsegurado: number;
-  readonly meses: number;
-  readonly baseCalculoPeriodo: number;
-  readonly tasa: number;              // 3.0% o 3.5%
+  readonly base: number;              // VAM × meses para póliza o monto completo para cobertura
+  readonly tasa: number;              // 3.0% o 3.5% (principal) / 5% (coberturas)
   readonly primaNeta: number;
-  readonly iva: number;               // 19% de primaNeta
+  readonly iva: number;               // 19% de la prima, ajustado al redondeo del subtotal
   readonly total: number;             // primaNeta + iva
 }
 
-/** Resultado completo de la Cotizacion recibido del API_Backend (Req 8.1). */
+/**
+ * Resultado completo de la Cotizacion recibido del API_Backend (Req 8.1).
+ * Alineado 1:1 con el DTO `CotizacionResponse` del backend.
+ */
 export interface CotizacionResult {
+  readonly referencia?: string;
+  readonly estado?: string;
   readonly conceptos: ConceptoCotizacion[];
-  readonly primaNetaTotal: number;
-  readonly ivaTotal: number;
-  readonly total: number;             // suma de primaNeta + iva de todos
-  /** Comisión estimada del bróker (si el backend la informa; si no, se estima en la UI). */
-  readonly comision?: number;
+  readonly primaNeta: number;         // prima neta total
+  readonly iva: number;               // IVA total
+  readonly total: number;             // prima neta + IVA
+  /** Comisión estimada del bróker calculada por el backend. */
+  readonly comisionEstimada?: number;
 }

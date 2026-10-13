@@ -37,6 +37,7 @@ import {
   type CoberturaCatalogo,
 } from '../../../core/services/coberturas.service';
 import { CotizadorService } from '../../../core/services/cotizador.service';
+import { BorradorRadicacionService } from '../../../core/services/borrador-radicacion.service';
 import { PdfService } from '../../../core/services/pdf.service';
 import type {
   CoberturaSeleccion,
@@ -53,22 +54,10 @@ import {
   incrementarMonto,
   normalizarMonto,
 } from '../../../shared/util/monto-escalonado';
-import {
-  CIUDADES_POR_DEPARTAMENTO,
-  COMISION_ESTIMADA,
-  DETALLE_COBERTURAS,
-  MONTO_MAXIMO_COBERTURA,
-  NOTA_TASAS,
-  DEPARTAMENTOS,
-  IVA_CANON_COMERCIO,
-  MESES_VIGENCIA_DEFECTO,
-  MESES_VIGENCIA_MAX,
-  MESES_VIGENCIA_MIN,
-  TIPOS_INMUEBLE,
-  TIPO_INMUEBLE_COMERCIO,
-} from '../cotizador-catalogo';
+import { CatalogoService } from '../../../core/services/catalogo.service';
 
-const TIPO_INMUEBLE_DEFECTO = 'Vivienda';
+/** Código del destino que habilita asegurar el IVA del canon (catálogo `destino_inmueble`). */
+const CODIGO_COMERCIO = 'COMERCIO';
 
 /** Fecha de hoy (YYYY-MM-DD, hora local) como inicio de vigencia por defecto. */
 function hoyIso(): string {
@@ -77,18 +66,18 @@ function hoyIso(): string {
   return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`;
 }
 
-/** Iconografía Material Symbols por tipo de inmueble y por cobertura (solo presentación). */
+/** Iconografía Material Symbols por destino de inmueble y por cobertura (solo presentación). */
 const ICONO_TIPO_INMUEBLE: Readonly<Record<string, string>> = {
-  Vivienda: 'home',
-  Comercio: 'storefront',
-  Oficina: 'apartment',
-  Bodega: 'warehouse',
-  Local: 'store',
+  VIVIENDA: 'home',
+  COMERCIO: 'storefront',
 };
 
+/** Iconografía por código de cobertura del catálogo oficial (cat_cobertura). */
 const ICONO_COBERTURA: Readonly<Record<string, string>> = {
-  danios: 'handyman',
-  servicios: 'bolt',
+  DANOS_FALTANTES: 'handyman',
+  SERVICIOS_PUBLICOS: 'bolt',
+  RESPONSABILIDAD_CIVIL: 'gavel',
+  DESEMPLEO: 'work_off',
 };
 
 /** Estado interactivo de una cobertura en el formulario (Req 7.5, 7.6). */
@@ -114,7 +103,6 @@ interface CoberturaEstado {
  *   (`CotizadorService.ciudadesPorDepartamento`) y las filtra con la lógica pura
  *   `estadoCobertura`; si el departamento no tiene ciudades, muestra
  *   "Ciudad no disponible en cobertura" e impide el cálculo (Req 7.2, 7.3).
- * - Cuando el tipo es "Comercio", permite asegurar el IVA (19% del canon) (Req 7.4).
  * - Cada cobertura usa `ToggleSwitchComponent` para activarse; al activarla se
  *   habilita el control de monto (pasos de $500.000, mínimo $0, sin negativos)
  *   mediante `incrementarMonto`/`decrementarMonto`/`normalizarMonto` (Req 7.5, 7.6).
@@ -151,9 +139,11 @@ interface CoberturaEstado {
 })
 export class CotizadorDatosComponent implements OnInit {
   private readonly coberturasService = inject(CoberturasService);
+  private readonly catalogo = inject(CatalogoService);
   private readonly cotizadorService = inject(CotizadorService);
   private readonly pdfService = inject(PdfService);
   private readonly router = inject(Router);
+  private readonly borrador = inject(BorradorRadicacionService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
@@ -169,37 +159,44 @@ export class CotizadorDatosComponent implements OnInit {
   /** Mensaje de error genérico del cálculo. */
   protected readonly errorCalculo = signal('');
 
-  /** Opciones de presentación de los selectores (Req 7.1, 7.4). */
-  protected readonly departamentos = DEPARTAMENTOS;
-  protected readonly tiposInmueble = TIPOS_INMUEBLE;
-  protected readonly mesesMin = MESES_VIGENCIA_MIN;
-  protected readonly mesesMax = MESES_VIGENCIA_MAX;
+  /** Departamentos con ciudades en cobertura (catálogo `ciudad`). */
+  protected readonly departamentos = computed(() => [
+    ...new Set(this.catalogo.opciones('ciudad').map((c) => String(c['departamento'] ?? '')).filter((d) => d)),
+  ]);
+  /** Vigencias y montos del Motor_Tarifas (`parametro_negocio`). */
+  protected readonly mesesMin = this.catalogo.parametro('VIGENCIA_MIN_MESES');
+  protected readonly mesesMax = this.catalogo.parametro('VIGENCIA_MAX_MESES');
+  private readonly mesesDefecto = this.catalogo.parametro('VIGENCIA_DEFECTO_MESES');
+  private readonly montoMaximoCobertura = this.catalogo.parametro('MONTO_MAX_COBERTURA');
   protected readonly mensajeSinCobertura = MENSAJE_CIUDAD_SIN_COBERTURA;
 
+  /** Destinos del inmueble (catálogo `destino_inmueble`: Vivienda / Comercio). */
+  private readonly destinos = this.catalogo.opciones('destino_inmueble');
+  private readonly tipoInmuebleDefecto = this.destinos[0]?.descripcion ?? '';
+  private readonly tipoComercio = this.destinos.find((d) => d.codigo === CODIGO_COMERCIO)?.descripcion;
+
   /** Opciones del selector segmentado de tipo de inmueble (catálogo real). */
-  protected readonly opcionesTipo: readonly OpcionSegmentada[] = TIPOS_INMUEBLE.map((tipo) => ({
-    valor: tipo,
-    etiqueta: tipo,
-    icono: ICONO_TIPO_INMUEBLE[tipo] ?? 'home_work',
+  protected readonly opcionesTipo: readonly OpcionSegmentada[] = this.destinos.map((d) => ({
+    valor: d.descripcion,
+    etiqueta: d.descripcion,
+    icono: ICONO_TIPO_INMUEBLE[d.codigo] ?? 'home_work',
   }));
 
-  /** Vigencias frecuentes (el campo numérico permite cualquier valor 1–36). */
-  protected readonly opcionesVigencia: readonly OpcionSegmentada[] = [6, 12, 24, 36].map((m) => ({
-    valor: String(m),
-    etiqueta: `${m} meses`,
-  }));
-
-  protected readonly atajosMonto: readonly number[] = [100_000, 500_000, 1_000_000];
+  /** Vigencias permitidas por el Motor_Tarifas: mínima y máxima del parámetro. */
+  protected readonly opcionesVigencia: readonly OpcionSegmentada[] = [...new Set([this.mesesMin, this.mesesMax])]
+    .filter((m) => Number.isFinite(m))
+    .map((m) => ({ valor: String(m), etiqueta: `${m} meses` }));
 
   /** Avance del flujo completo (el cotizador es el paso 1; el resto ocurre en Radicación). */
   protected readonly pasosFlujo: readonly string[] = ['Inmueble', 'Propietario', 'Documentos', 'Confirmación'];
 
+  /** Opciones del selector Sí/No de administración. */
   protected readonly opcionesSiNo: readonly OpcionSegmentada[] = [
     { valor: 'no', etiqueta: 'No' },
     { valor: 'si', etiqueta: 'Sí' },
   ];
 
-  /** ¿Tiene cuota de administración? Habilita el valor de administración. */
+  /** ¿Tiene cuota de administración? Habilita el campo del valor de administración. */
   protected readonly tieneAdmin = signal<'si' | 'no'>('no');
 
   /** Cobertura cuyo detalle se muestra en el modal (null = cerrado). */
@@ -208,24 +205,23 @@ export class CotizadorDatosComponent implements OnInit {
   protected readonly detalleActual = computed(() => {
     const id = this.detalleAbierto();
     const cobertura = this.coberturas().find((c) => c.id === id);
-    return cobertura && id ? { nombre: cobertura.nombre, ...DETALLE_COBERTURAS[id] } : null;
+    const item = this.catalogo.opciones('cobertura').find((c) => c.codigo === id);
+    return cobertura && item?.['detalle']
+      ? {
+          nombre: cobertura.nombre,
+          parrafos: String(item['detalle']).split('\n'),
+          destacado: String(item['destacado'] ?? ''),
+        }
+      : null;
   });
 
-  protected readonly notaTasas = NOTA_TASAS;
+  protected readonly notaTasas = this.catalogo.texto('NOTA_TASAS_COTIZADOR');
+  /** Escalón del monto asegurado (`PASO_MONTO_COBERTURA`). */
+  private readonly pasoMonto = this.catalogo.parametro('PASO_MONTO_COBERTURA');
   protected readonly cop = formatearCop;
 
-  /** Comisión estimada: la informada por el backend o, si no, 8% de la prima neta del seguro principal. */
-  protected readonly comisionEstimada = computed(() => {
-    const r = this.resultado();
-    if (!r) {
-      return null;
-    }
-    if (r.comision !== undefined) {
-      return r.comision;
-    }
-    const principal = r.conceptos[0];
-    return principal ? Math.round(principal.primaNeta * COMISION_ESTIMADA) : null;
-  });
+  /** Comisión estimada tal como la informa el backend (el front no la calcula). */
+  protected readonly comisionEstimada = computed(() => this.resultado()?.comisionEstimada ?? null);
 
   protected readonly resumenDestacado = computed(() => {
     const comision = this.comisionEstimada();
@@ -241,11 +237,11 @@ export class CotizadorDatosComponent implements OnInit {
   /** Campos del formulario de entrada (Req 7.1). */
   protected readonly departamento = signal('');
   protected readonly ciudad = signal('');
-  protected readonly tipoInmueble = signal(TIPO_INMUEBLE_DEFECTO);
+  protected readonly tipoInmueble = signal(this.tipoInmuebleDefecto);
   protected readonly canon = signal('');
   protected readonly administracion = signal('');
   protected readonly fechaInicioVigencia = signal(hoyIso());
-  protected readonly mesesVigencia = signal(MESES_VIGENCIA_DEFECTO);
+  protected readonly mesesVigencia = signal(this.mesesDefecto);
   protected readonly aseguraIva = signal(false);
 
   /** Coberturas interactivas (toggle + monto) (Req 7.5, 7.6). */
@@ -272,7 +268,7 @@ export class CotizadorDatosComponent implements OnInit {
   protected readonly validacionCanon = computed(() => validarCanon(this.canon()));
 
   /** Verdadero cuando el inmueble es Comercio y se puede asegurar el IVA (Req 7.4). */
-  protected readonly esComercio = computed(() => this.tipoInmueble() === TIPO_INMUEBLE_COMERCIO);
+  protected readonly esComercio = computed(() => this.tipoInmueble() === this.tipoComercio);
 
   /** Mensaje de error del campo canon cuando corresponde mostrarlo (Req 7.8). */
   protected readonly errorCanon = computed(() => {
@@ -289,11 +285,8 @@ export class CotizadorDatosComponent implements OnInit {
     }
   });
 
-  /** IVA asegurado estimado (19% del canon) mostrado como referencia (Req 7.4). */
-  protected readonly ivaCanonEstimado = computed(() => {
-    const canon = this.validacionCanon().valor ?? 0;
-    return Math.round(canon * IVA_CANON_COMERCIO);
-  });
+  /** Tarifa de IVA del canon comercial (`IVA_CANON_COMERCIO`) para el texto del interruptor; el valor lo calcula el backend. */
+  protected readonly tarifaIvaCanon = Math.round((this.catalogo.parametro('IVA_CANON_COMERCIO') || 0) * 100);
 
   /**
    * Indica si el cálculo puede solicitarse (Req 7.3, 7.7, 7.8):
@@ -333,8 +326,8 @@ export class CotizadorDatosComponent implements OnInit {
     }
     const activas = this.coberturas().filter((c) => c.activa).length;
     return [
-      { label: 'Prima neta', valor: formatearCop(r.primaNetaTotal) },
-      { label: 'IVA', valor: formatearCop(r.ivaTotal) },
+      { label: 'Prima neta', valor: formatearCop(r.primaNeta) },
+      { label: 'IVA', valor: formatearCop(r.iva) },
       { label: 'Coberturas adicionales', valor: String(activas) },
     ];
   });
@@ -397,6 +390,7 @@ export class CotizadorDatosComponent implements OnInit {
     return ICONO_COBERTURA[id] ?? 'verified_user';
   }
 
+  /** Alterna si el inmueble tiene cuota de administración; limpia el valor al desactivar. */
   protected onTieneAdmin(valor: string): void {
     this.tieneAdmin.set(valor === 'si' ? 'si' : 'no');
     if (valor !== 'si') {
@@ -418,7 +412,7 @@ export class CotizadorDatosComponent implements OnInit {
   }
 
   protected puedeIncrementar(monto: number): boolean {
-    return monto < MONTO_MAXIMO_COBERTURA;
+    return monto < this.montoMaximoCobertura;
   }
 
   /** Divide un texto en partes resaltando los importes ($500.000) como en el prototipo. */
@@ -437,12 +431,12 @@ export class CotizadorDatosComponent implements OnInit {
     this.departamento.set('');
     this.ciudad.set('');
     this.ciudadesCobertura.set([]);
-    this.tipoInmueble.set(TIPO_INMUEBLE_DEFECTO);
+    this.tipoInmueble.set(this.tipoInmuebleDefecto);
     this.canon.set('');
     this.administracion.set('');
     this.tieneAdmin.set('no');
     this.fechaInicioVigencia.set(hoyIso());
-    this.mesesVigencia.set(MESES_VIGENCIA_DEFECTO);
+    this.mesesVigencia.set(this.mesesDefecto);
     this.aseguraIva.set(false);
     this.intentoCalculo.set(false);
     this.errorCalculo.set('');
@@ -474,9 +468,10 @@ export class CotizadorDatosComponent implements OnInit {
       this.ciudadesCobertura.set([]);
       return;
     }
-    // Poblar de inmediato con el catálogo local para que el selector nunca quede
-    // vacío; el backend confirma/actualiza la cobertura (fuente autoritativa, Req 7.2).
-    this.ciudadesCobertura.set(CIUDADES_POR_DEPARTAMENTO[nombre] ?? []);
+    // Poblar de inmediato con el catálogo `ciudad`; el backend confirma la cobertura (Req 7.2).
+    this.ciudadesCobertura.set(
+      this.catalogo.opciones('ciudad').filter((c) => c['departamento'] === nombre).map((c) => c.descripcion),
+    );
     this.cargandoCiudades.set(true);
     this.cotizadorService
       .ciudadesPorDepartamento(nombre)
@@ -489,7 +484,7 @@ export class CotizadorDatosComponent implements OnInit {
           this.cargandoCiudades.set(false);
         },
         error: () => {
-          // Se conserva el catálogo local ya poblado; el Broker puede cotizar.
+          // Se conserva lo ya poblado desde el catálogo; el Broker puede cotizar.
           this.cargandoCiudades.set(false);
         },
       });
@@ -498,7 +493,7 @@ export class CotizadorDatosComponent implements OnInit {
   /** Actualiza el tipo de inmueble; desactiva el IVA si deja de ser Comercio (Req 7.4). */
   protected onTipoInmuebleChange(tipo: string): void {
     this.tipoInmueble.set(tipo);
-    if (tipo !== TIPO_INMUEBLE_COMERCIO) {
+    if (tipo !== this.tipoComercio) {
       this.aseguraIva.set(false);
     }
   }
@@ -507,10 +502,10 @@ export class CotizadorDatosComponent implements OnInit {
   protected onMesesChange(valor: string | number): void {
     const numero = Number(valor);
     if (!Number.isFinite(numero)) {
-      this.mesesVigencia.set(MESES_VIGENCIA_MIN);
+      this.mesesVigencia.set(this.mesesMin);
       return;
     }
-    const acotado = Math.min(MESES_VIGENCIA_MAX, Math.max(MESES_VIGENCIA_MIN, Math.trunc(numero)));
+    const acotado = Math.min(this.mesesMax, Math.max(this.mesesMin, Math.trunc(numero)));
     this.mesesVigencia.set(acotado);
   }
 
@@ -525,12 +520,12 @@ export class CotizadorDatosComponent implements OnInit {
 
   /** Incrementa el monto de una cobertura en un paso de $500.000 (Req 7.6). */
   protected incrementar(id: string): void {
-    this.ajustarMonto(id, (monto) => Math.min(MONTO_MAXIMO_COBERTURA, incrementarMonto(monto)));
+    this.ajustarMonto(id, (monto) => Math.min(this.montoMaximoCobertura, incrementarMonto(monto, this.pasoMonto)));
   }
 
   /** Decrementa el monto de una cobertura sin permitir negativos (mínimo $0) (Req 7.6). */
   protected decrementar(id: string): void {
-    this.ajustarMonto(id, decrementarMonto);
+    this.ajustarMonto(id, (monto) => decrementarMonto(monto, this.pasoMonto));
   }
 
   /**
@@ -596,6 +591,22 @@ export class CotizadorDatosComponent implements OnInit {
 
   /** Navega a la sección Radicación conservando el contexto (Req 9.3). */
   protected onRadicarPoliza(): void {
+    const resultado = this.resultado();
+    if (resultado?.referencia) {
+      // La cotización viaja a la radicación y al contrato para precargar sus campos.
+      const req = this.construirRequest();
+      this.borrador.iniciarDesdeCotizacion({
+        referencia: resultado.referencia,
+        departamento: req.departamento,
+        ciudad: req.ciudad,
+        tipoInmueble: req.tipoInmueble,
+        canon: req.canon,
+        administracion: req.administracion,
+        fechaInicioVigencia: req.fechaInicioVigencia,
+        mesesVigencia: req.mesesVigencia,
+        total: resultado.total,
+      });
+    }
     void this.router.navigate(['/app/radicacion']);
   }
 
@@ -612,7 +623,7 @@ export class CotizadorDatosComponent implements OnInit {
   /** Verdadero si los meses de vigencia están dentro de [1, 36] (Req 7.1). */
   private mesesVigenciaValidos(): boolean {
     const meses = this.mesesVigencia();
-    return Number.isInteger(meses) && meses >= MESES_VIGENCIA_MIN && meses <= MESES_VIGENCIA_MAX;
+    return Number.isInteger(meses) && meses >= this.mesesMin && meses <= this.mesesMax;
   }
 
   /** Aplica una transformación de monto a la cobertura indicada, normalizando el resultado (Req 7.6). */
@@ -620,21 +631,30 @@ export class CotizadorDatosComponent implements OnInit {
     this.coberturas.update((lista) =>
       lista.map((cobertura) =>
         cobertura.id === id
-          ? { ...cobertura, montoAsegurado: normalizarMonto(transformar(cobertura.montoAsegurado)) }
+          ? { ...cobertura, montoAsegurado: normalizarMonto(transformar(cobertura.montoAsegurado), this.pasoMonto) }
           : cobertura,
       ),
     );
   }
 
-  /** Mapea el catálogo del backend a coberturas interactivas con monto normalizado (Req 7.6, 14.1). */
+  /**
+   * Mapea el catálogo del backend a coberturas adicionales interactivas (Req 7.6, 14.1). Solo se ofrecen
+   * las marcadas `adicional` en `cat_cobertura` (amplían el valor asegurado y afectan el cálculo).
+   * El backend trae `nombre` = código oficial, que es lo que espera `CoberturaSeleccion.id`.
+   */
   private mapearCoberturas(catalogo: readonly CoberturaCatalogo[]): CoberturaEstado[] {
-    return catalogo.map((cobertura) => ({
-      id: cobertura.id,
-      nombre: cobertura.nombre,
-      descripcion: cobertura.descripcion,
-      activa: false,
-      montoAsegurado: normalizarMonto(cobertura.montoDefecto),
-    }));
+    const adicionales = new Set(
+      this.catalogo.opciones('cobertura').filter((c) => c['adicional'] === true).map((c) => c.codigo),
+    );
+    return catalogo
+      .filter((cobertura) => adicionales.has(cobertura.nombre))
+      .map((cobertura) => ({
+        id: cobertura.nombre,
+        nombre: cobertura.descripcion,
+        descripcion: cobertura.descripcion,
+        activa: false,
+        montoAsegurado: normalizarMonto(cobertura.montoDefecto, this.pasoMonto),
+      }));
   }
 
   /** Construye el `CotizacionRequest` a partir de los campos capturados (Req 7.1–7.6). */

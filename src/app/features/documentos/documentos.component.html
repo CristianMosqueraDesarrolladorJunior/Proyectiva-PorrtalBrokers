@@ -6,7 +6,20 @@
     subtitulo="Formatos, plantillas, clausulados e instructivos de apoyo."
   ></app-page-header>
 
-  @for (seccion of secciones; track trackSeccion($index, seccion)) {
+  @if (cargando()) {
+    <p role="status">Cargando documentos…</p>
+  }
+  @if (errorCarga()) {
+    <p role="alert">No fue posible cargar los documentos. Intenta nuevamente.</p>
+  }
+  @if (errorDescarga()) {
+    <p role="alert">No fue posible descargar el documento. Intenta nuevamente.</p>
+  }
+  @if (!cargando() && !errorCarga() && secciones().length === 0) {
+    <p>No hay documentos disponibles.</p>
+  }
+
+  @for (seccion of secciones(); track trackSeccion($index, seccion)) {
     <div class="doc-section">
       <h3 class="doc-section__titulo">{{ seccion.titulo }}</h3>
       <div class="doc-list">
@@ -20,10 +33,11 @@
             <button
               type="button"
               class="doc-btn"
+              [disabled]="descargandoId() === recurso.id"
               [attr.aria-label]="etiquetaAccion(recurso) + ' ' + recurso.titulo"
               (click)="abrir(recurso)"
             >
-              {{ etiquetaAccion(recurso) }}
+              {{ descargandoId() === recurso.id ? 'Descargando…' : etiquetaAccion(recurso) }}
             </button>
           </div>
         }

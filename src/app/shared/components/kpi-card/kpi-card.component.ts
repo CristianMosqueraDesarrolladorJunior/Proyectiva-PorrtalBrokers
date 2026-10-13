@@ -63,6 +63,10 @@ export type TonoKpiCard = 'none' | 'success' | 'accent' | 'danger';
   `,
   styles: [
     `
+      :host {
+        display: block;
+        height: 100%;
+      }
       .kpi {
         position: relative;
         display: flex;
@@ -74,6 +78,8 @@ export type TonoKpiCard = 'none' | 'success' | 'accent' | 'danger';
         border-radius: var(--radius-2xl);
         box-shadow: var(--sb-shadow-1);
         overflow: hidden;
+        height: 100%;
+        box-sizing: border-box;
       }
       .kpi--alerta::before,
       .kpi--exito::before {
@@ -117,9 +123,16 @@ export type TonoKpiCard = 'none' | 'success' | 'accent' | 'danger';
         align-items: flex-start;
         justify-content: space-between;
         gap: var(--space-3);
+        /* Dos líneas reservadas: el valor queda a la misma altura en toda la fila de KPIs. */
+        min-height: calc(var(--text-body-sm) * 2 * 1.35);
       }
       .kpi__label {
         margin: 0;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
         font-family: var(--font-family-body);
         font-size: var(--text-body-sm);
         font-weight: var(--font-weight-medium);
@@ -147,6 +160,7 @@ export type TonoKpiCard = 'none' | 'success' | 'accent' | 'danger';
         display: none;
       }
       .kpi__pie {
+        margin-top: auto;
         display: flex;
         flex-wrap: wrap;
         align-items: center;

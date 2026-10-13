@@ -21,10 +21,10 @@
     <app-step-tabs [pasos]="pasos" [pasoActivo]="pasoActivo()" ariaLabel="Pasos de la radicación" />
     @if (casoConsultable(); as caso) {
     <div class="rad-sarlaft-fin">
-      <app-alert-banner variante="error" titulo="SARLAFT consultable: el caso pasa a revisión" icono="policy">
-        {{ caso.mensaje }}
-        @if (caso.radicado) {
-          <span class="rad-sarlaft-fin__radicado">Radicado: <strong>{{ caso.radicado }}</strong></span>
+      <app-alert-banner variante="error" titulo="Conocimiento de Cliente consultable: el caso pasa a revisión" icono="policy">
+        {{ caso.mensaje || 'El caso del ' + etiquetaSujetoSarlaft() + ' se deriva a revisión de Cumplimiento.' }}
+        @if (caso.radicadoCumplimiento) {
+          <span class="rad-sarlaft-fin__radicado">Radicado: <strong>{{ caso.radicadoCumplimiento }}</strong></span>
         }
       </app-alert-banner>
       <app-info-box icono="info">
@@ -42,6 +42,14 @@
 
     <div class="radicacion__layout">
       <div class="radicacion__principal">
+        @if (cotizacion(); as cot) {
+          <app-info-box icono="request_quote">
+            Radicando la cotización <strong>{{ cot.referencia }}</strong>:
+            {{ cot.tipoInmueble }} en {{ cot.ciudad }} · canon {{ formatearCop(cot.canon) }}
+            · vigencia {{ cot.mesesVigencia }} meses · total {{ formatearCop(cot.total) }}.
+            Estos datos se precargan en el contrato.
+          </app-info-box>
+        }
         <app-form-section-card
           [numero]="1"
           icono="person"
@@ -88,22 +96,95 @@
           [numero]="2"
           icono="task_alt"
           titulo="Estudio de arrendamiento"
-          subtitulo="Vincula la aprobación previa emitida por la aseguradora aliada."
+          subtitulo="Consulta el estudio del inquilino en Estudio Digital del Libertador con su número de estudio y su cédula."
         >
-          <app-form-field
-            label="Número de estudio de inquilino aprobado"
-            [requerido]="true"
-            controlId="rad-num-estudio"
-          >
-            <input
-              id="rad-num-estudio"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: EST-2026-001234"
-              [ngModel]="numeroEstudioArrendamiento()"
-              (ngModelChange)="numeroEstudioArrendamiento.set($event)"
-            />
-          </app-form-field>
+          <div class="rad-form-grid">
+            <app-form-field
+              label="Número de estudio del inquilino"
+              [requerido]="true"
+              controlId="rad-num-estudio"
+            >
+              <input
+                id="rad-num-estudio"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="Ej: 11088178"
+                [ngModel]="numeroEstudioArrendamiento()"
+                (ngModelChange)="numeroEstudioArrendamiento.set($event)"
+              />
+            </app-form-field>
+
+            <app-form-field
+              label="Cédula del inquilino"
+              [requerido]="true"
+              controlId="rad-doc-inquilino"
+            >
+              <input
+                id="rad-doc-inquilino"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="Ej: 1010184374"
+                [ngModel]="documentoInquilino()"
+                (ngModelChange)="documentoInquilino.set($event)"
+              />
+            </app-form-field>
+          </div>
+
+          <div class="rad-sarlaft-acciones">
+            <app-boton
+              variante="accent"
+              icono="search"
+              [disabled]="!puedeConsultarEstudio()"
+              (clicked)="consultarEstudio()"
+            >
+              {{ consultandoEstudio() ? 'Consultando…' : 'Consultar estudio' }}
+            </app-boton>
+          </div>
+
+          @if (resultadoEstudio(); as estudio) {
+            @switch (estudio.estado) {
+              @case ('APROBADO') {
+                <app-alert-banner variante="success" titulo="Estudio aprobado">
+                  El estudio del inquilino está aprobado. Usaremos estos datos para autollenar el contrato.
+                </app-alert-banner>
+                <div class="rad-estudio-datos">
+                  @if (estudio.inquilino) {
+                    <div><span>Inquilino</span><strong>{{ estudio.inquilino }}</strong></div>
+                  }
+                  @if (estudio.documentoInquilino) {
+                    <div><span>Documento</span><strong>{{ estudio.documentoInquilino }}</strong></div>
+                  }
+                  @if (estudio.inmueble) {
+                    <div><span>Inmueble</span><strong>{{ estudio.inmueble }}</strong></div>
+                  }
+                  @if (estudio.vigenteHasta) {
+                    <div><span>Vigente hasta</span><strong>{{ estudio.vigenteHasta }}</strong></div>
+                  }
+                </div>
+              }
+              @case ('NO_APROBADO') {
+                <app-alert-banner variante="warning" titulo="Estudio no aprobado">
+                  El estudio del inquilino no está aprobado. El inquilino debe realizar el Estudio Digital antes de radicar.
+                </app-alert-banner>
+                @if (estudio.urlEstudioDigital; as url) {
+                  <div class="rad-sarlaft-enlace">
+                    <code>{{ url }}</code>
+                  </div>
+                }
+              }
+              @case ('PENDIENTE') {
+                <app-alert-banner variante="warning" titulo="Estudio en proceso">
+                  {{ estudio.mensaje || 'El estudio aún está en trámite. Vuelve a consultarlo más tarde.' }}
+                </app-alert-banner>
+              }
+            }
+          }
+
+          @if (errorEstudio(); as error) {
+            <app-alert-banner variante="error" titulo="Consulta no disponible">{{ error }}</app-alert-banner>
+          }
         </app-form-section-card>
 
         <app-form-section-card
@@ -157,7 +238,7 @@
               </div>
 
               <app-info-box icono="info">
-                Como firma un apoderado, la validación SARLAFT se hace al <b>apoderado</b> y
+                Como firma un apoderado, la validación de Conocimiento de Cliente se hace al <b>apoderado</b> y
                 la URL de actualización, si hace falta, se le envía a él.
               </app-info-box>
             </div>
@@ -173,27 +254,27 @@
         <app-form-section-card
           [numero]="4"
           icono="verified_user"
-          titulo="Validación SARLAFT"
+          titulo="Validación de Conocimiento de Cliente"
           [subtitulo]="'Consulta en listas del ' + etiquetaSujetoSarlaft() + ' antes de cargar los documentos.'"
         >
           @if (resultadoSarlaft(); as resultado) {
-            @if (resultado.estado === 'actualizado') {
+            @if (resultado.estado === 'ACTUALIZADO') {
               <!-- Salida 1: actualizado -> continúa a documentos. -->
-              <app-alert-banner variante="success" titulo="SARLAFT actualizado">
-                {{ resultado.mensaje }}
+              <app-alert-banner variante="success" titulo="Conocimiento de Cliente actualizado">
+                {{ resultado.mensaje || 'El Conocimiento de Cliente está actualizado. Puedes continuar con los documentos.' }}
               </app-alert-banner>
-            } @else if (resultado.estado === 'desactualizado') {
+            } @else if (resultado.estado === 'DESACTUALIZADO') {
               <!-- Salida 2: desactualizado -> URL al firmante, actualiza y reconsulta. -->
-              <app-alert-banner variante="warning" titulo="SARLAFT desactualizado">
-                {{ resultado.mensaje }}
+              <app-alert-banner variante="warning" titulo="Conocimiento de Cliente desactualizado">
+                {{ resultado.mensaje || 'El ' + etiquetaSujetoSarlaft() + ' debe actualizar sus datos de Conocimiento de Cliente antes de continuar.' }}
               </app-alert-banner>
 
               <div class="rad-sarlaft-panel">
                 <ol class="rad-sarlaft-pasos">
                   <li>
                     Enviamos la URL de actualización al <strong>{{ etiquetaSujetoSarlaft() }}</strong>
-                    @if (resultado.correoDestinatario) {
-                      ({{ resultado.correoDestinatario }})
+                    @if (resultado.correoEnmascarado) {
+                      ({{ resultado.correoEnmascarado }})
                     }
                   </li>
                   <li>El {{ etiquetaSujetoSarlaft() }} diligencia la actualización desde el enlace.</li>
@@ -228,7 +309,7 @@
                   <span class="material-symbols-outlined">verified_user</span>
                 </span>
                 <div class="rad-sarlaft-texto">
-                  <strong>Consulta SARLAFT del {{ etiquetaSujetoSarlaft() }} <app-info-tip texto="SARLAFT: sistema que verifica la identidad del cliente y lo consulta en listas restrictivas para prevenir el lavado de activos." /></strong>
+                  <strong>Consulta de Conocimiento de Cliente del {{ etiquetaSujetoSarlaft() }} <app-info-tip texto="Conocimiento de Cliente: sistema que verifica la identidad del cliente y lo consulta en listas restrictivas para prevenir el lavado de activos." /></strong>
                   <span>
                     Resultados posibles: <b>actualizado</b> (continúas con los documentos),
                     <b>desactualizado</b> (se envía una URL al {{ etiquetaSujetoSarlaft() }} para
@@ -239,6 +320,25 @@
               </div>
             </div>
 
+            <app-form-field
+              label="Celular del {{ etiquetaSujetoSarlaft() }}"
+              [requerido]="true"
+              controlId="rad-tel-sarlaft"
+            >
+              <input
+                id="rad-tel-sarlaft"
+                type="tel"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="Ej: 3001234567"
+                [ngModel]="telefonoSarlaft()"
+                (ngModelChange)="telefonoSarlaft.set($event)"
+              />
+            </app-form-field>
+            <p class="rad-sarlaft-ayuda">
+              Si la validación exige actualizar, la URL de Conocimiento de Cliente se envía por SMS al celular del {{ etiquetaSujetoSarlaft() }}.
+            </p>
+
             <div class="rad-sarlaft-acciones">
               <app-boton
                 variante="accent"
@@ -246,11 +346,11 @@
                 [disabled]="!puedeConsultarSarlaft()"
                 (clicked)="consultarSarlaft()"
               >
-                {{ consultandoSarlaft() ? 'Consultando…' : 'Consultar SARLAFT' }}
+                {{ consultandoSarlaft() ? 'Consultando…' : 'Consultar Conocimiento de Cliente' }}
               </app-boton>
               @if (!datosSarlaftCompletos()) {
                 <span class="rad-sarlaft-ayuda">
-                  Completa los datos del propietario{{ firmaApoderado() ? ', del apoderado' : '' }} y el estudio para consultar.
+                  Completa los datos del propietario{{ firmaApoderado() ? ', del apoderado' : '' }}, el estudio y el celular para consultar.
                 </span>
               }
             </div>
@@ -288,13 +388,13 @@
 
             @if (tipoPersona() === 'juridica') {
               <app-info-box icono="verified_user">
-                Persona jurídica: el Formulario SARLAFT diligenciado es obligatorio junto con
+                Persona jurídica: el Formulario Conocimiento de Cliente diligenciado es obligatorio junto con
                 los demás documentos.
               </app-info-box>
             }
           } @else {
             <app-info-box icono="lock">
-              La carga de documentos se habilita cuando la consulta SARLAFT resulte
+              La carga de documentos se habilita cuando la consulta de Conocimiento de Cliente resulte
               <b>actualizada</b>.
             </app-info-box>
           }
@@ -304,25 +404,43 @@
           [numero]="6"
           icono="description"
           titulo="Contrato de arrendamiento"
-          subtitulo="Opcional: adjúntalo ahora o créalo con nuestra plantilla."
+          subtitulo="Obligatorio: la radicación se crea a partir del contrato generado."
         >
+          @if (contratoReferencia(); as referencia) {
+            <app-alert-banner variante="success" titulo="Contrato generado">
+              El contrato <strong>{{ referencia }}</strong> quedó guardado y se enlazará a esta radicación.
+            </app-alert-banner>
+          } @else {
+            <app-info-box icono="info">
+              Genera el contrato con nuestra plantilla: de él se toman los datos del propietario,
+              el inquilino, el inmueble y el canon. Sin contrato no es posible radicar.
+            </app-info-box>
+          }
+
+          <div class="rad-contrato-accion">
+            <app-boton variante="accent" (clicked)="crearContrato()">
+              ✎ {{ contratoReferencia() ? 'Generar otro contrato' : 'Crear contrato' }}
+            </app-boton>
+          </div>
+
           <app-doc-uploader
             [reglas]="[reglaOpcional]"
             [cargados]="archivosCargados()"
             (archivoSeleccionado)="onArchivo($event)"
           ></app-doc-uploader>
-
-          <app-info-box icono="info">
-            ¿Aún no tienes el contrato? Puedes crear uno con nuestra plantilla o
-            solicitar que la aseguradora lo elabore.
-          </app-info-box>
-
-          <div class="rad-contrato-accion">
-            <app-boton variante="accent" (clicked)="crearContrato()">
-              ✎ Crear contrato
-            </app-boton>
-          </div>
         </app-form-section-card>
+
+        <div class="rad-autorizacion">
+          <app-toggle-switch
+            [checked]="autorizacionDatos()"
+            (checkedChange)="autorizacionDatos.set($event)"
+            ariaLabel="Autorizo el tratamiento de datos personales del inquilino y del propietario"
+          />
+          <span id="rad-autorizacion-texto">
+            Declaro que cuento con la autorización del inquilino y del propietario para el
+            tratamiento de sus datos personales (Habeas Data).
+          </span>
+        </div>
 
         @if (etiquetasFaltantes().length > 0) {
           <app-alert-banner variante="warning" titulo="Documentos pendientes">

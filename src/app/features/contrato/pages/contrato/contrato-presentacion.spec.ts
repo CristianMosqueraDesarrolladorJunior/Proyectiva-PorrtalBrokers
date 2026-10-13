@@ -66,6 +66,9 @@ describe('contrato-presentacion (lógica pura del Generador_Contrato)', () => {
     reajusteAnual: 'IPC',
     serviciosIncluidos: [],
     incluyeDeudoresSolidarios: false,
+    metodoPago: 'transferencia',
+    tipoCuenta: 'ahorros',
+    numeroCuenta: '123456789',
   };
 
   const estadoCompleto: EstadoContrato = {
@@ -126,6 +129,17 @@ describe('contrato-presentacion (lógica pura del Generador_Contrato)', () => {
       expect(esPasoInmuebleValido({ ...inmuebleOk, estrato: 0 })).toBe(false);
       expect(esPasoInmuebleValido({ ...inmuebleOk, estrato: 7 })).toBe(false);
       expect(esPasoInmuebleValido({ ...inmuebleOk, areaMetrosCuadrados: 0 })).toBe(false);
+    });
+
+    it('paso condiciones exige método de pago y cuenta válida salvo efectivo', () => {
+      expect(esPasoCondicionesValido({ ...condicionesOk, metodoPago: undefined as never })).toBe(false);
+      expect(esPasoCondicionesValido({ ...condicionesOk, numeroCuenta: '' })).toBe(false);
+      expect(esPasoCondicionesValido({ ...condicionesOk, numeroCuenta: '12-34' })).toBe(false);
+      expect(esPasoCondicionesValido({ ...condicionesOk, numeroCuenta: '1'.repeat(35) })).toBe(false);
+      expect(esPasoCondicionesValido({ ...condicionesOk, numeroCuenta: '1'.repeat(34) })).toBe(true);
+      expect(
+        esPasoCondicionesValido({ ...condicionesOk, metodoPago: 'efectivo', numeroCuenta: undefined }),
+      ).toBe(true);
     });
 
     it('paso condiciones exige canon positivo, administración ≥ 0 y duración válida', () => {

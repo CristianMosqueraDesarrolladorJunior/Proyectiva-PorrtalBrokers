@@ -91,6 +91,65 @@
   }
 }
 
+// --- Celda principal: valor destacado + subtítulo ---
+.dt-principal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.dt-principal__valor {
+  font-weight: var(--font-weight-semibold);
+  color: var(--sb-on-surface);
+}
+
+.dt-principal__sub {
+  overflow: hidden;
+  font-size: var(--text-caption);
+  color: var(--sb-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// --- Columna de acciones de icono ---
+.dt-acciones {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.dt-accion {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--sb-secondary);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+
+  &:hover {
+    border-color: var(--sb-border);
+    background: var(--sb-surface);
+    color: var(--sb-primary);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+.dt-accion--peligro:hover {
+  color: var(--sb-error);
+}
+
 // --- Encabezados ordenables ---
 .dt-th--ordenable {
   cursor: pointer;
@@ -257,5 +316,23 @@
 
   .data-table__empty {
     display: block;
+  }
+}
+
+// La columna de acción queda fija a la derecha: en tablas anchas el botón nunca se esconde tras el scroll.
+@media (width >= 640px) {
+  .data-table .dt-fija {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    box-shadow: -8px 0 12px -10px rgb(15 23 42 / 35%);
+  }
+
+  .data-table th.dt-fija {
+    background: var(--sb-slate);
+  }
+
+  .data-table td.dt-fija {
+    background: var(--sb-surface);
   }
 }

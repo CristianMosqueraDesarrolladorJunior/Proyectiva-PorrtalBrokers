@@ -1,0 +1,3 @@
+# Cloud Build sube lo mismo que Docker usa como contexto.
+#!include:.dockerignore
+.dockerignore

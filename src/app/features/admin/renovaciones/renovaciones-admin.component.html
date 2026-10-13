@@ -1,0 +1,136 @@
+<section class="vista" aria-labelledby="renovaciones-admin-titulo">
+  <app-page-header
+    [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
+    tituloId="renovaciones-admin-titulo"
+    titulo="Renovaciones"
+    subtitulo="Renovaciones del Warehouse tal como las gestiona el equipo comercial, sus casos especiales y las inducciones de pólizas vencidas."
+  >
+    @if (esAdmin) {
+      <div acciones>
+        <app-boton variante="outline" icono="sync" [disabled]="ingiriendo()" (clicked)="ingerir()">
+          {{ ingiriendo() ? 'Actualizando…' : 'Actualizar desde el Warehouse' }}
+        </app-boton>
+      </div>
+    }
+  </app-page-header>
+
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Por contactar" [valor]="conteo('pendiente')" icono="pending_actions" tono="accent" sub="Pólizas próximas a vencer" />
+    <app-kpi-card label="En gestión" [valor]="conteo('en_gestion')" icono="support_agent" sub="Contacto o expedición en curso" />
+    <app-kpi-card label="Renovadas" [valor]="conteo('renovada')" icono="verified" sub="Con nueva vigencia" />
+    <app-kpi-card label="Casos especiales" [valor]="conteo('caso_especial') + inducciones().length" icono="report" sub="Incluye inducciones de pólizas vencidas" />
+  </app-grid-layout>
+
+  <app-barra-acciones>
+    <div filtros>
+      <app-segmented-control [opciones]="vistas" [valor]="vista()" ariaLabel="Vista de renovaciones" (valorChange)="cambiarVista($event)" />
+    </div>
+    @if (vista() === 'warehouse') {
+      <div acciones>
+        <app-segmented-control [opciones]="filtrosEstado" [valor]="estado()" ariaLabel="Filtrar por estado" (valorChange)="estado.set($event)" />
+      </div>
+    }
+  </app-barra-acciones>
+
+  @if (mensaje()) {
+    <app-alert-banner variante="success" titulo="Warehouse" icono="sync">{{ mensaje() }}</app-alert-banner>
+  }
+
+  @if (vista() === 'inducciones') {
+    <app-estado-vista
+      [cargando]="false"
+      [error]="false"
+      [vacio]="inducciones().length === 0"
+      entidad="inducciones"
+      iconoVacio="assignment_return"
+      tituloVacio="Aún no hay inducciones"
+      descripcionVacio="Aparecen cuando un broker induce de nuevo una póliza vencida."
+    >
+      <app-data-table
+        [columnas]="columnasInducciones"
+        [filas]="filasInducciones()"
+        [total]="filasInducciones().length"
+        [tamanoPagina]="20"
+        [conBusqueda]="true"
+        placeholderBusqueda="Buscar por radicado, póliza o broker…"
+        ariaLabel="Inducciones"
+        (accion)="gestionarInduccion($event)"
+      />
+    </app-estado-vista>
+  } @else {
+    <app-estado-vista
+      [cargando]="cargando()"
+      [error]="error()"
+      [vacio]="filas().length === 0"
+      entidad="renovaciones"
+      iconoVacio="update"
+      tituloVacio="No hay renovaciones en este filtro"
+      descripcionVacio="Actualiza desde el Warehouse para traer la muestra."
+      (reintentar)="cargar()"
+    >
+      <app-data-table
+        [columnas]="columnas"
+        [filas]="filas()"
+        [total]="filas().length"
+        [tamanoPagina]="20"
+        [conBusqueda]="true"
+        placeholderBusqueda="Buscar por póliza, asegurado, broker o gestor…"
+        ariaLabel="Renovaciones"
+        (accion)="gestionar($event)"
+      />
+    </app-estado-vista>
+  }
+</section>
+
+<app-modal-dialog
+  [abierto]="renovacion() !== null"
+  [titulo]="'Póliza ' + (renovacion()?.poliza ?? '')"
+  [subtitulo]="(renovacion()?.asegurado ?? '') + ' · ' + (renovacion()?.broker ?? 'sin broker')"
+  eyebrow="Renovación"
+  tamano="lg"
+  [pestanas]="pestanasRenovacion"
+  [pestana]="pestana()"
+  (pestanaChange)="pestana.set($event)"
+  (cerrar)="renovacion.set(null)"
+>
+  @if (renovacion(); as r) {
+    <div cabecera>
+      <app-badge-estado [variante]="(estados[r.estado] ?? { variante: 'info' }).variante" [conPunto]="true">
+        {{ (estados[r.estado] ?? { etiqueta: r.estado }).etiqueta }}
+      </app-badge-estado>
+      @if (r.estadoWarehouse) {
+        <app-badge-estado variante="info">{{ r.estadoWarehouse }}</app-badge-estado>
+      }
+      @if (r.casoEspecial) {
+        <app-badge-estado variante="warning">{{ r.casoEspecial }}</app-badge-estado>
+      }
+    </div>
+  }
+  @if (renovacion()) {
+    @if (pestana() === 'detalle') {
+      <app-ficha [secciones]="fichaRenovacion()" />
+    } @else {
+      <app-bitacora [eventos]="historial()" mensajeVacio="Sin historial de gestión en el Warehouse" />
+    }
+  }
+</app-modal-dialog>
+
+<app-modal-dialog
+  [abierto]="induccion() !== null"
+  [titulo]="'Inducción ' + (induccion()?.radicado ?? '')"
+  [subtitulo]="'Póliza ' + (induccion()?.numeroPoliza ?? '') + ' · ' + (induccion()?.broker ?? '')"
+  eyebrow="Caso especial"
+  tamano="xl"
+  [pestanas]="pestanasInduccion"
+  [pestana]="pestanaInduccion()"
+  (pestanaChange)="cambiarPestanaInduccion($event)"
+  (cerrar)="induccion.set(null)"
+>
+  @if (induccion()) {
+    @if (pestanaInduccion() === 'detalle') {
+      <app-ficha [secciones]="fichaInduccion()" />
+    } @else {
+      <app-visor-archivo [archivo]="archivo()" [cargando]="cargandoArchivo()" [nombre]="pestanaInduccion() + '-' + induccion()!.radicado" />
+    }
+  }
+</app-modal-dialog>

@@ -8,7 +8,7 @@
       <h1 class="registro-marca">Proyectiva</h1>
       <h2 id="registro-titulo" class="registro-titulo">
         @switch (paso()) {
-          @case (1) { Únete a Proyectiva }
+          @case (1) { Únete como broker }
           @case (2) { Verifica tu SARLAFT }
           @case (3) { Adjunta tus documentos }
         }
@@ -20,6 +20,27 @@
           @case (3) { Con tus documentos aprobados serás broker registrado. }
         }
       </p>
+
+      <!-- Etapas del proceso: parte de la instrucción de unirse, siempre visibles. -->
+      <ol class="registro-pasos" aria-label="Etapas del registro de broker">
+        @for (p of progreso(); track $index; let i = $index; let ultimo = $last) {
+          <li
+            class="registro-pasos__item"
+            [class.hecho]="p.hecho"
+            [class.activo]="p.activo"
+            [attr.aria-current]="p.activo ? 'step' : null"
+          >
+            <span class="registro-pasos__nodo" aria-hidden="true">
+              @if (p.hecho) { <app-icon nombre="check" [tamano]="16" /> } @else { {{ i + 1 }} }
+            </span>
+            <span class="registro-pasos__texto">
+              <small>Paso {{ i + 1 }}</small>
+              <b>{{ p.titulo }}</b>
+            </span>
+            @if (!ultimo) { <span class="registro-pasos__linea" aria-hidden="true"></span> }
+          </li>
+        }
+      </ol>
     </header>
 
     <!-- Cómo funciona tu cuenta (arriba). En el paso 1 solo se explica el prospecto. -->
@@ -70,7 +91,7 @@
 
           <app-form-field label="Tipo de documento" controlId="reg-tipo-doc" [requerido]="true">
             <select id="reg-tipo-doc" class="registro-input" formControlName="tipoDocumento">
-              @for (t of tiposDocumento; track t) { <option [value]="t">{{ etiquetaTipoDocumento[t] }}</option> }
+              @for (t of tiposDocumento; track t.codigo) { <option [value]="t.codigo">{{ t.descripcion }}</option> }
             </select>
           </app-form-field>
 
@@ -78,11 +99,21 @@
             <input id="reg-documento" class="registro-input" type="text" inputmode="numeric" placeholder="1020304050" formControlName="documento"
               [attr.minlength]="documentoLongitudMin" [attr.maxlength]="documentoLongitudMax" [attr.aria-invalid]="!!errorDocumento" />
           </app-form-field>
+
+          <app-form-field label="Contraseña" ayuda="Mínimo 10 caracteres, con mayúscula, minúscula y número" controlId="reg-password" [requerido]="true" [error]="errorPassword">
+            <input id="reg-password" class="registro-input" type="password" autocomplete="new-password" placeholder="••••••••••" formControlName="password"
+              [attr.minlength]="passwordLongitudMin" [attr.aria-invalid]="!!errorPassword" />
+          </app-form-field>
+
+          <app-form-field label="Confirmar contraseña" controlId="reg-password-confirm" [requerido]="true" [error]="errorPasswordConfirmacion">
+            <input id="reg-password-confirm" class="registro-input" type="password" autocomplete="new-password" placeholder="••••••••••" formControlName="passwordConfirmacion"
+              [attr.minlength]="passwordLongitudMin" [attr.aria-invalid]="!!errorPasswordConfirmacion" />
+          </app-form-field>
         </div>
 
         @if (errorEnvio()) { <p class="registro-error" role="alert">{{ errorEnvio() }}</p> }
 
-        <div class="registro-acciones">
+        <div class="registro-acciones registro-acciones--fila">
           <app-boton variante="accent" [disabled]="!datosValidos()" (clicked)="continuar()">Continuar como broker</app-boton>
           <app-boton variante="outline" [disabled]="!datosValidos() || registrandoProspecto()" (clicked)="registrarComoProspecto()">
             {{ registrandoProspecto() ? 'Creando tu cuenta…' : 'Registrarme como prospecto' }}
@@ -104,7 +135,7 @@
           <app-escalerita-loader texto="Verificando SARLAFT..."></app-escalerita-loader>
         } @else {
           @switch (sarlaft()?.estado) {
-            @case ('actualizado') {
+            @case ('ACTUALIZADO') {
               <div class="registro-resultado registro-resultado--ok" role="status">
                 <app-icon nombre="verified_user" [tamano]="22" />
                 <div>
@@ -113,14 +144,14 @@
                 </div>
               </div>
             }
-            @case ('desactualizado') {
+            @case ('DESACTUALIZADO') {
               <div class="registro-resultado registro-resultado--aviso" role="status">
                 <app-icon nombre="update" [tamano]="22" />
                 <div>
                   <b>SARLAFT desactualizado</b>
                   <p>{{ sarlaft()?.mensaje }}</p>
                   <ol>
-                    <li>Enviamos la URL de actualización a {{ sarlaft()?.correoDestinatario }}.</li>
+                    <li>Enviamos la URL de actualización a {{ sarlaft()?.correoEnmascarado }}.</li>
                     <li>Diligencia la actualización desde el enlace.</li>
                     <li>Vuelve aquí y verifica de nuevo para continuar.</li>
                   </ol>
@@ -133,13 +164,13 @@
                 </div>
               }
             }
-            @case ('consultable') {
+            @case ('CONSULTABLE') {
               <div class="registro-resultado registro-resultado--error" role="alert">
                 <app-icon nombre="policy" [tamano]="22" />
                 <div>
                   <b>Tu solicitud pasa a revisión</b>
                   <p>{{ sarlaft()?.mensaje }}</p>
-                  @if (sarlaft()?.radicado) { <p>Radicado: <b>{{ sarlaft()?.radicado }}</b>. Te contactaremos por correo.</p> }
+                  @if (sarlaft()?.radicadoCumplimiento) { <p>Radicado: <b>{{ sarlaft()?.radicadoCumplimiento }}</b>. Te contactaremos por correo.</p> }
                 </div>
               </div>
             }
@@ -150,19 +181,19 @@
 
         <div class="registro-acciones">
           @switch (sarlaft()?.estado) {
-            @case ('actualizado') {
+            @case ('ACTUALIZADO') {
               <app-boton variante="accent" (clicked)="irAPaso(3)">Continuar a documentos</app-boton>
             }
-            @case ('consultable') {
+            @case ('CONSULTABLE') {
               <app-boton variante="accent" (clicked)="irALogin()">Volver al inicio de sesión</app-boton>
             }
             @default {
               <app-boton variante="accent" icono="policy" [disabled]="verificandoSarlaft()" (clicked)="verificarSarlaft()">
-                {{ sarlaft()?.estado === 'desactualizado' ? 'Verificar de nuevo' : 'Verificar SARLAFT' }}
+                {{ sarlaft()?.estado === 'DESACTUALIZADO' ? 'Verificar de nuevo' : 'Verificar SARLAFT' }}
               </app-boton>
             }
           }
-          @if (sarlaft()?.estado !== 'consultable') {
+          @if (sarlaft()?.estado !== 'CONSULTABLE') {
             <app-boton variante="ghost" (clicked)="irAPaso(1)">Atrás</app-boton>
           }
         </div>
@@ -191,18 +222,6 @@
       }
     </form>
 
-    <!-- Tu avance (abajo) -->
-    <ol class="registro-progreso" aria-label="Avance del registro">
-      @for (p of progreso(); track $index; let i = $index) {
-        <li [class.hecho]="p.hecho" [class.activo]="p.activo">
-          <span class="registro-progreso__nodo" aria-hidden="true">
-            @if (p.hecho) { <app-icon nombre="check" [tamano]="14" /> } @else { {{ i + 1 }} }
-          </span>
-          <span>{{ p.titulo }}</span>
-        </li>
-      }
-    </ol>
-
     <footer class="registro-footer">
       <span>¿Ya tienes cuenta?</span>
       <app-boton variante="ghost" ariaLabel="Ya tengo cuenta: ir a la pantalla de inicio de sesión" (clicked)="irALogin()">Iniciar sesión</app-boton>
@@ -215,7 +234,7 @@
   <p>{{ credenciales()?.mensaje }}</p>
   <dl class="registro-credenciales">
     <div><dt>Tu usuario</dt><dd>{{ credenciales()?.usuario }}</dd><small>Tu número de documento</small></div>
-    <div><dt>Tu contraseña</dt><dd>{{ credenciales()?.contrasena }}</dd><small>Tu correo electrónico</small></div>
+    <div><dt>Tu contraseña</dt><dd>{{ credenciales()?.contrasena }}</dd><small>La que definiste al registrarte</small></div>
   </dl>
   <div acciones>
     <app-boton variante="accent" (clicked)="aceptarCredenciales()">Aceptar e ir a iniciar sesión</app-boton>

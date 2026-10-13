@@ -9,8 +9,10 @@ import {
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
-import { ETIQUETA_ESTADO_CUENTA, moduloBloqueado } from '../../../core/models/cuenta.model';
+import { moduloBloqueado } from '../../../core/models/cuenta.model';
+import { CatalogoService } from '../../../core/services/catalogo.service';
 import { LayoutService } from '../../../core/services/layout.service';
+import { MiPerfilService } from '../../../core/services/mi-perfil.service';
 import { PerfilService } from '../../../core/services/perfil.service';
 import { SessionService } from '../../../core/services/session.service';
 import { IconComponent } from '../../../shared/components';
@@ -28,22 +30,21 @@ export interface AccesoSidebar {
 }
 
 /**
- * Accesos del sidebar en el orden exacto del prototipo (Req 4.1):
- * Seguimiento, Nueva radicación, Referir cliente, Estado referidos, Cotizador,
- * Renovaciones, Calendario, Documentos y Ayuda.
+ * Accesos visibles del sidebar (Req 4.1): Seguimiento, Nueva radicación, Cotizador,
+ * Contratos, Renovaciones, Comisiones, Calendario, Documentos y Ayuda.
  *
- * Cada `ruta` corresponde al mapa de enrutamiento del diseño (`/app/<ruta>`),
- * cuyo cableado con `loadComponent`/`authGuard` se realiza en la tarea 16.2.
+ * "Agente IA", "Referir cliente" y "Estado referidos" quedan ocultos del sidebar
+ * (sus rutas siguen existiendo). Cada `ruta` corresponde al mapa de enrutamiento
+ * del diseño (`/app/<ruta>`).
  */
 export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
   { ruta: 'seguimiento', icono: 'grid_view', etiqueta: 'Seguimiento' },
-  { ruta: 'agente', icono: 'smart_toy', etiqueta: 'Agente IA' },
   { ruta: 'radicacion', icono: 'post_add', etiqueta: 'Nueva radicación' },
-  { ruta: 'referidos', icono: 'person_add', etiqueta: 'Referir cliente' },
-  { ruta: 'estado-referidos', icono: 'conversion_path', etiqueta: 'Estado referidos' },
+  // "Agente IA", "Referir cliente" y "Estado referidos" se ocultan del sidebar (sus rutas siguen existiendo).
   { ruta: 'cotizador', icono: 'calculate', etiqueta: 'Cotizador' },
   { ruta: 'contrato', icono: 'description', etiqueta: 'Contratos' },
   { ruta: 'renovaciones', icono: 'update', etiqueta: 'Renovaciones' },
+  { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
   { ruta: 'calendario', icono: 'calendar_today', etiqueta: 'Calendario' },
   { ruta: 'documentos', icono: 'folder_open', etiqueta: 'Documentos' },
   { ruta: 'ayuda', icono: 'help_outline', etiqueta: 'Ayuda' },
@@ -86,11 +87,13 @@ export class SidebarComponent {
 
   /** Estado de la Cuenta (Prospecto / Broker registrado) para el pie del sidebar. */
   protected readonly estadoCuenta = this.cuenta.estadoCuenta;
+  private readonly catalogo = inject(CatalogoService);
+  private readonly rutasRestringidas = this.catalogo.modulosRestringidos().map((m) => m.ruta);
 
   /** Etiqueta visible del estado de la Cuenta (`—` si aún no se conoce). */
   protected readonly etiquetaEstadoActual = computed<string>(() => {
     const estado = this.estadoCuenta();
-    return estado ? ETIQUETA_ESTADO_CUENTA[estado] : '—';
+    return estado ? this.catalogo.etiqueta('estado_cuenta', estado) : '—';
   });
 
   /** En desktop el sidebar puede plegarse a un riel de iconos. */
@@ -130,6 +133,9 @@ export class SidebarComponent {
   /** Perfil del Broker autenticado (nombre y rol) para el `sidebar-profile` (Req 4.3). */
   protected readonly perfil = this.session.perfil;
 
+  /** Foto de perfil de la sesión (blob local); sin foto se ven las iniciales. */
+  protected readonly foto = inject(MiPerfilService).foto;
+
   /** Solo en el portal del broker: el perfil y la Matriz_Acceso aplican a `/app`. */
   protected get esPortalBroker(): boolean {
     return this.base === '/app';
@@ -142,7 +148,7 @@ export class SidebarComponent {
    */
   protected bloqueado(ruta: string): boolean {
     const estado = this.estadoCuenta();
-    return this.esPortalBroker && estado !== null && moduloBloqueado(estado, ruta);
+    return this.esPortalBroker && estado !== null && moduloBloqueado(estado, ruta, this.rutasRestringidas);
   }
 
   /** Alterna el riel de iconos (solo desktop). */
@@ -166,6 +172,12 @@ export class SidebarComponent {
    */
   protected iniciales(nombre: string | undefined): string {
     return calcularIniciales(nombre);
+  }
+
+  /** Rol legible (el usuario interno puede no tener nombre en la sesión). */
+  protected etiquetaRol(rol: string | undefined): string {
+    const texto = (rol ?? '').replace(/_/g, ' ').toLowerCase();
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 }
 

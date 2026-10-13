@@ -1,6 +1,6 @@
 /**
  * Modelos del listado de solicitudes (Seguimiento) y del Detalle_Solicitud (Req 6, 34).
- * Los campos de PII llegan enmascarados desde el API_Backend (Req 28.4, 34.5).
+ * El broker ve los datos completos de sus negocios (sin enmascarar).
  */
 
 /** Estado de una Solicitud en el Seguimiento (Req 5.4, 6.3). */
@@ -10,7 +10,7 @@ export type EstadoSolicitud =
 /** Fila del listado de solicitudes del Seguimiento (Req 6.1, 6.2). */
 export interface Solicitud {
   readonly referencia: string;
-  readonly cliente: string;           // enmascarado
+  readonly cliente: string;
   readonly producto: string;
   readonly estado: EstadoSolicitud;
   readonly estadoPago: string;
@@ -36,7 +36,7 @@ export interface HitoTimeline {
 /**
  * Detalle de una Solicitud mostrado en el Drawer_Detalle (Req 34.1, 34.2).
  * Extiende la fila de Seguimiento con la línea de tiempo de hitos del trámite.
- * Los datos se obtienen del API_Backend y llegan con la PII enmascarada (Req 34.4, 34.5).
+ * Los datos se obtienen del API_Backend completos (sin enmascarar).
  */
 export interface DetalleSolicitud extends Solicitud {
   readonly timeline: readonly HitoTimeline[];

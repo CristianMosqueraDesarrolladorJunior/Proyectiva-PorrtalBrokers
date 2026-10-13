@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth.guard';
 import { rolGuard } from './core/guards/rol.guard';
+import { moduloGuard } from './core/guards/modulo.guard';
 
 /**
  * Tabla de rutas raíz del Portal de Autogestión de Brokers (Req 4, 29.4).
@@ -28,6 +29,15 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'cambiar-clave',
+    title: 'Crea tu contraseña — Proyectiva',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/auth/pages/cambiar-clave/cambiar-clave.component').then(
+        (m) => m.CambiarClaveComponent,
+      ),
+  },
+  {
     path: 'registro-broker',
     title: 'Registro de broker — Proyectiva',
     loadComponent: () =>
@@ -35,11 +45,21 @@ export const routes: Routes = [
         './features/auth/pages/registro-broker/registro-broker.component'
       ).then((m) => m.RegistroBrokerComponent),
   },
+  // Entrada del broker que llega ya autenticado desde Cien Cuadras (`/ingreso#token=...`).
+  {
+    path: 'ingreso',
+    title: 'Ingresando — Proyectiva',
+    loadComponent: () =>
+      import('./features/auth/pages/ingreso/ingreso.component').then(
+        (m) => m.IngresoComponent,
+      ),
+  },
 
   // --- Shell autenticado (Req 4, 4.4) ---
   {
     path: 'app',
     canActivate: [authGuard, rolGuard('BROKER')],
+    canActivateChild: [moduloGuard],
     loadComponent: () =>
       import('./features/shell/shell.component').then((m) => m.ShellComponent),
     children: [
@@ -117,12 +137,26 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'comisiones',
+        title: 'Comisiones — Proyectiva',
+        loadComponent: () =>
+          import('./features/comisiones/comisiones.component').then((m) => m.ComisionesComponent),
+      },
+      {
         path: 'renovaciones',
         title: 'Renovaciones — Proyectiva',
         loadComponent: () =>
           import(
             './features/renovacion/pages/renovaciones/renovaciones.component'
           ).then((m) => m.RenovacionesComponent),
+      },
+      {
+        path: 'renovaciones/induccion',
+        title: 'Inducción de póliza — Proyectiva',
+        loadComponent: () =>
+          import('./features/renovacion/pages/induccion/induccion.component').then(
+            (m) => m.InduccionComponent,
+          ),
       },
       {
         path: 'renovaciones/detalle',
@@ -240,6 +274,59 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/comerciales/comerciales.component').then(
             (m) => m.ComercialesComponent,
+          ),
+      },
+      {
+        path: 'prospectos',
+        title: 'Prospectos — Consola Proyectiva',
+        canActivate: [rolGuard('ADMINISTRADOR', 'COMERCIAL')],
+        loadComponent: () =>
+          import('./features/admin/prospectos/prospectos.component').then(
+            (m) => m.ProspectosComponent,
+          ),
+      },
+      {
+        path: 'polizas',
+        title: 'Pólizas — Consola Proyectiva',
+        canActivate: [rolGuard('ADMINISTRADOR', 'COMERCIAL')],
+        loadComponent: () =>
+          import('./features/admin/polizas/polizas-admin.component').then(
+            (m) => m.PolizasAdminComponent,
+          ),
+      },
+      {
+        path: 'renovaciones',
+        title: 'Renovaciones — Consola Proyectiva',
+        canActivate: [rolGuard('ADMINISTRADOR', 'COMERCIAL')],
+        loadComponent: () =>
+          import('./features/admin/renovaciones/renovaciones-admin.component').then(
+            (m) => m.RenovacionesAdminComponent,
+          ),
+      },
+      {
+        path: 'referidos',
+        title: 'Referidos — Consola Proyectiva',
+        canActivate: [rolGuard('ADMINISTRADOR', 'COMERCIAL')],
+        loadComponent: () =>
+          import('./features/admin/referidos/referidos-admin.component').then(
+            (m) => m.ReferidosAdminComponent,
+          ),
+      },
+      {
+        path: 'perfil',
+        title: 'Mi perfil — Consola Proyectiva',
+        loadComponent: () =>
+          import('./features/admin/perfil/perfil-admin.component').then(
+            (m) => m.PerfilAdminComponent,
+          ),
+      },
+      {
+        path: 'comisiones',
+        title: 'Comisiones — Consola Proyectiva',
+        canActivate: [rolGuard('ADMINISTRADOR', 'COMERCIAL')],
+        loadComponent: () =>
+          import('./features/admin/comisiones/comisiones-admin.component').then(
+            (m) => m.ComisionesAdminComponent,
           ),
       },
     ],

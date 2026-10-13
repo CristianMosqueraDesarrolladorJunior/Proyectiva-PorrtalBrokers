@@ -18,6 +18,8 @@ export interface DatosArrendador {
   readonly telefono: string;
   readonly correo: string;
   readonly direccionResidencia: string;
+  readonly ciudadExpedicion?: string;
+  readonly direccionNotificacion?: string;
 }
 
 /** Paso 2: datos del arrendatario (Req 30.3). */
@@ -29,6 +31,8 @@ export interface DatosArrendatario {
   readonly telefono: string;
   readonly correo: string;
   readonly ocupacion: string;
+  readonly ciudadExpedicion?: string;
+  readonly direccionNotificacion?: string;
 }
 
 /** Paso 3: datos del inmueble (Req 30.4). */
@@ -40,6 +44,7 @@ export interface DatosInmueble {
   readonly matriculaInmobiliaria: string;
   readonly estrato: number;
   readonly areaMetrosCuadrados: number;
+  readonly lineaTelefonica?: string; // opcional
 }
 
 /** Paso 4: condiciones económicas del contrato (Req 30.5). */
@@ -52,7 +57,14 @@ export interface CondicionesEconomicas {
   readonly reajusteAnual: string;
   readonly serviciosIncluidos: readonly string[];
   readonly incluyeDeudoresSolidarios: boolean;
+  readonly metodoPago: MetodoPagoContrato;
+  readonly tipoCuenta?: string;
+  readonly numeroCuenta?: string;            // obligatorio salvo pago en efectivo
+  readonly banco?: string;
 }
+
+/** Métodos de pago del canon (la cuenta bancaria es obligatoria salvo efectivo). */
+export type MetodoPagoContrato = 'transferencia' | 'consignacion' | 'debito_automatico' | 'efectivo';
 
 /** Solicitud completa de generación del Contrato_Arrendamiento (Req 30.7). */
 export interface ContratoArrendamientoRequest {
@@ -60,4 +72,84 @@ export interface ContratoArrendamientoRequest {
   readonly arrendatario: DatosArrendatario;
   readonly inmueble: DatosInmueble;
   readonly condiciones: CondicionesEconomicas;
+  /** Cotización de origen (COT-…), si el contrato nace de "Radicar esta cotización". */
+  readonly cotizacionReferencia?: string;
+  /** Deudores solidarios (máximo dos, precargados del estudio digital). */
+  readonly deudores?: readonly DeudorSolidario[];
+}
+
+/** Persona extraída de un contrato cargado (propuesta: el broker la confirma o corrige). */
+/** Deudor solidario (codeudor) del contrato. */
+export interface DeudorSolidario {
+  nombres: string;
+  apellidos: string;
+  tipoIdentificacion: string;
+  numeroIdentificacion: string;
+  ciudadExpedicion: string;
+  direccionNotificacion: string;
+  telefono: string;
+  correo: string;
+}
+
+/** Persona que devuelve el estudio digital para precargar el contrato. */
+export interface PersonaEstudio {
+  readonly nombres: string | null;
+  readonly apellidos: string | null;
+  readonly tipoIdentificacion: string | null;
+  readonly numeroIdentificacion: string | null;
+  readonly telefono: string | null;
+  readonly correo: string | null;
+  readonly direccionNotificacion: string | null;
+}
+
+/** Precarga del contrato desde el estudio digital (`GET /contratos/prellenado`). */
+export interface PrellenadoContrato {
+  readonly consecutivo: string | null;
+  readonly estado: string | null;
+  readonly arrendador: PersonaEstudio | null;
+  readonly arrendatario: PersonaEstudio | null;
+  readonly deudores: readonly PersonaEstudio[];
+  readonly inmueble: {
+    readonly direccion: string | null;
+    readonly ciudad: string | null;
+    readonly uso: string | null;
+    readonly tipoInmueble: string | null;
+    readonly canon: string | null;
+    readonly administracion: string | null;
+  } | null;
+}
+
+export interface ParteLeida {
+  readonly nombres?: string;
+  readonly apellidos?: string;
+  readonly tipoIdentificacion?: TipoDocumentoIdentidad;
+  readonly numeroIdentificacion?: string;
+  readonly telefono?: string;
+  readonly correo?: string;
+  readonly direccion?: string;
+}
+
+/**
+ * Resultado de `POST /contratos/lectura` (Gemini en Vertex AI, vía backend). Lo que no se encontró
+ * queda vacío y se lista en `falta`: es mejor una casilla vacía que una llena con el dato de otro.
+ */
+export interface LecturaContratoResponse {
+  readonly arrendador: ParteLeida;
+  readonly arrendatario: ParteLeida;
+  readonly deudorSolidario?: ParteLeida;
+  readonly inmueble: {
+    readonly direccionCompleta?: string;
+    readonly ciudad?: string;
+    readonly tipoInmueble?: string;
+    readonly uso?: string;
+    readonly matriculaInmobiliaria?: string;
+  };
+  readonly condiciones: {
+    readonly canonMensual?: number;
+    readonly cuotaAdministracion?: number;
+    readonly fechaInicio?: string;
+    readonly duracionMeses?: number;
+  };
+  /** Campos que no se encontraron (etiquetas legibles). */
+  readonly falta: readonly string[];
 }

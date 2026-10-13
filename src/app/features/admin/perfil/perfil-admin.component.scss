@@ -1,0 +1,221 @@
+
+.pf-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-2xl);
+  background:
+    radial-gradient(120% 140% at 100% 0%, var(--sb-tint-accent-bg) 0%, transparent 55%),
+    var(--sb-surface);
+  box-shadow: var(--sb-shadow-1);
+}
+
+.pf-hero__datos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pf-hero__nombre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+
+  h2 {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: var(--text-headline);
+    color: var(--sb-on-surface);
+  }
+}
+
+.pf-hero__cargo {
+  margin: 0;
+  color: var(--sb-secondary);
+}
+
+.pf-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-body-sm);
+  color: var(--sb-on-surface);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  app-icon {
+    color: var(--sb-primary);
+  }
+}
+
+.pf-hero__progreso {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  min-width: 160px;
+
+  small {
+    font-size: var(--text-caption);
+    color: var(--sb-secondary);
+  }
+}
+
+.pf-hero__pct {
+  font-family: var(--font-family-heading);
+  font-size: var(--text-headline);
+  font-weight: var(--font-weight-bold);
+  color: var(--sb-primary);
+}
+
+.pf-hero__barra {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--sb-surface-low);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--sb-primary), var(--sb-tertiary));
+  }
+}
+
+.pf-rejilla {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.pf-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-2xl);
+  background: var(--sb-surface);
+  box-shadow: var(--sb-shadow-1);
+}
+
+.pf-panel__cab {
+  display: flex;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--sb-border);
+
+  h3 {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: var(--text-title);
+    color: var(--sb-on-surface);
+  }
+
+  p {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-body-sm);
+    color: var(--sb-secondary);
+  }
+}
+
+.pf-panel__icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  background: var(--sb-tint-accent-bg);
+  color: var(--sb-primary);
+}
+
+.pf-panel__icono--seguridad {
+  background: var(--sb-tint-success-bg);
+  color: var(--sb-tint-success-text);
+}
+
+.pf-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+
+  app-form-field:first-child,
+  app-alert-banner,
+  .pf-form__acciones {
+    grid-column: 1 / -1;
+  }
+}
+
+.pf-form__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.pf-consejos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-4);
+  list-style: none;
+  border-radius: var(--radius-lg);
+  background: var(--sb-surface-low);
+  font-size: var(--text-caption);
+  color: var(--sb-secondary);
+
+  li {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  app-icon {
+    color: var(--sb-tertiary);
+  }
+}
+
+@media (width <= 1023px) {
+  .pf-hero {
+    grid-template-columns: auto 1fr;
+  }
+
+  .pf-hero__progreso {
+    grid-column: 1 / -1;
+    align-items: stretch;
+  }
+
+  .pf-rejilla {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (width <= 639px) {
+  .pf-hero {
+    grid-template-columns: 1fr;
+    padding: var(--space-4);
+  }
+
+  .pf-form {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-panel {
+    padding: var(--space-4);
+  }
+}

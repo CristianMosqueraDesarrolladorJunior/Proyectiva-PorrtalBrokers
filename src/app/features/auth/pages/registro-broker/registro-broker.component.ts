@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -28,8 +29,9 @@ import type {
   ReglaDocumentoUploader,
 } from '../../../../shared/components/doc-uploader/doc-uploader.component';
 import { AuthService } from '../../../../core/services/auth.service';
+import { rutaInicio } from '../../../../core/guards/rol.guard';
 import {
-  DOCUMENTOS_REGISTRO_BROKER,
+  documentosRegistroBroker,
   type DocumentoRegistro,
   type ReglaDocumentoRegistro,
   type SolicitudRegistroBroker,
@@ -40,19 +42,17 @@ import type {
   ResultadoSarlaftRadicacion,
   TipoDocumentoIdentidad,
 } from '../../../../core/models/radicacion.model';
-import { MODULOS_RESTRINGIDOS } from '../../../../core/models/cuenta.model';
-import { ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD } from '../../../radicacion/pages/radicacion/radicacion-presentacion';
+import { CatalogoService } from '../../../../core/services/catalogo.service';
 import {
   reglaDeDocumentoRegistro,
   validarDocumento,
 } from '../../../../shared/validation/documento-validacion';
 import {
-  CIUDADES_PERMITIDAS,
-  CODIGOS_PAIS_PERMITIDOS,
   CODIGO_PAIS_DEFECTO,
   DOCUMENTO_LONGITUD_MAX,
   DOCUMENTO_LONGITUD_MIN,
   NOMBRE_LONGITUD_MIN,
+  PASSWORD_LONGITUD_MIN,
   TELEFONO_LONGITUD_MAX,
   TELEFONO_LONGITUD_MIN,
   esCiudadValida,
@@ -60,6 +60,7 @@ import {
   esCorreoValido,
   esDocumentoValido,
   esNombreValido,
+  esPasswordValida,
   esTelefonoValido,
 } from './registro-validacion';
 import { documentosRegistroCompletos } from './registro-envio';
@@ -70,9 +71,6 @@ const RUTA_LOGIN = '/login';
 /** Texto legal mostrado junto al botón de envío (Req 3.20). */
 const TEXTO_LEGAL =
   'Al enviar, aceptas nuestras Políticas de Privacidad y Términos de Uso.';
-
-/** Tipos de documento de identidad admitidos para el registro de broker. */
-const TIPOS_DOCUMENTO_REGISTRO: readonly TipoDocumentoIdentidad[] = ['CC', 'CE', 'NIT'];
 
 type PasoRegistro = 1 | 2 | 3;
 
@@ -95,6 +93,8 @@ interface FormularioRegistro {
   readonly ciudad: FormControl<string>;
   readonly tipoDocumento: FormControl<TipoDocumentoIdentidad>;
   readonly documento: FormControl<string>;
+    readonly password: FormControl<string>;
+    readonly passwordConfirmacion: FormControl<string>;
 }
 
 /** Credenciales iniciales que se informan al terminar el registro. */
@@ -144,20 +144,24 @@ export class RegistroBrokerComponent {
 
   /** Constantes expuestas al template. */
   protected readonly nombreLongitudMin = NOMBRE_LONGITUD_MIN;
+  protected readonly passwordLongitudMin = PASSWORD_LONGITUD_MIN;
   protected readonly telefonoLongitudMin = TELEFONO_LONGITUD_MIN;
   protected readonly telefonoLongitudMax = TELEFONO_LONGITUD_MAX;
   protected readonly documentoLongitudMin = DOCUMENTO_LONGITUD_MIN;
   protected readonly documentoLongitudMax = DOCUMENTO_LONGITUD_MAX;
-  protected readonly codigosPais = CODIGOS_PAIS_PERMITIDOS;
-  protected readonly ciudades = CIUDADES_PERMITIDAS;
-  protected readonly tiposDocumento = TIPOS_DOCUMENTO_REGISTRO;
-  protected readonly etiquetaTipoDocumento = ETIQUETA_TIPO_DOCUMENTO_IDENTIDAD;
-  protected readonly modulosRestringidos = MODULOS_RESTRINGIDOS;
+  /** Listas del formulario desde los catálogos de BD (`codigo_pais`, `ciudad`, `tipo_documento`). */
+  private readonly catalogo = inject(CatalogoService);
+  protected readonly codigosPais = this.catalogo.opciones('codigo_pais').map((c) => c.codigo);
+  protected readonly ciudades = this.catalogo.opciones('ciudad').map((c) => c.descripcion);
+  protected readonly tiposDocumento = this.catalogo.opciones('tipo_documento').filter((t) => t['registro_broker'] === true);
+  protected readonly etiquetaTipoDocumento = this.catalogo.etiquetas('tipo_documento');
+  protected readonly modulosRestringidos = inject(CatalogoService).modulosRestringidos();
   protected readonly textoLegal = TEXTO_LEGAL;
 
   /** Reglas de los 4 documentos obligatorios adaptadas al uploader (Req 3.16). */
+  private readonly documentosRegistro = documentosRegistroBroker(this.catalogo.opciones('documento_legalizacion'));
   protected readonly reglasUploader: readonly ReglaDocumentoUploader[] =
-    DOCUMENTOS_REGISTRO_BROKER.map((regla) => ({
+    this.documentosRegistro.map((regla) => ({
       id: regla.tipo,
       etiqueta: regla.etiqueta,
       descripcion: regla.descripcion,
@@ -175,6 +179,11 @@ export class RegistroBrokerComponent {
     ciudad: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     tipoDocumento: new FormControl<TipoDocumentoIdentidad>('CC', { nonNullable: true, validators: [Validators.required] }),
     documento: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    passwordConfirmacion: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
   });
 
   /** Signal que refleja los valores del formulario para recomputar validaciones. */
@@ -206,6 +215,45 @@ export class RegistroBrokerComponent {
         this.documentos.set({});
       }
     });
+    this.autocompletarDesdePerfilCompartido();
+  }
+
+  /**
+   * Autocompleta el paso 1 con lo que el usuario ya registró en Cien Cuadras, para
+   * no volver a pedírselo. Solo llena campos vacíos y solo con valores válidos; sin
+   * sesión o sin datos el formulario queda como está.
+   */
+  private autocompletarDesdePerfilCompartido(): void {
+    this.auth
+      .perfilCompartido()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (perfil) => {
+          if (!perfil) {
+            return;
+          }
+          const actual = this.formulario.getRawValue();
+          const nombre = [perfil.nombre, perfil.apellido].filter(Boolean).join(' ').trim();
+          const propuesto = {
+            nombreCompleto: esNombreValido(nombre) ? nombre : '',
+            correo: perfil.correo && esCorreoValido(perfil.correo) ? perfil.correo : '',
+            telefono: perfil.telefono && esTelefonoValido(perfil.telefono) ? perfil.telefono : '',
+            ciudad: perfil.ciudad && esCiudadValida(perfil.ciudad, this.ciudades) ? perfil.ciudad : '',
+            documento:
+              perfil.numeroIdentificacion && esDocumentoValido(perfil.numeroIdentificacion)
+                ? perfil.numeroIdentificacion
+                : '',
+          };
+          const cambios = Object.fromEntries(
+            Object.entries(propuesto).filter(
+              ([campo, valor]) => valor && !actual[campo as keyof typeof propuesto],
+            ),
+          );
+          this.formulario.patchValue(cambios);
+        },
+        // Sin sesión (401) o sin proveedor: no hay nada que autocompletar.
+        error: () => undefined,
+      });
   }
 
   /** Validez del paso 1 (datos personales + documento). */
@@ -214,11 +262,13 @@ export class RegistroBrokerComponent {
     return (
       esNombreValido(v.nombreCompleto) &&
       esCorreoValido(v.correo) &&
-      esCodigoPaisValido(v.codigoPais) &&
+      esCodigoPaisValido(v.codigoPais, this.codigosPais) &&
       esTelefonoValido(v.telefono) &&
-      esCiudadValida(v.ciudad) &&
-      TIPOS_DOCUMENTO_REGISTRO.includes(v.tipoDocumento) &&
-      esDocumentoValido(v.documento)
+      esCiudadValida(v.ciudad, this.ciudades) &&
+      this.tiposDocumento.some((t) => t.codigo === v.tipoDocumento) &&
+      esDocumentoValido(v.documento) &&
+      esPasswordValida(v.password) &&
+      v.password === v.passwordConfirmacion
     );
   });
 
@@ -241,13 +291,13 @@ export class RegistroBrokerComponent {
   });
 
   protected readonly documentosCompletos = computed(() =>
-    documentosRegistroCompletos(this.tiposDocumentosValidos()),
+    documentosRegistroCompletos(this.tiposDocumentosValidos(), this.documentosRegistro.map((r) => r.tipo)),
   );
 
   protected readonly puedeEnviar = computed(
     () =>
       this.datosValidos() &&
-      this.sarlaft()?.estado === 'actualizado' &&
+      this.sarlaft()?.estado === 'ACTUALIZADO' &&
       this.documentosCompletos() &&
       !this.enviando(),
   );
@@ -255,9 +305,9 @@ export class RegistroBrokerComponent {
   /** Avance del asistente (se muestra al pie de la tarjeta). */
   protected readonly progreso = computed(() => [
     { titulo: 'Tus datos', hecho: this.datosValidos() && this.paso() > 1, activo: this.paso() === 1 },
-    { titulo: 'SARLAFT', hecho: this.sarlaft()?.estado === 'actualizado', activo: this.paso() === 2 },
+    { titulo: 'Conocimiento de Cliente', hecho: this.sarlaft()?.estado === 'ACTUALIZADO', activo: this.paso() === 2 },
     {
-      titulo: `Documentos ${this.tiposDocumentosValidos().length}/${DOCUMENTOS_REGISTRO_BROKER.length}`,
+      titulo: `Documentos ${this.tiposDocumentosValidos().length}/${this.documentosRegistro.length}`,
       hecho: this.documentosCompletos(),
       activo: this.paso() === 3,
     },
@@ -279,7 +329,7 @@ export class RegistroBrokerComponent {
   }
 
   protected get errorCiudad(): string {
-    return this.mensajeError('ciudad', esCiudadValida(this.valores().ciudad), 'Selecciona una ciudad de la lista.');
+    return this.mensajeError('ciudad', esCiudadValida(this.valores().ciudad, this.ciudades), 'Selecciona una ciudad de la lista.');
   }
 
   protected get errorDocumento(): string {
@@ -287,11 +337,23 @@ export class RegistroBrokerComponent {
       `El documento debe contener entre ${DOCUMENTO_LONGITUD_MIN} y ${DOCUMENTO_LONGITUD_MAX} dígitos.`);
   }
 
+  protected get errorPassword(): string {
+    return this.mensajeError('password', esPasswordValida(this.valores().password),
+      `La contraseña debe tener al menos ${PASSWORD_LONGITUD_MIN} caracteres e incluir mayúscula, minúscula y número.`);
+  }
+
+  protected get errorPasswordConfirmacion(): string {
+    const v = this.valores();
+    const coincide =
+      v.password === v.passwordConfirmacion && esPasswordValida(v.passwordConfirmacion);
+    return this.mensajeError('passwordConfirmacion', coincide, 'Las contraseñas no coinciden.');
+  }
+
   // ===========================================================================
   // Paso 1
   // ===========================================================================
 
-  /** Ingreso simple: la cuenta queda como PROSPECTO y se informan las credenciales. */
+  /** Crea el prospecto, provisiona su identidad y abre la sesión automáticamente. */
   protected registrarComoProspecto(): void {
     if (!this.datosValidos() || this.registrandoProspecto()) {
       this.formulario.markAllAsTouched();
@@ -309,20 +371,36 @@ export class RegistroBrokerComponent {
         ciudad: v.ciudad,
         tipoDocumento: v.tipoDocumento,
         documento: v.documento,
+        password: v.password,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.registrandoProspecto.set(false);
-          this.credenciales.set({
-            ...this.credencialesIniciales(),
-            titulo: '¡Ya eres prospecto!',
-            mensaje: 'Tu cuenta quedó creada. Ya puedes radicar y cotizar; completa tu registro de broker cuando quieras desde "Mi perfil".',
-          });
+          this.auth
+            .login({ usuario: v.correo.trim(), password: v.password })
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: (perfil) => {
+                this.registrandoProspecto.set(false);
+                void this.router.navigate([rutaInicio(perfil.rol)]);
+              },
+              error: () => {
+                this.registrandoProspecto.set(false);
+                this.credenciales.set({
+                  ...this.credencialesIniciales(),
+                  titulo: 'Tu cuenta ya está creada',
+                  mensaje: 'No pudimos iniciar sesión automáticamente. Ingresa con tu documento y la contraseña que definiste.',
+                });
+              },
+            });
         },
-        error: () => {
+        error: (error: unknown) => {
           this.registrandoProspecto.set(false);
-          this.errorEnvio.set('No fue posible crear tu cuenta. Intenta de nuevo.');
+          this.errorEnvio.set(
+            error instanceof HttpErrorResponse && error.status === 409
+              ? 'Ya existe una cuenta con ese documento o correo. Inicia sesión o restablece tu contraseña.'
+              : 'No fue posible crear tu cuenta. Intenta de nuevo.',
+          );
         },
       });
   }
@@ -375,7 +453,7 @@ export class RegistroBrokerComponent {
   }
 
   protected irAPaso(paso: PasoRegistro): void {
-    if (paso === 3 && this.sarlaft()?.estado !== 'actualizado') {
+    if (paso === 3 && this.sarlaft()?.estado !== 'ACTUALIZADO') {
       return;
     }
     this.paso.set(paso);
@@ -388,7 +466,7 @@ export class RegistroBrokerComponent {
   /** Valida MIME/extensión, tamaño y vigencia con la lógica pura compartida (Req 3.16–3.18). */
   protected onArchivoSeleccionado(evento: ArchivoSeleccionado): void {
     const tipo = evento.id as TipoDocumentoRegistro;
-    const regla = DOCUMENTOS_REGISTRO_BROKER.find((r) => r.tipo === tipo);
+    const regla = this.documentosRegistro.find((r) => r.tipo === tipo);
     if (regla === undefined) {
       return;
     }
@@ -464,14 +542,14 @@ export class RegistroBrokerComponent {
 
   private credencialesIniciales(): Pick<Credenciales, 'usuario' | 'contrasena'> {
     const v = this.valores();
-    return { usuario: v.documento, contrasena: v.correo.trim() };
+    return { usuario: v.documento, contrasena: v.password };
   }
 
   private construirSolicitud(): SolicitudRegistroBroker | null {
     const v = this.valores();
     const estado = this.documentos();
     const documentos: DocumentoRegistro[] = [];
-    for (const regla of DOCUMENTOS_REGISTRO_BROKER) {
+    for (const regla of this.documentosRegistro) {
       const doc = estado[regla.tipo];
       if (doc === undefined || !doc.valido) {
         return null;

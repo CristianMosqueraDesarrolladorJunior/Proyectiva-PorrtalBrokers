@@ -71,6 +71,38 @@
   border-radius: var(--radius-sm);
 }
 
+.login-aviso {
+  margin: var(--space-0);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+  font-size: var(--text-body);
+  line-height: var(--line-height-normal);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.login-olvido {
+  align-self: center;
+  padding: var(--space-0);
+  color: var(--color-muted);
+  font: inherit;
+  font-size: var(--text-body);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--color-text);
+  }
+
+  &:disabled {
+    cursor: default;
+    text-decoration: none;
+  }
+}
+
 .login-input {
   width: 100%;
   padding: var(--space-3) var(--space-4);

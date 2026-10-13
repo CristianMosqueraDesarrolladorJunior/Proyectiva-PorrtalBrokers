@@ -23,7 +23,7 @@
         controlId="no-renovacion-motivo"
       >
         <app-radio-group
-          [opciones]="opcionesMotivo"
+          [opciones]="opcionesMotivo()"
           [valor]="motivo()"
           (valorChange)="motivo.set($event)"
           ariaLabel="Motivo de la no renovación"
