@@ -788,6 +788,8 @@ export class AgenteComponent {
             autorizacionDatos: this.declarado(),
             tipoPersona: this.tipoPersona(),
             firmaApoderado: this.firmaApoderado(),
+            tipoDocumentoApoderado: this.tipoDocumentoApoderado(),
+            documentoApoderado: this.numeroDocumentoApoderado(),
             vocabulario: this.documentosCatalogo.filter((d) => d['aplica'] !== 'OPCIONAL').map((d) => d.codigo),
           }),
         ),

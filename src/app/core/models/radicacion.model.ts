@@ -82,6 +82,9 @@ export interface RadicacionRequest {
   readonly autorizacionDatos: boolean;
   readonly tipoPersona: TipoPersona;
   readonly firmaApoderado: boolean;
+  /** Firmante apoderado: el servidor reconsulta su SARLAFT antes de radicar. */
+  readonly tipoDocumentoApoderado?: string;
+  readonly documentoApoderado?: string;
 }
 
 /**

@@ -236,6 +236,8 @@ export interface EntradaPayloadRadicacion {
   readonly firmaApoderado: boolean;
   /** Códigos que acepta el backend en `documentosCargados` (catálogo, sin los opcionales). */
   readonly vocabulario: readonly string[];
+  readonly tipoDocumentoApoderado?: string;
+  readonly documentoApoderado?: string;
 }
 
 /**
@@ -256,5 +258,8 @@ export function construirPayloadRadicacion(e: EntradaPayloadRadicacion): Radicac
     autorizacionDatos: e.autorizacionDatos,
     tipoPersona: e.tipoPersona,
     firmaApoderado: e.firmaApoderado,
+    ...(e.firmaApoderado && e.documentoApoderado?.trim()
+      ? { tipoDocumentoApoderado: e.tipoDocumentoApoderado ?? 'CC', documentoApoderado: e.documentoApoderado.trim() }
+      : {}),
   };
 }
