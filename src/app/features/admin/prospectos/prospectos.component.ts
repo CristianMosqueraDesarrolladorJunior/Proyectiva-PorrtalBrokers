@@ -92,6 +92,11 @@ export class ProspectosComponent {
   protected readonly compacto = copCompacto;
   private readonly catalogo = inject(CatalogoService);
   private readonly documentos = this.catalogo.etiquetas('documento_legalizacion');
+  private readonly fasesSarlaft = this.catalogo.etiquetas('fase_sarlaft');
+  /** Fase SARLAFT con la descripción del catálogo (`cat_fase_sarlaft`). */
+  protected sarlaft(fase: string | null): string {
+    return fase ? this.fasesSarlaft[fase] ?? fase : 'Sin consulta';
+  }
   private readonly legalizacion = this.catalogo.insignias('estado_registro_broker', VARIANTE_LEGALIZACION, 'info' as VarianteBadge);
   protected readonly etiquetaDocumento = (tipo: string) => this.documentos[tipo] ?? tipo;
   protected readonly fechaHora = fechaHora;
@@ -127,7 +132,7 @@ export class ProspectosComponent {
         legalizacion: leg.etiqueta,
         legalizacionVariante: leg.variante,
         documentos: `${p.documentosCargados} de 4`,
-        sarlaft: p.sarlaftEstado ?? 'Sin consulta',
+        sarlaft: this.sarlaft(p.sarlaftEstado),
         sarlaftSub: p.sarlaftFecha ? fechaHora(p.sarlaftFecha) : '',
         estudios: p.estudios,
         ingreso: cop(p.primas),
@@ -189,7 +194,7 @@ export class ProspectosComponent {
         titulo: 'Conocimiento del cliente (SARLAFT)',
         icono: 'policy',
         datos: [
-          { etiqueta: 'Estado', valor: p.sarlaftEstado ?? 'Sin consulta' },
+          { etiqueta: 'Estado', valor: this.sarlaft(p.sarlaftEstado) },
           { etiqueta: 'Última actualización', valor: fechaHora(p.sarlaftFecha) },
         ],
       },

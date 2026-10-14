@@ -700,7 +700,7 @@
             <input
               type="checkbox"
               [ngModel]="conDeudoresSolidarios()"
-              (ngModelChange)="conDeudoresSolidarios.set($event)"
+              (ngModelChange)="alternarDeudores($event)"
             />
             <span class="contrato-check__texto">
               <strong>Incluir deudores solidarios (codeudores)</strong>

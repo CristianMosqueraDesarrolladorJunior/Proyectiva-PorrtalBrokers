@@ -42,13 +42,17 @@ export interface DocumentoPerfil {
   readonly fechaCarga: string | null;
 }
 
-/** Estado SARLAFT del broker según la antigüedad de su fecha de expedición. */
-export type EstadoSarlaftPerfil = 'vigente' | 'por_vencer' | 'vencido' | 'sin_consultar';
+/** Estado SARLAFT del broker que decide el backend (`en_cumplimiento` = CONSULTABLE, pasa a Cumplimiento). */
+export type EstadoSarlaftPerfil = 'vigente' | 'por_vencer' | 'vencido' | 'en_cumplimiento' | 'sin_consultar';
 
 export interface SarlaftPerfil {
   readonly estado: EstadoSarlaftPerfil;
   readonly fechaExpedicion: string | null;
   readonly ultimaConsulta: string | null;
+  /** Radicado de Cumplimiento cuando la consulta queda CONSULTABLE. */
+  readonly radicadoCumplimiento?: string | null;
+  /** URL del formulario de actualización cuando queda DESACTUALIZADO. */
+  readonly enlaceActualizacion?: string | null;
 }
 
 /** Comisiones de solicitudes radicadas como prospecto (Req 1.7, 3.6). */

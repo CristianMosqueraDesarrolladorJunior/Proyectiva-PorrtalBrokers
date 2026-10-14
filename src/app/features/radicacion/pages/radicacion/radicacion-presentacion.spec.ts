@@ -246,4 +246,22 @@ describe('construirPayloadRadicacion (alineado 1:1 con el backend)', () => {
       { numRuns: 100 },
     );
   });
+
+  it('con apoderado envía su documento y su correo (columna "Correo Apoderado")', () => {
+    const payload = construirPayloadRadicacion({
+      contratoReferencia: 'CTR-1',
+      numeroEstudioArrendamiento: '123',
+      tipoDocumentoInquilino: 'CC',
+      documentoInquilino: '7332800',
+      documentosCargados: [],
+      autorizacionDatos: true,
+      tipoPersona: 'natural',
+      firmaApoderado: true,
+      documentoApoderado: ' 41503593 ',
+      correoApoderado: ' apo@correo.com ',
+      vocabulario: VOCABULARIO_DOCUMENTOS_RADICACION,
+    });
+    expect(payload.documentoApoderado).toBe('41503593');
+    expect(payload.correoApoderado).toBe('apo@correo.com');
+  });
 });

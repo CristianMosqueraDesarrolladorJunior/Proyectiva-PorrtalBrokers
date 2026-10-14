@@ -196,7 +196,7 @@ export class ContratoComponent {
   protected readonly conReajuste = signal('');
   protected readonly conServicios = signal('');
   // El prototipo marca "Incluir deudores solidarios" por defecto.
-  protected readonly conDeudoresSolidarios = signal(true);
+  protected readonly conDeudoresSolidarios = signal(false);
   protected readonly conMetodoPago = signal<MetodoPagoContrato>('transferencia');
   protected readonly conTipoCuenta = signal('ahorros');
   protected readonly conNumeroCuenta = signal('');
@@ -423,6 +423,21 @@ export class ContratoComponent {
 
   protected editarDeudor(i: number, campo: keyof DeudorSolidario, valor: string): void {
     this.deudores.update((lista) => lista.map((d, j) => (j === i ? { ...d, [campo]: valor } : d)));
+  }
+
+  /** Deudores con nombre y documento: solo con alguno el contrato declara deudores solidarios. */
+  private deudoresValidos(): DeudorSolidario[] {
+    return this.conDeudoresSolidarios()
+      ? this.deudores().filter((d) => d.nombres.trim() && d.numeroIdentificacion.trim())
+      : [];
+  }
+
+  /** Marcar "Incluir deudores" con la lista vacía abre el primer deudor para diligenciarlo. */
+  protected alternarDeudores(incluir: boolean): void {
+    this.conDeudoresSolidarios.set(incluir);
+    if (incluir && this.deudores().length === 0) {
+      this.agregarDeudor();
+    }
   }
 
   protected agregarDeudor(): void {
@@ -676,13 +691,11 @@ export class ContratoComponent {
       fechaInicio: this.conFechaInicio().trim(),
       reajusteAnual: this.conReajuste().trim(),
       serviciosIncluidos: this.serviciosComoLista(),
-      incluyeDeudoresSolidarios: this.conDeudoresSolidarios(),
+      incluyeDeudoresSolidarios: this.deudoresValidos().length > 0,
       ...this.datosPago(),
       ...(this.conMetodoPago() !== 'efectivo' && this.conBanco().trim() ? { banco: this.conBanco().trim() } : {}),
     };
-    const deudores = this.conDeudoresSolidarios()
-      ? this.deudores().filter((d) => d.nombres.trim() && d.numeroIdentificacion.trim())
-      : [];
+    const deudores = this.deudoresValidos();
     const cotizacionReferencia = this.borrador.cotizacion()?.referencia;
     return {
       arrendador,

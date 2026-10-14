@@ -63,7 +63,7 @@
     <app-boton variante="ghost" (clicked)="onCerrar()">Cerrar</app-boton>
     @if (puedeCorregir()) {
       <app-boton icono="upload_file" variante="accent" ariaLabel="Actualizar documentos de la solicitud" (clicked)="gestionarCorreccion()">
-        Actualizar documentos
+        {{ pendienteEnvio() ? 'Completar y enviar' : 'Actualizar documentos' }}
       </app-boton>
     }
   </div>

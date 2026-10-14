@@ -39,6 +39,7 @@ import type {
 } from '../../shared/components/doc-uploader/doc-uploader.component';
 import { formatearCop } from '../../shared/util/moneda';
 import { mensajeErrorIntegracion } from '../../core/util/errores-integracion';
+import { abrirFormularioSarlaft } from '../../core/util/sarlaft-enlace';
 import { reglaDeDocumentoRegistro, validarDocumento } from '../../shared/validation/documento-validacion';
 import {
   esCorreoValido,
@@ -55,13 +56,23 @@ const VARIANTE_DOC: Readonly<Record<EstadoDocumentoPerfil, VarianteBadge>> = {
 const ETIQUETA_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, string>> = {
   vigente: 'Vigente',
   por_vencer: 'Por vencer',
-  vencido: 'Vencido',
+  vencido: 'Desactualizado',
+  en_cumplimiento: 'En revisión de Cumplimiento',
   sin_consultar: 'Sin consultar',
+};
+/** Mensaje tras consultar SARLAFT desde el perfil, según lo que decidió el backend. */
+const MENSAJE_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, string>> = {
+  vigente: 'Conocimiento de Cliente actualizado: está vigente.',
+  por_vencer: 'Tu Conocimiento de Cliente está próximo a vencer. Actualízalo para completar tu registro.',
+  vencido: 'Tu Conocimiento de Cliente está desactualizado. Diligencia el formulario de actualización y vuelve a consultar.',
+  en_cumplimiento: 'Tu caso pasó a revisión del área de Cumplimiento. Te contactaremos por correo.',
+  sin_consultar: 'No fue posible consultar tu Conocimiento de Cliente. Intenta de nuevo.',
 };
 const VARIANTE_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, VarianteBadge>> = {
   vigente: 'success',
   por_vencer: 'warning',
   vencido: 'danger',
+  en_cumplimiento: 'warning',
   sin_consultar: 'info',
 };
 
@@ -152,6 +163,7 @@ export class PerfilComponent implements OnInit {
   );
   protected readonly varianteDoc = VARIANTE_DOC;
   protected readonly etiquetaSarlaft = ETIQUETA_SARLAFT;
+  protected readonly abrirFormularioSarlaft = abrirFormularioSarlaft;
   protected readonly varianteSarlaft = VARIANTE_SARLAFT;
   protected readonly cop = formatearCop;
 
@@ -302,11 +314,7 @@ export class PerfilComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((p) => {
         this.consultandoSarlaft.set(false);
-        this.mensajeSarlaft.set(
-          p.sarlaft.estado === 'vigente'
-            ? 'Conocimiento de Cliente actualizado: está vigente.'
-            : 'La fecha de expedición indica que tu Conocimiento de Cliente no está vigente. Actualízalo con un documento reciente.',
-        );
+        this.mensajeSarlaft.set(MENSAJE_SARLAFT[p.sarlaft.estado]);
       });
   }
 

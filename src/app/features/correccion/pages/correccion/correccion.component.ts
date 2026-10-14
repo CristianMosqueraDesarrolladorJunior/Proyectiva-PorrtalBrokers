@@ -47,29 +47,44 @@ export class CorreccionComponent {
   private readonly archivos = new Map<string, File>();
   protected readonly cargados = signal<Readonly<Record<string, string>>>({});
 
-  /** Documentos de la solicitud; los que el área señaló van primero y marcados como obligatorios. */
+  /** Radicación creada que no alcanzó a enviarse al área (p. ej. se cerró el navegador): se completa aquí. */
+  protected readonly pendienteEnvio = computed(() => this.datos()?.procedimiento.estadoPortal === 'RADICADA');
+
+  /** Documentos requeridos que aún no tiene la solicitud (solo aplica a la radicación sin enviar). */
+  private readonly faltantes = computed(() => {
+    const p = this.datos()?.procedimiento;
+    if (!p || !this.pendienteEnvio()) return new Set<string>();
+    const tiene = new Set(p.documentos.map((d) => d.tipo));
+    return new Set(p.documentosRequeridos.filter((t) => !tiene.has(t)));
+  });
+
+  /** Documentos de la solicitud; los que el área señaló (o que faltan) van primero y marcados como obligatorios. */
   protected readonly reglas = computed<readonly ReglaDocumentoUploader[]>(() => {
     const p = this.datos()?.procedimiento;
     if (!p) return [];
     const docs = this.catalogo.opciones('documento_radicacion');
-    const pedidos = new Set(
-      p.correcciones.flatMap((c) => docs.filter((d) => d['tipo_doc_warehouse'] === c.documento).map((d) => d.codigo)),
-    );
+    const pedidos = new Set([
+      ...p.correcciones.flatMap((c) => docs.filter((d) => d['tipo_doc_warehouse'] === c.documento).map((d) => d.codigo)),
+      ...this.faltantes(),
+    ]);
     const tipos = [...new Set([...p.documentosRequeridos, ...p.documentos.map((d) => d.tipo)])];
     return tipos
       .sort((a, b) => Number(pedidos.has(b)) - Number(pedidos.has(a)))
       .map((tipo) => ({
         id: tipo,
         etiqueta: this.catalogo.etiqueta('documento_radicacion', tipo),
-        descripcion: pedidos.has(tipo) ? 'El área pidió corregir este documento' : 'Reemplázalo solo si también cambió',
+        descripcion: this.faltantes().has(tipo) ? 'Falta cargar este documento'
+          : pedidos.has(tipo) ? 'El área pidió corregir este documento' : 'Reemplázalo solo si también cambió',
         icono: pedidos.has(tipo) ? 'rule' : 'description',
         obligatorio: pedidos.has(tipo),
       }));
   });
 
-  protected readonly puedeEnviar = computed(
-    () => this.datos()?.procedimiento.estadoPortal === 'EN_CORRECCION' && Object.keys(this.cargados()).length > 0,
-  );
+  protected readonly puedeEnviar = computed(() => {
+    const cargados = this.cargados();
+    if (this.pendienteEnvio()) return [...this.faltantes()].every((t) => cargados[t]);
+    return this.datos()?.procedimiento.estadoPortal === 'EN_CORRECCION' && Object.keys(cargados).length > 0;
+  });
 
   constructor() {
     this.cargar();
@@ -111,7 +126,9 @@ export class CorreccionComponent {
     concat(...[...this.archivos].map(([tipo, archivo]) => this.radicacion.subirDocumento(codigo, tipo, archivo)))
       .pipe(
         toArray(),
-        switchMap(() => this.radicacion.reenviarCorreccion(codigo)),
+        switchMap(() => this.pendienteEnvio()
+          ? this.radicacion.enviarAlArea(codigo)
+          : this.radicacion.reenviarCorreccion(codigo)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({

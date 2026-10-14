@@ -45,7 +45,7 @@ describe('RegistroBrokerComponent', () => {
     fixture.detectChanges();
   });
 
-  it('crea al prospecto, inicia sesión con Firebase mediante el backend y navega a la app', () => {
+  const llenarFormulario = (): void => {
     escribir('#reg-nombre', 'Prospecto Nuevo');
     escribir('#reg-correo', 'prospecto@ejemplo.com');
     escribir('#reg-telefono', '3001234567');
@@ -56,7 +56,10 @@ describe('RegistroBrokerComponent', () => {
     ciudad.value = 'Bogotá D.C.';
     ciudad.dispatchEvent(new Event('change'));
     fixture.detectChanges();
+  };
 
+  it('crea al prospecto, inicia sesión con Firebase mediante el backend y navega a la app', () => {
+    llenarFormulario();
     (query('.registro-acciones--fila .btn-outline') as HTMLButtonElement).click();
     fixture.detectChanges();
 
@@ -66,5 +69,14 @@ describe('RegistroBrokerComponent', () => {
       password: 'Clave-Prospecto1',
     });
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/app']);
+  });
+
+  it('continuar como broker crea la cuenta, abre la sesión y lleva al perfil (SARLAFT y documentos con sesión)', () => {
+    llenarFormulario();
+    (query('.registro-acciones--fila .btn-accent') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(authSpy.registrarProspecto).toHaveBeenCalled();
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/app/perfil']);
   });
 });

@@ -87,6 +87,23 @@ describe('DetalleSolicitudComponent', () => {
     expect(html).toContain('Actualizar documentos');
   });
 
+  it('ofrece completar y enviar la radicación que no alcanzó a enviarse al área', () => {
+    fixture.detectChanges();
+    seleccionar(componente, 'REF-001');
+    httpMock.expectOne('/api/v1/solicitudes/REF-001').flush(detalle);
+    httpMock.expectOne('/api/v1/radicaciones/REF-001/procedimiento').flush({
+      procedimiento: {
+        codigo: 'REF-001', estadoPortal: 'RADICADA', estadoWarehouse: null,
+        etiqueta: 'Radicada · por enviar al área', requiereAccion: false, correcciones: [],
+        observacion: null, numeroPoliza: null, asesor: null, enviada: false,
+        documentosRequeridos: ['cedulaPropietario'], documentos: [],
+      },
+      eventos: [],
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Completar y enviar');
+  });
+
   it('no consulta ni abre el drawer sin referencia', () => {
     // When
     fixture.detectChanges();

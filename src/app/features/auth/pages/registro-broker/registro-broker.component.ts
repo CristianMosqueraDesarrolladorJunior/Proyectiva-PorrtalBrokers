@@ -1,5 +1,4 @@
 import { SessionService } from '../../../../core/services/session.service';
-import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -20,35 +19,14 @@ import { Router } from '@angular/router';
 
 import {
   BotonComponent,
-  DocUploaderComponent,
-  EscaleritaLoaderComponent,
   FormFieldComponent,
   IconComponent,
   ModalDialogComponent,
 } from '../../../../shared/components';
-import type {
-  ArchivoSeleccionado,
-  ReglaDocumentoUploader,
-} from '../../../../shared/components/doc-uploader/doc-uploader.component';
 import { AuthService } from '../../../../core/services/auth.service';
 import { rutaInicio } from '../../../../core/guards/rol.guard';
-import {
-  documentosRegistroBroker,
-  type DocumentoRegistro,
-  type ReglaDocumentoRegistro,
-  type SolicitudRegistroBroker,
-  type TipoDocumentoRegistro,
-} from '../../../../core/models/registro-broker.model';
-import type { TipoMimePermitido } from '../../../../core/models/documento.model';
-import type {
-  ResultadoSarlaftRadicacion,
-  TipoDocumentoIdentidad,
-} from '../../../../core/models/radicacion.model';
+import type { TipoDocumentoIdentidad } from '../../../../core/models/radicacion.model';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
-import {
-  reglaDeDocumentoRegistro,
-  validarDocumento,
-} from '../../../../shared/validation/documento-validacion';
 import {
   CODIGO_PAIS_DEFECTO,
   DOCUMENTO_LONGITUD_MAX,
@@ -65,28 +43,14 @@ import {
   esPasswordValida,
   esTelefonoValido,
 } from './registro-validacion';
-import { documentosRegistroCompletos } from './registro-envio';
 
 /** Ruta de la pantalla de login (acceso "Ya tengo cuenta") (Req 2.3). */
 const RUTA_LOGIN = '/login';
 
-/** Texto legal mostrado junto al botón de envío (Req 3.20). */
-const TEXTO_LEGAL =
-  'Al enviar, aceptas nuestras Políticas de Privacidad y Términos de Uso.';
+/** Perfil del broker: ahí, ya con sesión, se verifica SARLAFT y se cargan los documentos. */
+const RUTA_PERFIL = '/app/perfil';
 
-type PasoRegistro = 1 | 2 | 3;
-
-/** Estado de un documento de registro cargado en memoria (nombre + validez + tipo MIME). */
-interface EstadoDocumento {
-  readonly nombre: string;
-  readonly tamanoBytes: number;
-  readonly tipoMime: TipoMimePermitido;
-  readonly fechaEmision?: string;
-  readonly valido: boolean;
-  readonly error?: string;
-}
-
-/** Tipado del formulario reactivo del paso 1 (datos personales + documento). */
+/** Tipado del formulario reactivo (datos personales + documento). */
 interface FormularioRegistro {
   readonly nombreCompleto: FormControl<string>;
   readonly correo: FormControl<string>;
@@ -95,11 +59,11 @@ interface FormularioRegistro {
   readonly ciudad: FormControl<string>;
   readonly tipoDocumento: FormControl<TipoDocumentoIdentidad>;
   readonly documento: FormControl<string>;
-    readonly password: FormControl<string>;
-    readonly passwordConfirmacion: FormControl<string>;
+  readonly password: FormControl<string>;
+  readonly passwordConfirmacion: FormControl<string>;
 }
 
-/** Credenciales iniciales que se informan al terminar el registro. */
+/** Credenciales iniciales que se informan si el ingreso automático falla. */
 interface Credenciales {
   readonly usuario: string;
   readonly contrasena: string;
@@ -108,20 +72,13 @@ interface Credenciales {
 }
 
 /**
- * Registro (`/registro-broker`): asistente de 3 pasos que comparte la UI del
- * login (mismo fondo y tarjeta).
+ * Registro (`/registro-broker`): comparte la UI del login (mismo fondo y tarjeta).
  *
- *  1. Datos personales y documento. Desde aquí el aspirante puede
- *     **registrarse como prospecto** (ingreso simple, spec backend Req 1.2) o
- *     **continuar** para registrarse como broker.
- *  2. Verificación SARLAFT con el documento del paso 1 (no se vuelve a pedir).
- *     Mismas 3 salidas que la radicación: actualizado → paso 3; desactualizado
- *     → URL de actualización y reconsulta; consultable → el caso pasa a
- *     Cumplimiento y termina en el portal.
- *  3. Documentos (identidad, certificación bancaria, autorización de pago, RUT).
- *
- * Al terminar se informa que el usuario es su documento y la contraseña su
- * correo, y se vuelve al login. El backend revalida SIEMPRE (Req 3.23).
+ * Con los datos personales y el documento se crea la cuenta (PROSPECTO) y se abre la
+ * sesión. "Registrarme como prospecto" lleva al inicio; "Continuar como broker" lleva
+ * al perfil, donde con la sesión ya abierta se verifica SARLAFT y se cargan los 4
+ * documentos (los endpoints de SARLAFT y legalización exigen sesión). El backend
+ * revalida SIEMPRE (Req 3.23).
  */
 @Component({
   selector: 'app-registro-broker',
@@ -132,8 +89,6 @@ interface Credenciales {
     FormFieldComponent,
     IconComponent,
     BotonComponent,
-    DocUploaderComponent,
-    EscaleritaLoaderComponent,
     ModalDialogComponent,
   ],
   templateUrl: './registro-broker.component.html',
@@ -157,23 +112,11 @@ export class RegistroBrokerComponent {
   protected readonly codigosPais = this.catalogo.opciones('codigo_pais').map((c) => c.codigo);
   protected readonly ciudades = this.catalogo.opciones('ciudad').map((c) => c.descripcion);
   protected readonly tiposDocumento = this.catalogo.opciones('tipo_documento').filter((t) => t['registro_broker'] === true);
-  protected readonly etiquetaTipoDocumento = this.catalogo.etiquetas('tipo_documento');
-  protected readonly modulosRestringidos = inject(CatalogoService).modulosRestringidos();
-  protected readonly textoLegal = TEXTO_LEGAL;
+  protected readonly modulosRestringidos = this.catalogo.modulosRestringidos();
+  /** Etapas del registro de broker (las dos últimas se completan en el perfil). */
+  protected readonly etapas = ['Tus datos', 'Conocimiento de Cliente', 'Documentos'];
 
-  /** Reglas de los 4 documentos obligatorios adaptadas al uploader (Req 3.16). */
-  private readonly documentosRegistro = documentosRegistroBroker(this.catalogo.opciones('documento_legalizacion'));
-  protected readonly reglasUploader: readonly ReglaDocumentoUploader[] =
-    this.documentosRegistro.map((regla) => ({
-      id: regla.tipo,
-      etiqueta: regla.etiqueta,
-      descripcion: regla.descripcion,
-      obligatorio: true,
-    }));
-
-  protected readonly paso = signal<PasoRegistro>(1);
-
-  /** Formulario reactivo del paso 1. */
+  /** Formulario reactivo. */
   protected readonly formulario = new FormGroup<FormularioRegistro>({
     nombreCompleto: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     correo: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -192,37 +135,21 @@ export class RegistroBrokerComponent {
   /** Signal que refleja los valores del formulario para recomputar validaciones. */
   private readonly valores = signal(this.formulario.getRawValue());
 
-  /** Documentos cargados en memoria, indexados por tipo (Req 3.16). */
-  private readonly documentos = signal<Partial<Record<TipoDocumentoRegistro, EstadoDocumento>>>({});
-
-  // --- Paso 2: SARLAFT ---
-  protected readonly sarlaft = signal<ResultadoSarlaftRadicacion | null>(null);
-  protected readonly verificandoSarlaft = signal(false);
-  protected readonly errorSarlaft = signal('');
-  protected readonly enlaceCopiado = signal(false);
-
-  // --- Envíos ---
-  protected readonly registrandoProspecto = signal(false);
-  protected readonly enviando = signal(false);
+  // --- Envío ---
+  /** Destino elegido mientras se crea la cuenta (`null` = no hay creación en curso). */
+  protected readonly creandoHacia = signal<'inicio' | 'perfil' | null>(null);
   protected readonly errorEnvio = signal('');
   protected readonly credenciales = signal<Credenciales | null>(null);
 
   constructor() {
     this.formulario.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      const previo = this.valores();
-      const actual = this.formulario.getRawValue();
-      this.valores.set(actual);
-      // Un cambio en el documento invalida la verificación SARLAFT previa.
-      if (previo.documento !== actual.documento || previo.tipoDocumento !== actual.tipoDocumento) {
-        this.sarlaft.set(null);
-        this.documentos.set({});
-      }
+      this.valores.set(this.formulario.getRawValue());
     });
     this.autocompletarDesdePerfilCompartido();
   }
 
   /**
-   * Autocompleta el paso 1 con lo que el usuario ya registró en Cien Cuadras, para
+   * Autocompleta el formulario con lo que el usuario ya registró en Cien Cuadras, para
    * no volver a pedírselo. Solo llena campos vacíos y solo con valores válidos; sin
    * sesión o sin datos el formulario queda como está.
    */
@@ -263,7 +190,7 @@ export class RegistroBrokerComponent {
       });
   }
 
-  /** Validez del paso 1 (datos personales + documento). */
+  /** Validez de los datos personales y el documento. */
   protected readonly datosValidos = computed(() => {
     const v = this.valores();
     return (
@@ -278,47 +205,6 @@ export class RegistroBrokerComponent {
       v.password === v.passwordConfirmacion
     );
   });
-
-  /** Nombres de los documentos cargados para el uploader (Req 3.16). */
-  protected readonly cargados = computed<Readonly<Record<string, string>>>(() => {
-    const estado = this.documentos();
-    const salida: Record<string, string> = {};
-    for (const tipo of Object.keys(estado) as TipoDocumentoRegistro[]) {
-      const doc = estado[tipo];
-      if (doc?.valido) {
-        salida[tipo] = doc.nombre;
-      }
-    }
-    return salida;
-  });
-
-  private readonly tiposDocumentosValidos = computed<TipoDocumentoRegistro[]>(() => {
-    const estado = this.documentos();
-    return (Object.keys(estado) as TipoDocumentoRegistro[]).filter((tipo) => estado[tipo]?.valido === true);
-  });
-
-  protected readonly documentosCompletos = computed(() =>
-    documentosRegistroCompletos(this.tiposDocumentosValidos(), this.documentosRegistro.map((r) => r.tipo)),
-  );
-
-  protected readonly puedeEnviar = computed(
-    () =>
-      this.datosValidos() &&
-      this.sarlaft()?.estado === 'ACTUALIZADO' &&
-      this.documentosCompletos() &&
-      !this.enviando(),
-  );
-
-  /** Avance del asistente (se muestra al pie de la tarjeta). */
-  protected readonly progreso = computed(() => [
-    { titulo: 'Tus datos', hecho: this.datosValidos() && this.paso() > 1, activo: this.paso() === 1 },
-    { titulo: 'Conocimiento de Cliente', hecho: this.sarlaft()?.estado === 'ACTUALIZADO', activo: this.paso() === 2 },
-    {
-      titulo: `Documentos ${this.tiposDocumentosValidos().length}/${this.documentosRegistro.length}`,
-      hecho: this.documentosCompletos(),
-      activo: this.paso() === 3,
-    },
-  ]);
 
   // --- Mensajes de error por campo (solo tras interacción) ---
   protected get errorNombre(): string {
@@ -356,18 +242,17 @@ export class RegistroBrokerComponent {
     return this.mensajeError('passwordConfirmacion', coincide, 'Las contraseñas no coinciden.');
   }
 
-  // ===========================================================================
-  // Paso 1
-  // ===========================================================================
-
-  /** Crea el prospecto, provisiona su identidad y abre la sesión automáticamente. */
-  protected registrarComoProspecto(): void {
-    if (!this.datosValidos() || this.registrandoProspecto()) {
+  /**
+   * Crea la cuenta (PROSPECTO), abre la sesión y navega: al inicio si se queda como
+   * prospecto, o al perfil para seguir con SARLAFT y documentos si continúa como broker.
+   */
+  protected crearCuenta(destino: 'inicio' | 'perfil'): void {
+    if (!this.datosValidos() || this.creandoHacia()) {
       this.formulario.markAllAsTouched();
       return;
     }
     const v = this.valores();
-    this.registrandoProspecto.set(true);
+    this.creandoHacia.set(destino);
     this.errorEnvio.set('');
     this.auth
       .registrarProspecto({
@@ -388,13 +273,14 @@ export class RegistroBrokerComponent {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
               next: (perfil) => {
-                this.registrandoProspecto.set(false);
-                void this.router.navigate([rutaInicio(perfil.rol)]);
+                this.creandoHacia.set(null);
+                void this.router.navigate([destino === 'perfil' ? RUTA_PERFIL : rutaInicio(perfil.rol)]);
               },
               error: () => {
-                this.registrandoProspecto.set(false);
+                this.creandoHacia.set(null);
                 this.credenciales.set({
-                  ...this.credencialesIniciales(),
+                  usuario: v.documento,
+                  contrasena: v.password,
                   titulo: 'Tu cuenta ya está creada',
                   mensaje: 'No pudimos iniciar sesión automáticamente. Ingresa con tu documento y la contraseña que definiste.',
                 });
@@ -402,7 +288,7 @@ export class RegistroBrokerComponent {
             });
         },
         error: (error: unknown) => {
-          this.registrandoProspecto.set(false);
+          this.creandoHacia.set(null);
           this.errorEnvio.set(
             error instanceof HttpErrorResponse && error.status === 409
               ? 'Ya existe una cuenta con ese documento o correo. Inicia sesión o restablece tu contraseña.'
@@ -411,138 +297,6 @@ export class RegistroBrokerComponent {
         },
       });
   }
-
-  /** Continúa el registro como broker (paso 2: SARLAFT). */
-  protected continuar(): void {
-    if (!this.datosValidos()) {
-      this.formulario.markAllAsTouched();
-      return;
-    }
-    this.errorEnvio.set('');
-    this.paso.set(2);
-  }
-
-  // ===========================================================================
-  // Paso 2 · SARLAFT (3 salidas)
-  // ===========================================================================
-
-  protected verificarSarlaft(): void {
-    if (this.verificandoSarlaft()) {
-      return;
-    }
-    const v = this.valores();
-    this.verificandoSarlaft.set(true);
-    this.errorSarlaft.set('');
-    this.enlaceCopiado.set(false);
-    this.auth
-      .verificarSarlaftRegistro({
-        tipoDocumento: v.tipoDocumento,
-        documento: v.documento,
-        correo: v.correo.trim(),
-        ...(/^3\d{9}$/.test(v.telefono.replace(/\D/g, '')) ? { celular: v.telefono.replace(/\D/g, '') } : {}),
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (resultado) => {
-          this.verificandoSarlaft.set(false);
-          this.sarlaft.set(resultado);
-          // Como el cotizador: si hay que actualizar, el formulario de SARLAFT se abre de una.
-          if (resultado.estado === 'DESACTUALIZADO') {
-            abrirFormularioSarlaft(resultado.enlaceActualizacion);
-          }
-        },
-        error: () => {
-          this.verificandoSarlaft.set(false);
-          this.errorSarlaft.set('No fue posible verificar tu SARLAFT. Intenta de nuevo.');
-        },
-      });
-  }
-
-  protected readonly abrirFormularioSarlaft = abrirFormularioSarlaft;
-
-  protected copiarEnlace(enlace: string | undefined): void {
-    if (!enlace) {
-      return;
-    }
-    void navigator.clipboard
-      ?.writeText(enlace)
-      .then(() => this.enlaceCopiado.set(true))
-      .catch(() => this.enlaceCopiado.set(false));
-  }
-
-  protected irAPaso(paso: PasoRegistro): void {
-    if (paso === 3 && this.sarlaft()?.estado !== 'ACTUALIZADO') {
-      return;
-    }
-    this.paso.set(paso);
-  }
-
-  // ===========================================================================
-  // Paso 3 · Documentos
-  // ===========================================================================
-
-  /** Valida MIME/extensión, tamaño y vigencia con la lógica pura compartida (Req 3.16–3.18). */
-  protected onArchivoSeleccionado(evento: ArchivoSeleccionado): void {
-    const tipo = evento.id as TipoDocumentoRegistro;
-    const regla = this.documentosRegistro.find((r) => r.tipo === tipo);
-    if (regla === undefined) {
-      return;
-    }
-    const tipoMime = evento.archivo.type as TipoMimePermitido;
-    const documentoCargado = {
-      nombre: evento.archivo.name,
-      tipoMime,
-      tamanoBytes: evento.archivo.size,
-      fechaEmision: regla.vigenciaMaxDias !== null ? new Date(evento.archivo.lastModified).toISOString() : undefined,
-    };
-    const resultado = validarDocumento(documentoCargado, reglaDeDocumentoRegistro(regla), new Date().toISOString());
-    this.documentos.update((estado) => ({
-      ...estado,
-      [tipo]: {
-        nombre: evento.archivo.name,
-        tamanoBytes: evento.archivo.size,
-        tipoMime,
-        fechaEmision: documentoCargado.fechaEmision,
-        valido: resultado.valido,
-        error: resultado.valido ? undefined : this.mensajeRechazo(regla, resultado.motivo),
-      },
-    }));
-  }
-
-  protected errorDocumentoCargado(tipo: string): string {
-    return this.documentos()[tipo as TipoDocumentoRegistro]?.error ?? '';
-  }
-
-  /** Envía la Solicitud_Registro_Broker (Req 3.21, 3.24). */
-  protected enviarSolicitud(): void {
-    this.errorEnvio.set('');
-    const solicitud = this.construirSolicitud();
-    if (!this.puedeEnviar() || solicitud === null) {
-      return;
-    }
-    this.enviando.set(true);
-    this.auth
-      .registrarSolicitud(solicitud)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.enviando.set(false);
-          this.credenciales.set({
-            ...this.credencialesIniciales(),
-            titulo: 'Solicitud de broker enviada',
-            mensaje: 'Revisaremos tus documentos. Mientras tanto tu cuenta queda como prospecto: ya puedes radicar y cotizar, y tus comisiones se acreditan al ser aprobado.',
-          });
-        },
-        error: () => {
-          this.enviando.set(false);
-          this.errorEnvio.set('No fue posible enviar la solicitud. Intenta de nuevo.');
-        },
-      });
-  }
-
-  // ===========================================================================
-  // Navegación
-  // ===========================================================================
 
   /** "Aceptar" del aviso de credenciales: vuelve al login. */
   protected aceptarCredenciales(): void {
@@ -554,68 +308,11 @@ export class RegistroBrokerComponent {
     void this.router.navigate([RUTA_LOGIN]);
   }
 
-  // ===========================================================================
-  // Privados
-  // ===========================================================================
-
-  private credencialesIniciales(): Pick<Credenciales, 'usuario' | 'contrasena'> {
-    const v = this.valores();
-    return { usuario: v.documento, contrasena: v.password };
-  }
-
-  private construirSolicitud(): SolicitudRegistroBroker | null {
-    const v = this.valores();
-    const estado = this.documentos();
-    const documentos: DocumentoRegistro[] = [];
-    for (const regla of this.documentosRegistro) {
-      const doc = estado[regla.tipo];
-      if (doc === undefined || !doc.valido) {
-        return null;
-      }
-      documentos.push({
-        tipo: regla.tipo,
-        nombre: doc.nombre,
-        tipoMime: doc.tipoMime,
-        tamanoBytes: doc.tamanoBytes,
-        fechaEmision: doc.fechaEmision,
-      });
-    }
-    return {
-      nombreCompleto: v.nombreCompleto.trim(),
-      correo: v.correo.trim(),
-      codigoPais: v.codigoPais,
-      telefono: v.telefono,
-      ciudad: v.ciudad,
-      tipoDocumento: v.tipoDocumento,
-      documento: v.documento,
-      estadoSarlaft: this.sarlaft()?.estado,
-      documentos,
-    };
-  }
-
   private mensajeError(control: keyof FormularioRegistro, valido: boolean, mensaje: string): string {
     const ctrl = this.formulario.controls[control];
     if (!ctrl.touched && !ctrl.dirty) {
       return '';
     }
     return valido ? '' : mensaje;
-  }
-
-  /** Traduce el motivo de rechazo de un documento a un mensaje para el usuario (Req 3.18). */
-  private mensajeRechazo(regla: ReglaDocumentoRegistro, motivo: string | undefined): string {
-    switch (motivo) {
-      case 'tamano_excedido':
-        return `El archivo supera el tamaño máximo permitido (${Math.round(regla.tamanoMaxBytes / 1_048_576)} MB).`;
-      case 'mime_no_permitido':
-      case 'extension_no_permitida':
-        return 'Formato no permitido. Usa PDF, JPG o PNG.';
-      case 'vigencia_requerida':
-      case 'vigencia_invalida':
-        return 'No fue posible validar la vigencia del documento.';
-      case 'vigencia_excedida':
-        return `La vigencia del documento supera el máximo permitido (${regla.vigenciaMaxDias} días).`;
-      default:
-        return 'El documento no cumple las validaciones requeridas.';
-    }
   }
 }

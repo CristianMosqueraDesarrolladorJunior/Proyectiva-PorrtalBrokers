@@ -105,6 +105,7 @@ export class DetalleSolicitudComponent implements OnChanges {
    * cuando el estado es "observada": la revisión solicitó actualizar/corregir los documentos.
    */
   protected readonly puedeCorregir = signal(false);
+  protected readonly pendienteEnvio = signal(false);
 
   /**
    * Reacciona al cambio de referencia: abre y carga el detalle cuando hay una
@@ -165,7 +166,7 @@ export class DetalleSolicitudComponent implements OnChanges {
     this.estadoActual.set(detalle.estado);
     this.referenciaCargada.set(detalle.referencia);
     // "observada" = la revisión solicitó actualizar/corregir documentos (gestión de corrección).
-    this.puedeCorregir.set(detalle.estado === 'observada');
+    this.puedeCorregir.set(detalle.estado === 'observada' || detalle.estado === 'radicada');
     // Si el procedimiento del área ya llegó, su estado prevalece sobre el del resumen.
     if (this.procedimiento()) this.aplicarProcedimiento(this.procedimiento());
   }
@@ -199,7 +200,9 @@ export class DetalleSolicitudComponent implements OnChanges {
         : p.procedimiento.estadoPortal === 'EN_CORRECCION' ? 'warning'
         : p.procedimiento.estadoPortal === 'ANULADA' ? 'danger' : 'info',
     );
-    this.puedeCorregir.set(p.procedimiento.estadoPortal === 'EN_CORRECCION');
+    // También la radicación creada que no alcanzó a enviarse: se completa desde la misma pantalla.
+    this.puedeCorregir.set(['EN_CORRECCION', 'RADICADA'].includes(p.procedimiento.estadoPortal));
+    this.pendienteEnvio.set(p.procedimiento.estadoPortal === 'RADICADA');
   }
 
   private reiniciar(): void {

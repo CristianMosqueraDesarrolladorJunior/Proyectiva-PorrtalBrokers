@@ -192,6 +192,8 @@ export class RadicacionComponent {
   // --- Identificación del apoderado: a él se le consulta SARLAFT ---
   protected readonly tipoDocumentoApoderado = signal<TipoDocumentoIdentidad>('CC');
   protected readonly numeroDocumentoApoderado = signal('');
+  /** Correo del apoderado: va a la columna "Correo Apoderado" del Consolidado. */
+  protected readonly correoApoderado = signal('');
   protected readonly sarlaftRequiereFormulario = signal(false);
 
   /**
@@ -296,7 +298,8 @@ export class RadicacionComponent {
       this.datosValidos(),
       this.firmaApoderado(),
       this.numeroDocumentoApoderado(),
-    ) && this.telefonoSarlaft().trim().length >= 7,
+    ) && this.telefonoSarlaft().trim().length >= 7
+      && (!this.firmaApoderado() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.correoApoderado().trim())),
   );
 
   /** Habilita el botón de consulta SARLAFT. */
@@ -466,6 +469,7 @@ export class RadicacionComponent {
       firmaApoderado: this.firmaApoderado(),
       tipoDocumentoApoderado: this.tipoDocumentoApoderado(),
       numeroDocumentoApoderado: this.numeroDocumentoApoderado(),
+      correoApoderado: this.correoApoderado(),
       sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
       telefonoSarlaft: this.telefonoSarlaft(),
       consultaSarlaft: this.consultaSarlaft(),
@@ -489,6 +493,7 @@ export class RadicacionComponent {
     this.firmaApoderado.set(f['firmaApoderado'] ?? false);
     this.tipoDocumentoApoderado.set(f['tipoDocumentoApoderado'] ?? 'CC');
     this.numeroDocumentoApoderado.set(f['numeroDocumentoApoderado'] ?? '');
+    this.correoApoderado.set(f['correoApoderado'] ?? '');
     this.sarlaftRequiereFormulario.set(f['sarlaftRequiereFormulario'] ?? false);
     this.telefonoSarlaft.set(f['telefonoSarlaft'] ?? '');
     this.consultaSarlaft.set(f['consultaSarlaft'] ?? null);
@@ -694,6 +699,7 @@ export class RadicacionComponent {
       firmaApoderado: this.firmaApoderado(),
       tipoDocumentoApoderado: this.tipoDocumentoApoderado(),
       documentoApoderado: this.numeroDocumentoApoderado(),
+      correoApoderado: this.firmaApoderado() ? this.correoApoderado().trim() : undefined,
       observaciones: this.observaciones(),
       vocabulario: this.documentosCatalogo.filter((d) => d['aplica'] !== 'OPCIONAL').map((d) => d.codigo),
     });

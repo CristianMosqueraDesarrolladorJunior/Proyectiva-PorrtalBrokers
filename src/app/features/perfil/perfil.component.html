@@ -181,7 +181,14 @@
       @if (perfil().sarlaft.estado === 'por_vencer') {
         <app-info-box icono="schedule">Tu Conocimiento de Cliente está próximo a vencer (más de 2,5 años). Actualízalo para completar tu registro.</app-info-box>
       } @else if (perfil().sarlaft.estado === 'vencido') {
-        <app-info-box icono="error">Tu Conocimiento de Cliente está vencido (3 años o más). Debes actualizarlo.</app-info-box>
+        <app-info-box icono="error">Tu Conocimiento de Cliente está desactualizado. Actualízalo en el formulario de Seguros Bolívar y vuelve a consultar.</app-info-box>
+        @if (perfil().sarlaft.enlaceActualizacion; as enlace) {
+          <app-boton variante="accent" icono="open_in_new" (clicked)="abrirFormularioSarlaft(enlace)">Abrir formulario de actualización</app-boton>
+        }
+      } @else if (perfil().sarlaft.estado === 'en_cumplimiento') {
+        <app-info-box icono="policy">
+          Tu caso pasó a revisión del área de Cumplimiento@if (perfil().sarlaft.radicadoCumplimiento; as radicado) { (radicado <b>{{ radicado }}</b>)}. Te contactaremos por correo.
+        </app-info-box>
       }
 
       <div class="perfil-sarlaft-form">

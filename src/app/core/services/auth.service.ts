@@ -3,13 +3,10 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
 import { LoginRequest, PerfilBroker, PerfilCompartido } from '../models/broker.model';
-import type { ResultadoSarlaftRadicacion } from '../models/radicacion.model';
 import {
   CrearProspectoPayload,
   RegistroProspectoRequest,
   ResultadoSarlaft,
-  SolicitudRegistroBroker,
-  VerificacionSarlaftRegistroRequest,
 } from '../models/registro-broker.model';
 import { SessionService } from './session.service';
 
@@ -112,21 +109,6 @@ export class AuthService {
   }
 
   /**
-   * Registra una Solicitud_Registro_Broker en estado pendiente (Req 3).
-   * @param solicitud datos personales, SARLAFT y documentos del aspirante.
-   * @returns confirmación con radicado y estado de la solicitud.
-   */
-  registrarSolicitud(
-    solicitud: SolicitudRegistroBroker,
-  ): Observable<RegistroBrokerResponse> {
-    return this.http.post<RegistroBrokerResponse>(
-      `${this.baseUrl}/brokers/solicitudesRegistro`,
-      solicitud,
-      { withCredentials: true },
-    );
-  }
-
-  /**
    * Ingreso simple: crea la Cuenta en estado PROSPECTO (spec backend, Req 1.2).
    * @param datos datos personales y documento del aspirante.
    * @returns radicado y estado de la cuenta creada.
@@ -145,19 +127,6 @@ export class AuthService {
       password: datos.password,
     };
     return this.http.post<RegistroBrokerResponse>(`${this.baseUrl}/brokers/prospectos`, payload, {
-      withCredentials: true,
-    });
-  }
-
-  /**
-   * Verifica el SARLAFT del aspirante con el documento del paso 1. El backend
-   * decide la salida: actualizado, desactualizado (URL de actualización) o
-   * consultable (el caso pasa a Cumplimiento).
-   */
-  verificarSarlaftRegistro(
-    request: VerificacionSarlaftRegistroRequest,
-  ): Observable<ResultadoSarlaftRadicacion> {
-    return this.http.post<ResultadoSarlaftRadicacion>(`${this.baseUrl}/sarlaft/consultas`, request, {
       withCredentials: true,
     });
   }

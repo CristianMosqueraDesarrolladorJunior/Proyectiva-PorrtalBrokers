@@ -85,6 +85,7 @@ export interface RadicacionRequest {
   /** Firmante apoderado: el servidor reconsulta su SARLAFT antes de radicar. */
   readonly tipoDocumentoApoderado?: string;
   readonly documentoApoderado?: string;
+  readonly correoApoderado?: string;
   /** Observación del broker para el área. */
   readonly observaciones?: string;
 }

@@ -247,6 +247,16 @@
                     (ngModelChange)="numeroDocumentoApoderado.set($event)"
                   />
                 </app-form-field>
+                <app-form-field label="Correo del apoderado" [requerido]="true" controlId="rad-correo-apo">
+                  <input
+                    id="rad-correo-apo"
+                    type="email"
+                    autocomplete="off"
+                    placeholder="apoderado@correo.com"
+                    [ngModel]="correoApoderado()"
+                    (ngModelChange)="correoApoderado.set($event)"
+                  />
+                </app-form-field>
               </div>
 
               <app-info-box icono="info">

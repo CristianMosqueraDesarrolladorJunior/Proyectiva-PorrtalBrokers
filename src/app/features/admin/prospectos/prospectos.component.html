@@ -87,7 +87,7 @@
       <app-badge-estado [variante]="e.faltantes.length ? 'warning' : 'success'" [conPunto]="true">
         {{ e.faltantes.length ? e.faltantes.length + ' pendientes para aprobar' : 'Listo para aprobar' }}
       </app-badge-estado>
-      <app-badge-estado variante="info">SARLAFT: {{ e.prospecto.sarlaftEstado ?? 'sin consulta' }}</app-badge-estado>
+      <app-badge-estado variante="info">SARLAFT: {{ sarlaft(e.prospecto.sarlaftEstado) }}</app-badge-estado>
     </div>
   }
   @if (expediente(); as e) {

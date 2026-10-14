@@ -49,8 +49,9 @@ export function estadoSarlaftPerfil(estado: EstadoSarlaftRadicacion | string | n
     case 'puede_continuar':
     case 'exceptuado':
       return 'vigente';
-    case 'DESACTUALIZADO':
     case 'CONSULTABLE':
+      return 'en_cumplimiento';
+    case 'DESACTUALIZADO':
     case 'requiere_actualizacion':
       return 'vencido';
     default:
@@ -237,7 +238,13 @@ export class PerfilService {
         map((r) => {
           this._perfil.update((actual) => ({
             ...actual,
-            sarlaft: { estado: estadoSarlaftPerfil(r.estado), fechaExpedicion, ultimaConsulta: r.fechaConsulta },
+            sarlaft: {
+              estado: estadoSarlaftPerfil(r.estado),
+              fechaExpedicion,
+              ultimaConsulta: r.fechaConsulta,
+              radicadoCumplimiento: r.radicadoCumplimiento,
+              enlaceActualizacion: r.enlaceActualizacion,
+            },
           }));
           if (r.estado === 'DESACTUALIZADO') {
             abrirFormularioSarlaft(r.enlaceActualizacion);

@@ -2,7 +2,7 @@
   <app-page-header
     eyebrow="Seguimiento"
     tituloId="correccion-titulo"
-    titulo="Corrección de documentos"
+    [titulo]="pendienteEnvio() ? 'Completar y enviar la radicación' : 'Corrección de documentos'"
     [subtitulo]="referencia() ? 'Solicitud ' + referencia() : 'Abre la corrección desde el detalle de tu solicitud en Seguimiento.'"
   />
 
@@ -14,17 +14,22 @@
     <app-estado-vista [cargando]="cargando()" [error]="error()" [vacio]="false" entidad="la solicitud" (reintentar)="cargar()">
       @if (datos(); as d) {
         @if (listo()) {
-          <app-alert-banner variante="success" titulo="Corrección enviada" icono="task_alt">
-            Tus documentos volvieron a revisión del área ({{ d.procedimiento.etiqueta }}). Te avisaremos cuando avance.
+          <app-alert-banner variante="success" [titulo]="d.procedimiento.estadoPortal === 'EN_GESTION' ? 'Enviada al área' : 'Corrección enviada'" icono="task_alt">
+            Tus documentos quedaron en revisión del área ({{ d.procedimiento.etiqueta }}). Te avisaremos cuando avance.
           </app-alert-banner>
           <div class="correccion__acciones">
             <app-boton variante="accent" icono="arrow_back" (clicked)="volver()">Volver a Seguimiento</app-boton>
           </div>
-        } @else if (d.procedimiento.estadoPortal !== 'EN_CORRECCION') {
+        } @else if (d.procedimiento.estadoPortal !== 'EN_CORRECCION' && !pendienteEnvio()) {
           <app-alert-banner variante="success" titulo="Esta solicitud no tiene correcciones pendientes" icono="info">
             Estado actual: {{ d.procedimiento.etiqueta }}.
           </app-alert-banner>
         } @else {
+          @if (pendienteEnvio()) {
+            <app-alert-banner variante="warning" titulo="Tu radicación no alcanzó a enviarse al área" icono="schedule_send">
+              Carga los documentos que faltan y envíala; el área la recibirá en "Pendiente Validación Documental".
+            </app-alert-banner>
+          } @else {
           <section class="correccion__pedido" aria-label="Qué pidió corregir el área">
             <h2><app-icon nombre="rule" [tamano]="20" /> Qué debes corregir</h2>
             <ul>
@@ -35,6 +40,7 @@
               }
             </ul>
           </section>
+          }
 
           <app-doc-uploader [reglas]="reglas()" [cargados]="cargados()" [disabled]="enviando()" (archivoSeleccionado)="onArchivo($event)" />
 
@@ -44,7 +50,7 @@
           <div class="correccion__acciones">
             <app-boton variante="ghost" (clicked)="volver()">Cancelar</app-boton>
             <app-boton variante="accent" icono="upload_file" [disabled]="!puedeEnviar() || enviando()" (clicked)="enviar()">
-              {{ enviando() ? 'Enviando…' : 'Enviar corrección al área' }}
+              {{ enviando() ? 'Enviando…' : pendienteEnvio() ? 'Enviar al área' : 'Enviar corrección al área' }}
             </app-boton>
           </div>
         }
