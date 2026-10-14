@@ -239,7 +239,8 @@ export class PerfilComponent implements OnInit {
   });
 
   protected readonly documentosEditables = computed(() =>
-    this.perfil().documentos.filter((d) => d.tipo !== 'documentoIdentidad'),
+    // La identidad aún sin cargar también es pendiente (antes desaparecía de la lista: 3 de 4).
+    this.perfil().documentos.filter((d) => d.tipo !== 'documentoIdentidad' || !d.archivo),
   );
 
   // --- Transición de registro ---
@@ -252,7 +253,11 @@ export class PerfilComponent implements OnInit {
   }
 
   protected fecha(iso: string | null): string {
-    return iso ? new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    if (!iso) return '—';
+    // "2026-09-01" es medianoche UTC: se arma en hora local para no mostrar el día anterior en Colombia.
+    const soloFecha = /^\d{4}-\d{2}-\d{2}$/.exec(iso);
+    const d = soloFecha ? new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) : new Date(iso);
+    return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
   protected soloDigitos(valor: string): string {

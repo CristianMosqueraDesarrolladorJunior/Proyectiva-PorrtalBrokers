@@ -439,6 +439,33 @@
             />
           </app-form-field>
 
+          <app-form-field label="Número de garaje (opcional)" controlId="inm-garaje">
+            <input
+              id="inm-garaje"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: 12"
+              [ngModel]="inmGaraje()"
+              (ngModelChange)="inmGaraje.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Número de depósito (opcional)" controlId="inm-deposito">
+            <input
+              id="inm-deposito"
+              type="text"
+              autocomplete="off"
+              placeholder="Ej: D-3"
+              [ngModel]="inmDeposito()"
+              (ngModelChange)="inmDeposito.set($event)"
+            />
+          </app-form-field>
+
+          <label class="contrato-check contrato-grid-full">
+            <input type="checkbox" [ngModel]="inmLeasing()" (ngModelChange)="inmLeasing.set($event)" />
+            <span>El inmueble está en leasing</span>
+          </label>
+
         </div>
       </div>
     }
@@ -604,6 +631,50 @@
                 [ngModel]="conBanco()"
                 (ngModelChange)="conBanco.set($event)"
               />
+            </app-form-field>
+
+            <label class="contrato-check contrato-grid-full">
+              <input
+                type="checkbox"
+                [ngModel]="conArrendadorEsTitular()"
+                (ngModelChange)="conArrendadorEsTitular.set($event)"
+              />
+              <span>El arrendador es el titular de la cuenta</span>
+            </label>
+            @if (!conArrendadorEsTitular()) {
+              <app-form-field label="Nombre del titular de la cuenta" [requerido]="true" controlId="con-titular">
+                <input
+                  id="con-titular"
+                  type="text"
+                  autocomplete="off"
+                  [ngModel]="conNombreTitular()"
+                  (ngModelChange)="conNombreTitular.set($event)"
+                />
+              </app-form-field>
+            }
+          }
+
+          <app-form-field label="Modalidad de firma del contrato" controlId="con-firma">
+            <select id="con-firma" [ngModel]="conTipoFirma()" (ngModelChange)="conTipoFirma.set($event)">
+              @for (f of tiposFirma; track f.codigo) {
+                <option [value]="f.codigo">{{ f.descripcion }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          <label class="contrato-check contrato-grid-full">
+            <input type="checkbox" [ngModel]="conTieneClausulas()" (ngModelChange)="conTieneClausulas.set($event)" />
+            <span>El contrato tiene cláusulas adicionales</span>
+          </label>
+          @if (conTieneClausulas()) {
+            <app-form-field label="Cláusulas adicionales" [requerido]="true" controlId="con-clausulas" class="contrato-grid-full">
+              <textarea
+                id="con-clausulas"
+                rows="4"
+                maxlength="4000"
+                [ngModel]="conClausulas()"
+                (ngModelChange)="conClausulas.set($event)"
+              ></textarea>
             </app-form-field>
           }
 

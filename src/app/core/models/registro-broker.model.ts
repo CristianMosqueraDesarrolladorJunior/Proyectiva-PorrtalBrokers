@@ -60,6 +60,8 @@ export interface VerificacionSarlaftRegistroRequest {
   readonly tipoDocumento: TipoDocumentoIdentidad;
   readonly documento: string;
   readonly correo: string;
+  /** Celular del aspirante: SARLAFT le envía el SMS con la URL de actualización (igual que el cotizador). */
+  readonly celular?: string;
 }
 
 // Identificador de cada documento obligatorio del registro de broker (Req 3.16).

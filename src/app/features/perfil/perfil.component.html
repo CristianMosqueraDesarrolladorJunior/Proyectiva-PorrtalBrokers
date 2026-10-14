@@ -44,7 +44,7 @@
           <app-icon nombre="badge" [tamano]="16" />
           {{ etiquetaTipoDocumento[perfil().tipoDocumento] }} · {{ perfil().numeroDocumento }}
         </p>
-        <p class="perfil-identidad__meta">Cuenta {{ perfil().id }} · Comercial: {{ perfil().comercialAsignado }} · Ingreso {{ fecha(perfil().fechaIngreso) }}</p>
+        <p class="perfil-identidad__meta">Cuenta {{ perfil().id }} · Comercial: {{ perfil().comercialAsignado || 'Sin asignar' }} · Ingreso {{ fecha(perfil().fechaIngreso) }}</p>
       </div>
     </div>
     <div class="perfil-estado" [class.perfil-estado--registrado]="!esProspecto()">

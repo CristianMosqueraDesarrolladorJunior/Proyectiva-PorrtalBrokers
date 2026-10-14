@@ -45,6 +45,8 @@ export interface DatosInmueble {
   readonly estrato: number;
   readonly areaMetrosCuadrados: number;
   readonly lineaTelefonica?: string; // opcional
+  readonly garaje?: string; // número del garaje, si tiene
+  readonly deposito?: string; // número del depósito, si tiene
 }
 
 /** Paso 4: condiciones económicas del contrato (Req 30.5). */
@@ -76,6 +78,15 @@ export interface ContratoArrendamientoRequest {
   readonly cotizacionReferencia?: string;
   /** Deudores solidarios (máximo dos, precargados del estudio digital). */
   readonly deudores?: readonly DeudorSolidario[];
+  /** Leasing, titular de la cuenta, cláusulas adicionales y modalidad de firma (columnas AP–AV del Consolidado). */
+  readonly adicionales?: {
+    readonly leasing: boolean;
+    readonly arrendadorEsTitular: boolean;
+    readonly nombreTitular?: string;
+    readonly tieneClausulas: boolean;
+    readonly clausulas?: string;
+    readonly tipoFirma?: string;
+  };
 }
 
 /** Persona extraída de un contrato cargado (propuesta: el broker la confirma o corrige). */

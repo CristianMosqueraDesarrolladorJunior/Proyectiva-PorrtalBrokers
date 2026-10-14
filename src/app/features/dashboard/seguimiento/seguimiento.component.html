@@ -11,6 +11,12 @@
     </div>
   </app-page-header>
 
+  @if (moduloBloqueado(); as modulo) {
+    <app-alert-banner variante="warning" titulo="Módulo no disponible todavía">
+      «{{ modulo }}» se habilita cuando tu cuenta pase a broker registrado. Completa tu legalización desde Mi perfil.
+    </app-alert-banner>
+  }
+
   <!-- Banner Herramienta Rápida (Req 5.1, 5.5) -->
   <app-quick-tool-banner
     titulo="Cotiza en segundos la póliza ideal para tu cliente"

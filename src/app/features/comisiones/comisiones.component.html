@@ -124,7 +124,7 @@
               </ul>
             </app-alert-banner>
           }
-          @if (intento() && revision().errores.length > 0) {
+          @if ((intento() || hayFilasEscritas()) && revision().errores.length > 0) {
             <app-alert-banner variante="error" titulo="Falta corregir">
               <ul class="lista">
                 @for (error of revision().errores; track error) {

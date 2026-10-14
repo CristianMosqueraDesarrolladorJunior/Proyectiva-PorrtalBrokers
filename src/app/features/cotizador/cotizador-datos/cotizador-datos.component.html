@@ -91,7 +91,7 @@
           <app-form-field
             label="Canon mensual de arrendamiento"
             [requerido]="true"
-            [error]="errorCanon()"
+            [error]="errorCanon() || errorCanonMinimo()"
             controlId="cot-canon"
           >
             <app-money-input
@@ -151,6 +151,7 @@
             <input
               id="cot-fecha"
               type="date"
+              [min]="hoy"
               name="fechaInicioVigencia"
               [ngModel]="fechaInicioVigencia()"
               (ngModelChange)="fechaInicioVigencia.set($event)"

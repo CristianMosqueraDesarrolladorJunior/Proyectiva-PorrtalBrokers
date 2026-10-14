@@ -151,8 +151,12 @@
                   <b>SARLAFT desactualizado</b>
                   <p>{{ sarlaft()?.mensaje }}</p>
                   <ol>
-                    <li>Enviamos la URL de actualización a {{ sarlaft()?.correoEnmascarado }}.</li>
-                    <li>Diligencia la actualización desde el enlace.</li>
+                    @if (sarlaft()?.enlaceActualizacion) {
+                      <li>Abrimos el formulario de actualización en una pestaña nueva (si no se abrió, usa el botón).</li>
+                      <li>Diligencia la actualización en ese formulario.</li>
+                    } @else {
+                      <li>Actualiza tu Conocimiento de Cliente directamente con Seguros Bolívar.</li>
+                    }
                     <li>Vuelve aquí y verifica de nuevo para continuar.</li>
                   </ol>
                 </div>
@@ -160,6 +164,7 @@
               @if (sarlaft()?.enlaceActualizacion; as enlace) {
                 <div class="registro-enlace">
                   <code>{{ enlace }}</code>
+                  <app-boton variante="accent" icono="open_in_new" (clicked)="abrirFormularioSarlaft(enlace)">Abrir formulario de actualización</app-boton>
                   <app-boton variante="outline" icono="content_copy" (clicked)="copiarEnlace(enlace)">{{ enlaceCopiado() ? 'Copiado' : 'Copiar enlace' }}</app-boton>
                 </div>
               }

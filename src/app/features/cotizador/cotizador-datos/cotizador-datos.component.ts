@@ -1,3 +1,4 @@
+import { descargarArchivo } from '../../../core/util/descargar-archivo';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -38,7 +39,6 @@ import {
 } from '../../../core/services/coberturas.service';
 import { CotizadorService } from '../../../core/services/cotizador.service';
 import { BorradorRadicacionService } from '../../../core/services/borrador-radicacion.service';
-import { PdfService } from '../../../core/services/pdf.service';
 import type {
   CoberturaSeleccion,
   CotizacionRequest,
@@ -141,7 +141,6 @@ export class CotizadorDatosComponent implements OnInit {
   private readonly coberturasService = inject(CoberturasService);
   private readonly catalogo = inject(CatalogoService);
   private readonly cotizadorService = inject(CotizadorService);
-  private readonly pdfService = inject(PdfService);
   private readonly router = inject(Router);
   private readonly borrador = inject(BorradorRadicacionService);
   private readonly destroyRef = inject(DestroyRef);
@@ -230,7 +229,7 @@ export class CotizadorDatosComponent implements OnInit {
       : {
           label: 'Tu comisión estimada',
           valor: formatearCop(comision),
-          nota: 'Calculada sobre la prima neta del seguro principal.',
+          nota: 'Estimación del sistema; la comisión que se paga es la que registra el área al expedir.',
         };
   });
 
@@ -285,6 +284,20 @@ export class CotizadorDatosComponent implements OnInit {
     }
   });
 
+  /** Canon mínimo del cotizador (`COTIZACION_CANON_MINIMO`); 0 si no está configurado. */
+  protected readonly canonMinimo = this.catalogo.parametro('COTIZACION_CANON_MINIMO') || 0;
+  private readonly canonBajoMinimo = computed(
+    () => this.validacionCanon().valido && (this.validacionCanon().valor ?? 0) < this.canonMinimo,
+  );
+  protected readonly errorCanonMinimo = computed(() =>
+    this.intentoCalculo() && this.canonBajoMinimo()
+      ? `El canon mínimo para cotizar es ${formatearCop(this.canonMinimo)}.`
+      : '',
+  );
+
+  /** Hoy (yyyy-mm-dd, hora de Colombia): la vigencia no puede iniciar en el pasado. */
+  protected readonly hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
+
   /** Tarifa de IVA del canon comercial (`IVA_CANON_COMERCIO`) para el texto del interruptor; el valor lo calcula el backend. */
   protected readonly tarifaIvaCanon = Math.round((this.catalogo.parametro('IVA_CANON_COMERCIO') || 0) * 100);
 
@@ -293,7 +306,7 @@ export class CotizadorDatosComponent implements OnInit {
    * canon válido (> 0), cobertura de ciudad válida y demás campos obligatorios.
    */
   protected readonly puedeCalcular = computed(() => {
-    if (!this.validacionCanon().valido) {
+    if (!this.validacionCanon().valido || this.canonBajoMinimo()) {
       return false;
     }
     // El botón solo exige canon válido y campos básicos; no se bloquea por
@@ -356,11 +369,12 @@ export class CotizadorDatosComponent implements OnInit {
       ? 'Selecciona una ciudad con cobertura.'
       : '',
   );
-  protected readonly errorFecha = computed(() =>
-    this.intentoCalculo() && this.fechaInicioVigencia().trim().length === 0
-      ? 'Indica cuándo inicia la vigencia.'
-      : '',
-  );
+  protected readonly errorFecha = computed(() => {
+    if (!this.intentoCalculo()) return '';
+    const fecha = this.fechaInicioVigencia().trim();
+    if (!fecha) return 'Indica cuándo inicia la vigencia.';
+    return fecha < this.hoy ? 'La vigencia no puede iniciar en una fecha pasada.' : '';
+  });
 
   /** ¿Hay datos que se perderían al limpiar? */
   protected readonly hayDatos = computed(
@@ -565,22 +579,23 @@ export class CotizadorDatosComponent implements OnInit {
     if (!resultado) {
       return;
     }
-    this.descargandoPdf.set(true);
-    try {
-      const blob = this.pdfService.generarPdfCotizacion({
-        request: this.construirRequest(),
-        resultado,
-      });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      URL.revokeObjectURL(url);
-    } catch {
-      this.errorCalculo.set(
-        'La descarga en PDF estará disponible próximamente.',
-      );
-    } finally {
-      this.descargandoPdf.set(false);
+    if (!resultado.referencia) {
+      return;
     }
+    this.descargandoPdf.set(true);
+    this.cotizadorService
+      .descargarPdf(resultado.referencia)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (pdf) => {
+          this.descargandoPdf.set(false);
+          descargarArchivo(pdf, `cotizacion-${resultado.referencia}.pdf`);
+        },
+        error: () => {
+          this.descargandoPdf.set(false);
+          this.errorCalculo.set('No se pudo descargar el PDF de la cotización. Intenta de nuevo.');
+        },
+      });
   }
 
   /** Oculta el resultado y rehabilita la edición de los datos (Req 9.2). */

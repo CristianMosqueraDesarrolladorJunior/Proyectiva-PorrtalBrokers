@@ -144,10 +144,15 @@
   }
   @if (expediente() && pestana() === 'decision') {
     <div acciones>
-      <app-boton variante="ghost" icono="block" [disabled]="decidiendo()" (clicked)="decidir(false)">Rechazar legalización</app-boton>
+      @if (confirmando()) {
+        <app-boton variante="ghost" icono="close" [disabled]="decidiendo()" (clicked)="confirmando.set(null)">Cancelar</app-boton>
+      }
+      <app-boton variante="ghost" icono="block" [disabled]="decidiendo()" (clicked)="decidir(false)">
+        {{ confirmando() === 'rechazar' ? 'Confirmar rechazo' : 'Rechazar legalización' }}
+      </app-boton>
       <app-boton variante="outline" icono="policy" [disabled]="decidiendo()" (clicked)="consultarSarlaft()">Consultar SARLAFT ahora</app-boton>
       <app-boton variante="accent" icono="verified" [disabled]="decidiendo() || faltantes().length > 0" (clicked)="decidir(true)">
-        {{ decidiendo() ? 'Procesando…' : 'Aprobar y pasar a broker' }}
+        {{ decidiendo() ? 'Procesando…' : confirmando() === 'aprobar' ? 'Confirmar aprobación' : 'Aprobar y pasar a broker' }}
       </app-boton>
     </div>
   }

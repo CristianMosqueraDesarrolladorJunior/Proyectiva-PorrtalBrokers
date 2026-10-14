@@ -53,7 +53,14 @@ interface EstadoCobertura {
 export class CoberturasComponent {
   private readonly coberturasService = inject(CoberturasService);
   /** Escalón del monto asegurado (`PASO_MONTO_COBERTURA`, catálogo de BD). */
-  private readonly pasoMonto = inject(CatalogoService).parametro('PASO_MONTO_COBERTURA');
+  private readonly catalogoBd = inject(CatalogoService);
+  private readonly pasoMonto = this.catalogoBd.parametro('PASO_MONTO_COBERTURA');
+
+  /** Nombre legible desde el catálogo `cobertura` de la BD (el servicio puede traer el código crudo). */
+  protected nombreCobertura(id: string, nombre: string): string {
+    const etiqueta = this.catalogoBd.etiqueta('cobertura', id);
+    return etiqueta && etiqueta !== id ? etiqueta : nombre;
+  }
 
   /** Estado de las coberturas del catálogo con su selección y monto. */
   protected readonly coberturas = signal<readonly EstadoCobertura[]>([]);

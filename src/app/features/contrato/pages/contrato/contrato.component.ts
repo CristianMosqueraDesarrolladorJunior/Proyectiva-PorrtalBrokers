@@ -37,9 +37,6 @@ import type {
 } from '../../../../core/models/contrato.model';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
 import { BorradorRadicacionService } from '../../../../core/services/borrador-radicacion.service';
-import { CotizadorService } from '../../../../core/services/cotizador.service';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of } from 'rxjs';
 import type { TipoDocumentoIdentidad } from '../../../../core/models/radicacion.model';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
 import {
@@ -102,12 +99,9 @@ export class ContratoComponent {
   private readonly contratoService = inject(ContratoService);
   private readonly router = inject(Router);
   private readonly borrador = inject(BorradorRadicacionService);
-  /** Ciudades del catálogo soportado por el backend (evita `ciudad_no_soportada`). */
-  protected readonly ciudades = toSignal(
-    inject(CotizadorService)
-      .ciudadesPorDepartamento(this.borrador.cotizacion()?.departamento || 'todos')
-      .pipe(catchError(() => of([] as readonly string[]))),
-    { initialValue: [] as readonly string[] },
+  /** Ciudades del catálogo `ciudad` de la BD: las que acepta el backend (evita `ciudad_no_soportada`). */
+  protected readonly ciudades = signal<readonly string[]>(
+    inject(CatalogoService).opciones('ciudad').map((c) => c.descripcion).sort((a, b) => a.localeCompare(b, 'es')),
   );
 
   /** Emite cuando el Broker cancela y debe regresar a Radicación (Req 30.8). */
@@ -190,6 +184,8 @@ export class ContratoComponent {
   protected readonly inmEstrato = signal<number | null>(4);
   protected readonly inmArea = signal<number | null>(null);
   protected readonly inmLineaTelefonica = signal('');
+  protected readonly inmGaraje = signal('');
+  protected readonly inmDeposito = signal('');
 
   // --- Paso 4: condiciones económicas y vigencia (Req 30.5) ---
   protected readonly conCanon = signal<number | null>(null);
@@ -205,6 +201,14 @@ export class ContratoComponent {
   protected readonly conTipoCuenta = signal('ahorros');
   protected readonly conNumeroCuenta = signal('');
   protected readonly conBanco = signal('');
+  // Datos adicionales que el área registra en el Consolidado (como en el Antiguo Cotizador).
+  protected readonly inmLeasing = signal(false);
+  protected readonly conArrendadorEsTitular = signal(true);
+  protected readonly conNombreTitular = signal('');
+  protected readonly conTieneClausulas = signal(false);
+  protected readonly conClausulas = signal('');
+  protected readonly tiposFirma = this.catalogo.opciones('tipo_firma');
+  protected readonly conTipoFirma = signal(this.catalogo.opciones('tipo_firma')[0]?.codigo ?? '');
   protected readonly numeroCuentaValido = computed(() => esNumeroCuentaValido(this.conNumeroCuenta()));
   protected readonly metodosPago: readonly { valor: MetodoPagoContrato; etiqueta: string }[] = [
     { valor: 'transferencia', etiqueta: 'Transferencia bancaria' },
@@ -661,6 +665,8 @@ export class ContratoComponent {
       estrato: this.inmEstrato() as number,
       areaMetrosCuadrados: this.inmArea() as number,
       lineaTelefonica: this.inmLineaTelefonica().trim(),
+      ...(this.inmGaraje().trim() ? { garaje: this.inmGaraje().trim() } : {}),
+      ...(this.inmDeposito().trim() ? { deposito: this.inmDeposito().trim() } : {}),
     };
     const condiciones: CondicionesEconomicas = {
       canonMensual: this.conCanon() as number,
@@ -685,6 +691,16 @@ export class ContratoComponent {
       condiciones,
       ...(cotizacionReferencia ? { cotizacionReferencia } : {}),
       ...(deudores.length ? { deudores } : {}),
+      adicionales: {
+        leasing: this.inmLeasing(),
+        arrendadorEsTitular: this.conArrendadorEsTitular(),
+        ...(!this.conArrendadorEsTitular() && this.conNombreTitular().trim()
+          ? { nombreTitular: this.conNombreTitular().trim() }
+          : {}),
+        tieneClausulas: this.conTieneClausulas(),
+        ...(this.conTieneClausulas() && this.conClausulas().trim() ? { clausulas: this.conClausulas().trim() } : {}),
+        ...(this.conTipoFirma() ? { tipoFirma: this.conTipoFirma() } : {}),
+      },
     };
   }
 }

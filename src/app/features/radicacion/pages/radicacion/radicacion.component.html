@@ -115,8 +115,20 @@
               />
             </app-form-field>
 
+            <app-form-field label="Tipo de documento del inquilino" [requerido]="true" controlId="rad-tipo-inquilino">
+              <select
+                id="rad-tipo-inquilino"
+                [ngModel]="tipoDocumentoInquilino()"
+                (ngModelChange)="tipoDocumentoInquilino.set($event)"
+              >
+                @for (tipo of tiposDocumentoInquilino; track tipo) {
+                  <option [value]="tipo">{{ catalogo.etiqueta('tipo_documento', tipo) }}</option>
+                }
+              </select>
+            </app-form-field>
+
             <app-form-field
-              label="Cédula del inquilino"
+              label="Documento del inquilino"
               [requerido]="true"
               controlId="rad-doc-inquilino"
             >
@@ -271,19 +283,29 @@
 
               <div class="rad-sarlaft-panel">
                 <ol class="rad-sarlaft-pasos">
-                  <li>
-                    Enviamos la URL de actualización al <strong>{{ etiquetaSujetoSarlaft() }}</strong>
-                    @if (resultado.correoEnmascarado) {
-                      ({{ resultado.correoEnmascarado }})
-                    }
-                  </li>
-                  <li>El {{ etiquetaSujetoSarlaft() }} diligencia la actualización desde el enlace.</li>
+                  @if (resultado.enlaceActualizacion) {
+                    <li>
+                      Enviamos la URL de actualización al <strong>{{ etiquetaSujetoSarlaft() }}</strong>
+                      @if (resultado.correoEnmascarado) {
+                        ({{ resultado.correoEnmascarado }})
+                      }
+                    </li>
+                    <li>El {{ etiquetaSujetoSarlaft() }} diligencia la actualización desde el enlace.</li>
+                  } @else {
+                    <li>
+                      No recibimos un enlace automático: el <strong>{{ etiquetaSujetoSarlaft() }}</strong> debe actualizar
+                      su Conocimiento de Cliente directamente con Seguros Bolívar.
+                    </li>
+                  }
                   <li>Cuando confirme, vuelve a consultar para continuar con los documentos.</li>
                 </ol>
 
                 @if (resultado.enlaceActualizacion) {
                   <div class="rad-sarlaft-enlace">
                     <code>{{ resultado.enlaceActualizacion }}</code>
+                    <app-boton variante="accent" icono="open_in_new" (clicked)="abrirEnlaceSarlaft()">
+                      Abrir formulario de actualización
+                    </app-boton>
                     <app-boton variante="outline" icono="content_copy" (clicked)="copiarEnlaceSarlaft()">
                       {{ enlaceCopiado() ? 'Copiado' : 'Copiar enlace' }}
                     </app-boton>
@@ -429,6 +451,17 @@
             (archivoSeleccionado)="onArchivo($event)"
           ></app-doc-uploader>
         </app-form-section-card>
+
+        <app-form-field label="Observaciones para el área (opcional)" controlId="rad-observaciones">
+          <textarea
+            id="rad-observaciones"
+            rows="3"
+            maxlength="2000"
+            placeholder="Información que el área debe tener en cuenta al revisar esta solicitud"
+            [ngModel]="observaciones()"
+            (ngModelChange)="observaciones.set($event)"
+          ></textarea>
+        </app-form-field>
 
         <div class="rad-autorizacion">
           <app-toggle-switch

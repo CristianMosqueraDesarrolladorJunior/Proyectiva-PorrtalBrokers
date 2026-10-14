@@ -150,7 +150,13 @@ export function esFechaExpedicionValida(fechaIso: string): boolean {
   if (fechaIso.trim().length === 0) {
     return false;
   }
-  return !Number.isNaN(Date.parse(fechaIso));
+  if (Number.isNaN(Date.parse(fechaIso))) {
+    return false;
+  }
+  // Una fecha de expedición no puede ser futura (se compara la fecha civil local, sin desfase UTC).
+  const hoy = new Date();
+  const hoyIso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  return fechaIso.slice(0, 10) <= hoyIso;
 }
 
 /**

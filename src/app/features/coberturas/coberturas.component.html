@@ -21,12 +21,12 @@
             <div class="cobertura">
               <div class="cobertura__cabecera">
                 <div class="cobertura__info">
-                  <h2 class="cobertura__nombre">{{ estado.catalogo.nombre }}</h2>
+                  <h2 class="cobertura__nombre">{{ nombreCobertura(estado.catalogo.id, estado.catalogo.nombre) }}</h2>
                   <p class="cobertura__descripcion">{{ estado.catalogo.descripcion }}</p>
                 </div>
                 <app-toggle-switch
                   [checked]="estado.activa"
-                  [ariaLabel]="'Activar cobertura ' + estado.catalogo.nombre"
+                  [ariaLabel]="'Activar cobertura ' + nombreCobertura(estado.catalogo.id, estado.catalogo.nombre)"
                   (checkedChange)="alternarCobertura(estado.catalogo.id, $event)"
                 ></app-toggle-switch>
               </div>
@@ -44,7 +44,7 @@
                     <button
                       type="button"
                       class="cobertura__paso"
-                      [attr.aria-label]="'Disminuir monto de ' + estado.catalogo.nombre"
+                      [attr.aria-label]="'Disminuir monto de ' + nombreCobertura(estado.catalogo.id, estado.catalogo.nombre)"
                       (click)="decrementar(estado.catalogo.id)"
                     >
                       −
@@ -55,7 +55,7 @@
                     <button
                       type="button"
                       class="cobertura__paso"
-                      [attr.aria-label]="'Aumentar monto de ' + estado.catalogo.nombre"
+                      [attr.aria-label]="'Aumentar monto de ' + nombreCobertura(estado.catalogo.id, estado.catalogo.nombre)"
                       (click)="incrementar(estado.catalogo.id)"
                     >
                       +

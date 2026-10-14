@@ -27,6 +27,14 @@ export class CotizadorService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/v1';
 
+  /** PDF de la cotización generado por el backend (`GET /cotizaciones/{referencia}/pdf`). */
+  descargarPdf(referencia: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/cotizaciones/${encodeURIComponent(referencia)}/pdf`, {
+      responseType: 'blob',
+      withCredentials: true,
+    });
+  }
+
   /**
    * Solicita el cálculo autoritativo de la Cotizacion al Motor_Tarifas (Req 8).
    * @param request datos del inmueble y coberturas seleccionadas.

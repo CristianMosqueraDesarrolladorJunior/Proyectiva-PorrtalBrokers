@@ -165,7 +165,14 @@ export class LoginComponent {
         next: (perfil) => {
           this.enviando.set(false);
           // Broker → /app; Administrador y Comercial → consola /admin.
-          void this.router.navigate([perfil?.debeCambiarClave ? '/cambiar-clave' : rutaInicio(perfil?.rol)]);
+          void this.router
+            .navigate([perfil?.debeCambiarClave ? '/cambiar-clave' : rutaInicio(perfil?.rol)])
+            .then((navego) => {
+              // Si un guard rechaza la navegación, la pantalla no se queda muda en /login.
+              if (!navego) {
+                this.errorCredenciales.set('No pudimos abrir tu sesión. Intenta de nuevo.');
+              }
+            });
         },
         error: (error: { status?: number }) => {
           this.enviando.set(false);

@@ -17,7 +17,7 @@ export const moduloGuard: CanActivateChildFn = (ruta: ActivatedRouteSnapshot): O
   return perfilDeLaSesion().pipe(
     map((perfil) =>
       perfil?.estadoCuenta && moduloBloqueado(perfil.estadoCuenta, modulo, restringidas)
-        ? router.createUrlTree(['/app/seguimiento'])
+        ? router.createUrlTree(['/app/seguimiento'], { queryParams: { bloqueado: modulo } })
         : true,
     ),
   );

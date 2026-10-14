@@ -1,3 +1,4 @@
+import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
 import { concat, switchMap, toArray } from 'rxjs';
 import {
   ChangeDetectionStrategy,
@@ -52,6 +53,7 @@ import {
   claveConsultaSarlaft,
   construirPayloadRadicacion,
   documentosObligatoriosFaltantes,
+  esNumeroDocumentoPropietarioValido,
   etiquetasDocumentos,
   PASOS_RADICACION,
   pasoActivoRadicacion,
@@ -125,6 +127,8 @@ export class RadicacionComponent {
   protected readonly contratoReferencia = computed(() => this.borrador.contrato()?.referencia ?? null);
   /** Declaración de autorización de tratamiento de datos (Habeas Data), exigida por el backend. */
   protected readonly autorizacionDatos = signal(false);
+  /** Observación del broker para el área (columna "Observaciones Usuario Radicación" del Consolidado). */
+  protected readonly observaciones = signal('');
   protected readonly formatearCop = formatearCop;
 
   /** Pestañas de tipo de persona (Persona Natural / Persona Jurídica) (Req 10.3, 10.4). */
@@ -139,7 +143,7 @@ export class RadicacionComponent {
     { valor: 'apoderado', etiqueta: 'Apoderado' },
   ];
 
-  private readonly catalogo = inject(CatalogoService);
+  protected readonly catalogo = inject(CatalogoService);
 
   /** Tipos de documento del propietario y del apoderado (catálogo `tipo_documento`, Req 10.1). */
   protected readonly tiposDocumento = this.catalogo.codigos<TipoDocumentoIdentidad>('tipo_documento', 'propietario');
@@ -158,6 +162,9 @@ export class RadicacionComponent {
   // --- Paso 2: consulta del Estudio Digital del Libertador (inquilino) ---
   /** Documento/cédula del inquilino, requerido junto al número de estudio para consultar. */
   protected readonly documentoInquilino = signal('');
+  /** Tipo de documento del inquilino (catálogo `tipo_documento`): una empresa arrienda con NIT. */
+  protected readonly tipoDocumentoInquilino = signal<TipoDocumentoIdentidad>('CC');
+  protected readonly tiposDocumentoInquilino = this.catalogo.codigos<TipoDocumentoIdentidad>('tipo_documento');
   /** Consulta de estudio en curso. */
   protected readonly consultandoEstudio = signal(false);
   /** Resultado del estudio consultado (autollena el contrato). */
@@ -173,8 +180,8 @@ export class RadicacionComponent {
   /** Habilita el botón de consulta de estudio: número + cédula del inquilino presentes. */
   protected readonly puedeConsultarEstudio = computed(
     () =>
-      this.numeroEstudioArrendamiento().trim().length > 0 &&
-      this.documentoInquilino().trim().length > 0 &&
+      /^\d{4,15}$/.test(this.numeroEstudioArrendamiento().trim()) &&
+      esNumeroDocumentoPropietarioValido(this.documentoInquilino().trim()) &&
       !this.consultandoEstudio(),
   );
 
@@ -335,13 +342,13 @@ export class RadicacionComponent {
     false,
   );
 
-  /** Validez de los datos base de la radicación (Req 10.1). */
+  /** Validez de los datos base de la radicación (Req 10.1): sin estudio APROBADO el paso no se completa. */
   protected readonly datosValidos = computed(
     () =>
       validarDatosRadicacion(
         this.numeroDocumentoPropietario(),
         this.numeroEstudioArrendamiento(),
-      ).datosValidos,
+      ).datosValidos && this.estudioAprobado(),
   );
 
   /** Tipos obligatorios que ya tienen un archivo válido cargado. */
@@ -522,7 +529,7 @@ export class RadicacionComponent {
       .consultarEstudio(
         this.numeroEstudioArrendamiento().trim(),
         this.documentoInquilino().trim(),
-        this.tipoDocumentoPropietario(),
+        this.tipoDocumentoInquilino(),
       )
       .subscribe({
         next: (resultado) => {
@@ -567,6 +574,11 @@ export class RadicacionComponent {
         next: (resultado) => {
           this.consultaSarlaft.set({ clave, resultado });
           this.consultandoSarlaft.set(false);
+          // Como el cotizador: si hay que actualizar, el formulario de SARLAFT se abre de una (si el navegador
+          // bloquea la ventana, queda el botón "Abrir formulario de actualización").
+          if (resultado.estado === 'DESACTUALIZADO' && resultado.enlaceActualizacion) {
+            this.abrirEnlaceSarlaft();
+          }
         },
         error: () => {
           this.errorSarlaft.set(
@@ -575,6 +587,11 @@ export class RadicacionComponent {
           this.consultandoSarlaft.set(false);
         },
       });
+  }
+
+  /** Abre el formulario de actualización de Conocimiento de Cliente en una pestaña nueva. */
+  protected abrirEnlaceSarlaft(): void {
+    abrirFormularioSarlaft(this.resultadoSarlaft()?.enlaceActualizacion);
   }
 
   /** Copia la URL de actualización SARLAFT para compartirla con el firmante. */
@@ -669,7 +686,7 @@ export class RadicacionComponent {
     const request = construirPayloadRadicacion({
       contratoReferencia: this.contratoReferencia(),
       numeroEstudioArrendamiento: this.numeroEstudioArrendamiento(),
-      tipoDocumentoInquilino: 'CC',
+      tipoDocumentoInquilino: this.tipoDocumentoInquilino(),
       documentoInquilino: this.documentoInquilino(),
       documentosCargados: [...this.cargadosValidos()],
       autorizacionDatos: this.autorizacionDatos(),
@@ -677,6 +694,7 @@ export class RadicacionComponent {
       firmaApoderado: this.firmaApoderado(),
       tipoDocumentoApoderado: this.tipoDocumentoApoderado(),
       documentoApoderado: this.numeroDocumentoApoderado(),
+      observaciones: this.observaciones(),
       vocabulario: this.documentosCatalogo.filter((d) => d['aplica'] !== 'OPCIONAL').map((d) => d.codigo),
     });
 

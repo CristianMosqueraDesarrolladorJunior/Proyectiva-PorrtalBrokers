@@ -164,6 +164,8 @@ export class ProspectosComponent {
   protected readonly archivo = signal<Blob | null>(null);
   protected readonly cargandoArchivo = signal(false);
   protected readonly decidiendo = signal(false);
+  /** Decisión pendiente de confirmar (segundo clic): evita aprobar o rechazar por un clic accidental. */
+  protected readonly confirmando = signal<'aprobar' | 'rechazar' | null>(null);
   protected readonly errorDecision = signal('');
   protected readonly faltantes = computed(() => (this.expediente()?.faltantes ?? []).map((f) => faltante(f, this.documentos)));
 
@@ -335,6 +337,12 @@ export class ProspectosComponent {
   }
 
   protected decidir(aprobar: boolean): void {
+    const accion = aprobar ? 'aprobar' : 'rechazar';
+    if (this.confirmando() !== accion) {
+      this.confirmando.set(accion);
+      return;
+    }
+    this.confirmando.set(null);
     const p = this.expediente()?.prospecto;
     if (!p) return;
     this.decidiendo.set(true);

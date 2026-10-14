@@ -7,50 +7,9 @@
 @use 'app/shared/styles/tokens';
 
 /* Tipografía de marca (Brandbook Proyectiva, p. 19): familia Bolívar.
-   Coloca los archivos en public/fonts/bolivar/. Mientras no estén, el navegador
-   usa el respaldo definido en --font-family-body (Roboto). */
-@font-face {
-  font-family: 'Bolivar';
-  src: url('/fonts/bolivar/Bolivar-Light.woff2') format('woff2');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Bolivar';
-  src: url('/fonts/bolivar/Bolivar-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Bolivar';
-  src: url('/fonts/bolivar/Bolivar-Italic.woff2') format('woff2');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Bolivar';
-  src: url('/fonts/bolivar/Bolivar-Semibold.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Bolivar';
-  src: url('/fonts/bolivar/Bolivar-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Bolivar';
-  src: url('/fonts/bolivar/Bolivar-ExtraBold.woff2') format('woff2');
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
+   Los archivos .woff2 aún no están en el proyecto: sin @font-face no hay 404 y se usa el respaldo de
+   --font-family-body (Roboto). Al recibirlos, ponerlos en public/fonts/bolivar/ y declarar aquí un
+   @font-face por peso (300, 400, 400 itálica, 600, 700, 800) con font-display: swap. */
 
 /* Reset base y tipografía global del prototipo (Req 36.1, 36.2).
    Todos los valores se referencian vía Design_Token (Req 25.3, 25.4). */

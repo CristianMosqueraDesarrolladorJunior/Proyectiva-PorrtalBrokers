@@ -1,3 +1,5 @@
+import { SessionService } from '../../../../core/services/session.service';
+import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -139,6 +141,7 @@ interface Credenciales {
 })
 export class RegistroBrokerComponent {
   private readonly auth = inject(AuthService);
+  private readonly sesion = inject(SessionService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -224,6 +227,10 @@ export class RegistroBrokerComponent {
    * sesión o sin datos el formulario queda como está.
    */
   private autocompletarDesdePerfilCompartido(): void {
+    // Solo con sesión (llegada por SSO desde Cien Cuadras): en el registro público evita un 401 innecesario.
+    if (!this.sesion.perfil()) {
+      return;
+    }
     this.auth
       .perfilCompartido()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -428,12 +435,21 @@ export class RegistroBrokerComponent {
     this.errorSarlaft.set('');
     this.enlaceCopiado.set(false);
     this.auth
-      .verificarSarlaftRegistro({ tipoDocumento: v.tipoDocumento, documento: v.documento, correo: v.correo.trim() })
+      .verificarSarlaftRegistro({
+        tipoDocumento: v.tipoDocumento,
+        documento: v.documento,
+        correo: v.correo.trim(),
+        ...(/^3\d{9}$/.test(v.telefono.replace(/\D/g, '')) ? { celular: v.telefono.replace(/\D/g, '') } : {}),
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (resultado) => {
           this.verificandoSarlaft.set(false);
           this.sarlaft.set(resultado);
+          // Como el cotizador: si hay que actualizar, el formulario de SARLAFT se abre de una.
+          if (resultado.estado === 'DESACTUALIZADO') {
+            abrirFormularioSarlaft(resultado.enlaceActualizacion);
+          }
         },
         error: () => {
           this.verificandoSarlaft.set(false);
@@ -441,6 +457,8 @@ export class RegistroBrokerComponent {
         },
       });
   }
+
+  protected readonly abrirFormularioSarlaft = abrirFormularioSarlaft;
 
   protected copiarEnlace(enlace: string | undefined): void {
     if (!enlace) {

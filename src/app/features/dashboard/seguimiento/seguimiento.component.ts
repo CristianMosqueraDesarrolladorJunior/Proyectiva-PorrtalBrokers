@@ -135,6 +135,9 @@ export class SeguimientoComponent {
   // --- Detalle de solicitud seleccionada (Req 6.4, 34) ---
   protected readonly referenciaSeleccionada = signal<string | null>(null);
 
+  /** Módulo al que se intentó entrar sin tenerlo habilitado (lo indica el guard de módulos). */
+  protected readonly moduloBloqueado = signal<string | null>(null);
+
   /** Filas mapeadas para el DataTableComponent (con etiquetas legibles). */
   protected readonly filas = computed(() =>
     this.solicitudes().map((s) => ({
@@ -158,6 +161,7 @@ export class SeguimientoComponent {
     inject(ActivatedRoute)
       .queryParamMap.pipe(takeUntilDestroyed())
       .subscribe((params) => {
+        this.moduloBloqueado.set(params.get('bloqueado'));
         const q = params.get('q');
         if (q !== null && q !== this.busqueda()) {
           this.busqueda.set(q);

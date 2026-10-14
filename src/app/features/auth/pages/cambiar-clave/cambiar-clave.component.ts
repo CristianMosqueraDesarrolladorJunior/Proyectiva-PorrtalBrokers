@@ -100,7 +100,12 @@ export class CambiarClaveComponent {
         },
         error: (err: unknown) => {
           this.enviando.set(false);
-          this.error.set(mensajeErrorIntegracion(err));
+          const status = (err as { status?: number })?.status;
+          this.error.set(
+            status === 401 || status === 422
+              ? 'La contraseña actual no es correcta. Si es tu primer ingreso, usa la contraseña temporal que te entregaron.'
+              : mensajeErrorIntegracion(err),
+          );
         },
       });
   }

@@ -1,5 +1,5 @@
 import { HttpEvent, HttpInterceptorFn } from '@angular/common/http';
-import { Observable, retry, timeout } from 'rxjs';
+import { Observable, TimeoutError, of, retry, throwError, timeout } from 'rxjs';
 
 /** Tiempo límite por intento de solicitud, en milisegundos (15s) (Req 29.5). */
 export const TIMEOUT_MS = 15_000;
@@ -33,13 +33,24 @@ export function aplicarTimeoutReintento<T>(
 ): Observable<T> {
   return source$.pipe(
     timeout({ each: timeoutMs }),
-    retry({ count: maxReintentos })
+    // Solo fallas transitorias (red, timeout o 5xx): un 4xx no mejora al repetirse.
+    retry({ count: maxReintentos, delay: (error) => (esTransitorio(error) ? of(0) : throwError(() => error)) })
   );
 }
+
+/** Red caída (status 0), timeout o error del servidor (5xx). */
+function esTransitorio(error: unknown): boolean {
+  if (error instanceof TimeoutError) return true;
+  const status = (error as { status?: number })?.status;
+  return status === undefined || status === 0 || status >= 500;
+}
+
+/** Métodos que se pueden repetir sin riesgo de duplicar efectos (un POST de radicación o contrato no lo es). */
+const IDEMPOTENTES = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /**
  * Interceptor funcional que aplica un timeout de 15s por intento y reintenta
  * hasta 3 veces las solicitudes que fallan o se exceden en tiempo (Req 29.5).
  */
 export const timeoutRetryInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> =>
-  aplicarTimeoutReintento(next(req));
+  aplicarTimeoutReintento(next(req), TIMEOUT_MS, IDEMPOTENTES.has(req.method.toUpperCase()) ? MAX_REINTENTOS : 0);

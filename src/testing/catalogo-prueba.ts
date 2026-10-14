@@ -4,7 +4,7 @@ import { Injector, type Provider } from '@angular/core';
 import { CatalogoService, type Catalogos } from '../app/core/services/catalogo.service';
 
 /**
- * Catálogos de prueba: copia de `GET /api/v1/catalogos` contra la BD local (V62). Las pruebas los cargan con
+ * Catálogos de prueba: copia de `GET /api/v1/catalogos` contra la BD local (V64). Las pruebas los cargan con
  * `TestBed.inject(CatalogoService).usar(CATALOGOS_PRUEBA)`; así el front se prueba con los mismos valores reales.
  */
 export const CATALOGOS_PRUEBA = {
@@ -1104,16 +1104,14 @@ export const CATALOGOS_PRUEBA = {
     ],
     "tipo_firma": [
       {
-        "codigo": "DIGITAL",
-        "descripcion": "Firma digital"
-      },
-      {
         "codigo": "ELECTRONICA",
-        "descripcion": "Firma electrónica"
+        "descripcion": "Firma electrónica",
+        "valor_warehouse": "Firma electrónica"
       },
       {
         "codigo": "FISICA",
-        "descripcion": "Firma física (manuscrita)"
+        "descripcion": "Firma por notaría",
+        "valor_warehouse": "Firma por notaría"
       }
     ],
     "tipo_inmueble": [
@@ -1221,6 +1219,7 @@ export const CATALOGOS_PRUEBA = {
     "COMISION_ESTIMADA": 0.08,
     "COMISION_PLAZO_COBRO_MESES": 3.0,
     "COMISION_PORCENTAJE_DEFECTO": 20.0,
+    "COTIZACION_CANON_MINIMO": 100000.0,
     "CUENTA_COBRO_MAX_FILAS": 20.0,
     "CUENTA_COBRO_VALOR_MAX": 500000000.0,
     "CUENTA_COBRO_VALOR_MIN": 50000.0,
@@ -1248,24 +1247,24 @@ export const CATALOGOS_PRUEBA = {
   },
   "seguimiento": [
     {
-      "codigo": "radicada",
-      "descripcion": "Radicada · por enviar al área"
+      "descripcion": "Radicada · por enviar al área",
+      "codigo": "radicada"
     },
     {
-      "codigo": "en_revision",
-      "descripcion": "En revisión del área"
+      "descripcion": "En revisión del área",
+      "codigo": "en_revision"
     },
     {
-      "codigo": "aprobada",
-      "descripcion": "Póliza expedida"
+      "descripcion": "Póliza expedida",
+      "codigo": "aprobada"
     },
     {
-      "codigo": "bloqueada",
-      "descripcion": "Desistida o anulada"
+      "descripcion": "Desistida o anulada",
+      "codigo": "bloqueada"
     },
     {
-      "codigo": "observada",
-      "descripcion": "Corrección pendiente"
+      "descripcion": "Corrección pendiente",
+      "codigo": "observada"
     }
   ],
   "radicacionWarehouse": [
@@ -1296,52 +1295,52 @@ export const CATALOGOS_PRUEBA = {
   ],
   "renovacionWarehouse": [
     {
-      "estadoSnapshot": "pendiente",
       "descripcion": "Por renovar",
       "requiereAccion": true,
-      "codigo": "POR_RENOVAR"
+      "codigo": "POR_RENOVAR",
+      "estadoSnapshot": "pendiente"
     },
     {
-      "estadoSnapshot": "en_gestion",
       "descripcion": "En contacto",
       "requiereAccion": true,
-      "codigo": "EN_CONTACTO"
+      "codigo": "EN_CONTACTO",
+      "estadoSnapshot": "en_gestion"
     },
     {
-      "estadoSnapshot": "en_gestion",
       "descripcion": "En expedición",
       "requiereAccion": false,
-      "codigo": "EN_EXPEDICION"
+      "codigo": "EN_EXPEDICION",
+      "estadoSnapshot": "en_gestion"
     },
     {
-      "estadoSnapshot": "en_gestion",
       "descripcion": "Corrección pendiente",
       "requiereAccion": true,
-      "codigo": "CORRECCION"
+      "codigo": "CORRECCION",
+      "estadoSnapshot": "en_gestion"
     },
     {
-      "estadoSnapshot": "renovada",
       "descripcion": "Renovada",
       "requiereAccion": false,
-      "codigo": "RENOVADA"
+      "codigo": "RENOVADA",
+      "estadoSnapshot": "renovada"
     },
     {
-      "estadoSnapshot": "no_renovada",
       "descripcion": "No renovada",
       "requiereAccion": false,
-      "codigo": "NO_RENOVADA"
+      "codigo": "NO_RENOVADA",
+      "estadoSnapshot": "no_renovada"
     },
     {
-      "estadoSnapshot": "caso_especial",
       "descripcion": "Caso especial",
       "requiereAccion": false,
-      "codigo": "CASO_ESPECIAL"
+      "codigo": "CASO_ESPECIAL",
+      "estadoSnapshot": "caso_especial"
     },
     {
-      "estadoSnapshot": "en_gestion",
       "descripcion": "En gestión",
       "requiereAccion": false,
-      "codigo": "EN_GESTION"
+      "codigo": "EN_GESTION",
+      "estadoSnapshot": "en_gestion"
     }
   ]
 } as unknown as Catalogos;

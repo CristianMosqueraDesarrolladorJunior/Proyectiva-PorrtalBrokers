@@ -36,9 +36,8 @@ export const appConfig: ApplicationConfig = {
         errorInterceptor
       ])
     ),
-    // Catálogos de negocio desde la BD (sin bloquear el arranque: si fallan, se reintentan al usarlos).
-    provideAppInitializer(() => {
-      inject(CatalogoService).cargar().subscribe();
-    }),
+    // Catálogos de negocio desde la BD: el arranque los espera para que ninguna pantalla abierta por URL directa
+    // calcule sus listas vacías (si fallan, la app arranca igual y se reintentan al usarlos).
+    provideAppInitializer(() => inject(CatalogoService).cargar()),
   ]
 };

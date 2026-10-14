@@ -238,6 +238,7 @@ export interface EntradaPayloadRadicacion {
   readonly vocabulario: readonly string[];
   readonly tipoDocumentoApoderado?: string;
   readonly documentoApoderado?: string;
+  readonly observaciones?: string;
 }
 
 /**
@@ -261,5 +262,6 @@ export function construirPayloadRadicacion(e: EntradaPayloadRadicacion): Radicac
     ...(e.firmaApoderado && e.documentoApoderado?.trim()
       ? { tipoDocumentoApoderado: e.tipoDocumentoApoderado ?? 'CC', documentoApoderado: e.documentoApoderado.trim() }
       : {}),
+    ...(e.observaciones?.trim() ? { observaciones: e.observaciones.trim() } : {}),
   };
 }

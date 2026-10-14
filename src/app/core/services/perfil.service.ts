@@ -11,6 +11,7 @@ import {
 } from '../models/cuenta.model';
 import type { TipoDocumentoRegistro } from '../models/registro-broker.model';
 import type { EstadoSarlaftRadicacion, ResultadoSarlaftRadicacion } from '../models/radicacion.model';
+import { abrirFormularioSarlaft } from '../util/sarlaft-enlace';
 import { SessionService } from './session.service';
 import { CatalogoService } from './catalogo.service';
 
@@ -28,6 +29,8 @@ interface PerfilCuentaBackend {
   readonly correo: string | null;
   readonly telefono: string | null;
   readonly fechaRegistro: string | null;
+  readonly fechaIngreso?: string | null;
+  readonly comercial?: string | null;
 }
 
 /**
@@ -221,7 +224,13 @@ export class PerfilService {
     return this.http
       .post<ResultadoSarlaftRadicacion>(
         `${this.baseUrl}/sarlaft/consultas`,
-        { documento: p.numeroDocumento, tipoDocumento: p.tipoDocumento, fechaExpedicion },
+        {
+          documento: p.numeroDocumento,
+          tipoDocumento: p.tipoDocumento,
+          fechaExpedicion,
+          // Con el celular SARLAFT genera la URL de actualización y la envía por SMS (igual que el cotizador).
+          ...(/^3\d{9}$/.test((p.telefono ?? '').replace(/\D/g, '')) ? { celular: p.telefono.replace(/\D/g, '') } : {}),
+        },
         { withCredentials: true },
       )
       .pipe(
@@ -230,6 +239,9 @@ export class PerfilService {
             ...actual,
             sarlaft: { estado: estadoSarlaftPerfil(r.estado), fechaExpedicion, ultimaConsulta: r.fechaConsulta },
           }));
+          if (r.estado === 'DESACTUALIZADO') {
+            abrirFormularioSarlaft(r.enlaceActualizacion);
+          }
           return this._perfil();
         }),
       );
@@ -284,6 +296,8 @@ export class PerfilService {
       correo: dto.correo ?? '',
       telefono: dto.telefono ?? '',
       fechaRegistro: dto.fechaRegistro,
+      fechaIngreso: dto.fechaIngreso ?? previo.fechaIngreso,
+      comercialAsignado: dto.comercial ?? previo.comercialAsignado,
       ...extra,
     };
   }

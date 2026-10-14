@@ -92,6 +92,8 @@ export class ComisionesComponent {
   /** Revisión del servidor (reglas y comisión del acuerdo del broker); el front no calcula. */
   protected readonly revision = signal<RevisionCuenta>(REVISION_VACIA);
   protected readonly revisando = signal(false);
+  /** Hay al menos una fila con datos: desde ahí se muestran los errores que devuelve el servidor. */
+  protected readonly hayFilasEscritas = computed(() => this.filasCrudas().some((f) => f.poliza.trim() || f.valor.trim()));
   protected readonly puedeGenerar = computed(
     () => this.revision().errores.length === 0 && this.revision().filas.length > 0 && !this.generando() && !this.revisando(),
   );
@@ -150,6 +152,9 @@ export class ComisionesComponent {
       .pipe(
         debounceTime(300),
         switchMap((filas) => {
+          if (!filas.some((f) => f.poliza.trim() || f.valor.trim())) {
+            return of(REVISION_VACIA);
+          }
           this.revisando.set(true);
           return this.comisiones
             .revisarCuenta({
