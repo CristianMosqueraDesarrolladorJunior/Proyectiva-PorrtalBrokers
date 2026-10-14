@@ -17,13 +17,16 @@ export interface DesgloseComisionProducto {
 }
 
 /**
- * Comisión estimada del periodo y su desglose (Req 5.2, 5.6).
+ * Comisión pendiente por pagar (pólizas expedidas dentro del plazo de cobro y sin pago del área) y su
+ * desglose por estado de cobro. La calcula el backend desde Postgres.
  */
 export interface ComisionesResponse {
   readonly valorEstimado: number;
   readonly periodo: string;
   readonly polizasRadicadas: number;
   readonly desglose: readonly DesgloseComisionProducto[];
+  /** Pólizas que componen la comisión pendiente. */
+  readonly polizasPendientes: number;
 }
 
 /**

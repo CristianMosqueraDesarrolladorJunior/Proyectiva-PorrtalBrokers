@@ -31,6 +31,8 @@
         [periodo]="periodo()?.periodo ?? ''"
         [polizasRadicadas]="periodo()?.polizasRadicadas ?? 0"
         [desglose]="periodo()?.desglose ?? []"
+        [polizasPendientes]="periodo()?.polizasPendientes ?? 0"
+        [plazoMeses]="plazoCobroMeses"
       />
       <div class="comisiones__kpis">
         <app-kpi-card

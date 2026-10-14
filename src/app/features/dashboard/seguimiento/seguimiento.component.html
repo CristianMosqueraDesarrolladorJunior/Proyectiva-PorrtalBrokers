@@ -28,6 +28,8 @@
       [periodo]="comisiones()?.periodo ?? ''"
       [polizasRadicadas]="comisiones()?.polizasRadicadas ?? 0"
       [desglose]="comisiones()?.desglose ?? []"
+        [polizasPendientes]="comisiones()?.polizasPendientes ?? 0"
+        [plazoMeses]="plazoCobroMeses"
     />
 
     <!-- KPIs en grid 2x2 con íconos + delta de tendencia (Req 5.3, 5.4) -->

@@ -74,6 +74,7 @@ export class ComisionesComponent {
   /** Plataforma de proveedores de Seguros Bolívar donde el broker carga la cuenta de cobro (catálogo `contacto_ayuda`). */
   protected readonly proveedores = this.catalogo.opciones('contacto_ayuda').find((c) => c.codigo === 'PROVEEDORES');
   protected readonly maximoFilas = this.catalogo.parametro('CUENTA_COBRO_MAX_FILAS');
+  protected readonly plazoCobroMeses = this.catalogo.parametro('COMISION_PLAZO_COBRO_MESES');
   protected readonly pesos = pesos;
 
   // --- Periodo y acuerdo ---

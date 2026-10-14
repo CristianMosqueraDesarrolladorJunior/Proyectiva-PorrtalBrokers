@@ -4,7 +4,7 @@ import { Injector, type Provider } from '@angular/core';
 import { CatalogoService, type Catalogos } from '../app/core/services/catalogo.service';
 
 /**
- * Catálogos de prueba: copia de `GET /api/v1/catalogos` contra la BD local (V60). Las pruebas los cargan con
+ * Catálogos de prueba: copia de `GET /api/v1/catalogos` contra la BD local (V62). Las pruebas los cargan con
  * `TestBed.inject(CatalogoService).usar(CATALOGOS_PRUEBA)`; así el front se prueba con los mismos valores reales.
  */
 export const CATALOGOS_PRUEBA = {
@@ -1219,6 +1219,7 @@ export const CATALOGOS_PRUEBA = {
   "parametros": {
     "ANIO_IPC": 2026.0,
     "COMISION_ESTIMADA": 0.08,
+    "COMISION_PLAZO_COBRO_MESES": 3.0,
     "COMISION_PORCENTAJE_DEFECTO": 20.0,
     "CUENTA_COBRO_MAX_FILAS": 20.0,
     "CUENTA_COBRO_VALOR_MAX": 500000000.0,
@@ -1269,78 +1270,78 @@ export const CATALOGOS_PRUEBA = {
   ],
   "radicacionWarehouse": [
     {
-      "codigo": "EN_GESTION",
       "descripcion": "En revisión de documentos",
       "requiereAccion": false,
-      "valorWarehouse": "Pendiente Validación Documental"
+      "valorWarehouse": "Pendiente Validación Documental",
+      "codigo": "EN_GESTION"
     },
     {
-      "codigo": "EN_CORRECCION",
       "descripcion": "Corrección pendiente",
       "requiereAccion": true,
-      "valorWarehouse": "Pendiente Corrección Documental"
+      "valorWarehouse": "Pendiente Corrección Documental",
+      "codigo": "EN_CORRECCION"
     },
     {
-      "codigo": "EXPEDIDA",
       "descripcion": "Póliza expedida",
       "requiereAccion": false,
-      "valorWarehouse": "Expedido"
+      "valorWarehouse": "Expedido",
+      "codigo": "EXPEDIDA"
     },
     {
-      "codigo": "ANULADA",
       "descripcion": "Desistida",
       "requiereAccion": false,
-      "valorWarehouse": "Desistido"
+      "valorWarehouse": "Desistido",
+      "codigo": "ANULADA"
     }
   ],
   "renovacionWarehouse": [
     {
-      "codigo": "POR_RENOVAR",
       "estadoSnapshot": "pendiente",
       "descripcion": "Por renovar",
-      "requiereAccion": true
+      "requiereAccion": true,
+      "codigo": "POR_RENOVAR"
     },
     {
-      "codigo": "EN_CONTACTO",
       "estadoSnapshot": "en_gestion",
       "descripcion": "En contacto",
-      "requiereAccion": true
+      "requiereAccion": true,
+      "codigo": "EN_CONTACTO"
     },
     {
-      "codigo": "EN_EXPEDICION",
       "estadoSnapshot": "en_gestion",
       "descripcion": "En expedición",
-      "requiereAccion": false
+      "requiereAccion": false,
+      "codigo": "EN_EXPEDICION"
     },
     {
-      "codigo": "CORRECCION",
       "estadoSnapshot": "en_gestion",
       "descripcion": "Corrección pendiente",
-      "requiereAccion": true
+      "requiereAccion": true,
+      "codigo": "CORRECCION"
     },
     {
-      "codigo": "RENOVADA",
       "estadoSnapshot": "renovada",
       "descripcion": "Renovada",
-      "requiereAccion": false
+      "requiereAccion": false,
+      "codigo": "RENOVADA"
     },
     {
-      "codigo": "NO_RENOVADA",
       "estadoSnapshot": "no_renovada",
       "descripcion": "No renovada",
-      "requiereAccion": false
+      "requiereAccion": false,
+      "codigo": "NO_RENOVADA"
     },
     {
-      "codigo": "CASO_ESPECIAL",
       "estadoSnapshot": "caso_especial",
       "descripcion": "Caso especial",
-      "requiereAccion": false
+      "requiereAccion": false,
+      "codigo": "CASO_ESPECIAL"
     },
     {
-      "codigo": "EN_GESTION",
       "estadoSnapshot": "en_gestion",
       "descripcion": "En gestión",
-      "requiereAccion": false
+      "requiereAccion": false,
+      "codigo": "EN_GESTION"
     }
   ]
 } as unknown as Catalogos;

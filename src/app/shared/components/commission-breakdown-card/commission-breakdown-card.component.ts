@@ -48,7 +48,7 @@ const TOTAL_COLORES = 4;
   template: `
     <article class="comm">
       <header class="comm__cab">
-        <span class="comm__label">Valor de comisión estimada o aproximada</span>
+        <span class="comm__label">Comisión pendiente por pagar</span>
         @if (periodo) {
           <span class="comm__periodo-chip">{{ periodo }}</span>
         }
@@ -60,10 +60,7 @@ const TOTAL_COLORES = 4;
           <span class="comm__moneda">COP</span>
         </div>
         <p class="comm__sub">
-          {{ polizasRadicadas }} pólizas radicadas activas
-          @if (promedioFormateado()) {
-            · Promedio {{ promedioFormateado() }} / comisión por contrato
-          }
+          {{ polizasPendientes }} de {{ polizasRadicadas }} pólizas radicadas con comisión pendiente
         </p>
 
         <div
@@ -97,7 +94,13 @@ const TOTAL_COLORES = 4;
           }
         </div>
       } @else {
-        <p class="comm__sub">Sin datos de comisión disponibles.</p>
+        <p class="comm__sub">No tienes comisiones pendientes por pagar ({{ polizasRadicadas }} pólizas radicadas).</p>
+      }
+      @if (plazoMeses > 0) {
+        <p class="comm__nota">
+          Solo cuentan las pólizas expedidas en los últimos {{ plazoMeses }} meses y aún sin pagar. Las de más tiempo
+          no se cobran por el portal: gestiónalas con tu asesor comercial.
+        </p>
       }
     </article>
   `,
@@ -119,6 +122,12 @@ const TOTAL_COLORES = 4;
         justify-content: space-between;
         gap: var(--space-3);
       }
+      .comm__nota {
+        margin: var(--space-3) 0 0;
+        font-size: var(--text-caption);
+        color: var(--color-muted);
+      }
+
       .comm__label {
         font-family: var(--font-family-body);
         font-size: var(--text-caption);
@@ -249,8 +258,14 @@ export class CommissionBreakdownCardComponent {
   /** Periodo de la comisión (p. ej. "Mayo 2026"). */
   @Input() periodo = '';
 
-  /** Número de pólizas radicadas activas del periodo. */
+  /** Total de pólizas radicadas por el broker. */
   @Input() polizasRadicadas = 0;
+
+  /** Pólizas que componen la comisión pendiente. */
+  @Input() polizasPendientes = 0;
+
+  /** Plazo de cobro por el portal en meses (`COMISION_PLAZO_COBRO_MESES`); 0 oculta la nota. */
+  @Input() plazoMeses = 0;
 
   /** Desglose de comisión por ramo/producto. */
   @Input()
@@ -289,16 +304,6 @@ export class CommissionBreakdownCardComponent {
   protected readonly valorFormateado = computed(() =>
     this.formatearCop(this._valorEstimado()),
   );
-
-  /** Promedio de comisión por contrato, formateado (o null si no aplica). */
-  protected readonly promedioFormateado = computed(() => {
-    if (this.polizasRadicadas <= 0) {
-      return null;
-    }
-    return this.formatearCop(
-      Math.round(this._valorEstimado() / this.polizasRadicadas),
-    );
-  });
 
   /** Etiqueta accesible de la barra apilada. */
   protected readonly etiquetaBarra = computed(() =>

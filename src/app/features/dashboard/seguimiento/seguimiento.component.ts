@@ -99,6 +99,8 @@ export class SeguimientoComponent {
   /** Filtros desde los catálogos (`producto` y estados del seguimiento). */
   protected readonly productos = this.catalogo.opciones('producto').map((p) => p.descripcion);
   protected readonly estados = this.catalogo.seguimiento().map((e) => ({ valor: e.codigo, etiqueta: e.descripcion }));
+  /** Plazo de cobro de comisiones por el portal (`COMISION_PLAZO_COBRO_MESES`). */
+  protected readonly plazoCobroMeses = this.catalogo.parametro('COMISION_PLAZO_COBRO_MESES');
 
   /** Columnas de la tabla de solicitudes con sort y acción "Gestionar" (Req 6.1). */
   protected readonly columnas: readonly ColumnaTabla[] = [
