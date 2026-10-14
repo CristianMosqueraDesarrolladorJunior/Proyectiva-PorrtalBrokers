@@ -751,6 +751,12 @@ export class RadicacionComponent {
       state: estudio
         ? {
             estudio,
+            // Con el estudio ya consultado, el contrato trae del estudio digital a las partes y el inmueble.
+            consulta: {
+              numeroEstudio: this.numeroEstudioArrendamiento().trim(),
+              tipoDocumentoInquilino: this.tipoDocumentoInquilino(),
+              documentoInquilino: this.documentoInquilino().trim(),
+            },
             propietario: {
               tipoDocumento: this.tipoDocumentoPropietario(),
               numeroDocumento: this.numeroDocumentoPropietario().trim(),

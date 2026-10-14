@@ -259,30 +259,31 @@ export class ContratoComponent {
       return;
     }
     const navegacion = estado as {
-      readonly estudio?: {
-        readonly inquilino?: string;
-        readonly inmueble?: string;
+      readonly consulta?: {
+        readonly numeroEstudio?: string;
+        readonly tipoDocumentoInquilino?: TipoDocumentoIdentidad;
+        readonly documentoInquilino?: string;
       };
       readonly propietario?: {
         readonly tipoDocumento?: TipoDocumentoIdentidad;
         readonly numeroDocumento?: string;
       };
     };
-    const estudio = navegacion.estudio;
-    if (estudio?.inquilino) {
-      // Nombre completo enmascarado del inquilino como prefill del arrendatario.
-      this.ateNombres.set(estudio.inquilino);
-    }
-    if (estudio?.inmueble) {
-      // Dirección operativa del inmueble en claro (uso · tipo · dirección, ciudad).
-      this.inmDireccion.set(estudio.inmueble);
-    }
     const propietario = navegacion.propietario;
     if (propietario?.tipoDocumento) {
       this.arrTipoIdentificacion.set(propietario.tipoDocumento);
     }
     if (propietario?.numeroDocumento) {
       this.arrNumeroIdentificacion.set(propietario.numeroDocumento);
+    }
+    // Desde la radicación (estudio APROBADO ya consultado): se precargan del estudio digital, en claro,
+    // el arrendatario, los codeudores, el arrendador y el inmueble.
+    const consulta = navegacion.consulta;
+    if (consulta?.numeroEstudio && consulta.documentoInquilino) {
+      this.estudioConsecutivo.set(consulta.numeroEstudio);
+      this.ateTipoIdentificacion.set(consulta.tipoDocumentoInquilino ?? 'CC');
+      this.ateNumeroIdentificacion.set(consulta.documentoInquilino);
+      this.precargarDeEstudio();
     }
   }
 
@@ -380,16 +381,24 @@ export class ContratoComponent {
           this.ateCorreo.set(a.correo ?? this.ateCorreo());
           this.ateDireccionNotificacion.set(a.direccionNotificacion ?? this.ateDireccionNotificacion());
         }
-        if (p.arrendador?.nombres && !this.arrNombres().trim()) {
-          this.arrNombres.set(p.arrendador.nombres);
-          if (p.arrendador.numeroIdentificacion) {
-            this.arrNumeroIdentificacion.set(p.arrendador.numeroIdentificacion);
-          }
+        const arr = p.arrendador;
+        // El arrendador del estudio solo se usa si es el mismo propietario de la radicación (o no hay uno).
+        const mismoPropietario = !this.arrNumeroIdentificacion().trim()
+          || arr?.numeroIdentificacion === this.arrNumeroIdentificacion().trim();
+        if (arr?.nombres && !this.arrNombres().trim() && mismoPropietario) {
+          this.arrNombres.set(arr.nombres);
+          if (arr.apellidos && !this.arrApellidos().trim()) this.arrApellidos.set(arr.apellidos);
+          if (arr.numeroIdentificacion) this.arrNumeroIdentificacion.set(arr.numeroIdentificacion);
+          if (arr.telefono && !this.arrTelefono().trim()) this.arrTelefono.set(arr.telefono);
+          if (arr.correo && !this.arrCorreo().trim()) this.arrCorreo.set(arr.correo);
+          if (arr.direccionNotificacion && !this.arrDireccion().trim()) this.arrDireccion.set(arr.direccionNotificacion);
         }
         const inm = p.inmueble;
         if (inm) {
           if (inm.direccion && !this.inmDireccion().trim()) this.inmDireccion.set(inm.direccion);
-          if (inm.ciudad && !this.inmCiudad().trim()) this.inmCiudad.set(inm.ciudad);
+          if (inm.ciudad && this.ciudades().includes(inm.ciudad) && !this.inmCiudad().trim()) this.inmCiudad.set(inm.ciudad);
+          if (inm.tipoInmueble && this.tiposInmueble.includes(inm.tipoInmueble)) this.inmTipoInmueble.set(inm.tipoInmueble);
+          if (inm.uso && this.usosInmueble.includes(inm.uso) && !this.borrador.cotizacion()) this.inmUso.set(inm.uso);
           if (inm.canon && this.conCanon() === null) this.conCanon.set(Number(inm.canon) || null);
           if (inm.administracion && this.conAdministracion() === null) this.conAdministracion.set(Number(inm.administracion) || null);
         }
