@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, Input, OnChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
+import type { ClasificacionTemporal, ReferenciaOrigen, TipoEvento } from '../../../core/models/evento-temporal.model';
 import {
   BadgeEstadoComponent,
   VarianteBadge,
 } from '../badge-estado/badge-estado.component';
+import { agruparDia, esGestionable, etiquetaDia, GrupoEventos, indicadorDe } from './calendario-eventos.helpers';
 
 /** Evento del calendario asociado a un día concreto (Req 33.1, 33.2). */
 export interface EventoCalendario {
@@ -11,6 +13,15 @@ export interface EventoCalendario {
   readonly titulo: string;
   /** Variante de insignia de estado del evento (Req 33.2). */
   readonly estado: VarianteBadge;
+  /** Texto de la insignia; por defecto, la variante. */
+  readonly etiqueta?: string;
+  /** `HH:mm`; con `todoElDia` se ignora (00:00). */
+  readonly hora?: string;
+  readonly todoElDia?: boolean;
+  readonly tipoEvento?: TipoEvento;
+  /** Clasificación calculada por el backend; el estilo depende solo de ella. */
+  readonly clasificacionTemporal?: ClasificacionTemporal;
+  readonly referenciaOrigen?: ReferenciaOrigen;
 }
 
 /** Celda de día renderizada en la rejilla del calendario. */
@@ -75,6 +86,9 @@ export class CalendarioMensualComponent implements OnChanges {
   /** Eventos del mes (u otros; se filtran por día seleccionado). */
   @Input() eventos: readonly EventoCalendario[] = [];
 
+  /** Se emite al pulsar «Gestionar» en un evento gestionable (renovación por vencer). */
+  @Output() readonly gestionar = new EventEmitter<EventoCalendario>();
+
   /** Nombres de los días de la semana (encabezado). */
   protected readonly diasSemana = DIAS_SEMANA;
 
@@ -101,6 +115,20 @@ export class CalendarioMensualComponent implements OnChanges {
   /** Eventos del día seleccionado, en el orden recibido. */
   protected get eventosDelDia(): readonly EventoCalendario[] {
     return this.eventos.filter((evento) => evento.fecha === this.diaSeleccionado);
+  }
+
+  /** Eventos del día agrupados en Anteriores / Hoy / Próximos. */
+  protected get gruposDelDia(): readonly GrupoEventos<EventoCalendario>[] {
+    return agruparDia(this.eventosDelDia);
+  }
+
+  protected readonly indicadorDe = indicadorDe;
+  protected readonly esGestionable = esGestionable;
+  protected readonly etiquetaDia = etiquetaDia;
+
+  /** Cantidad de eventos de un día (para la etiqueta accesible). */
+  protected cantidadEventos(fechaIso: string): number {
+    return this.eventos.filter((e) => e.fecha === fechaIso).length;
   }
 
   /** Selecciona un día para mostrar sus eventos. */

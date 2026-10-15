@@ -108,6 +108,8 @@ import { IconComponent } from '../icon/icon.component';
           </section>
         }
       </div>
+
+      <img class="tb__logo" src="img/proyectiva-logo.svg" alt="Proyectiva Agencia de Seguros" />
     </header>
   `,
   styles: [
@@ -124,6 +126,14 @@ import { IconComponent } from '../icon/icon.component';
         background: var(--sb-surface);
         border-bottom: 1px solid var(--sb-border);
         box-shadow: var(--sb-shadow-1);
+      }
+      .tb__logo {
+        height: var(--topbar-logo-height);
+        width: auto;
+        margin-left: var(--space-3);
+        padding-left: var(--space-4);
+        border-left: 1px solid var(--sb-border);
+        box-sizing: content-box;
       }
       .tb__menu {
         display: none;
@@ -356,6 +366,9 @@ import { IconComponent } from '../icon/icon.component';
           gap: var(--space-2);
         }
         .tb__estado {
+          display: none;
+        }
+        .tb__logo {
           display: none;
         }
         .tb__buscador {

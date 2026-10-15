@@ -1,19 +1,35 @@
 <!--
-  Registro de broker: comparte la UI del login (fondo y tarjeta). Crea la cuenta y
-  abre la sesión; SARLAFT y documentos se completan en el perfil.
+  Registro de broker: comparte la UI del login (fondo y tarjeta). Asistente de 3 pasos: 1) datos (crea la
+  cuenta y abre la sesión), 2) Conocimiento de Cliente (SARLAFT) y 3) documentos. Desde el paso 1 se puede
+  quedar como prospecto, y en los pasos 2 y 3 completarlo después desde Mi perfil.
 -->
 <main class="registro" role="main">
   <section class="registro-card" aria-labelledby="registro-titulo">
     <header class="registro-header">
-      <h1 class="registro-marca">Proyectiva</h1>
-      <h2 id="registro-titulo" class="registro-titulo">Únete como broker</h2>
-      <p class="registro-subtitulo">Cuéntanos quién eres para crear tu cuenta.</p>
+      <img class="registro-marca" src="img/proyectiva-logo.svg" alt="Proyectiva Agencia de Seguros" width="595" height="150" />
+      <h2 id="registro-titulo" class="registro-titulo">
+        @switch (paso()) {
+          @case (1) { Únete como broker }
+          @case (2) { Verifica tu Conocimiento de Cliente }
+          @case (3) { Adjunta tus documentos }
+        }
+      </h2>
+      <p class="registro-subtitulo">
+        @switch (paso()) {
+          @case (1) { Cuéntanos quién eres para crear tu cuenta. }
+          @case (2) { Validamos tu SARLAFT con el documento que registraste. }
+          @case (3) { Con tus documentos aprobados serás broker registrado. }
+        }
+      </p>
 
       <!-- Etapas del proceso: parte de la instrucción de unirse, siempre visibles. -->
       <ol class="registro-pasos" aria-label="Etapas del registro de broker">
         @for (titulo of etapas; track $index; let i = $index; let ultimo = $last) {
-          <li class="registro-pasos__item" [class.activo]="i === 0" [attr.aria-current]="i === 0 ? 'step' : null">
-            <span class="registro-pasos__nodo" aria-hidden="true">{{ i + 1 }}</span>
+          <li class="registro-pasos__item" [class.hecho]="i + 1 < paso()" [class.activo]="i + 1 === paso()"
+            [attr.aria-current]="i + 1 === paso() ? 'step' : null">
+            <span class="registro-pasos__nodo" aria-hidden="true">
+              @if (i + 1 < paso()) { <app-icon nombre="check" [tamano]="16" /> } @else { {{ i + 1 }} }
+            </span>
             <span class="registro-pasos__texto">
               <small>Paso {{ i + 1 }}</small>
               <b>{{ titulo }}</b>
@@ -25,10 +41,19 @@
     </header>
 
     <!-- Cómo funciona tu cuenta. -->
-    <div class="registro-aviso registro-aviso--prospecto">
-      <p class="registro-aviso__titulo"><app-icon nombre="rocket_launch" [tamano]="18" /> Empieza como prospecto</p>
-      <p>Sin documentos ya puedes radicar, cotizar y hacer seguimiento. Para ser broker, en tu perfil verificas tu SARLAFT y cargas tus documentos: al aprobarlos se desbloquean {{ modulosRestringidos.length }} módulos más y tus comisiones, incluidas las de lo que radiques como prospecto.</p>
-    </div>
+    @if (paso() === 1) {
+      <div class="registro-aviso registro-aviso--prospecto">
+        <p class="registro-aviso__titulo"><app-icon nombre="rocket_launch" [tamano]="18" /> Empieza como prospecto</p>
+        <p>Sin documentos ya puedes radicar, cotizar y hacer seguimiento. Para ser broker verificas tu SARLAFT y cargas tus documentos: al aprobarlos se desbloquean {{ modulosRestringidos.length }} módulos más y tus comisiones, incluidas las de lo que radiques como prospecto.</p>
+      </div>
+    } @else {
+      <div class="registro-aviso registro-aviso--broker">
+        <p class="registro-aviso__titulo"><app-icon nombre="verified" [tamano]="18" /> Tu cuenta ya está creada</p>
+        <p>Con tu SARLAFT vigente y tus documentos aprobados se desbloquean {{ modulosRestringidos.length }} módulos más y generas comisiones. Si prefieres, termina después desde Mi perfil.</p>
+      </div>
+    }
+
+    @if (paso() === 1) {
 
     <form class="registro-form" [formGroup]="formulario" (ngSubmit)="crearCuenta('perfil')" novalidate>
       <div class="registro-grid">
@@ -94,11 +119,119 @@
         </app-boton>
       </div>
     </form>
+    }
 
-    <footer class="registro-footer">
-      <span>¿Ya tienes cuenta?</span>
-      <app-boton variante="ghost" ariaLabel="Ya tengo cuenta: ir a la pantalla de inicio de sesión" (clicked)="irALogin()">Iniciar sesión</app-boton>
-    </footer>
+    <!-- ===================== Paso 2 · Conocimiento de Cliente (SARLAFT) ===================== -->
+    @if (paso() === 2) {
+      <div class="registro-documento">
+        <app-icon nombre="badge" [tamano]="20" />
+        <span>
+          <small>Documento a verificar</small>
+          <b>{{ perfil().numeroDocumento }}</b>
+        </span>
+      </div>
+
+      @if (consultandoSarlaft()) {
+        <app-escalerita-loader texto="Verificando tu Conocimiento de Cliente..."></app-escalerita-loader>
+      } @else if (sarlaftConsultado()) {
+        @switch (perfil().sarlaft.estado) {
+          @case ('vigente') {
+            <div class="registro-resultado registro-resultado--ok" role="status">
+              <app-icon nombre="verified_user" [tamano]="22" />
+              <div><b>SARLAFT actualizado</b><p>Tu Conocimiento de Cliente está vigente. Continúa con tus documentos.</p></div>
+            </div>
+          }
+          @case ('en_cumplimiento') {
+            <div class="registro-resultado registro-resultado--error" role="alert">
+              <app-icon nombre="policy" [tamano]="22" />
+              <div>
+                <b>Tu solicitud pasa a revisión</b>
+                <p>Tu caso pasó a revisión del área de Cumplimiento. Te contactaremos por correo.</p>
+                @if (perfil().sarlaft.radicadoCumplimiento; as radicado) { <p>Radicado: <b>{{ radicado }}</b>.</p> }
+              </div>
+            </div>
+          }
+          @case ('fisico') {
+            <div class="registro-resultado registro-resultado--ok" role="status">
+              <app-icon nombre="upload_file" [tamano]="22" />
+              <div><b>SARLAFT físico cargado</b><p>Queda en revisión del área. Continúa con tus documentos.</p></div>
+            </div>
+          }
+          @case ('sin_consultar') {
+            <div class="registro-resultado registro-resultado--error" role="alert">
+              <app-icon nombre="error" [tamano]="22" />
+              <div><b>No pudimos consultar tu SARLAFT</b><p>Intenta de nuevo en unos minutos o termina después desde Mi perfil.</p></div>
+            </div>
+          }
+          @default {
+            <div class="registro-resultado registro-resultado--aviso" role="status">
+              <app-icon nombre="update" [tamano]="22" />
+              <div>
+                <b>SARLAFT desactualizado</b>
+                <ol>
+                  @if (celularEnlace(); as celular) {
+                    <li>Te enviamos el enlace de actualización por SMS a tu celular {{ celular }}.</li>
+                    <li>Diligencia la actualización en ese formulario.</li>
+                  } @else {
+                    <li>Tu teléfono registrado no es un celular: no pudimos enviarte el enlace por SMS.</li>
+                  }
+                  <li>Vuelve aquí y verifica de nuevo, o carga tu SARLAFT físico.</li>
+                </ol>
+              </div>
+            </div>
+            @if (perfil().sarlaft.enlaceActualizacion; as enlace) {
+              <div class="registro-enlace">
+                <app-boton variante="accent" icono="open_in_new" (clicked)="abrirFormularioSarlaft(enlace)">Abrir formulario de actualización</app-boton>
+              </div>
+            }
+          }
+        }
+      }
+
+      @if (sarlaftConsultado() && perfil().sarlaft.estado !== 'vigente' && perfil().sarlaft.estado !== 'en_cumplimiento') {
+        <!-- Alternativa al enlace: cargar el SARLAFT físico (queda en revisión del área). -->
+        <app-doc-uploader [reglas]="reglaSarlaftFisico" [cargados]="cargadoSarlaftFisico()" (archivoSeleccionado)="onSarlaftFisico($event)"></app-doc-uploader>
+      }
+
+      @if (errorSarlaft()) { <p class="registro-error" role="alert">{{ errorSarlaft() }}</p> }
+
+      <div class="registro-acciones">
+        @if (sarlaftConsultado() && (perfil().sarlaft.estado === 'vigente' || perfil().sarlaft.estado === 'fisico')) {
+          <app-boton variante="accent" (clicked)="paso.set(3)">Continuar a documentos</app-boton>
+        } @else if (sarlaftConsultado() && perfil().sarlaft.estado === 'en_cumplimiento') {
+          <app-boton variante="accent" (clicked)="irAlPortal()">Ir al portal</app-boton>
+        } @else {
+          <app-boton variante="accent" icono="policy" [disabled]="!puedeConsultarSarlaft()" (clicked)="verificarSarlaft()">
+            {{ sarlaftConsultado() ? 'Verificar de nuevo' : 'Verificar SARLAFT' }}
+          </app-boton>
+        }
+        <app-boton variante="ghost" (clicked)="irAlPortal()">Completar después</app-boton>
+      </div>
+    }
+
+    <!-- ===================== Paso 3 · Documentos ===================== -->
+    @if (paso() === 3) {
+      <app-doc-uploader [reglas]="reglasUploader" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)"></app-doc-uploader>
+      @if (mensajeCarga()) { <p class="registro-ok" role="status">{{ mensajeCarga() }}</p> }
+      @if (errorCarga()) { <p class="registro-error" role="alert">{{ errorCarga() }}</p> }
+
+      @if (enviandoSolicitud()) {
+        <app-escalerita-loader texto="Enviando solicitud..."></app-escalerita-loader>
+      } @else {
+        <div class="registro-acciones">
+          <app-boton variante="accent" icono="send" [disabled]="!puedeCompletarRegistro()" (clicked)="enviarSolicitud()">Enviar solicitud de registro</app-boton>
+          <app-boton variante="ghost" (clicked)="paso.set(2)">Atrás</app-boton>
+          <app-boton variante="ghost" (clicked)="irAlPortal()">Completar después</app-boton>
+        </div>
+      }
+    }
+
+    @if (paso() === 1) {
+      <footer class="registro-footer">
+        <span>¿Ya tienes cuenta?</span>
+        <app-boton variante="ghost" ariaLabel="Ya tengo cuenta: ir a la pantalla de inicio de sesión" (clicked)="irALogin()">Iniciar sesión</app-boton>
+      </footer>
+    }
   </section>
 </main>
 

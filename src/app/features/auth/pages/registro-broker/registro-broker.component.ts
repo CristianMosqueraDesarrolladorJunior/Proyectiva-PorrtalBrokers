@@ -19,10 +19,19 @@ import { Router } from '@angular/router';
 
 import {
   BotonComponent,
+  DocUploaderComponent,
+  EscaleritaLoaderComponent,
   FormFieldComponent,
   IconComponent,
   ModalDialogComponent,
 } from '../../../../shared/components';
+import type { ArchivoSeleccionado, ReglaDocumentoUploader } from '../../../../shared/components/doc-uploader/doc-uploader.component';
+import { documentosRegistroBroker, type TipoDocumentoRegistro } from '../../../../core/models/registro-broker.model';
+import type { TipoMimePermitido } from '../../../../core/models/documento.model';
+import { PerfilService } from '../../../../core/services/perfil.service';
+import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
+import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
+import { reglaDeDocumentoRegistro, validarDocumento } from '../../../../shared/validation/documento-validacion';
 import { AuthService } from '../../../../core/services/auth.service';
 import { rutaInicio } from '../../../../core/guards/rol.guard';
 import type { TipoDocumentoIdentidad } from '../../../../core/models/radicacion.model';
@@ -90,6 +99,8 @@ interface Credenciales {
     IconComponent,
     BotonComponent,
     ModalDialogComponent,
+    DocUploaderComponent,
+    EscaleritaLoaderComponent,
   ],
   templateUrl: './registro-broker.component.html',
   styleUrl: './registro-broker.component.scss',
@@ -99,6 +110,43 @@ export class RegistroBrokerComponent {
   private readonly sesion = inject(SessionService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  /** Pasos 2 y 3 usan los mismos servicios de Mi perfil (la sesión ya está abierta tras el paso 1). */
+  private readonly perfilServicio = inject(PerfilService);
+  protected readonly perfil = this.perfilServicio.perfil;
+  protected readonly abrirFormularioSarlaft = abrirFormularioSarlaft;
+
+  /** Paso del asistente: 1 datos (crea la cuenta), 2 Conocimiento de Cliente, 3 documentos. */
+  protected readonly paso = signal<1 | 2 | 3>(1);
+
+  // --- Paso 2 · SARLAFT ---
+  protected readonly consultandoSarlaft = signal(false);
+  protected readonly sarlaftConsultado = signal(false);
+  protected readonly errorSarlaft = signal('');
+  protected readonly puedeConsultarSarlaft = computed(() => !this.consultandoSarlaft());
+  /** Celular registrado (últimos 4 dígitos) al que SARLAFT envía el enlace; nulo si no es celular. */
+  protected readonly celularEnlace = computed(() => {
+    const d = (this.perfil().telefono ?? '').replace(/\D/g, '');
+    return /^3\d{9}$/.test(d) ? '··· ' + d.slice(-4) : null;
+  });
+  protected readonly reglaSarlaftFisico: readonly ReglaDocumentoUploader[] = [
+    { id: 'formularioSarlaft', etiqueta: 'Cargar SARLAFT físico', descripcion: 'Formulario de Conocimiento de Cliente diligenciado y firmado (PDF, JPG o PNG)', icono: 'upload_file', obligatorio: false },
+  ];
+  protected readonly cargadoSarlaftFisico = computed<Readonly<Record<string, string>>>(() =>
+    this.perfil().sarlaft.fisico ? { formularioSarlaft: this.perfil().sarlaft.fisico as string } : ({} as Record<string, string>),
+  );
+
+  // --- Paso 3 · Documentos ---
+  private readonly documentosRegistro = documentosRegistroBroker(inject(CatalogoService).opciones('documento_legalizacion'));
+  protected readonly reglasUploader: readonly ReglaDocumentoUploader[] = this.documentosRegistro.map((r) => ({
+    id: r.tipo, etiqueta: r.etiqueta, descripcion: r.descripcion, icono: 'upload_file', obligatorio: true,
+  }));
+  protected readonly cargados = computed<Readonly<Record<string, string>>>(() =>
+    Object.fromEntries(this.perfil().documentos.filter((d) => d.archivo).map((d) => [d.tipo, d.archivo])),
+  );
+  protected readonly mensajeCarga = signal('');
+  protected readonly errorCarga = signal('');
+  protected readonly enviandoSolicitud = signal(false);
+  protected readonly puedeCompletarRegistro = this.perfilServicio.puedeCompletarRegistro;
 
   /** Constantes expuestas al template. */
   protected readonly nombreLongitudMin = NOMBRE_LONGITUD_MIN;
@@ -274,7 +322,13 @@ export class RegistroBrokerComponent {
             .subscribe({
               next: (perfil) => {
                 this.creandoHacia.set(null);
-                void this.router.navigate([destino === 'perfil' ? RUTA_PERFIL : rutaInicio(perfil.rol)]);
+                if (destino === 'inicio') {
+                  void this.router.navigate([rutaInicio(perfil.rol)]);
+                  return;
+                }
+                // Continúa como broker: la sesión ya está abierta; sigue en el asistente (paso 2).
+                this.perfilServicio.cargar().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ error: () => undefined });
+                this.paso.set(2);
               },
               error: () => {
                 this.creandoHacia.set(null);
@@ -296,6 +350,100 @@ export class RegistroBrokerComponent {
           );
         },
       });
+  }
+
+  /** Paso 2: consulta el Conocimiento de Cliente con el documento (sin fecha); desactualizado → SMS al celular. */
+  protected verificarSarlaft(): void {
+    if (!this.puedeConsultarSarlaft()) {
+      return;
+    }
+    this.consultandoSarlaft.set(true);
+    this.errorSarlaft.set('');
+    this.perfilServicio
+      .actualizarSarlaft()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.consultandoSarlaft.set(false);
+          this.sarlaftConsultado.set(true);
+        },
+        error: () => {
+          this.consultandoSarlaft.set(false);
+          this.errorSarlaft.set('No pudimos consultar tu Conocimiento de Cliente en este momento. Intenta de nuevo o termina después desde Mi perfil.');
+        },
+      });
+  }
+
+  /** Paso 2: alternativa al enlace, carga el SARLAFT físico (queda en revisión del área) y deja continuar. */
+  protected onSarlaftFisico(evento: ArchivoSeleccionado): void {
+    this.errorSarlaft.set('');
+    this.perfilServicio
+      .cargarSarlaftFisico(evento.archivo)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.sarlaftConsultado.set(true),
+        error: (err: unknown) => this.errorSarlaft.set(mensajeErrorIntegracion(err)),
+      });
+  }
+
+  /** Paso 3: valida el archivo con la lógica compartida y lo carga (el backend revalida siempre). */
+  protected onDocumento(evento: ArchivoSeleccionado): void {
+    const tipo = evento.id as TipoDocumentoRegistro;
+    const regla = this.documentosRegistro.find((r) => r.tipo === tipo);
+    if (!regla) {
+      return;
+    }
+    const resultado = validarDocumento(
+      {
+        nombre: evento.archivo.name,
+        tipoMime: evento.archivo.type as TipoMimePermitido,
+        tamanoBytes: evento.archivo.size,
+        fechaEmision: regla.vigenciaMaxDias !== null ? new Date(evento.archivo.lastModified).toISOString() : undefined,
+      },
+      reglaDeDocumentoRegistro(regla),
+      new Date().toISOString(),
+    );
+    if (!resultado.valido) {
+      this.errorCarga.set(
+        resultado.motivo === 'vigencia_excedida'
+          ? `${regla.etiqueta}: debe tener máximo ${regla.vigenciaMaxDias} días de expedida.`
+          : resultado.motivo === 'tamano_excedido'
+            ? `${regla.etiqueta}: supera el tamaño máximo (${Math.round(regla.tamanoMaxBytes / 1_048_576)} MB).`
+            : `${regla.etiqueta}: formato no permitido. Usa PDF, JPG o PNG.`,
+      );
+      return;
+    }
+    this.errorCarga.set('');
+    this.perfilServicio
+      .reemplazarDocumento(tipo, evento.archivo)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.mensajeCarga.set(`${regla.etiqueta} cargado.`),
+        error: (err: unknown) => this.errorCarga.set(mensajeErrorIntegracion(err)),
+      });
+  }
+
+  /** Paso 3: envía la solicitud de registro y lleva a Mi perfil, donde se ve "en revisión". */
+  protected enviarSolicitud(): void {
+    if (!this.puedeCompletarRegistro() || this.enviandoSolicitud()) {
+      return;
+    }
+    this.enviandoSolicitud.set(true);
+    this.perfilServicio
+      .completarRegistro()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => void this.router.navigate([RUTA_PERFIL], { queryParams: { registro: 1 } }),
+        error: (err: unknown) => {
+          this.enviandoSolicitud.set(false);
+          this.errorCarga.set(mensajeErrorIntegracion(err));
+        },
+      });
+  }
+
+  /** "Completar después": entra al portal como prospecto; SARLAFT y documentos siguen en Mi perfil. */
+  protected irAlPortal(): void {
+    void this.router.navigate([rutaInicio('BROKER')]);
   }
 
   /** "Aceptar" del aviso de credenciales: vuelve al login. */

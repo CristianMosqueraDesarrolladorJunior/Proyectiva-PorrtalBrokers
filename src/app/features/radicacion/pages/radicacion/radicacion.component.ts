@@ -279,10 +279,23 @@ export class RadicacionComponent {
   /** Estado SARLAFT vigente, o `null` si aún no se consulta. */
   protected readonly estadoSarlaft = computed(() => this.resultadoSarlaft()?.estado ?? null);
 
-  /** Salida 1: la carga de documentos solo se habilita con SARLAFT actualizado. */
+  /**
+   * Salida 1: la carga de documentos se habilita con SARLAFT actualizado, o desactualizado con el SARLAFT físico
+   * (el formulario pasa a ser obligatorio en la lista y lo revisa el área; el backend aplica la misma regla).
+   */
   protected readonly documentosHabilitados = computed(() =>
-    permiteCargarDocumentos(this.estadoSarlaft()),
+    permiteCargarDocumentos(this.estadoSarlaft()) || this.conSarlaftFisico(),
   );
+
+  /** El firmante quedó desactualizado y el broker eligió cargar el SARLAFT físico. */
+  protected readonly conSarlaftFisico = computed(
+    () => this.estadoSarlaft() === 'DESACTUALIZADO' && this.sarlaftRequiereFormulario(),
+  );
+
+  /** "Cargar SARLAFT físico": habilita los documentos con el formulario SARLAFT obligatorio. */
+  protected elegirSarlaftFisico(): void {
+    this.sarlaftRequiereFormulario.set(true);
+  }
 
   /** Salida 3: el caso es consultable y el trámite termina en el Warehouse. */
   protected readonly casoConsultable = computed(() =>

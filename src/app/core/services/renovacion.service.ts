@@ -123,6 +123,11 @@ export class RenovacionService {
     });
   }
 
+  /** Envía el enlace de actualización del SARLAFT al celular del asegurado (acción explícita del broker). */
+  enviarEnlaceSarlaft(numeroPoliza: string): Observable<{ enviado: boolean }> {
+    return this.http.post<{ enviado: boolean }>(`${this.baseUrl}/sarlaft/enlace`, { numeroPoliza }, { withCredentials: true });
+  }
+
   /** Registra una renovación física o digital tras el SARLAFT vigente. */
   solicitar(request: SolicitudRenovacionRequest): Observable<RenovacionResponse> {
     const datos = formulario({

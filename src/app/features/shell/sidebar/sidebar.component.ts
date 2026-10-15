@@ -119,7 +119,7 @@ export class SidebarComponent {
   @Input() base = '/app';
 
   /** Subtítulo de la marca superior. */
-  @Input() subtitulo = 'Panel Bróker';
+  @Input() subtitulo = 'Portal Brokers';
 
   /** Muestra la tarjeta "Línea Bróker VIP" (solo tiene sentido para brokers). */
   @Input() mostrarVip = true;

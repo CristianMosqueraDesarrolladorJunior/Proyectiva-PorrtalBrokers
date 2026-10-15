@@ -1,9 +1,11 @@
 import { proveerCatalogosPrueba } from '../../../../../testing/catalogo-prueba';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { computed, signal } from '@angular/core';
 import { of } from 'rxjs';
 
 import { AuthService } from '../../../../core/services/auth.service';
+import { PerfilService } from '../../../../core/services/perfil.service';
 import { RegistroBrokerComponent } from './registro-broker.component';
 
 describe('RegistroBrokerComponent', () => {
@@ -14,6 +16,17 @@ describe('RegistroBrokerComponent', () => {
     login: jest.Mock;
   };
   let routerSpy: { navigate: jest.Mock };
+  // Pasos 2 y 3 usan los servicios de Mi perfil (la sesión ya está abierta).
+  const perfil = signal({ numeroDocumento: '123456789', telefono: '6017000000', sarlaft: { estado: 'sin_consultar' }, documentos: [] as unknown[] });
+  const perfilSpy = {
+    perfil: perfil.asReadonly(),
+    puedeCompletarRegistro: computed(() => false),
+    cargar: jest.fn().mockReturnValue(of({})),
+    actualizarSarlaft: jest.fn().mockImplementation(() => {
+      perfil.update((p) => ({ ...p, sarlaft: { estado: 'vigente' } }));
+      return of({});
+    }),
+  };
 
   const query = (selector: string): HTMLElement =>
     fixture.nativeElement.querySelector(selector) as HTMLElement;
@@ -38,6 +51,7 @@ describe('RegistroBrokerComponent', () => {
         proveerCatalogosPrueba(),
         { provide: AuthService, useValue: authSpy },
         { provide: Router, useValue: routerSpy },
+        { provide: PerfilService, useValue: perfilSpy },
       ],
     }).compileComponents();
 
@@ -71,12 +85,24 @@ describe('RegistroBrokerComponent', () => {
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/app']);
   });
 
-  it('continuar como broker crea la cuenta, abre la sesión y lleva al perfil (SARLAFT y documentos con sesión)', () => {
+  it('continuar como broker crea la cuenta, abre la sesión y sigue en el asistente: SARLAFT y luego documentos', () => {
     llenarFormulario();
     (query('.registro-acciones--fila .btn-accent') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     expect(authSpy.registrarProspecto).toHaveBeenCalled();
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/app/perfil']);
+    expect(routerSpy.navigate).not.toHaveBeenCalled();
+    expect(query('#registro-titulo').textContent).toContain('Conocimiento de Cliente');
+
+    // Sin fecha de expedición: se verifica directamente con el documento registrado.
+    expect(query('#reg-fecha-exp')).toBeNull();
+    (query('.registro-acciones .btn-accent') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(perfilSpy.actualizarSarlaft).toHaveBeenCalledWith();
+
+    (query('.registro-acciones .btn-accent') as HTMLButtonElement).click(); // Continuar a documentos
+    fixture.detectChanges();
+    expect(query('#registro-titulo').textContent).toContain('Adjunta tus documentos');
+    expect(query('app-doc-uploader')).not.toBeNull();
   });
 });

@@ -3,71 +3,27 @@
     eyebrow="Agenda"
     tituloId="calendario-titulo"
     titulo="Calendario"
-    subtitulo="Vencimientos de tus pólizas. Elige un día para ver sus vencimientos."
+    subtitulo="Contratos, pólizas, cotizaciones y renovaciones de tu cuenta. Elige un día para ver sus eventos."
   ></app-page-header>
 
-  <div class="calendar-wrapper">
-    <div class="cal-header">
-      <button type="button" class="cal-view-btn" aria-label="Mes anterior" (click)="cambiarMes(-1)">‹</button>
-      <h3>{{ mesTitulo() }}</h3>
-      <button type="button" class="cal-view-btn" aria-label="Mes siguiente" (click)="cambiarMes(1)">›</button>
-    </div>
-
-    <div class="cal-grid">
-      @for (dia of diasSemana; track dia) {
-        <div class="cal-day-header">{{ dia }}</div>
-      }
-      @for (dia of dias(); track $index) {
-        @if (dia.numero === null) {
-          <div class="cal-day cal-day--empty"></div>
-        } @else {
-          <button
-            type="button"
-            class="cal-day"
-            [class.cal-day--today]="dia.hoy"
-            [class.cal-day--event]="dia.dots"
-            [class.active]="dia.fecha === diaSeleccionado()"
-            [attr.aria-label]="dia.fecha + (dia.dots ? ', con vencimientos' : '')"
-            (click)="seleccionarDia(dia)"
-          >
-            {{ dia.numero }}
-            @if (dia.dots) {
-              <span class="cal-dots">
-                @for (color of dia.dots; track color) {
-                  <span class="dot dot--{{ color }}"></span>
-                }
-              </span>
-            }
-          </button>
-        }
-      }
-    </div>
-
-    <div class="cal-legend">
-      <span class="dot dot--red"></span> Vence en 7 días o menos
-      <span class="dot dot--orange"></span> En 30 días o menos
-      <span class="dot dot--blue"></span> Más adelante
-    </div>
+  <div class="calendario__nav">
+    <button type="button" class="calendario__nav-btn" aria-label="Mes anterior" (click)="cambiarMes(-1)">‹</button>
+    <button type="button" class="calendario__nav-btn" aria-label="Mes siguiente" (click)="cambiarMes(1)">›</button>
   </div>
 
-  <div class="cal-events">
-    <h3 class="cal-events__titulo">{{ tituloEventos() }}</h3>
-    @if (cargando()) {
-      <p>Cargando tus pólizas…</p>
-    } @else if (error()) {
-      <p>No pudimos cargar tus pólizas. Intenta de nuevo más tarde.</p>
-    } @else {
-      @for (evento of eventos(); track evento.numero) {
-        <div class="event-card" [class.event-card--urgent]="evento.urgente">
-          <span class="badge badge--{{ evento.variante }}">{{ evento.badge }}</span>
-          <h4>{{ evento.cliente }}</h4>
-          <p>{{ evento.detalle }}</p>
-          <small>{{ evento.vence }}</small>
-          <button type="button" class="event-card__btn" (click)="gestionar()">Gestionar renovación</button>
-        </div>
-      } @empty {
-        <p>No tienes pólizas que venzan en este periodo.</p>
-      }
-    }
-  </div>
+  @if (cargando()) {
+    <p class="calendario__estado" role="status">Cargando tu calendario…</p>
+  } @else if (error()) {
+    <div class="calendario__estado" role="alert">
+      <p>{{ error() }}</p>
+      <button type="button" class="calendario__reintentar" (click)="cargar()">Reintentar</button>
+    </div>
+  } @else {
+    <app-calendario-mensual
+      [anio]="anio()"
+      [mes]="numeroMes()"
+      [eventos]="eventosVista()"
+      (gestionar)="gestionar($event)"
+    ></app-calendario-mensual>
+  }
 </section>

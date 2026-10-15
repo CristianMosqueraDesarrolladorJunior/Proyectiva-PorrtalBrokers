@@ -46,28 +46,26 @@
 
   // --- Marca superior ---
   &__brand {
+    position: relative;
     height: var(--topbar-height);
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-3);
     padding: var(--space-0) var(--space-5);
+    border-bottom: 1px solid var(--color-sidebar-border);
   }
 
-  &__brand-mark {
-    width: var(--sidebar-logo-size);
+  // Isotipo de marca (escalera naranja): se lee bien sobre el slate sin necesidad de contenedor.
+  &__brand-iso {
     height: var(--sidebar-logo-size);
+    width: auto;
     flex-shrink: 0;
-    border-radius: var(--radius-btn-sm);
-    background: var(--sb-primary);
-    color: var(--sb-on-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
   &__brand-text {
     display: flex;
     flex-direction: column;
+    align-items: center;
     line-height: var(--line-height-tight);
 
     strong {
@@ -87,7 +85,9 @@
 
   &__close {
     display: none;
-    margin-left: auto;
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
     background: transparent;
     border: none;
     color: var(--sb-on-slate);
@@ -387,6 +387,13 @@
 // Módulo restringido para prospectos (solo UI; el servidor autoriza).
 .nav-item--bloqueado {
   color: var(--color-sidebar-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+
+  &:hover {
+    background: transparent;
+    color: var(--color-sidebar-muted);
+  }
 }
 
 .nav-item__candado {

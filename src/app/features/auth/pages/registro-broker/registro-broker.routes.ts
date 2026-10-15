@@ -10,7 +10,7 @@ import { Routes } from '@angular/router';
 export const registroBrokerRoutes: Routes = [
   {
     path: 'registro-broker',
-    title: 'Solicitud de registro de broker — Proyectiva',
+    title: 'Únete como broker — Portal Brokers Proyectiva',
     loadComponent: () =>
       import('./registro-broker.component').then(
         (m) => m.RegistroBrokerComponent,

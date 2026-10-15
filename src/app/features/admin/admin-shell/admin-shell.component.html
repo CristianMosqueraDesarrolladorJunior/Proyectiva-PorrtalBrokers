@@ -5,7 +5,7 @@
     </button>
     <div class="admin-topbar__titulo">
       <app-icon nombre="admin_panel_settings" [tamano]="22" />
-      <strong>Consola de brokers</strong>
+      <strong>Portal Brokers Proyectiva</strong>
     </div>
     @if (perfil(); as p) {
       <span class="admin-topbar__rol" [class.admin-topbar__rol--comercial]="p.rol === 'COMERCIAL'">{{ p.rol }}</span>
@@ -17,7 +17,7 @@
       [abierto]="sidebarAbierto()"
       [accesos]="accesos()"
       base="/admin"
-      subtitulo="Consola operación"
+      subtitulo="Portal Brokers"
       [mostrarVip]="false"
       [conSalir]="true"
       (cerrar)="cerrarSidebar()"

@@ -29,11 +29,10 @@
 }
 
 .registro-marca {
-  margin: var(--space-0) var(--space-0) var(--space-2);
-  color: var(--color-accent);
-  font-size: var(--text-headline);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
+  display: block;
+  width: 200px;
+  height: auto;
+  margin: var(--space-0) auto var(--space-4);
 }
 
 .registro-titulo {
@@ -290,7 +289,7 @@
   align-items: flex-start;
   gap: var(--space-2);
   margin: var(--space-5) var(--space-0) var(--space-0);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-3);
   border: 1px solid var(--sb-tint-accent-border);
   border-radius: var(--radius-lg);
   background: var(--sb-tint-accent-bg);
@@ -298,22 +297,26 @@
   counter-reset: paso;
 }
 
+// Escritorio: cada etapa en columna centrada (círculo arriba, texto debajo sin cortes).
 .registro-pasos__item {
   position: relative;
   display: flex;
   flex: 1;
+  flex-direction: column;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+  text-align: center;
   color: var(--color-muted);
 
-  // Línea conectora entre etapas (hasta la siguiente).
+  // Línea conectora de círculo a círculo (no cruza los textos).
   .registro-pasos__linea {
     position: absolute;
-    top: calc(var(--section-number-size) / 2);
-    left: calc(var(--section-number-size) + var(--space-2));
-    right: calc(-1 * var(--space-2));
+    top: calc(var(--section-number-size) / 2 - 1px);
+    left: calc(50% + var(--section-number-size) / 2 + var(--space-2));
+    width: calc(100% + var(--space-2) - var(--section-number-size) - 2 * var(--space-2));
     height: 2px;
+    border-radius: var(--radius-full);
     background: var(--sb-tint-accent-border);
   }
 
@@ -358,6 +361,8 @@
 .registro-pasos__texto {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 2px;
   min-width: 0;
   line-height: var(--line-height-tight);
 
@@ -372,9 +377,7 @@
     font-size: var(--text-body-sm);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    text-wrap: balance; // hasta dos líneas parejas ("Conocimiento de Cliente"), sin puntos suspensivos
   }
 
   .activo & b {
@@ -442,6 +445,16 @@
   .registro-pasos {
     flex-direction: column;
     gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .registro-pasos__item {
+    flex-direction: row;
+    text-align: left;
+  }
+
+  .registro-pasos__texto {
+    align-items: flex-start;
   }
 
   .registro-pasos__linea {
@@ -451,4 +464,11 @@
   .registro-pasos__texto small {
     display: none;
   }
+}
+
+// Confirmación de un documento cargado en el paso 3.
+.registro-ok {
+  margin: var(--space-2) var(--space-0) var(--space-0);
+  color: var(--color-success, #15803d);
+  font-size: var(--text-body-sm);
 }

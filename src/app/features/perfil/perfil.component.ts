@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 
 import {
   type EstadoCuenta,
@@ -43,7 +44,6 @@ import { abrirFormularioSarlaft } from '../../core/util/sarlaft-enlace';
 import { reglaDeDocumentoRegistro, validarDocumento } from '../../shared/validation/documento-validacion';
 import {
   esCorreoValido,
-  esFechaExpedicionValida,
   esNombreValido,
   esTelefonoValido,
 } from '../auth/pages/registro-broker/registro-validacion';
@@ -58,6 +58,7 @@ const ETIQUETA_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, string>> = {
   por_vencer: 'Por vencer',
   vencido: 'Desactualizado',
   en_cumplimiento: 'En revisión de Cumplimiento',
+  fisico: 'Físico en revisión',
   sin_consultar: 'Sin consultar',
 };
 /** Mensaje tras consultar SARLAFT desde el perfil, según lo que decidió el backend. */
@@ -66,6 +67,7 @@ const MENSAJE_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, string>> = {
   por_vencer: 'Tu Conocimiento de Cliente está próximo a vencer. Actualízalo para completar tu registro.',
   vencido: 'Tu Conocimiento de Cliente está desactualizado. Diligencia el formulario de actualización y vuelve a consultar.',
   en_cumplimiento: 'Tu caso pasó a revisión del área de Cumplimiento. Te contactaremos por correo.',
+  fisico: 'Cargaste tu SARLAFT físico: queda en revisión del área.',
   sin_consultar: 'No fue posible consultar tu Conocimiento de Cliente. Intenta de nuevo.',
 };
 const VARIANTE_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, VarianteBadge>> = {
@@ -73,6 +75,7 @@ const VARIANTE_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, VarianteBadge>> = {
   por_vencer: 'warning',
   vencido: 'danger',
   en_cumplimiento: 'warning',
+  fisico: 'info',
   sin_consultar: 'info',
 };
 
@@ -140,6 +143,45 @@ export class PerfilComponent implements OnInit {
   }
 
   /** Carga el perfil real del backend y sincroniza los campos editables. */
+  private readonly ruta = inject(ActivatedRoute);
+
+  /** Recorrido guiado de registro (Conocimiento de Cliente → documentos → envío); llega con `?registro=1`. */
+  protected readonly guiado = signal(this.ruta.snapshot.queryParamMap.get('registro') === '1');
+  protected readonly paso = signal<1 | 2 | 3>(1);
+
+  protected iniciarGuiado(): void {
+    this.paso.set(this.pasoInicial());
+    this.guiado.set(true);
+  }
+
+  protected salirGuiado(): void {
+    this.guiado.set(false);
+  }
+
+  protected anterior(): void {
+    this.paso.update((p) => (p > 1 ? ((p - 1) as 1 | 2 | 3) : p));
+  }
+
+  protected siguiente(): void {
+    if (this.puedeAvanzar()) this.paso.update((p) => (p < 3 ? ((p + 1) as 1 | 2 | 3) : p));
+  }
+
+  /** El paso 1 avanza con el Conocimiento de Cliente consultado; el 2, con los 4 documentos aportados. */
+  protected readonly puedeAvanzar = computed(() =>
+    this.paso() === 1
+      ? this.perfil().sarlaft.estado !== 'sin_consultar'
+      : this.paso() === 2
+        ? this.perfil().documentos.every((d) => d.estado !== 'pendiente')
+        : false,
+  );
+
+  /** Primer paso pendiente: sin Conocimiento de Cliente → 1; sin documentos → 2; todo listo → 3. */
+  private pasoInicial(): 1 | 2 | 3 {
+    const p = this.perfil();
+    if (p.sarlaft.estado === 'sin_consultar') return 1;
+    return p.documentos.every((d) => d.estado !== 'pendiente') ? 3 : 2;
+  }
+
   ngOnInit(): void {
     this.servicio
       .cargar()
@@ -149,7 +191,7 @@ export class PerfilComponent implements OnInit {
         this.correo.set(p.correo);
         this.telefono.set(p.telefono);
         this.ciudad.set(p.ciudad);
-        this.fechaExpedicion.set(p.sarlaft.fechaExpedicion ?? '');
+        this.paso.set(this.pasoInicial());
       });
   }
 
@@ -178,8 +220,8 @@ export class PerfilComponent implements OnInit {
     const docsOk = p.documentos.every((d) => d.estado !== 'pendiente');
     return [
       { titulo: 'Ingreso al portal', detalle: 'Cuenta creada', hecho: true },
-      { titulo: 'Documentación', detalle: `${this.documentosAportados()} de ${p.documentos.length} aportados`, hecho: docsOk },
       { titulo: 'Conocimiento de Cliente vigente', detalle: ETIQUETA_SARLAFT[p.sarlaft.estado], hecho: p.sarlaft.estado === 'vigente' },
+      { titulo: 'Documentación', detalle: `${this.documentosAportados()} de ${p.documentos.length} aportados`, hecho: docsOk },
       { titulo: 'Broker registrado', detalle: p.fechaRegistro ? `Desde ${this.fecha(p.fechaRegistro)}` : 'Acceso completo y comisiones', hecho: p.estadoCuenta === 'REGISTRADO' },
     ];
   });
@@ -212,11 +254,19 @@ export class PerfilComponent implements OnInit {
   });
 
   // --- SARLAFT ---
-  protected readonly fechaExpedicion = signal(this.perfil().sarlaft.fechaExpedicion ?? '');
   protected readonly consultandoSarlaft = signal(false);
   protected readonly mensajeSarlaft = signal('');
-  protected readonly puedeActualizarSarlaft = computed(
-    () => esFechaExpedicionValida(this.fechaExpedicion()) && !this.consultandoSarlaft(),
+  protected readonly puedeActualizarSarlaft = computed(() => !this.consultandoSarlaft());
+  /** Celular registrado (últimos 4 dígitos) al que SARLAFT envía el enlace; nulo si no es celular. */
+  protected readonly celularEnlace = computed(() => {
+    const d = (this.perfil().telefono ?? '').replace(/\D/g, '');
+    return /^3\d{9}$/.test(d) ? '··· ' + d.slice(-4) : null;
+  });
+  protected readonly reglaSarlaftFisico: readonly ReglaDocumentoUploader[] = [
+    { id: 'formularioSarlaft', etiqueta: 'SARLAFT físico', descripcion: 'Formulario de Conocimiento de Cliente diligenciado y firmado (PDF, JPG o PNG)', icono: 'upload_file', obligatorio: false },
+  ];
+  protected readonly cargadoSarlaftFisico = computed<Readonly<Record<string, string>>>(() =>
+    this.perfil().sarlaft.fisico ? { formularioSarlaft: this.perfil().sarlaft.fisico as string } : ({} as Record<string, string>),
   );
 
   // --- Documentos ---
@@ -319,7 +369,7 @@ export class PerfilComponent implements OnInit {
     this.consultandoSarlaft.set(true);
     this.mensajeSarlaft.set('');
     this.servicio
-      .actualizarSarlaft(this.fechaExpedicion())
+      .actualizarSarlaft()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (p) => {
@@ -330,6 +380,22 @@ export class PerfilComponent implements OnInit {
           this.consultandoSarlaft.set(false);
           this.mensajeSarlaft.set('No pudimos consultar tu Conocimiento de Cliente en este momento. Intenta de nuevo más tarde.');
         },
+      });
+  }
+
+  /** Carga el SARLAFT físico (alternativa al enlace): queda en revisión del área. El backend valida el archivo. */
+  protected onSarlaftFisico(evento: ArchivoSeleccionado): void {
+    this.mensajeSarlaft.set('');
+    this.perfilSarlaftFisico(evento.archivo);
+  }
+
+  private perfilSarlaftFisico(archivo: File): void {
+    this.servicio
+      .cargarSarlaftFisico(archivo)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (p) => this.mensajeSarlaft.set(MENSAJE_SARLAFT[p.sarlaft.estado]),
+        error: (err: unknown) => this.mensajeSarlaft.set(mensajeErrorIntegracion(err)),
       });
   }
 

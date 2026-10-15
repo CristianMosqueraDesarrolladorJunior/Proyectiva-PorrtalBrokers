@@ -19,9 +19,7 @@
           [class.has-event]="celda.tieneEvento"
           [class.selected]="celda.fechaIso === diaSeleccionado"
           [attr.aria-pressed]="celda.fechaIso === diaSeleccionado"
-          [attr.aria-label]="
-            'Día ' + celda.dia + (celda.tieneEvento ? ', con eventos' : ', sin eventos')
-          "
+          [attr.aria-label]="etiquetaDia(celda.dia, cantidadEventos(celda.fechaIso))"
           (click)="seleccionarDia(celda)"
         >
           <span class="cal-day__num">{{ celda.dia }}</span>
@@ -39,15 +37,33 @@
   @if (eventosDelDia.length === 0) {
     <p class="cal-eventos__vacio">No hay eventos para el día seleccionado.</p>
   } @else {
-    <ul class="cal-eventos__lista">
-      @for (evento of eventosDelDia; track trackEvento($index, evento)) {
-        <li class="cal-eventos__item">
-          <span class="cal-eventos__nombre">{{ evento.titulo }}</span>
-          <app-badge-estado [variante]="evento.estado" [conPunto]="true">
-            {{ evento.estado }}
-          </app-badge-estado>
-        </li>
-      }
-    </ul>
+    @for (grupo of gruposDelDia; track grupo.clave) {
+      <section class="cal-eventos__grupo">
+        @if (grupo.titulo) {
+          <h5 class="cal-eventos__grupo-titulo">{{ grupo.titulo }}</h5>
+        }
+        <ul class="cal-eventos__lista">
+          @for (evento of grupo.eventos; track trackEvento($index, evento)) {
+            <li class="cal-eventos__item {{ indicadorDe(evento).clase }}">
+              <span class="cal-eventos__indicador" aria-hidden="true">{{ indicadorDe(evento).glifo }}</span>
+              <span class="cal-eventos__nombre">
+                <span class="cal-eventos__sr">{{ indicadorDe(evento).texto }}: </span>{{ evento.titulo }}
+                @if (evento.hora && !evento.todoElDia) {
+                  <small class="cal-eventos__hora">{{ evento.hora.slice(0, 5) }}</small>
+                }
+              </span>
+              <app-badge-estado [variante]="evento.estado" [conPunto]="true">
+                {{ evento.etiqueta ?? evento.estado }}
+              </app-badge-estado>
+              @if (esGestionable(evento)) {
+                <button type="button" class="cal-eventos__gestionar" (click)="gestionar.emit(evento)">
+                  Gestionar
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
   }
 </div>

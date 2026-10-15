@@ -73,7 +73,7 @@
 
       <ol class="perfil-pasos" aria-label="Avance del registro">
         @for (p of pasosRegistro(); track p.titulo; let i = $index) {
-          <li class="perfil-pasos__item" [class.hecho]="p.hecho">
+          <li class="perfil-pasos__item" [class.hecho]="p.hecho" [class.activo]="guiado() && i === paso()" [attr.aria-current]="guiado() && i === paso() ? 'step' : null">
             <span class="perfil-pasos__nodo" aria-hidden="true">
               @if (p.hecho) { <app-icon nombre="check" [tamano]="16" /> } @else { {{ i + 1 }} }
             </span>
@@ -81,6 +81,22 @@
           </li>
         }
       </ol>
+
+      @if (guiado()) {
+        <div class="perfil-guia" role="group" aria-label="Navegación del registro">
+          <app-boton variante="ghost" icono="arrow_back" [disabled]="paso() === 1" (clicked)="anterior()">Anterior</app-boton>
+          <span class="perfil-guia__estado">Paso {{ paso() }} de 3</span>
+          @if (paso() < 3) {
+            <app-boton variante="accent" icono="arrow_forward" [disabled]="!puedeAvanzar()" (clicked)="siguiente()">Siguiente</app-boton>
+          } @else {
+            <app-boton variante="ghost" (clicked)="salirGuiado()">Ver mi perfil completo</app-boton>
+          }
+        </div>
+      } @else {
+        <div class="perfil-guia">
+          <app-boton variante="outline" icono="route" (clicked)="iniciarGuiado()">Continuar mi registro paso a paso</app-boton>
+        </div>
+      }
 
       <div class="perfil-comisiones">
         <div>
@@ -115,6 +131,7 @@
 
   <div class="perfil-rejilla">
     <!-- ===================== Datos personales ===================== -->
+    @if (!guiado()) {
     <article class="perfil-tarjeta" id="perfil-datos" aria-labelledby="perfil-datos-titulo">
       <header class="perfil-tarjeta__cabecera">
         <div>
@@ -163,7 +180,10 @@
       </div>
     </article>
 
+    }
+
     <!-- ===================== Conocimiento de Cliente ===================== -->
+    @if (!guiado() || paso() === 1) {
     <article class="perfil-tarjeta" id="perfil-sarlaft" aria-labelledby="perfil-sarlaft-titulo">
       <header class="perfil-tarjeta__cabecera">
         <div>
@@ -176,14 +196,19 @@
       </header>
 
       <dl class="perfil-datos">
-        <div><dt>Fecha de expedición del documento</dt><dd>{{ fecha(perfil().sarlaft.fechaExpedicion) }}</dd></div>
+        <div><dt>SARLAFT físico</dt><dd>{{ perfil().sarlaft.fisico || '—' }}</dd></div>
         <div><dt>Última consulta</dt><dd>{{ fecha(perfil().sarlaft.ultimaConsulta) }}</dd></div>
       </dl>
 
       @if (perfil().sarlaft.estado === 'por_vencer') {
         <app-info-box icono="schedule">Tu Conocimiento de Cliente está próximo a vencer (más de 2,5 años). Actualízalo para completar tu registro.</app-info-box>
       } @else if (perfil().sarlaft.estado === 'vencido') {
-        <app-info-box icono="error">Tu Conocimiento de Cliente está desactualizado. Actualízalo en el formulario de Seguros Bolívar y vuelve a consultar.</app-info-box>
+        <app-info-box icono="error">
+          Tu Conocimiento de Cliente está desactualizado.
+          @if (celularEnlace(); as celular) { Te enviamos el enlace de actualización por SMS a tu celular {{ celular }}. }
+          @else { Tu teléfono registrado no es un celular: actualiza tu celular en Datos personales o carga el SARLAFT físico. }
+          Diligéncialo y vuelve a consultar.
+        </app-info-box>
         @if (perfil().sarlaft.enlaceActualizacion; as enlace) {
           <app-boton variante="accent" icono="open_in_new" (clicked)="abrirFormularioSarlaft(enlace)">Abrir formulario de actualización</app-boton>
         }
@@ -194,22 +219,25 @@
       }
 
       <div class="perfil-sarlaft-form">
-        <app-form-field label="Nueva fecha de expedición" controlId="perfil-fecha-exp" ayuda="La del documento de identidad vigente.">
-          <input id="perfil-fecha-exp" type="date" [ngModel]="fechaExpedicion()" (ngModelChange)="fechaExpedicion.set($event)" />
-        </app-form-field>
         <app-boton variante="outline" icono="policy" [disabled]="!puedeActualizarSarlaft()" (clicked)="actualizarSarlaft()">
           {{ consultandoSarlaft() ? 'Consultando…' : 'Actualizar Conocimiento de Cliente' }}
         </app-boton>
       </div>
+      @if (perfil().sarlaft.estado !== 'vigente') {
+        <!-- Alternativa al enlace: cargar el SARLAFT físico (queda en revisión del área). -->
+        <app-doc-uploader [reglas]="reglaSarlaftFisico" [cargados]="cargadoSarlaftFisico()" (archivoSeleccionado)="onSarlaftFisico($event)" />
+      }
       @if (mensajeSarlaft()) {
         <p class="perfil-ok" [class.perfil-ok--alerta]="perfil().sarlaft.estado !== 'vigente'" role="status">
           <app-icon [nombre]="perfil().sarlaft.estado === 'vigente' ? 'check_circle' : 'error'" [tamano]="16" /> {{ mensajeSarlaft() }}
         </p>
       }
     </article>
+    }
   </div>
 
   <!-- ===================== Documentos ===================== -->
+  @if (!guiado() || paso() === 2) {
   <article class="perfil-tarjeta" id="perfil-documentos" aria-labelledby="perfil-docs-titulo">
     <header class="perfil-tarjeta__cabecera">
       <div>
@@ -252,6 +280,7 @@
       <p class="perfil-ok" role="status"><app-icon nombre="check_circle" [tamano]="16" /> {{ mensajeDocumento() }}</p>
     }
   </article>
+  }
 </section>
 
 <!-- Confirmación de la Transición de registro (modal central) -->

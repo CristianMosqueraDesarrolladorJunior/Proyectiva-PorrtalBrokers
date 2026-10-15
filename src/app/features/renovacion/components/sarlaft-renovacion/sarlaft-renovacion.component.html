@@ -49,9 +49,18 @@
       </div>
     } @else {
       <app-alert-banner variante="error" titulo="Documento de Conocimiento de Cliente no vigente">
-        El certificado de Conocimiento de Cliente tiene una antigüedad de {{ mesesVigencia }} meses o más y no es válido
-        para continuar. Solicítalo al cliente o descárgalo de su entidad financiera y cárgalo aquí.
+        El Conocimiento de Cliente del asegurado está desactualizado. Envíale el enlace de actualización a su celular o
+        carga el SARLAFT físico diligenciado y firmado.
       </app-alert-banner>
+
+      @if (r.celularEnlace) {
+        <div class="sarlaft-renov__acciones">
+          <app-boton variante="outline" icono="sms" [disabled]="enviandoEnlace()" (clicked)="enviarEnlace()">
+            {{ enviandoEnlace() ? 'Enviando…' : 'Enviar enlace al celular ' + r.celularEnlace }}
+          </app-boton>
+        </div>
+      }
+      @if (enlaceEnviado()) { <p class="sarlaft-renov__nota" role="status">{{ enlaceEnviado() }}</p> }
 
       <app-doc-uploader
         [reglas]="reglaActualizacion"

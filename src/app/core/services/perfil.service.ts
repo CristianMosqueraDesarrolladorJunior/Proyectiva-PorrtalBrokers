@@ -51,6 +51,8 @@ export function estadoSarlaftPerfil(estado: EstadoSarlaftRadicacion | string | n
       return 'vigente';
     case 'CONSULTABLE':
       return 'en_cumplimiento';
+    case 'formulario_fisico':
+      return 'fisico';
     case 'DESACTUALIZADO':
     case 'requiere_actualizacion':
       return 'vencido';
@@ -219,8 +221,11 @@ export class PerfilService {
       );
   }
 
-  /** Consulta el Conocimiento de Cliente del broker en el backend (`POST /sarlaft/consultas`); el backend decide. */
-  actualizarSarlaft(fechaExpedicion: string): Observable<PerfilCuenta> {
+  /**
+   * Consulta el Conocimiento de Cliente del broker con su documento (`POST /sarlaft/consultas`); el backend decide.
+   * Sin fecha de expedición. Si está desactualizado, SARLAFT envía el enlace por SMS al celular registrado.
+   */
+  actualizarSarlaft(): Observable<PerfilCuenta> {
     const p = this._perfil();
     return this.http
       .post<ResultadoSarlaftRadicacion>(
@@ -228,7 +233,6 @@ export class PerfilService {
         {
           documento: p.numeroDocumento,
           tipoDocumento: p.tipoDocumento,
-          fechaExpedicion,
           // Con el celular SARLAFT genera la URL de actualización y la envía por SMS (igual que el cotizador).
           ...(/^3\d{9}$/.test((p.telefono ?? '').replace(/\D/g, '')) ? { celular: p.telefono.replace(/\D/g, '') } : {}),
         },
@@ -239,8 +243,9 @@ export class PerfilService {
           this._perfil.update((actual) => ({
             ...actual,
             sarlaft: {
-              estado: estadoSarlaftPerfil(r.estado),
-              fechaExpedicion,
+              ...actual.sarlaft,
+              // Con el físico cargado, una consulta que no queda vigente sigue en revisión con el físico.
+              estado: actual.sarlaft.fisico && estadoSarlaftPerfil(r.estado) !== 'vigente' ? 'fisico' : estadoSarlaftPerfil(r.estado),
               ultimaConsulta: r.fechaConsulta,
               radicadoCumplimiento: r.radicadoCumplimiento,
               enlaceActualizacion: r.enlaceActualizacion,
@@ -259,6 +264,24 @@ export class PerfilService {
    * backend es la fuente autoritativa del estado; aquí se refleja localmente para
    * la navegación de la UI de vinculación.
    */
+  /** Carga el SARLAFT físico (formulario diligenciado y firmado) al expediente: queda en revisión del área. */
+  cargarSarlaftFisico(archivo: File): Observable<PerfilCuenta> {
+    const cuerpo = new FormData();
+    cuerpo.append('tipo', 'formularioSarlaft');
+    cuerpo.append('archivo', archivo);
+    return this.http
+      .post<DocumentoLegalizacion>(`${this.baseUrl}/brokers/legalizacion/documentos`, cuerpo, { withCredentials: true })
+      .pipe(
+        map((doc) => {
+          this._perfil.update((p) => ({
+            ...p,
+            sarlaft: { ...p.sarlaft, fisico: doc.nombre, estado: p.sarlaft.estado === 'vigente' ? 'vigente' : 'fisico' },
+          }));
+          return this._perfil();
+        }),
+      );
+  }
+
   completarRegistro(): Observable<PerfilCuenta> {
     // El servidor consulta SARLAFT y deja la solicitud EN_REVISION: el área aprueba con sus
     // validadores y solo entonces la cuenta pasa a REGISTRADO.
@@ -284,9 +307,14 @@ export class PerfilService {
           ? { ...d, estado: servidor.estado === 'APROBADO' ? 'aprobado' : 'en_revision', archivo: servidor.nombre, fechaCarga: servidor.fechaCarga }
           : d;
       }),
-      ...(e.sarlaftEstado
-        ? { sarlaft: { ...previo.sarlaft, estado: estadoSarlaftPerfil(e.sarlaftEstado), ultimaConsulta: e.sarlaftFecha ?? previo.sarlaft.ultimaConsulta } }
-        : {}),
+      ...(() => {
+        const fisico = e.documentos.find((x) => (x.tipo as string) === 'formularioSarlaft')?.nombre ?? null;
+        const estado = e.sarlaftEstado ? estadoSarlaftPerfil(e.sarlaftEstado) : previo.sarlaft.estado;
+        return e.sarlaftEstado || fisico
+          ? { sarlaft: { ...previo.sarlaft, fisico, estado: fisico && estado !== 'vigente' ? 'fisico' : estado,
+              ultimaConsulta: e.sarlaftFecha ?? previo.sarlaft.ultimaConsulta } }
+          : {};
+      })(),
     };
   }
 

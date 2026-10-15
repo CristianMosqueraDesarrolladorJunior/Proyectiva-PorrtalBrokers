@@ -6,9 +6,7 @@
 <aside class="sidebar" [class.sidebar--abierto]="abierto" [class.sidebar--colapsado]="colapsado()">
   <!-- Marca superior -->
   <div class="sidebar__brand">
-    <div class="sidebar__brand-mark" aria-hidden="true">
-      <app-icon nombre="shield" [tamano]="20" [relleno]="true" />
-    </div>
+    <img class="sidebar__brand-iso" src="img/proyectiva-isotipo.svg" alt="" aria-hidden="true" />
     <div class="sidebar__brand-text">
       <strong>Proyectiva</strong>
       <span>{{ subtitulo }}</span>
@@ -39,23 +37,34 @@
   <!-- Accesos de navegación (Req 4.1). El ítem activo se resalta (Req 4.2). -->
   <nav class="sidebar__nav" aria-label="Navegación principal">
     @for (acceso of accesos; track acceso.ruta) {
-      <a
-        class="nav-item"
-        [routerLink]="[base, acceso.ruta]"
-        routerLinkActive="active"
-        #enlace="routerLinkActive"
-        [attr.aria-current]="enlace.isActive ? 'page' : null"
-        [class.nav-item--bloqueado]="bloqueado(acceso.ruta)"
-        [attr.title]="bloqueado(acceso.ruta) ? acceso.etiqueta + ' · disponible al completar tu registro' : colapsado() ? acceso.etiqueta : null"
-        [attr.aria-label]="colapsado() || bloqueado(acceso.ruta) ? acceso.etiqueta + (bloqueado(acceso.ruta) ? ' (requiere registro)' : '') : null"
-        (click)="solicitarCierre()"
-      >
-        <app-icon class="nav-item__icono" [nombre]="acceso.icono" [tamano]="20" />
-        <span class="nav-item__texto">{{ acceso.etiqueta }}</span>
-        @if (bloqueado(acceso.ruta)) {
+      @if (bloqueado(acceso.ruta)) {
+        <!-- Módulo con candado (prospecto): no es un enlace, no navega ni muestra nada. -->
+        <span
+          class="nav-item nav-item--bloqueado"
+          role="link"
+          aria-disabled="true"
+          [attr.title]="acceso.etiqueta + ' · disponible al completar tu registro'"
+          [attr.aria-label]="acceso.etiqueta + ' (requiere registro)'"
+        >
+          <app-icon class="nav-item__icono" [nombre]="acceso.icono" [tamano]="20" />
+          <span class="nav-item__texto">{{ acceso.etiqueta }}</span>
           <app-icon class="nav-item__candado" nombre="lock" [tamano]="14" />
-        }
-      </a>
+        </span>
+      } @else {
+        <a
+          class="nav-item"
+          [routerLink]="[base, acceso.ruta]"
+          routerLinkActive="active"
+          #enlace="routerLinkActive"
+          [attr.aria-current]="enlace.isActive ? 'page' : null"
+          [attr.title]="colapsado() ? acceso.etiqueta : null"
+          [attr.aria-label]="colapsado() ? acceso.etiqueta : null"
+          (click)="solicitarCierre()"
+        >
+          <app-icon class="nav-item__icono" [nombre]="acceso.icono" [tamano]="20" />
+          <span class="nav-item__texto">{{ acceso.etiqueta }}</span>
+        </a>
+      }
     }
   </nav>
 

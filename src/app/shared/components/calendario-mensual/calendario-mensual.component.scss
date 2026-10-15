@@ -119,20 +119,89 @@
   list-style: none;
 }
 
+.cal-eventos__grupo + .cal-eventos__grupo {
+  margin-top: var(--space-3);
+}
+
+.cal-eventos__grupo-titulo {
+  margin: var(--space-0, 0) var(--space-0, 0) var(--space-1);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
 .cal-eventos__item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-0, 0);
   border-bottom: 1px solid var(--color-border);
+  border-left: var(--space-1) solid var(--cal-evento-color, var(--color-border));
+  padding-left: var(--space-3);
 
   &:last-child {
     border-bottom: none;
   }
+
+  // Un Design_Token distinto por estado temporal (el indicador no depende solo del color).
+  &.cal-evento--pasado {
+    --cal-evento-color: var(--color-muted);
+    color: var(--color-muted);
+  }
+
+  &.cal-evento--hoy {
+    --cal-evento-color: var(--color-accent);
+  }
+
+  &.cal-evento--futuro {
+    --cal-evento-color: var(--color-info);
+  }
+}
+
+.cal-eventos__indicador {
+  width: var(--space-4);
+  text-align: center;
+  color: var(--cal-evento-color, var(--color-muted));
+}
+
+.cal-eventos__hora {
+  margin-left: var(--space-2);
+  color: var(--color-muted);
+}
+
+.cal-eventos__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cal-eventos__gestionar {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-btn-sm);
+  background: var(--color-card);
+  color: var(--color-accent-hover);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-accent-light);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
 }
 
 .cal-eventos__nombre {
+  flex: 1;
   font-size: var(--text-body);
   color: var(--color-text);
 }

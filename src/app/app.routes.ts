@@ -22,7 +22,7 @@ export const routes: Routes = [
   // --- Acceso público ---
   {
     path: 'login',
-    title: 'Iniciar sesión — Proyectiva',
+    title: 'Iniciar sesión — Portal Brokers Proyectiva',
     loadComponent: () =>
       import('./features/auth/pages/login/login.component').then(
         (m) => m.LoginComponent,
@@ -30,7 +30,7 @@ export const routes: Routes = [
   },
   {
     path: 'cambiar-clave',
-    title: 'Crea tu contraseña — Proyectiva',
+    title: 'Crea tu contraseña — Portal Brokers Proyectiva',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/auth/pages/cambiar-clave/cambiar-clave.component').then(
@@ -39,7 +39,7 @@ export const routes: Routes = [
   },
   {
     path: 'registro-broker',
-    title: 'Registro de broker — Proyectiva',
+    title: 'Registro de broker — Portal Brokers Proyectiva',
     loadComponent: () =>
       import(
         './features/auth/pages/registro-broker/registro-broker.component'
@@ -48,7 +48,7 @@ export const routes: Routes = [
   // Entrada del broker que llega ya autenticado desde Cien Cuadras (`/ingreso#token=...`).
   {
     path: 'ingreso',
-    title: 'Ingresando — Proyectiva',
+    title: 'Ingresando — Portal Brokers Proyectiva',
     loadComponent: () =>
       import('./features/auth/pages/ingreso/ingreso.component').then(
         (m) => m.IngresoComponent,
@@ -66,7 +66,7 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'seguimiento' },
       {
         path: 'seguimiento',
-        title: 'Seguimiento — Proyectiva',
+        title: 'Seguimiento — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/dashboard/seguimiento/seguimiento.component'
@@ -74,7 +74,7 @@ export const routes: Routes = [
       },
       {
         path: 'agente',
-        title: 'Agente IA — Proyectiva',
+        title: 'Agente IA — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/agente/agente.component').then(
             (m) => m.AgenteComponent,
@@ -82,7 +82,7 @@ export const routes: Routes = [
       },
       {
         path: 'radicacion',
-        title: 'Nueva radicación — Proyectiva',
+        title: 'Nueva radicación — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/radicacion/pages/radicacion/radicacion.component'
@@ -90,7 +90,7 @@ export const routes: Routes = [
       },
       {
         path: 'contrato',
-        title: 'Crear contrato — Proyectiva',
+        title: 'Crear contrato — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/contrato/pages/contrato/contrato.component').then(
             (m) => m.ContratoComponent,
@@ -98,7 +98,7 @@ export const routes: Routes = [
       },
       {
         path: 'coberturas',
-        title: 'Coberturas — Proyectiva',
+        title: 'Coberturas — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/coberturas/coberturas.component').then(
             (m) => m.CoberturasComponent,
@@ -106,7 +106,7 @@ export const routes: Routes = [
       },
       {
         path: 'referidos',
-        title: 'Referir cliente — Proyectiva',
+        title: 'Referir cliente — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/referidos/referir/referir.component').then(
             (m) => m.ReferirComponent,
@@ -114,7 +114,7 @@ export const routes: Routes = [
       },
       {
         path: 'estado-referidos',
-        title: 'Estado de referidos — Proyectiva',
+        title: 'Estado de referidos — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/referidos/estado-referidos/estado-referidos.component'
@@ -122,7 +122,7 @@ export const routes: Routes = [
       },
       {
         path: 'cotizador',
-        title: 'Cotizador — Proyectiva',
+        title: 'Cotizador — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/cotizador/cotizador-datos/cotizador-datos.component'
@@ -130,7 +130,7 @@ export const routes: Routes = [
       },
       {
         path: 'polizas',
-        title: 'Pólizas — Proyectiva',
+        title: 'Pólizas — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/polizas/consulta-polizas.component').then(
             (m) => m.ConsultaPolizasComponent,
@@ -138,13 +138,13 @@ export const routes: Routes = [
       },
       {
         path: 'comisiones',
-        title: 'Comisiones — Proyectiva',
+        title: 'Comisiones — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/comisiones/comisiones.component').then((m) => m.ComisionesComponent),
       },
       {
         path: 'renovaciones',
-        title: 'Renovaciones — Proyectiva',
+        title: 'Renovaciones — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/renovacion/pages/renovaciones/renovaciones.component'
@@ -152,7 +152,7 @@ export const routes: Routes = [
       },
       {
         path: 'renovaciones/induccion',
-        title: 'Inducción de póliza — Proyectiva',
+        title: 'Inducción de póliza — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/renovacion/pages/induccion/induccion.component').then(
             (m) => m.InduccionComponent,
@@ -160,7 +160,7 @@ export const routes: Routes = [
       },
       {
         path: 'renovaciones/detalle',
-        title: 'Renovar póliza — Proyectiva',
+        title: 'Renovar póliza — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/renovacion/pages/gestion-renovacion/gestion-renovacion.component'
@@ -168,7 +168,7 @@ export const routes: Routes = [
       },
       {
         path: 'renovaciones/no-renovacion',
-        title: 'No renovación — Proyectiva',
+        title: 'No renovación — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/renovacion/pages/no-renovacion/no-renovacion.component'
@@ -176,7 +176,7 @@ export const routes: Routes = [
       },
       {
         path: 'renovaciones/caso-especial',
-        title: 'Caso especial — Proyectiva',
+        title: 'Caso especial — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/renovacion/pages/caso-especial/caso-especial.component'
@@ -184,7 +184,7 @@ export const routes: Routes = [
       },
       {
         path: 'nuevo-negocio',
-        title: 'Nuevo negocio — Proyectiva',
+        title: 'Nuevo negocio — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/nuevo-negocio/nuevo-negocio/nuevo-negocio.component'
@@ -192,7 +192,7 @@ export const routes: Routes = [
       },
       {
         path: 'correccion',
-        title: 'Corrección de documentos — Proyectiva',
+        title: 'Corrección de documentos — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/correccion/pages/correccion/correccion.component'
@@ -200,7 +200,7 @@ export const routes: Routes = [
       },
       {
         path: 'calendario',
-        title: 'Calendario — Proyectiva',
+        title: 'Calendario — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/calendario/calendario.component').then(
             (m) => m.CalendarioComponent,
@@ -208,7 +208,7 @@ export const routes: Routes = [
       },
       {
         path: 'documentos',
-        title: 'Documentos — Proyectiva',
+        title: 'Documentos — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/documentos/documentos.component').then(
             (m) => m.DocumentosComponent,
@@ -216,7 +216,7 @@ export const routes: Routes = [
       },
       {
         path: 'perfil',
-        title: 'Mi perfil — Proyectiva',
+        title: 'Mi perfil — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/perfil/perfil.component').then(
             (m) => m.PerfilComponent,
@@ -224,7 +224,7 @@ export const routes: Routes = [
       },
       {
         path: 'ayuda',
-        title: 'Ayuda — Proyectiva',
+        title: 'Ayuda — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/ayuda/ayuda.component').then(
             (m) => m.AyudaComponent,

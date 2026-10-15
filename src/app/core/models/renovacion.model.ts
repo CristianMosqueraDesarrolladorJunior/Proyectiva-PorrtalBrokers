@@ -94,6 +94,8 @@ export interface ResultadoSarlaftRenovacion {
   readonly tiempoTranscurrido: string;    // legible, p. ej. "4 años, 2 meses"
   readonly mesesDesdeExpedicion: number;
   readonly validacionId: string;
+  /** Celular del asegurado (enmascarado) al que se puede enviar el enlace de actualización; nulo si no tiene. */
+  readonly celularEnlace?: string | null;
 }
 
 /** SARLAFT aceptado en el asistente: con el certificado actualizado que cargó el broker, si lo hubo. */

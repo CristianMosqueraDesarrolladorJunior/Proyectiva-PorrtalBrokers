@@ -418,6 +418,12 @@
               ></app-doc-uploader>
             }
 
+            @if (conSarlaftFisico()) {
+              <app-info-box icono="upload_file">
+                SARLAFT físico: carga el Formulario Conocimiento de Cliente diligenciado y firmado en la lista. El área
+                lo revisa con la radicación.
+              </app-info-box>
+            }
             @if (tipoPersona() === 'juridica') {
               <app-info-box icono="verified_user">
                 Persona jurídica: el Formulario Conocimiento de Cliente diligenciado es obligatorio junto con
@@ -427,8 +433,11 @@
           } @else {
             <app-info-box icono="lock">
               La carga de documentos se habilita cuando la consulta de Conocimiento de Cliente resulte
-              <b>actualizada</b>.
+              <b>actualizada</b>, o si cargas el <b>SARLAFT físico</b> diligenciado y firmado.
             </app-info-box>
+            @if (estadoSarlaft() === 'DESACTUALIZADO') {
+              <app-boton variante="outline" icono="upload_file" (clicked)="elegirSarlaftFisico()">Cargar SARLAFT físico</app-boton>
+            }
           }
         </app-form-section-card>
 

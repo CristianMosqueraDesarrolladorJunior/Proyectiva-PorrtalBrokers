@@ -32,11 +32,10 @@
 }
 
 .login-marca {
-  margin: var(--space-0) var(--space-0) var(--space-2);
-  color: var(--color-accent);
-  font-size: var(--text-headline);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
+  display: block;
+  width: 200px;
+  height: auto;
+  margin: var(--space-0) auto var(--space-4);
 }
 
 .login-titulo {

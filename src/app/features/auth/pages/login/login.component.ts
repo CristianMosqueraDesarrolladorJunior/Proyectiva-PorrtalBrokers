@@ -27,7 +27,7 @@ const RUTA_REGISTRO_BROKER = '/registro-broker';
  * No revela cuál campo es incorrecto ni si el usuario existe.
  */
 const MENSAJE_CREDENCIALES_INVALIDAS =
-  'Usuario o contraseña incorrectos. Verifica tus datos e intenta de nuevo.';
+  'Usuario o contraseña incorrectos. Verifica tus datos e intenta de nuevo. Tras 5 intentos fallidos el acceso se bloquea 15 minutos.';
 
 /** Mensaje cuando el servicio de ingreso no responde (no es un error de credenciales). */
 const MENSAJE_SERVICIO_NO_DISPONIBLE =
@@ -38,7 +38,7 @@ const MENSAJE_SERVICIO_NO_DISPONIBLE =
  * cuenta, para no revelar qué usuarios están registrados.
  */
 const MENSAJE_RESTABLECIMIENTO =
-  'Si tu cédula o correo están registrados, te enviamos un correo con el enlace para crear o cambiar tu contraseña.';
+  'Si tu cédula o correo están registrados, te enviamos un correo con el enlace para crear o cambiar tu contraseña. Si eres parte del equipo comercial, pide al administrador que restablezca tu acceso.';
 
 /** Mensaje cuando se pide restablecer la contraseña sin haber escrito el usuario. */
 const MENSAJE_USUARIO_REQUERIDO =

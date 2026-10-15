@@ -80,14 +80,34 @@ export class SarlaftRenovacionComponent implements OnInit {
   protected readonly reglaActualizacion: readonly ReglaDocumentoUploader[] = [
     {
       id: 'sarlaft-actualizado',
-      etiqueta: 'Certificado de Conocimiento de Cliente actualizado',
-      descripcion: 'PDF, JPG o PNG · máx. 5 MB',
+      etiqueta: 'Cargar SARLAFT físico',
+      descripcion: 'Formulario de Conocimiento de Cliente diligenciado y firmado · PDF, JPG o PNG · máx. 5 MB',
       obligatorio: true,
     },
   ];
 
   ngOnInit(): void {
     this.consultar();
+  }
+
+  protected readonly enviandoEnlace = signal(false);
+  protected readonly enlaceEnviado = signal<string | null>(null);
+
+  /** Envía el enlace de actualización al celular del asegurado (el broker lo decide: es un cliente real). */
+  protected enviarEnlace(): void {
+    this.enviandoEnlace.set(true);
+    this.renovacionService.enviarEnlaceSarlaft(this.numeroPoliza).subscribe({
+      next: (r) => {
+        this.enviandoEnlace.set(false);
+        this.enlaceEnviado.set(r.enviado
+          ? 'Enviamos el enlace de actualización por SMS. Cuando el cliente lo diligencie, verifica de nuevo.'
+          : 'SARLAFT no generó el enlace para este cliente. Carga el SARLAFT físico.');
+      },
+      error: () => {
+        this.enviandoEnlace.set(false);
+        this.enlaceEnviado.set('No fue posible enviar el enlace. Intenta de nuevo o carga el SARLAFT físico.');
+      },
+    });
   }
 
   /** Reconsulta adjuntando el SARLAFT actualizado. */

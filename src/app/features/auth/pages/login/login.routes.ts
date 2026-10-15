@@ -10,7 +10,7 @@ import { Routes } from '@angular/router';
 export const loginRoutes: Routes = [
   {
     path: 'login',
-    title: 'Iniciar sesión — Proyectiva',
+    title: 'Iniciar sesión — Portal Brokers Proyectiva',
     loadComponent: () =>
       import('./login.component').then((m) => m.LoginComponent),
   },
