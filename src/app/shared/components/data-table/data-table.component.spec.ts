@@ -55,6 +55,16 @@ describe('DataTableComponent', () => {
     expect(emitido).toEqual([2]);
   });
 
+  it('con muchas páginas muestra primera, última y vecinas de la actual con saltos', () => {
+    const paginas = () => (component as unknown as { paginas: number[] }).paginas;
+    component.total = 2260;
+    component.tamanoPagina = 10;
+    component.paginaActual = 50;
+    expect(paginas()).toEqual([1, 0, 48, 49, 50, 51, 52, 0, 226]);
+    component.paginaActual = 1;
+    expect(paginas()).toEqual([1, 2, 3, 0, 226]);
+  });
+
   it('no emite cambio de página cuando es la página actual', () => {
     // Given
     const emitido: number[] = [];

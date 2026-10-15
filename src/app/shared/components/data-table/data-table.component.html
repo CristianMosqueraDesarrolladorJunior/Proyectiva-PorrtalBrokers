@@ -125,17 +125,21 @@
     >
       ‹
     </button>
-    @for (n of paginas; track n) {
-      <button
-        type="button"
-        class="pg"
-        [class.active]="n === pagina()"
-        [attr.aria-current]="n === pagina() ? 'page' : null"
-        [attr.aria-label]="'Página ' + n"
-        (click)="irAPagina(n)"
-      >
-        {{ n }}
-      </button>
+    @for (n of paginas; track $index) {
+      @if (n === 0) {
+        <span class="pg pg--salto" aria-hidden="true">…</span>
+      } @else {
+        <button
+          type="button"
+          class="pg"
+          [class.active]="n === pagina()"
+          [attr.aria-current]="n === pagina() ? 'page' : null"
+          [attr.aria-label]="'Página ' + n"
+          (click)="irAPagina(n)"
+        >
+          {{ n }}
+        </button>
+      }
     }
     <button
       type="button"

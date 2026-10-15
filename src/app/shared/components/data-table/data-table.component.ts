@@ -169,10 +169,16 @@ export class DataTableComponent {
     this.paginaLocal.set(1);
   }
 
-  /** Lista de números de página para los controles de paginación. */
+  /**
+   * Números de página para los controles: primera, última y dos a cada lado de la actual; `0` marca un salto
+   * («…»). Con miles de filas (p. ej. 4.500 renovaciones) evita cientos de botones que desbordan la página.
+   */
   protected get paginas(): number[] {
-    const paginas = Math.max(1, this.calcularTotalPaginas());
-    return Array.from({ length: paginas }, (_, indice) => indice + 1);
+    const total = Math.max(1, this.calcularTotalPaginas());
+    const actual = this.pagina();
+    const visibles = Array.from({ length: total }, (_, i) => i + 1)
+      .filter((n) => n === 1 || n === total || Math.abs(n - actual) <= 2);
+    return visibles.flatMap((n, i) => (i > 0 && n - visibles[i - 1] > 1 ? [0, n] : [n]));
   }
 
   /** Página mostrada en paginación local (cuando el contenedor entrega todas las filas). */
