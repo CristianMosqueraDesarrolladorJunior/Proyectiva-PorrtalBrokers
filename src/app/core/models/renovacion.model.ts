@@ -63,6 +63,7 @@ export interface CasoEspecialRequest {
   readonly tipo: TipoCasoEspecial;
   readonly documentos: readonly File[]; // van a documentosProceso del Warehouse
   readonly observaciones: string;       // obligatorias, como en Comercial renovaciones
+  readonly sarlaftActualizado?: File;   // si el SARLAFT del asegurado no estaba vigente
 }
 
 /** Corrección de una renovación devuelta por Gestión Documental (estado CORRECCION). */
@@ -70,6 +71,7 @@ export interface CorreccionRenovacionRequest {
   readonly numeroPoliza: string;
   readonly documentos: readonly File[];
   readonly observaciones?: string;
+  readonly sarlaftActualizado?: File;
 }
 
 // --- Gestión de renovación (wizard /renovaciones/detalle) -------------------
@@ -92,6 +94,11 @@ export interface ResultadoSarlaftRenovacion {
   readonly tiempoTranscurrido: string;    // legible, p. ej. "4 años, 2 meses"
   readonly mesesDesdeExpedicion: number;
   readonly validacionId: string;
+}
+
+/** SARLAFT aceptado en el asistente: con el certificado actualizado que cargó el broker, si lo hubo. */
+export interface SarlaftRenovacionAceptado extends ResultadoSarlaftRenovacion {
+  readonly sarlaftActualizado?: File;
 }
 
 /** Tipo de renovación: física (formulario cargado) o digital (detalles + ajuste). */
@@ -179,6 +186,7 @@ export interface SolicitudRenovacionRequest {
   readonly fechaFin?: string;
   readonly comentarios?: string;
   readonly validacionSarlaftId: string;
+  readonly sarlaftActualizado?: File;               // SARLAFT no vigente: certificado actualizado
 }
 
 /** Datos para rellenar el formato oficial de renovación de Bolívar (renovación física). */

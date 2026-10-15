@@ -94,13 +94,12 @@ export class RenovacionesComponent {
   /** Filas mapeadas para el DataTable, con la variante de insignia por estado. */
   protected readonly filas = computed(() => {
     const polizas = this.polizasVisibles();
-    const hoy = new Date();
     return polizas.map((p) => ({
       numero: p.numero,
       producto: p.producto,
       fechaVencimiento: p.fechaVencimiento,
-      estado: esPolizaVencida(p, hoy) ? 'Vencida · inducción' : (this.catalogo.etiqueta('estado_poliza', p.estado)),
-      estadoVariante: esPolizaVencida(p, hoy)
+      estado: this.catalogo.etiqueta('estado_poliza', p.estado),
+      estadoVariante: esPolizaVencida(p)
         ? 'danger'
         : estadoABadge(this.catalogo.etiqueta('estado_poliza', p.estado)).replace('badge-', ''),
       gestion: p.gestion ?? 'Sin gestión aún',
@@ -147,7 +146,7 @@ export class RenovacionesComponent {
    * ya no se renueva: va a la inducción.
    */
   private iniciarRenovacion(poliza: Poliza): void {
-    if (esPolizaVencida(poliza, new Date())) {
+    if (esPolizaVencida(poliza)) {
       void this.router.navigate(['/app/renovaciones/induccion'], { queryParams: { poliza: poliza.numero } });
       return;
     }

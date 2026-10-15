@@ -20,7 +20,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, catchError, debounceTime, of, switchMap, type Observable } from 'rxjs';
 
 import type {
-  ResultadoSarlaftRenovacion,
+  SarlaftRenovacionAceptado,
   TipoCasoEspecial,
   CondicionesRenovacion,
   PropuestaRenovacion,
@@ -170,6 +170,8 @@ export class GestionRenovacionComponent {
 
   /** Archivo cargado en la etapa de captura (formulario, documento legal o corrección). */
   protected readonly archivo = signal<File | null>(null);
+  /** SARLAFT actualizado que cargó el broker en el paso SARLAFT (viaja con la gestión). */
+  private sarlaftActualizado: File | null = null;
 
   /** Comentarios / observaciones de la gestión activa. */
   protected readonly comentarios = signal('');
@@ -550,7 +552,8 @@ export class GestionRenovacionComponent {
   // --- SARLAFT vigente → registrar la gestión -------------------------------
 
   /** Con SARLAFT vigente registra la gestión en el backend y muestra el éxito. */
-  protected onSarlaftVigente(resultado: ResultadoSarlaftRenovacion): void {
+  protected onSarlaftVigente(resultado: SarlaftRenovacionAceptado): void {
+    this.sarlaftActualizado = resultado.sarlaftActualizado ?? null;
     this.enviar(resultado.validacionId);
   }
 
@@ -601,6 +604,7 @@ export class GestionRenovacionComponent {
 
   private reiniciarCaptura(): void {
     this.archivo.set(null);
+    this.sarlaftActualizado = null;
     this.comentarios.set('');
     this.confirmacion.set(null);
     this.errorEnvio.set(null);
@@ -613,6 +617,7 @@ export class GestionRenovacionComponent {
     const conComentarios = comentarios.length > 0 ? { comentarios } : {};
     const conObservaciones = comentarios.length > 0 ? { observaciones: comentarios } : {};
     const archivo = this.archivo();
+    const conSarlaft = this.sarlaftActualizado ? { sarlaftActualizado: this.sarlaftActualizado } : {};
 
     switch (this.flujo()) {
       case 'fisica':
@@ -622,6 +627,7 @@ export class GestionRenovacionComponent {
           validacionSarlaftId,
           ...(archivo ? { formularioRenovacion: archivo } : {}),
           ...conComentarios,
+          ...conSarlaft,
         });
       case 'digital': {
         const v = this.formulario.getRawValue();
@@ -644,6 +650,7 @@ export class GestionRenovacionComponent {
                 },
               }),
           ...(observaciones ? { comentarios: observaciones } : {}),
+          ...conSarlaft,
         });
       }
       case 'caso-especial':
@@ -652,6 +659,7 @@ export class GestionRenovacionComponent {
           tipo: this.tipoCasoEspecial(),
           documentos: archivo ? [archivo] : [],
           observaciones: comentarios,
+          ...conSarlaft,
         });
       case 'no-renovar':
         return this.renovacionService.noRenovar({
@@ -664,6 +672,7 @@ export class GestionRenovacionComponent {
           numeroPoliza,
           documentos: archivo ? [archivo] : [],
           ...conObservaciones,
+          ...conSarlaft,
         });
     }
   }

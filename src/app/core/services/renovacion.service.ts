@@ -45,6 +45,13 @@ export interface PortafolioRenovaciones {
  * con `withCredentials`. El backend revalida los datos capturados.
  */
 /** Campos de texto de un multipart; omite los vacíos. */
+/** SARLAFT actualizado que cargó el broker: el backend lo guarda como SARLAFT_<póliza> en la carpeta de la renovación. */
+function conSarlaft(datos: FormData, archivo?: File): void {
+  if (archivo) {
+    datos.append('sarlaft', archivo, archivo.name);
+  }
+}
+
 function formulario(campos: Readonly<Record<string, string | number | undefined>>): FormData {
   const datos = new FormData();
   for (const [clave, valor] of Object.entries(campos)) {
@@ -91,6 +98,7 @@ export class RenovacionService {
   casoEspecial(request: CasoEspecialRequest): Observable<RenovacionResponse> {
     const datos = formulario({ numeroPoliza: request.numeroPoliza, tipo: request.tipo, observaciones: request.observaciones });
     request.documentos.forEach((d) => datos.append('documentos', d, d.name));
+    conSarlaft(datos, request.sarlaftActualizado);
     return this.http.post<RenovacionResponse>(`${this.baseUrl}/casosEspeciales`, datos, { withCredentials: true });
   }
 
@@ -98,6 +106,7 @@ export class RenovacionService {
   corregir(request: CorreccionRenovacionRequest): Observable<RenovacionResponse> {
     const datos = formulario({ numeroPoliza: request.numeroPoliza, observaciones: request.observaciones });
     request.documentos.forEach((d) => datos.append('documentos', d, d.name));
+    conSarlaft(datos, request.sarlaftActualizado);
     return this.http.post<RenovacionResponse>(`${this.baseUrl}/correcciones`, datos, { withCredentials: true });
   }
 
@@ -128,6 +137,7 @@ export class RenovacionService {
     if (request.formularioRenovacion) {
       datos.append('formulario', request.formularioRenovacion, request.formularioRenovacion.name);
     }
+    conSarlaft(datos, request.sarlaftActualizado);
     return this.http.post<RenovacionResponse>(`${this.baseUrl}/solicitudes`, datos, { withCredentials: true });
   }
 

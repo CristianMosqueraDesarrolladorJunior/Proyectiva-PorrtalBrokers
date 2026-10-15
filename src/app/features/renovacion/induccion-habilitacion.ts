@@ -25,15 +25,12 @@ export const PARTE_VACIA: ParteInduccion = {
 
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Póliza vencida: estado del backend "Vencida" o fecha de vencimiento anterior a `hoy`. */
-export function esPolizaVencida(poliza: { estado: string; fechaVencimiento: string }, hoy: Date): boolean {
-  if (/vencid/i.test(poliza.estado)) return true;
-  // Se compara la fecha civil (yyyy-mm-dd): `new Date('2026-10-09')` es medianoche UTC, no local.
-  const civil = /^(\d{4})-(\d{2})-(\d{2})/.exec(poliza.fechaVencimiento);
-  if (!civil) return false;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const hoyCivil = `${hoy.getFullYear()}-${pad(hoy.getMonth() + 1)}-${pad(hoy.getDate())}`;
-  return civil[0] < hoyCivil;
+/**
+ * Póliza que va a inducción: el backend la clasifica VENCIDA con las reglas del área (VENCIDO en el Warehouse o
+ * cinco meses tras el vencimiento sin gestión cerrada). Antes de eso se sigue renovando.
+ */
+export function esPolizaVencida(poliza: { estado: string }): boolean {
+  return poliza.estado === 'VENCIDA';
 }
 
 /** Errores de una parte, prefijados con su etiqueta; vacío si está completa. */

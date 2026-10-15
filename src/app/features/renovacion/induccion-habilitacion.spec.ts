@@ -15,13 +15,11 @@ const COMPLETA = {
 };
 
 describe('induccion-habilitacion', () => {
-  const hoy = new Date(2026, 9, 9);
 
-  it('detecta pólizas vencidas por estado o por fecha', () => {
-    expect(esPolizaVencida({ estado: 'Vencida', fechaVencimiento: '2027-01-01' }, hoy)).toBe(true);
-    expect(esPolizaVencida({ estado: 'Próxima a renovar', fechaVencimiento: '2026-10-08' }, hoy)).toBe(true);
-    expect(esPolizaVencida({ estado: 'Próxima a renovar', fechaVencimiento: '2026-10-09' }, hoy)).toBe(false);
-    expect(esPolizaVencida({ estado: 'Renovada', fechaVencimiento: 'sin fecha' }, hoy)).toBe(false);
+  it('solo va a inducción la póliza que el backend clasifica VENCIDA', () => {
+    expect(esPolizaVencida({ estado: 'VENCIDA' })).toBe(true);
+    expect(esPolizaVencida({ estado: 'A_PUNTO_DE_VENCER' })).toBe(false);
+    expect(esPolizaVencida({ estado: 'RENOVADA' })).toBe(false);
   });
 
   it('acepta una parte completa y señala cada dato inválido', () => {

@@ -11,7 +11,10 @@ import {
 import { DatePipe } from '@angular/common';
 
 import type { DocumentoCargado } from '../../../../core/models/documento.model';
-import type { ResultadoSarlaftRenovacion } from '../../../../core/models/renovacion.model';
+import type {
+  ResultadoSarlaftRenovacion,
+  SarlaftRenovacionAceptado,
+} from '../../../../core/models/renovacion.model';
 import { RenovacionService } from '../../../../core/services/renovacion.service';
 import {
   AlertBannerComponent,
@@ -60,7 +63,7 @@ export class SarlaftRenovacionComponent implements OnInit {
   @Input() textoContinuar = 'Continuar';
 
   /** SARLAFT vigente: el wizard puede enviar la solicitud. */
-  @Output() readonly vigente = new EventEmitter<ResultadoSarlaftRenovacion>();
+  @Output() readonly vigente = new EventEmitter<SarlaftRenovacionAceptado>();
 
   /** El broker abandona la gestión. */
   @Output() readonly cancelar = new EventEmitter<void>();
@@ -70,6 +73,8 @@ export class SarlaftRenovacionComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly archivoActualizado = signal<Readonly<Record<string, string>>>({});
   protected readonly mesesVigencia = MESES_VIGENCIA_SARLAFT;
+  /** Certificado actualizado cargado por el broker: viaja con la gestión para que el área lo revise. */
+  private sarlaftActualizado: File | null = null;
 
   /** Regla del cargador del SARLAFT actualizado (salida no vigente). */
   protected readonly reglaActualizacion: readonly ReglaDocumentoUploader[] = [
@@ -88,6 +93,7 @@ export class SarlaftRenovacionComponent implements OnInit {
   /** Reconsulta adjuntando el SARLAFT actualizado. */
   protected onArchivoActualizado(evento: ArchivoSeleccionado): void {
     this.archivoActualizado.set({ [evento.id]: evento.archivo.name });
+    this.sarlaftActualizado = evento.archivo;
     this.consultar({
       nombre: evento.archivo.name,
       tipoMime: evento.archivo.type as DocumentoCargado['tipoMime'],
@@ -103,7 +109,7 @@ export class SarlaftRenovacionComponent implements OnInit {
   protected continuar(): void {
     const resultado = this.resultado();
     if (resultado?.estado === 'vigente') {
-      this.vigente.emit(resultado);
+      this.vigente.emit(this.sarlaftActualizado ? { ...resultado, sarlaftActualizado: this.sarlaftActualizado } : resultado);
     }
   }
 
