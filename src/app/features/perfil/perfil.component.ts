@@ -191,6 +191,7 @@ export class PerfilComponent implements OnInit {
   protected readonly ciudad = signal(this.perfil().ciudad);
   protected readonly guardandoDatos = signal(false);
   protected readonly mensajeDatos = signal('');
+  protected readonly errorDatos = signal(false);
 
   protected readonly datosValidos = computed(
     () =>
@@ -289,9 +290,17 @@ export class PerfilComponent implements OnInit {
         telefono: this.telefono(),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.guardandoDatos.set(false);
-        this.mensajeDatos.set('Tus datos personales se actualizaron.');
+      .subscribe({
+        next: () => {
+          this.guardandoDatos.set(false);
+          this.errorDatos.set(false);
+          this.mensajeDatos.set('Tus datos personales se actualizaron.');
+        },
+        error: () => {
+          this.guardandoDatos.set(false);
+          this.errorDatos.set(true);
+          this.mensajeDatos.set('No pudimos guardar tus datos. Revisa la información e intenta de nuevo.');
+        },
       });
   }
 
@@ -312,9 +321,15 @@ export class PerfilComponent implements OnInit {
     this.servicio
       .actualizarSarlaft(this.fechaExpedicion())
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((p) => {
-        this.consultandoSarlaft.set(false);
-        this.mensajeSarlaft.set(MENSAJE_SARLAFT[p.sarlaft.estado]);
+      .subscribe({
+        next: (p) => {
+          this.consultandoSarlaft.set(false);
+          this.mensajeSarlaft.set(MENSAJE_SARLAFT[p.sarlaft.estado]);
+        },
+        error: () => {
+          this.consultandoSarlaft.set(false);
+          this.mensajeSarlaft.set('No pudimos consultar tu Conocimiento de Cliente en este momento. Intenta de nuevo más tarde.');
+        },
       });
   }
 

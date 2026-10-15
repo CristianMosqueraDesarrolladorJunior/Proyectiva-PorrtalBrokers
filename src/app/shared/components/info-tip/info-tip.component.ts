@@ -65,20 +65,13 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
         letter-spacing: normal;
         box-shadow: var(--sb-shadow-3);
         transform: translateX(-50%);
-        visibility: hidden;
-        opacity: 0;
+        /* display (no visibility): oculto no ocupa layout; si no, ensancha la página en celular. */
+        display: none;
         pointer-events: none;
-        transition: opacity 0.12s ease;
       }
       .tip:hover .tip__texto,
       .tip:focus-within .tip__texto {
-        visibility: visible;
-        opacity: 1;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .tip__texto {
-          transition: none;
-        }
+        display: block;
       }
     `,
   ],
