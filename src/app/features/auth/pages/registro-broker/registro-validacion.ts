@@ -19,7 +19,7 @@
 export const NOMBRE_LONGITUD_MIN = 3;
 
 /** Longitud mínima de la contraseña del prospecto (debe coincidir con la política del backend). */
-export const PASSWORD_LONGITUD_MIN = 10;
+export const PASSWORD_LONGITUD_MIN = 8;
 
 /** Longitud máxima de la contraseña del prospecto (evita DoS por hashing de entradas enormes). */
 export const PASSWORD_LONGITUD_MAX = 128;
@@ -46,12 +46,6 @@ const PATRON_TELEFONO = /^\d{7,10}$/;
 
 /** Acepta únicamente documentos compuestos por 6 a 12 dígitos (Req 3.7). */
 const PATRON_DOCUMENTO = /^\d{6,12}$/;
-
-/**
- * Política de contraseña fuerte: al menos una minúscula, una mayúscula y un dígito.
- * Replica `CredentialValidator.PASSWORD_FUERTE` del backend (el backend revalida SIEMPRE).
- */
-const PATRON_PASSWORD_FUERTE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
 
 /**
  * Patrón de correo electrónico válido (Req 3.3).
@@ -129,17 +123,14 @@ export function esDocumentoValido(documento: string): boolean {
 /**
  * Valida la contraseña del prospecto replicando la política de alta del backend
  * (`CredentialValidator.isPasswordSegura`): longitud entre {@link PASSWORD_LONGITUD_MIN} y
- * {@link PASSWORD_LONGITUD_MAX}, con al menos una minúscula, una mayúscula y un dígito. Es
+ * {@link PASSWORD_LONGITUD_MAX} (sin reglas de complejidad, decisión de operación). Es
  * validación de UX/fail-fast; el backend revalida SIEMPRE (Req 2.6, 3.23). Función pura y total.
  *
  * @param password contraseña en claro capturada en el formulario.
  * @returns `true` si la contraseña satisface la política de alta.
  */
 export function esPasswordValida(password: string): boolean {
-  if (password.length < PASSWORD_LONGITUD_MIN || password.length > PASSWORD_LONGITUD_MAX) {
-    return false;
-  }
-  return PATRON_PASSWORD_FUERTE.test(password);
+  return password.length >= PASSWORD_LONGITUD_MIN && password.length <= PASSWORD_LONGITUD_MAX;
 }
 
 /**

@@ -23,7 +23,8 @@ export type TipoDocumentoRadicacion =
   | 'formularioSarlaft'          // Persona_Juridica obligatorio; Persona_Natural condicional (Req 11.2, 12)
   | 'contratoArrendamientoFirmado' // opcional (Req 11.3)
   | 'poderApoderado'             // caso apoderado (Req 10.2)
-  | 'cedulaApoderado';           // caso apoderado (Req 10.2)
+  | 'cedulaApoderado'            // caso apoderado (Req 10.2)
+  | 'permisoSubarriendo';        // inmueble en leasing (contrato con leasing)
 
 /**
  * Estado de conjunto cerrado del Estudio Digital (paso 2 del flujo de radicación),
@@ -157,6 +158,8 @@ export function documentosRequeridosRadicacion(req: {
   readonly tipoPersona: TipoPersona;
   readonly firmaApoderado: boolean;
   readonly sarlaftRequiereFormulario: boolean;
+  /** El contrato tiene el inmueble en leasing: se exige el permiso de subarriendo. */
+  readonly requierePermisoSubarriendo?: boolean;
   readonly documentos: readonly { readonly codigo: string; readonly [columna: string]: unknown }[];
 }): readonly TipoDocumentoRadicacion[] {
   const de = (aplica: string): TipoDocumentoRadicacion[] =>
@@ -170,6 +173,9 @@ export function documentosRequeridosRadicacion(req: {
   // Caso apoderado: documentos del catálogo que aplican al apoderado (Req 10.2).
   if (req.firmaApoderado) {
     base.push(...de('APODERADO'));
+  }
+  if (req.requierePermisoSubarriendo) {
+    base.push('permisoSubarriendo');
   }
   return base;
 }

@@ -47,6 +47,7 @@ import {
   esNumeroDocumentoPropietarioValido,
   sujetoSarlaft,
 } from '../radicacion/pages/radicacion/radicacion-presentacion';
+import { SoloDigitosDirective } from '../../shared/directives/solo-digitos.directive';
 
 /** Pantalla del escenario (una por paso o salida del flujo 02). */
 type Escena =
@@ -146,7 +147,7 @@ function normalizar(texto: string): string {
   selector: 'app-agente',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [SoloDigitosDirective, 
     FormsModule,
     IconComponent,
     FormFieldComponent,

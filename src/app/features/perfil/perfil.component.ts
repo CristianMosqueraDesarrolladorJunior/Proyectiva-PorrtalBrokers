@@ -249,9 +249,16 @@ export class PerfilComponent implements OnInit {
     return (
       this.nombre() !== p.nombreCompleto ||
       this.correo() !== p.correo ||
-      this.telefono() !== p.telefono
+      this.telefono() !== p.telefono ||
+      this.ciudad() !== p.ciudad
     );
   });
+
+  /** Ciudades del catálogo para el selector de Mi perfil. */
+  protected readonly ciudades = this.catalogo
+    .opciones('ciudad')
+    .map((c) => c.descripcion)
+    .sort((a, b) => a.localeCompare(b, 'es'));
 
   // --- SARLAFT ---
   protected readonly consultandoSarlaft = signal(false);
@@ -338,6 +345,8 @@ export class PerfilComponent implements OnInit {
         nombreCompleto: this.nombre().trim(),
         correo: this.correo().trim(),
         telefono: this.telefono(),
+        // Una ciudad fuera del catálogo (dato viejo de Cien Cuadras) no se envía: el backend la rechazaría.
+        ciudad: this.ciudades.includes(this.ciudad()) ? this.ciudad() : undefined,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

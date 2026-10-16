@@ -237,3 +237,9 @@
     order: -1; // el resumen queda visible arriba en tablet/móvil
   }
 }
+
+.cob__obsequio {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-caption);
+  color: var(--sb-secondary);
+}

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, comput
 
 import type { PersonaRequest } from '../../../core/models/consola.model';
 import { BotonComponent, FormFieldComponent } from '../../../shared/components';
+import { SoloDigitosDirective } from '../../../shared/directives/solo-digitos.directive';
 
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,14 +14,14 @@ const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   selector: 'app-form-persona',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BotonComponent, FormFieldComponent],
+  imports: [SoloDigitosDirective, BotonComponent, FormFieldComponent],
   template: `
     <form class="fp" (submit)="$event.preventDefault(); enviarSiValido()" novalidate>
       <app-form-field class="fp__ancho" label="Nombre completo" controlId="fp-nombre" [requerido]="true" [error]="error('nombre')">
         <input id="fp-nombre" type="text" autocomplete="off" maxlength="160" [value]="nombre()" (input)="nombre.set(v($event))" />
       </app-form-field>
       <app-form-field label="Cédula" controlId="fp-documento" [requerido]="true" [error]="error('documento')">
-        <input id="fp-documento" type="text" inputmode="numeric" autocomplete="off" maxlength="12" [value]="documento()" (input)="documento.set(v($event))" />
+        <input appSoloDigitos id="fp-documento" type="text" inputmode="numeric" autocomplete="off" maxlength="12" [value]="documento()" (input)="documento.set(v($event))" />
       </app-form-field>
       <app-form-field label="Teléfono celular" controlId="fp-telefono" [requerido]="true" [error]="error('telefono')">
         <input id="fp-telefono" type="tel" autocomplete="off" maxlength="10" [value]="telefono()" (input)="telefono.set(v($event))" />

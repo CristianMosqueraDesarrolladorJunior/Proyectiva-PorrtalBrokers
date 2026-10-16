@@ -18,6 +18,7 @@ import {
   PageHeaderComponent,
   type CambioClave,
 } from '../../../shared/components';
+import { SoloDigitosDirective } from '../../../shared/directives/solo-digitos.directive';
 
 type Campo = keyof CambiosPerfil;
 
@@ -29,7 +30,7 @@ type Campo = keyof CambiosPerfil;
   selector: 'app-perfil-admin',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [SoloDigitosDirective, 
     AlertBannerComponent,
     BadgeEstadoComponent,
     BotonComponent,

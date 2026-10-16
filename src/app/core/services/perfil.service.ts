@@ -31,6 +31,8 @@ interface PerfilCuentaBackend {
   readonly fechaRegistro: string | null;
   readonly fechaIngreso?: string | null;
   readonly comercial?: string | null;
+  /** Ciudad guardada en el portal; si no hay, se usa la del perfil compartido de Cien Cuadras. */
+  readonly ciudad?: string | null;
 }
 
 /**
@@ -168,22 +170,24 @@ export class PerfilService {
       .get<ExpedienteLegalizacion>(`${this.baseUrl}/brokers/legalizacion`, { withCredentials: true })
       .pipe(catchError(() => of(null)));
     return forkJoin([perfilCuenta$, ciudad$, expediente$]).pipe(
-      map(([dto, ciudad, expediente]) => this.combinar(dto, { ciudad, ...this.desdeExpediente(expediente) })),
+      map(([dto, ciudad, expediente]) =>
+        this.combinar(dto, { ciudad: dto.ciudad?.trim() || ciudad, ...this.desdeExpediente(expediente) })),
       tap((perfil) => this._perfil.set(perfil)),
     );
   }
 
-  /** Actualiza los datos personales en el backend (`PUT /brokers/perfil`). La `ciudad` no es editable desde el perfil (viene del perfil compartido de Cien Cuadras). */
+  /** Actualiza los datos personales y la ciudad en el backend (`PUT /brokers/perfil`). */
   actualizarDatos(datos: DatosPersonalesEditables): Observable<PerfilCuenta> {
     const body = {
       nombreCompleto: datos.nombreCompleto,
       correo: datos.correo,
       telefono: datos.telefono,
+      ...(datos.ciudad ? { ciudad: datos.ciudad } : {}),
     };
     return this.http
       .put<PerfilCuentaBackend>(`${this.baseUrl}/brokers/perfil`, body, { withCredentials: true })
       .pipe(
-        map((dto) => this.combinar(dto)),
+        map((dto) => this.combinar(dto, dto.ciudad ? { ciudad: dto.ciudad } : {})),
         tap((perfil) => this._perfil.set(perfil)),
       );
   }

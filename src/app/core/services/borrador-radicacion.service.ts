@@ -16,6 +16,8 @@ export interface CotizacionParaRadicar {
 /** Contrato ya generado y guardado en el backend; la radicación lo exige. */
 export interface ContratoGenerado {
   readonly referencia: string;
+  /** El inmueble está en leasing: la radicación exige el permiso de subarriendo. */
+  readonly leasing?: boolean;
 }
 
 const CLAVE = 'portal.borradorRadicacion';

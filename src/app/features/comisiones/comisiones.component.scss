@@ -60,8 +60,15 @@
   border-radius: var(--radius-lg);
   background: var(--sb-surface-low);
 
+  // En celular cada dato va en su propia fila: con 3 columnas el valor pagado desbordaba la pantalla.
   @include mx.respond-to('mobile') {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
+
+    .fila__numero,
+    .fila__comision {
+      margin-top: 0;
+      padding-top: 0;
+    }
   }
 }
 

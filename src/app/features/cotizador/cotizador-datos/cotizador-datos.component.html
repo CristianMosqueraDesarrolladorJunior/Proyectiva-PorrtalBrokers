@@ -224,7 +224,7 @@
                     <app-boton
                       variante="outline"
                       ariaLabel="Disminuir monto asegurado"
-                      [disabled]="cobertura.montoAsegurado <= 0"
+                      [disabled]="cobertura.montoAsegurado <= montoMinimo(cobertura.id)"
                       (clicked)="decrementar(cobertura.id)"
                     >
                       −
@@ -241,6 +241,12 @@
                       +
                     </app-boton>
                   </div>
+                  @if (cobertura.id === 'SERVICIOS_PUBLICOS') {
+                    <p class="cob__obsequio">
+                      Te obsequiamos <strong>{{ cop(obsequioServicios()) }}</strong> para servicios públicos básicos (gas, luz y agua)
+                      en mora a la desocupación del inmueble. Si amplías la cobertura, cada millón adicional cuesta 5&nbsp;% + IVA.
+                    </p>
+                  }
                 }
               </li>
             }

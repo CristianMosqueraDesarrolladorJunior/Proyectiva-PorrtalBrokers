@@ -190,7 +190,7 @@
                       </select>
                     </app-form-field>
                     <app-form-field label="Número de documento" [requerido]="true" controlId="brok-num-doc" [error]="errorDocumento()">
-                      <input
+                      <input [appSoloDigitos]="tipoDocumentoPropietario() !== 'PA'"
                         id="brok-num-doc"
                         class="brok-input-grande"
                         type="text"
@@ -369,7 +369,7 @@
                         </select>
                       </app-form-field>
                       <app-form-field label="Número de documento del apoderado" [requerido]="true" controlId="brok-num-doc-apo">
-                        <input
+                        <input [appSoloDigitos]="tipoDocumentoApoderado() !== 'PA'"
                           id="brok-num-doc-apo"
                           type="text"
                           inputmode="numeric"

@@ -65,8 +65,8 @@
         <div>
           <h3 id="perfil-cuenta-titulo">Completa tu registro de broker</h3>
           <p>
-            Como <b>prospecto</b> ya puedes radicar y cotizar. Al completar tu documentación y tu Conocimiento de Cliente pasas a
-            <b>broker registrado</b>: se desbloquean todos los módulos y se acreditan tus comisiones.
+            Con tu cuenta ya cotizas y radicas. Completa tu documentación y tu Conocimiento de Cliente para calificarte como
+            <b>broker</b>: desbloqueas todos los módulos y accedes a tus comisiones.
           </p>
         </div>
       </header>
@@ -159,11 +159,16 @@
           [error]="esTelefonoInvalido() ? 'Entre 7 y 10 dígitos.' : ''">
           <input id="perfil-telefono" type="tel" inputmode="numeric" autocomplete="tel-national" [ngModel]="telefono()" (ngModelChange)="telefono.set(soloDigitos($event))" />
         </app-form-field>
-        <app-form-field label="Ciudad" controlId="perfil-ciudad" [requerido]="true" ayuda="Dato de Cien Cuadras, no modificable desde el perfil.">
-          <div class="perfil-bloqueado">
-            <input id="perfil-ciudad" type="text" [value]="ciudad()" readonly aria-readonly="true" />
-            <app-icon nombre="lock" [tamano]="18" />
-          </div>
+        <app-form-field label="Ciudad" controlId="perfil-ciudad" [requerido]="true">
+          <select id="perfil-ciudad" [ngModel]="ciudad()" (ngModelChange)="ciudad.set($event)">
+            @if (ciudad() && !ciudades.includes(ciudad())) {
+              <option [value]="ciudad()">{{ ciudad() }}</option>
+            }
+            <option value="" disabled>Selecciona tu ciudad</option>
+            @for (c of ciudades; track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
         </app-form-field>
       </div>
 

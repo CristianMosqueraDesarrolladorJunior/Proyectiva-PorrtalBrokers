@@ -36,7 +36,6 @@
 
     <!-- Paso 1: Datos del arrendador (Req 30.2) -->
     @if (pasoActual() === 0) {
-      <app-lector-contrato (leido)="precargarDesdeLectura($event)" />
       <div class="contrato-paso">
         <h2 class="contrato-paso-titulo">Datos del arrendador</h2>
         <div class="contrato-grid">
@@ -84,7 +83,7 @@
             [requerido]="true"
             controlId="arr-num-id"
           >
-            <input
+            <input [appSoloDigitos]="arrTipoIdentificacion() !== 'PA'"
               id="arr-num-id"
               type="text"
               inputmode="numeric"
@@ -179,7 +178,7 @@
               />
             </app-form-field>
             <app-form-field label="Documento del arrendatario evaluado" controlId="ate-estudio-doc">
-              <input
+              <input [appSoloDigitos]="ateTipoIdentificacion() !== 'PA'"
                 id="ate-estudio-doc"
                 type="text"
                 inputmode="numeric"
@@ -241,7 +240,7 @@
             [requerido]="true"
             controlId="ate-num-id"
           >
-            <input
+            <input [appSoloDigitos]="ateTipoIdentificacion() !== 'PA'"
               id="ate-num-id"
               type="text"
               inputmode="numeric"
@@ -282,44 +281,6 @@
               placeholder="ejemplo@correo.com"
               [ngModel]="ateCorreo()"
               (ngModelChange)="ateCorreo.set($event)"
-            />
-          </app-form-field>
-
-          <app-form-field
-            label="Ocupación / Actividad"
-            [requerido]="true"
-            controlId="ate-ocupacion"
-            class="contrato-grid-full"
-          >
-            <input
-              id="ate-ocupacion"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: Ingeniero, empleado, comerciante..."
-              [ngModel]="ateOcupacion()"
-              (ngModelChange)="ateOcupacion.set($event)"
-            />
-          </app-form-field>
-
-          <app-form-field label="Ciudad de expedición del documento" controlId="ate-ciudad-exp">
-            <input
-              id="ate-ciudad-exp"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: Medellín"
-              [ngModel]="ateCiudadExpedicion()"
-              (ngModelChange)="ateCiudadExpedicion.set($event)"
-            />
-          </app-form-field>
-
-          <app-form-field label="Dirección de notificación" controlId="ate-direccion" class="contrato-grid-full">
-            <input
-              id="ate-direccion"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: Calle 100 #15-30, Bogotá"
-              [ngModel]="ateDireccionNotificacion()"
-              (ngModelChange)="ateDireccionNotificacion.set($event)"
             />
           </app-form-field>
 
@@ -400,45 +361,6 @@
             />
           </app-form-field>
 
-          <app-form-field label="Estrato" [requerido]="true" controlId="inm-estrato">
-            <select
-              id="inm-estrato"
-              [ngModel]="inmEstrato()"
-              (ngModelChange)="inmEstrato.set($event)"
-            >
-              @for (estrato of estratos; track estrato) {
-                <option [ngValue]="estrato">{{ estrato }}</option>
-              }
-            </select>
-          </app-form-field>
-
-          <app-form-field
-            label="Área (m²)"
-            [requerido]="true"
-            controlId="inm-area"
-          >
-            <input
-              id="inm-area"
-              type="number"
-              inputmode="decimal"
-              min="0"
-              placeholder="Ej: 85"
-              [ngModel]="inmArea()"
-              (ngModelChange)="inmArea.set($event)"
-            />
-          </app-form-field>
-
-          <app-form-field label="Línea telefónica del inmueble (opcional)" controlId="inm-linea">
-            <input
-              id="inm-linea"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: 601 555 1234"
-              [ngModel]="inmLineaTelefonica()"
-              (ngModelChange)="inmLineaTelefonica.set($event)"
-            />
-          </app-form-field>
-
           <app-form-field label="Número de garaje (opcional)" controlId="inm-garaje">
             <input
               id="inm-garaje"
@@ -465,6 +387,19 @@
             <input type="checkbox" [ngModel]="inmLeasing()" (ngModelChange)="inmLeasing.set($event)" />
             <span>El inmueble está en leasing</span>
           </label>
+          @if (inmLeasing()) {
+            <label class="contrato-check contrato-grid-full">
+              <input
+                type="checkbox"
+                [ngModel]="inmPermisoSubarriendo()"
+                (ngModelChange)="inmPermisoSubarriendo.set($event)"
+              />
+              <span class="contrato-check__texto">
+                <strong>Cuento con el permiso de subarriendo de la entidad de leasing</strong>
+                <small>Es obligatorio para arrendar un inmueble en leasing; lo cargas en la radicación.</small>
+              </span>
+            </label>
+          }
 
         </div>
       </div>
@@ -526,25 +461,8 @@
           </app-form-field>
 
           <app-form-field
-            label="Día de pago mensual"
-            ayuda="Entre 1 y 31"
-            [requerido]="true"
-            controlId="con-dia-pago"
-          >
-            <input
-              id="con-dia-pago"
-              type="number"
-              inputmode="numeric"
-              min="1"
-              max="31"
-              placeholder="Ej: 5"
-              [ngModel]="conDiaPago()"
-              (ngModelChange)="conDiaPago.set($event)"
-            />
-          </app-form-field>
-
-          <app-form-field
             label="Fecha de inicio"
+            ayuda="El canon se paga cada mes el mismo día de la fecha de inicio"
             [requerido]="true"
             controlId="con-fecha-inicio"
           >
@@ -556,20 +474,32 @@
             />
           </app-form-field>
 
-          <app-form-field
-            label="Reajuste anual (%)"
-            [requerido]="true"
-            controlId="con-reajuste"
-          >
-            <input
-              id="con-reajuste"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: IPC + 0%"
-              [ngModel]="conReajuste()"
-              (ngModelChange)="conReajuste.set($event)"
-            />
-          </app-form-field>
+          @if (esComercio()) {
+            <app-form-field
+              label="Incremento anual: puntos sobre el IPC"
+              ayuda="El canon sube cada año el IPC más estos puntos (0 si solo el IPC)"
+              [requerido]="true"
+              controlId="con-reajuste"
+            >
+              <input
+                id="con-reajuste"
+                type="number"
+                inputmode="numeric"
+                min="0"
+                max="20"
+                [ngModel]="conPuntosReajuste()"
+                (ngModelChange)="conPuntosReajuste.set($event)"
+              />
+            </app-form-field>
+          } @else {
+            <app-form-field
+              label="Incremento anual"
+              ayuda="En vivienda el canon se incrementa cada año con el IPC (Ley 820 de 2003)"
+              controlId="con-reajuste"
+            >
+              <input id="con-reajuste" type="text" [value]="reajusteTexto()" readonly aria-readonly="true" />
+            </app-form-field>
+          }
 
           <app-form-field
             label="Método de pago del canon"
@@ -598,8 +528,9 @@
                 [ngModel]="conTipoCuenta()"
                 (ngModelChange)="conTipoCuenta.set($event)"
               >
-                <option value="ahorros">Ahorros</option>
-                <option value="corriente">Corriente</option>
+                @for (t of tiposCuenta; track t.codigo) {
+                  <option [value]="t.descripcion.toLowerCase()">{{ t.descripcion }}</option>
+                }
               </select>
             </app-form-field>
 
@@ -622,15 +553,13 @@
               />
             </app-form-field>
 
-            <app-form-field label="Banco" controlId="con-banco">
-              <input
-                id="con-banco"
-                type="text"
-                autocomplete="off"
-                placeholder="Ej: Banco de Bogotá"
-                [ngModel]="conBanco()"
-                (ngModelChange)="conBanco.set($event)"
-              />
+            <app-form-field label="Banco" [requerido]="true" controlId="con-banco">
+              <select id="con-banco" [ngModel]="conBanco()" (ngModelChange)="conBanco.set($event)">
+                <option value="" disabled>Selecciona el banco</option>
+                @for (b of bancos; track b) {
+                  <option [value]="b">{{ b }}</option>
+                }
+              </select>
             </app-form-field>
 
             <label class="contrato-check contrato-grid-full">
@@ -678,20 +607,19 @@
             </app-form-field>
           }
 
-          <app-form-field
-            label="Servicios incluidos (opcional)"
-            controlId="con-servicios"
-            class="contrato-grid-full"
-          >
-            <input
-              id="con-servicios"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: Administración, agua, gas..."
-              [ngModel]="conServicios()"
-              (ngModelChange)="conServicios.set($event)"
-            />
-          </app-form-field>
+          <fieldset class="contrato-servicios contrato-grid-full">
+            <legend>Servicios públicos disponibles en el inmueble</legend>
+            @for (servicio of serviciosPublicos; track servicio) {
+              <label class="contrato-check">
+                <input
+                  type="checkbox"
+                  [checked]="conServicios().includes(servicio)"
+                  (change)="alternarServicio(servicio, $any($event.target).checked)"
+                />
+                <span>{{ servicio }}</span>
+              </label>
+            }
+          </fieldset>
         </div>
 
         <!-- Panel destacado de deudores solidarios (fiel al prototipo) -->
@@ -715,10 +643,10 @@
               <fieldset class="contrato-deudor">
                 <legend>Deudor solidario {{ i + 1 }}</legend>
                 <div class="contrato-grid">
-                  <app-form-field label="Nombres" controlId="deu-nombres-{{ i }}">
+                  <app-form-field label="Nombres" [requerido]="true" controlId="deu-nombres-{{ i }}">
                     <input id="deu-nombres-{{ i }}" type="text" [ngModel]="deudor.nombres" (ngModelChange)="editarDeudor(i, 'nombres', $event)" />
                   </app-form-field>
-                  <app-form-field label="Apellidos" controlId="deu-apellidos-{{ i }}">
+                  <app-form-field label="Apellidos" [requerido]="true" controlId="deu-apellidos-{{ i }}">
                     <input id="deu-apellidos-{{ i }}" type="text" [ngModel]="deudor.apellidos" (ngModelChange)="editarDeudor(i, 'apellidos', $event)" />
                   </app-form-field>
                   <app-form-field label="Tipo de identificación" controlId="deu-tipo-{{ i }}">
@@ -728,11 +656,8 @@
                       }
                     </select>
                   </app-form-field>
-                  <app-form-field label="Número de identificación" controlId="deu-numero-{{ i }}">
-                    <input id="deu-numero-{{ i }}" type="text" inputmode="numeric" [ngModel]="deudor.numeroIdentificacion" (ngModelChange)="editarDeudor(i, 'numeroIdentificacion', $event)" />
-                  </app-form-field>
-                  <app-form-field label="Ciudad de expedición" controlId="deu-ciudad-{{ i }}">
-                    <input id="deu-ciudad-{{ i }}" type="text" [ngModel]="deudor.ciudadExpedicion" (ngModelChange)="editarDeudor(i, 'ciudadExpedicion', $event)" />
+                  <app-form-field label="Número de identificación" [requerido]="true" controlId="deu-numero-{{ i }}">
+                    <input [appSoloDigitos]="deudor.tipoIdentificacion !== 'PA'" id="deu-numero-{{ i }}" type="text" inputmode="numeric" [ngModel]="deudor.numeroIdentificacion" (ngModelChange)="editarDeudor(i, 'numeroIdentificacion', $event)" />
                   </app-form-field>
                   <app-form-field label="Teléfono" controlId="deu-telefono-{{ i }}">
                     <input id="deu-telefono-{{ i }}" type="tel" [ngModel]="deudor.telefono" (ngModelChange)="editarDeudor(i, 'telefono', $event)" />

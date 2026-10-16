@@ -8,7 +8,7 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { BotonComponent, FormFieldComponent, IconComponent } from '../../../../shared/components';
+import { BotonComponent, FormFieldComponent } from '../../../../shared/components';
 import { AuthService } from '../../../../core/services/auth.service';
 import { rutaInicio } from '../../../../core/guards/rol.guard';
 import { LoginRequest } from '../../../../core/models/broker.model';
@@ -67,7 +67,7 @@ interface FormularioLogin {
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, FormFieldComponent, BotonComponent, IconComponent],
+  imports: [ReactiveFormsModule, FormFieldComponent, BotonComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -93,6 +93,10 @@ export class LoginComponent {
 
   /** Mensaje de error mostrado ante un ingreso fallido (Req 1.2). */
   protected readonly errorCredenciales = signal('');
+
+  /** Llegó aquí porque la sesión venció en otra pantalla (interceptor de errores). */
+  protected readonly sesionVencida =
+    typeof location !== 'undefined' && new URLSearchParams(location.search).get('sesion') === 'vencida';
 
   /** Mensaje informativo tras solicitar el restablecimiento de contraseña. */
   protected readonly avisoRestablecimiento = signal('');

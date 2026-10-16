@@ -3,8 +3,8 @@ import { AlertBannerComponent } from '../alert-banner/alert-banner.component';
 import { BotonComponent } from '../boton/boton.component';
 import { FormFieldComponent } from '../form-field/form-field.component';
 
-/** Misma política que el backend: 10+ caracteres con mayúscula, minúscula y número. */
-export const CLAVE_FUERTE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{10,128}$/;
+/** Misma política que el backend: entre 8 y 128 caracteres. */
+export const CLAVE_FUERTE = /^.{8,128}$/s;
 
 export interface CambioClave {
   readonly actual: string;
@@ -26,7 +26,7 @@ export interface CambioClave {
         <input [id]="id + '-actual'" type="password" autocomplete="current-password" [value]="actual()" (input)="actual.set(v($event))" />
       </app-form-field>
       <app-form-field label="Nueva contraseña" [controlId]="id + '-nueva'" [requerido]="true"
-        ayuda="Mínimo 10 caracteres, con mayúscula, minúscula y número." [error]="intento() && !fuerte() ? 'Debe tener mínimo 10 caracteres, con mayúscula, minúscula y número, y ser distinta a la actual.' : ''">
+        ayuda="Mínimo 8 caracteres." [error]="intento() && !fuerte() ? 'Debe tener mínimo 8 caracteres y ser distinta a la actual.' : ''">
         <input [id]="id + '-nueva'" type="password" autocomplete="new-password" [value]="nueva()" (input)="nueva.set(v($event))" />
       </app-form-field>
       <app-form-field label="Confirma la nueva contraseña" [controlId]="id + '-confirmar'" [requerido]="true"

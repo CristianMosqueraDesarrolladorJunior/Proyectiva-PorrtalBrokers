@@ -8,6 +8,7 @@ import type {
   ExpedienteProspecto,
   PersonaRequest,
   ProspectoConsola,
+  ComercialConsola,
 } from '../../../core/models/consola.model';
 import { AdminService } from '../../../core/services/admin.service';
 import { COLUMNA_GESTIONAR, COLUMNAS_FECHAS, celdasFechas, cop, copCompacto, fechaHora } from '../../../core/services/admin.helpers';
@@ -22,6 +23,7 @@ import {
   DataTableComponent,
   EstadoVistaComponent,
   FichaComponent,
+  FormFieldComponent,
   GridLayoutComponent,
   KpiCardComponent,
   ModalDialogComponent,
@@ -75,6 +77,7 @@ function faltante(codigo: string, documentos: Readonly<Record<string, string>>):
     EstadoVistaComponent,
     FichaComponent,
     FormPersonaComponent,
+    FormFieldComponent,
     GridLayoutComponent,
     KpiCardComponent,
     ModalDialogComponent,
@@ -88,7 +91,11 @@ export class ProspectosComponent {
   private readonly consola = inject(ConsolaService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly esAdmin = inject(AdminService).esAdmin();
+  private readonly admin = inject(AdminService);
+  protected readonly esAdmin = this.admin.esAdmin();
+  /** Comerciales activos para reasignar el prospecto (solo el administrador). */
+  protected readonly comerciales = signal<readonly ComercialConsola[]>([]);
+  protected readonly comercialDestino = signal('');
   protected readonly compacto = copCompacto;
   private readonly catalogo = inject(CatalogoService);
   private readonly documentos = this.catalogo.etiquetas('documento_legalizacion');
@@ -216,6 +223,37 @@ export class ProspectosComponent {
 
   constructor() {
     this.cargar();
+    if (this.esAdmin) {
+      this.consola
+        .comerciales()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: (c) => this.comerciales.set(c.filter((x) => x.activo)), error: () => this.comerciales.set([]) });
+    }
+  }
+
+  /** Reasigna el prospecto (y sus negocios) a otro comercial: misma acción que en Brokers. */
+  protected reasignarComercial(): void {
+    const p = this.expediente()?.prospecto;
+    const destino = this.comerciales().find((c) => c.codigo === this.comercialDestino());
+    if (!p || !destino) return;
+    this.decidiendo.set(true);
+    this.errorDecision.set('');
+    this.admin
+      .asignarComercial(p.id, destino.codigo)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.decidiendo.set(false);
+          this.expediente.set(null);
+          this.comercialDestino.set('');
+          this.mensaje.set(`${p.nombre} pasó a ${destino.nombre}.`);
+          this.cargar();
+        },
+        error: (err: unknown) => {
+          this.decidiendo.set(false);
+          this.errorDecision.set(mensajeErrorIntegracion(err));
+        },
+      });
   }
 
   protected cargar(): void {

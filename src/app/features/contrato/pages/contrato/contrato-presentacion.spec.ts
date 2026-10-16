@@ -119,16 +119,16 @@ describe('contrato-presentacion (lógica pura del Generador_Contrato)', () => {
       );
     });
 
-    it('paso arrendatario válido con datos completos e inválido si falta la ocupación', () => {
+    it('paso arrendatario ya no pide ocupación (operación) pero sí el correo', () => {
       expect(esPasoArrendatarioValido(arrendatarioOk)).toBe(true);
-      expect(esPasoArrendatarioValido({ ...arrendatarioOk, ocupacion: '  ' })).toBe(false);
+      expect(esPasoArrendatarioValido({ ...arrendatarioOk, ocupacion: '  ' })).toBe(true);
+      expect(esPasoArrendatarioValido({ ...arrendatarioOk, correo: 'no-es-correo' })).toBe(false);
     });
 
-    it('paso inmueble exige estrato 1–6 y área positiva', () => {
-      expect(esPasoInmuebleValido(inmuebleOk)).toBe(true);
-      expect(esPasoInmuebleValido({ ...inmuebleOk, estrato: 0 })).toBe(false);
-      expect(esPasoInmuebleValido({ ...inmuebleOk, estrato: 7 })).toBe(false);
-      expect(esPasoInmuebleValido({ ...inmuebleOk, areaMetrosCuadrados: 0 })).toBe(false);
+    it('paso inmueble no pide estrato ni área, y con leasing exige el permiso de subarriendo', () => {
+      expect(esPasoInmuebleValido({ ...inmuebleOk, estrato: undefined, areaMetrosCuadrados: undefined })).toBe(true);
+      expect(esPasoInmuebleValido({ ...inmuebleOk, leasing: true })).toBe(false);
+      expect(esPasoInmuebleValido({ ...inmuebleOk, leasing: true, permisoSubarriendo: true })).toBe(true);
     });
 
     it('paso condiciones exige método de pago y cuenta válida salvo efectivo', () => {

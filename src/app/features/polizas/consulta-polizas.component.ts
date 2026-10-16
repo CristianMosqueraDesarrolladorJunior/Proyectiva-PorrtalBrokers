@@ -24,6 +24,7 @@ import { esPolizaRenovable } from './poliza-renovable';
 import { computed } from '@angular/core';
 
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { SoloDigitosDirective } from '../../shared/directives/solo-digitos.directive';
 /** Estado de la consulta para controlar loader, error y vacío (Req 16.1). */
 type EstadoConsulta = 'inicial' | 'consultando' | 'resultado' | 'error';
 
@@ -54,7 +55,7 @@ const CEDULA_MAX_DIGITOS = 10;
   selector: 'app-consulta-polizas',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeaderComponent, 
+  imports: [SoloDigitosDirective, PageHeaderComponent, 
     FormsModule,
     BotonComponent,
     FormFieldComponent,

@@ -97,7 +97,7 @@
               <app-alert-banner variante="error" titulo="No se pudo enviar">{{ errorEnvio() }}</app-alert-banner>
             }
             <app-boton variante="accent" icono="send" [disabled]="enviando()" (clicked)="enviar()">
-              {{ enviando() ? 'Enviando…' : 'Enviar inducción' }}
+              {{ enviando() ? 'Enviando, puede tardar unos segundos…' : 'Enviar inducción' }}
             </app-boton>
           </div>
         </app-summary-card>

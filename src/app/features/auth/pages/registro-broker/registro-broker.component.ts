@@ -1,5 +1,5 @@
 import { SessionService } from '../../../../core/services/session.service';
-import { HttpErrorResponse } from '@angular/common/http';
+import type { ErrorPortal } from '../../../../core/interceptors/error.interceptor';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -29,6 +29,8 @@ import type { ArchivoSeleccionado, ReglaDocumentoUploader } from '../../../../sh
 import { documentosRegistroBroker, type TipoDocumentoRegistro } from '../../../../core/models/registro-broker.model';
 import type { TipoMimePermitido } from '../../../../core/models/documento.model';
 import { PerfilService } from '../../../../core/services/perfil.service';
+import { DocumentosService } from '../../../../core/services/documentos.service';
+import { descargarArchivo } from '../../../../core/util/descargar-archivo';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
 import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
 import { reglaDeDocumentoRegistro, validarDocumento } from '../../../../shared/validation/documento-validacion';
@@ -52,12 +54,35 @@ import {
   esPasswordValida,
   esTelefonoValido,
 } from './registro-validacion';
+import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
 
 /** Ruta de la pantalla de login (acceso "Ya tengo cuenta") (Req 2.3). */
 const RUTA_LOGIN = '/login';
 
 /** Perfil del broker: ahí, ya con sesión, se verifica SARLAFT y se cargan los documentos. */
 const RUTA_PERFIL = '/app/perfil';
+
+/**
+ * Mensaje del alta según el error normalizado por el interceptor ({@link ErrorPortal}): en 409 el
+ * backend indica en `fields` si el conflicto es el documento (`cedula`) o el correo.
+ */
+export function mensajeErrorRegistro(error: unknown): string {
+  const { status, error: cuerpo } = (error ?? {}) as Partial<ErrorPortal>;
+  const campos = cuerpo?.fields ?? [];
+  if (status === 409) {
+    if (campos.includes('cedula')) {
+      return 'Ya existe una cuenta con este número de documento. Inicia sesión o restablece tu contraseña.';
+    }
+    if (campos.includes('correo')) {
+      return 'Este correo ya está registrado con otra cuenta. Usa otro correo o inicia sesión.';
+    }
+    return 'Ya existe una cuenta con ese documento o correo. Inicia sesión o restablece tu contraseña.';
+  }
+  if (status === 503) {
+    return 'El servicio de registro no está disponible en este momento. Intenta de nuevo en unos minutos.';
+  }
+  return 'No fue posible crear tu cuenta. Intenta de nuevo.';
+}
 
 /** Tipado del formulario reactivo (datos personales + documento). */
 interface FormularioRegistro {
@@ -84,7 +109,7 @@ interface Credenciales {
  * Registro (`/registro-broker`): comparte la UI del login (mismo fondo y tarjeta).
  *
  * Con los datos personales y el documento se crea la cuenta (PROSPECTO) y se abre la
- * sesión. "Registrarme como prospecto" lleva al inicio; "Continuar como broker" lleva
+ * sesión. "Crear cuenta y calificarme después" lleva al inicio; "Continuar como broker" lleva
  * al perfil, donde con la sesión ya abierta se verifica SARLAFT y se cargan los 4
  * documentos (los endpoints de SARLAFT y legalización exigen sesión). El backend
  * revalida SIEMPRE (Req 3.23).
@@ -93,7 +118,7 @@ interface Credenciales {
   selector: 'app-registro-broker',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [SoloDigitosDirective, 
     ReactiveFormsModule,
     FormFieldComponent,
     IconComponent,
@@ -112,6 +137,7 @@ export class RegistroBrokerComponent {
   private readonly destroyRef = inject(DestroyRef);
   /** Pasos 2 y 3 usan los mismos servicios de Mi perfil (la sesión ya está abierta tras el paso 1). */
   private readonly perfilServicio = inject(PerfilService);
+  private readonly documentos = inject(DocumentosService);
   protected readonly perfil = this.perfilServicio.perfil;
   protected readonly abrirFormularioSarlaft = abrirFormularioSarlaft;
 
@@ -123,14 +149,27 @@ export class RegistroBrokerComponent {
   protected readonly sarlaftConsultado = signal(false);
   protected readonly errorSarlaft = signal('');
   protected readonly puedeConsultarSarlaft = computed(() => !this.consultandoSarlaft());
+  /** Formulario físico: si la consulta falló (error de red o sin respuesta) o quedó desactualizado. */
+  protected readonly puedeCargarFisico = computed(() => {
+    if (this.consultandoSarlaft()) {
+      return false;
+    }
+    const estado = this.perfil().sarlaft.estado;
+    return !!this.errorSarlaft() || (this.sarlaftConsultado() && estado !== 'vigente' && estado !== 'en_cumplimiento');
+  });
   /** Celular registrado (últimos 4 dígitos) al que SARLAFT envía el enlace; nulo si no es celular. */
   protected readonly celularEnlace = computed(() => {
     const d = (this.perfil().telefono ?? '').replace(/\D/g, '');
     return /^3\d{9}$/.test(d) ? '··· ' + d.slice(-4) : null;
   });
   protected readonly reglaSarlaftFisico: readonly ReglaDocumentoUploader[] = [
-    { id: 'formularioSarlaft', etiqueta: 'Cargar SARLAFT físico', descripcion: 'Formulario de Conocimiento de Cliente diligenciado y firmado (PDF, JPG o PNG)', icono: 'upload_file', obligatorio: false },
+    { id: 'formularioSarlaft', etiqueta: 'Cargar formulario físico', descripcion: 'Formulario de Conocimiento de Cliente diligenciado y firmado (PDF, JPG o PNG)', icono: 'upload_file', obligatorio: false },
   ];
+  /** Formato físico a descargar según el tipo de documento: NIT → persona jurídica; CC/CE → persona natural. */
+  protected readonly formatoSarlaft = computed(() =>
+    (this.perfil().tipoDocumento || this.formulario.controls.tipoDocumento.value) === 'NIT' ? 'juridica' : 'natural',
+  );
+  protected readonly descargandoFormato = signal(false);
   protected readonly cargadoSarlaftFisico = computed<Readonly<Record<string, string>>>(() =>
     this.perfil().sarlaft.fisico ? { formularioSarlaft: this.perfil().sarlaft.fisico as string } : ({} as Record<string, string>),
   );
@@ -280,7 +319,7 @@ export class RegistroBrokerComponent {
 
   protected get errorPassword(): string {
     return this.mensajeError('password', esPasswordValida(this.valores().password),
-      `La contraseña debe tener al menos ${PASSWORD_LONGITUD_MIN} caracteres e incluir mayúscula, minúscula y número.`);
+      `La contraseña debe tener al menos ${PASSWORD_LONGITUD_MIN} caracteres.`);
   }
 
   protected get errorPasswordConfirmacion(): string {
@@ -343,11 +382,7 @@ export class RegistroBrokerComponent {
         },
         error: (error: unknown) => {
           this.creandoHacia.set(null);
-          this.errorEnvio.set(
-            error instanceof HttpErrorResponse && error.status === 409
-              ? 'Ya existe una cuenta con ese documento o correo. Inicia sesión o restablece tu contraseña.'
-              : 'No fue posible crear tu cuenta. Intenta de nuevo.',
-          );
+          this.errorEnvio.set(mensajeErrorRegistro(error));
         },
       });
   }
@@ -369,7 +404,26 @@ export class RegistroBrokerComponent {
         },
         error: () => {
           this.consultandoSarlaft.set(false);
-          this.errorSarlaft.set('No pudimos consultar tu Conocimiento de Cliente en este momento. Intenta de nuevo o termina después desde Mi perfil.');
+          this.errorSarlaft.set('No pudimos consultar tu Conocimiento de Cliente en este momento. Intenta de nuevo, carga el formulario físico o termina después desde Mi perfil.');
+        },
+      });
+  }
+
+  /** Paso 2: descarga el formato de Conocimiento de Cliente del bucket (persona natural o jurídica). */
+  protected descargarFormatoSarlaft(): void {
+    const tipo = this.formatoSarlaft();
+    this.descargandoFormato.set(true);
+    this.documentos
+      .descargarRecurso(`sarlaft-persona-${tipo}`)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (pdf) => {
+          this.descargandoFormato.set(false);
+          descargarArchivo(pdf, `conocimiento-de-cliente-persona-${tipo}.pdf`);
+        },
+        error: () => {
+          this.descargandoFormato.set(false);
+          this.errorSarlaft.set('No pudimos descargar el formato en este momento. Intenta de nuevo.');
         },
       });
   }

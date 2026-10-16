@@ -135,6 +135,21 @@
               Documentos completos, SARLAFT que permite continuar y datos de contacto. Al aprobar pasa a broker registrado.
             </app-alert-banner>
           }
+          <app-form-field label="Reasignar comercial" controlId="prospecto-comercial"
+            ayuda="El prospecto y todos sus negocios pasan al nuevo comercial.">
+            <select id="prospecto-comercial" [value]="comercialDestino()"
+              (change)="comercialDestino.set($any($event.target).value)">
+              <option value="">Selecciona…</option>
+              @for (c of comerciales(); track c.codigo) {
+                @if (c.codigo !== e.prospecto.comercialCodigo) {
+                  <option [value]="c.codigo">{{ c.nombre }}</option>
+                }
+              }
+            </select>
+          </app-form-field>
+          <app-boton variante="outline" icono="swap_horiz" [disabled]="decidiendo() || !comercialDestino()" (clicked)="reasignarComercial()">
+            Reasignar comercial
+          </app-boton>
           @if (errorDecision()) {
             <app-alert-banner variante="error" titulo="No se pudo completar">{{ errorDecision() }}</app-alert-banner>
           }

@@ -133,6 +133,18 @@ export class FormatoRenovacionComponent {
   /** Número de la sección dentro del paso que lo aloja. */
   @Input() numero = 1;
 
+  /** Canon y destino que ya conoce la póliza: se precargan para que el broker no los reescriba. */
+  @Input() set canonInicial(valor: number | null | undefined) {
+    if (valor && valor > 0 && !this.canonActual()) {
+      this.canonActual.set(String(Math.round(valor)));
+    }
+  }
+  @Input() set destinoInicial(valor: string | null | undefined) {
+    if (valor) {
+      this.destino.set(/comerc/i.test(valor) ? 'comercio' : 'vivienda');
+    }
+  }
+
   protected readonly destinos: readonly OpcionSegmentada[] = [
     { valor: 'vivienda', etiqueta: 'Vivienda', icono: 'home' },
     { valor: 'comercio', etiqueta: 'Comercio', icono: 'storefront' },

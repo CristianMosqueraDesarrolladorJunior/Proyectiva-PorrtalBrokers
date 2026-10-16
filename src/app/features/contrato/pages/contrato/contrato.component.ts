@@ -52,7 +52,16 @@ import {
 } from './contrato-presentacion';
 
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
-import { LectorContratoComponent } from '../../components/lector-contrato/lector-contrato.component';
+import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
+
+/** Servicios públicos que puede tener el inmueble (los mismos del cotizador actual). */
+const SERVICIOS_PUBLICOS: readonly string[] = ['Acueducto', 'Energía', 'Gas', 'Caldera', 'Teléfono'];
+
+/** Día del mes de una fecha ISO (AAAA-MM-DD): el canon se paga el mismo día del inicio del contrato. */
+function diaDeFecha(fecha: string): number | undefined {
+  const dia = Number(/^\d{4}-\d{2}-(\d{2})$/.exec(fecha.trim())?.[1]);
+  return dia >= 1 && dia <= 31 ? dia : undefined;
+}
 /** Estado del envío del Contrato_Arrendamiento para controlar loader y confirmación (Req 30.7). */
 type EstadoEnvioContrato = 'inactivo' | 'enviando' | 'exito';
 
@@ -82,8 +91,7 @@ type EstadoEnvioContrato = 'inactivo' | 'enviando' | 'exito';
   selector: 'app-contrato',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeaderComponent,
-    LectorContratoComponent,
+  imports: [SoloDigitosDirective, PageHeaderComponent,
     FormsModule,
     StepTabsComponent,
     FormFieldComponent,
@@ -127,8 +135,13 @@ export class ContratoComponent {
   /** Usos del inmueble del selector (Req 30.4). */
   protected readonly usosInmueble = this.catalogo.opciones('uso_inmueble').map((t) => t.descripcion);
 
-  /** Estratos del selector (Req 30.4). */
-  protected readonly estratos = this.catalogo.codigos('estrato').map(Number);
+  /** Bancos de la cuenta del canon (catálogo `banco`). */
+  protected readonly bancos = this.catalogo.opciones('banco').map((b) => b.descripcion);
+
+  /** Tipos de cuenta bancaria (catálogo `tipo_cuenta`). */
+  protected readonly tiposCuenta = this.catalogo.opciones('tipo_cuenta');
+
+  protected readonly serviciosPublicos = SERVICIOS_PUBLICOS;
 
   /** Duraciones del contrato ofrecidas en meses (Req 30.5). */
   protected readonly duraciones = this.catalogo.codigos('duracion_contrato').map((d) => Number(d) as DuracionContratoMeses);
@@ -165,9 +178,6 @@ export class ContratoComponent {
   protected readonly ateNumeroIdentificacion = signal('');
   protected readonly ateTelefono = signal('');
   protected readonly ateCorreo = signal('');
-  protected readonly ateOcupacion = signal('');
-  protected readonly ateCiudadExpedicion = signal('');
-  protected readonly ateDireccionNotificacion = signal('');
 
   /** Precarga desde el estudio digital (arrendatario, codeudores, propietario e inmueble). */
   protected readonly estudioConsecutivo = signal('');
@@ -181,9 +191,6 @@ export class ContratoComponent {
   protected readonly inmDireccion = signal('');
   protected readonly inmCiudad = signal('');
   protected readonly inmMatricula = signal('');
-  protected readonly inmEstrato = signal<number | null>(4);
-  protected readonly inmArea = signal<number | null>(null);
-  protected readonly inmLineaTelefonica = signal('');
   protected readonly inmGaraje = signal('');
   protected readonly inmDeposito = signal('');
 
@@ -191,10 +198,10 @@ export class ContratoComponent {
   protected readonly conCanon = signal<number | null>(null);
   protected readonly conAdministracion = signal<number | null>(null);
   protected readonly conDuracion = signal<DuracionContratoMeses>(12);
-  protected readonly conDiaPago = signal<number | null>(null);
   protected readonly conFechaInicio = signal('');
-  protected readonly conReajuste = signal('');
-  protected readonly conServicios = signal('');
+  /** Comercio: puntos sobre el IPC del incremento anual (vivienda: solo IPC, fijo). */
+  protected readonly conPuntosReajuste = signal<number | null>(0);
+  protected readonly conServicios = signal<readonly string[]>([]);
   // El prototipo marca "Incluir deudores solidarios" por defecto.
   protected readonly conDeudoresSolidarios = signal(false);
   protected readonly conMetodoPago = signal<MetodoPagoContrato>('transferencia');
@@ -203,6 +210,21 @@ export class ContratoComponent {
   protected readonly conBanco = signal('');
   // Datos adicionales que el área registra en el Consolidado (como en el Antiguo Cotizador).
   protected readonly inmLeasing = signal(false);
+  /** Inmueble en leasing: el broker confirma que tiene el permiso de subarriendo (lo carga en la radicación). */
+  protected readonly inmPermisoSubarriendo = signal(false);
+
+  /** El uso elegido usa la plantilla de comercio (Comercial/Mixto). */
+  protected readonly esComercio = computed(() =>
+    this.catalogo.opciones('uso_inmueble').find((u) => u.descripcion === this.inmUso())?.['plantilla'] === 'COMERCIO');
+
+  /** Texto del incremento anual que viaja al contrato y al Consolidado. */
+  protected readonly reajusteTexto = computed(() => {
+    if (!this.esComercio()) {
+      return 'IPC';
+    }
+    const puntos = Math.max(0, Math.trunc(Number(this.conPuntosReajuste()) || 0));
+    return puntos > 0 ? `IPC + ${puntos} puntos` : 'IPC';
+  });
   protected readonly conArrendadorEsTitular = signal(true);
   protected readonly conNombreTitular = signal('');
   protected readonly conTieneClausulas = signal(false);
@@ -229,6 +251,50 @@ export class ContratoComponent {
       ?? (typeof history !== 'undefined' ? history.state : undefined);
     this.autollenarDesdeEstudio(estado);
     this.autollenarDesdeCotizacion();
+    const lectura = (estado as { lectura?: LecturaContratoResponse } | undefined)?.lectura;
+    if (lectura) {
+      this.precargarDesdeLectura(lectura);
+    }
+  }
+
+  /**
+   * Precarga la lectura del contrato firmado que se cargó en Radicación: solo pisa los campos que llegaron
+   * con valor, lo demás queda como estaba para que el broker lo complete.
+   */
+  private precargarDesdeLectura(lectura: LecturaContratoResponse): void {
+    const poner = <T>(campo: WritableSignal<T>, valor: T | undefined | null) => {
+      if (valor !== undefined && valor !== null && String(valor).trim() !== '') campo.set(valor);
+    };
+    const { arrendador: arr, arrendatario: ate, inmueble: inm, condiciones: con } = lectura;
+    poner(this.arrNombres, arr.nombres);
+    poner(this.arrApellidos, arr.apellidos);
+    poner(this.arrTipoIdentificacion, arr.tipoIdentificacion);
+    poner(this.arrNumeroIdentificacion, arr.numeroIdentificacion);
+    poner(this.arrTelefono, arr.telefono);
+    poner(this.arrCorreo, arr.correo);
+    poner(this.arrDireccion, arr.direccion);
+    poner(this.ateNombres, ate.nombres);
+    poner(this.ateApellidos, ate.apellidos);
+    poner(this.ateTipoIdentificacion, ate.tipoIdentificacion);
+    poner(this.ateNumeroIdentificacion, ate.numeroIdentificacion);
+    poner(this.ateTelefono, ate.telefono);
+    poner(this.ateCorreo, ate.correo);
+    poner(this.inmDireccion, inm.direccionCompleta);
+    // Solo valores del catálogo: una ciudad o tipo fuera de lista rompería el envío.
+    if (inm.ciudad && this.ciudades().includes(inm.ciudad)) this.inmCiudad.set(inm.ciudad);
+    if (inm.tipoInmueble && this.tiposInmueble.includes(inm.tipoInmueble)) this.inmTipoInmueble.set(inm.tipoInmueble);
+    if (inm.uso && this.usosInmueble.includes(inm.uso)) this.inmUso.set(inm.uso);
+    poner(this.inmMatricula, inm.matriculaInmobiliaria);
+    poner(this.conCanon, con.canonMensual);
+    poner(this.conAdministracion, con.cuotaAdministracion);
+    poner(this.conFechaInicio, con.fechaInicio);
+    poner(this.conNumeroCuenta, con.numeroCuenta);
+    poner(this.conTipoCuenta, con.tipoCuenta);
+    if (con.banco && this.bancos.includes(con.banco)) this.conBanco.set(con.banco);
+    if (con.duracionMeses && (this.duraciones as readonly number[]).includes(con.duracionMeses)) {
+      this.conDuracion.set(con.duracionMeses as DuracionContratoMeses);
+    }
+    if (lectura.deudorSolidario?.nombres) this.conDeudoresSolidarios.set(true);
   }
 
   /**
@@ -243,7 +309,11 @@ export class ContratoComponent {
     this.conCanon.set(cot.canon);
     this.conAdministracion.set(cot.administracion ?? 0);
     this.inmCiudad.set(cot.ciudad);
-    this.inmUso.set(/comerc/i.test(cot.tipoInmueble) ? 'Comercial' : 'Habitacional');
+    const plantilla = /comerc/i.test(cot.tipoInmueble) ? 'COMERCIO' : 'VIVIENDA';
+    const uso = this.catalogo.opciones('uso_inmueble').find((u) => u['plantilla'] === plantilla);
+    if (uso) {
+      this.inmUso.set(uso.descripcion);
+    }
     if (cot.fechaInicioVigencia) {
       this.conFechaInicio.set(cot.fechaInicioVigencia);
     }
@@ -287,43 +357,6 @@ export class ContratoComponent {
     }
   }
 
-  /**
-   * Precarga la propuesta del lector de contratos: solo pisa los campos que llegaron con valor,
-   * lo demás queda como estaba para que el broker lo complete.
-   */
-  protected precargarDesdeLectura(lectura: LecturaContratoResponse): void {
-    const poner = <T>(campo: WritableSignal<T>, valor: T | undefined | null) => {
-      if (valor !== undefined && valor !== null && String(valor).trim() !== '') campo.set(valor);
-    };
-    const { arrendador: arr, arrendatario: ate, inmueble: inm, condiciones: con } = lectura;
-    poner(this.arrNombres, arr.nombres);
-    poner(this.arrApellidos, arr.apellidos);
-    poner(this.arrTipoIdentificacion, arr.tipoIdentificacion);
-    poner(this.arrNumeroIdentificacion, arr.numeroIdentificacion);
-    poner(this.arrTelefono, arr.telefono);
-    poner(this.arrCorreo, arr.correo);
-    poner(this.arrDireccion, arr.direccion);
-    poner(this.ateNombres, ate.nombres);
-    poner(this.ateApellidos, ate.apellidos);
-    poner(this.ateTipoIdentificacion, ate.tipoIdentificacion);
-    poner(this.ateNumeroIdentificacion, ate.numeroIdentificacion);
-    poner(this.ateTelefono, ate.telefono);
-    poner(this.ateCorreo, ate.correo);
-    poner(this.inmDireccion, inm.direccionCompleta);
-    // Solo valores del catálogo: una ciudad o tipo fuera de lista rompería el envío.
-    if (inm.ciudad && this.ciudades().includes(inm.ciudad)) this.inmCiudad.set(inm.ciudad);
-    if (inm.tipoInmueble && this.tiposInmueble.includes(inm.tipoInmueble)) this.inmTipoInmueble.set(inm.tipoInmueble);
-    if (inm.uso && this.usosInmueble.includes(inm.uso)) this.inmUso.set(inm.uso);
-    poner(this.inmMatricula, inm.matriculaInmobiliaria);
-    poner(this.conCanon, con.canonMensual);
-    poner(this.conAdministracion, con.cuotaAdministracion);
-    poner(this.conFechaInicio, con.fechaInicio);
-    if (con.duracionMeses && (this.duraciones as readonly number[]).includes(con.duracionMeses)) {
-      this.conDuracion.set(con.duracionMeses as DuracionContratoMeses);
-    }
-    if (lectura.deudorSolidario?.nombres) this.conDeudoresSolidarios.set(true);
-  }
-
   /** Estado agregado de los datos por paso, consumido por la lógica pura de gating. */
   protected readonly estado = computed<EstadoContrato>(() => ({
     arrendador: this.datosArrendador(),
@@ -363,7 +396,9 @@ export class ContratoComponent {
   /** Trae del estudio digital al arrendatario, los codeudores (deudores solidarios), el propietario y el inmueble. */
   protected precargarDeEstudio(): void {
     const consecutivo = this.estudioConsecutivo().trim();
-    const documento = this.ateNumeroIdentificacion().trim();
+    // Solo dígitos: los brokers escriben la cédula con puntos (el backend rechazaba "11.234.567").
+    const documento = this.ateNumeroIdentificacion().replace(/\D/g, '');
+    this.ateNumeroIdentificacion.set(documento);
     if (!consecutivo || !documento) {
       this.mensajeEstudio.set({ tipo: 'warning', titulo: 'Faltan datos', texto: 'Escribe el número de estudio y el documento del arrendatario evaluado.' });
       return;
@@ -379,7 +414,6 @@ export class ContratoComponent {
           this.ateApellidos.set(a.apellidos ?? this.ateApellidos());
           this.ateTelefono.set(a.telefono ?? this.ateTelefono());
           this.ateCorreo.set(a.correo ?? this.ateCorreo());
-          this.ateDireccionNotificacion.set(a.direccionNotificacion ?? this.ateDireccionNotificacion());
         }
         const arr = p.arrendador;
         // El arrendador del estudio solo se usa si es el mismo propietario de la radicación (o no hay uno).
@@ -418,14 +452,16 @@ export class ContratoComponent {
         this.mensajeEstudio.set({
           tipo: 'success',
           titulo: 'Datos del estudio cargados',
-          texto: `Arrendatario${this.deudores().length ? ` y ${this.deudores().length} deudor(es) solidario(s)` : ''} precargados. Revísalos y completa la ciudad de expedición.`,
+          texto: `Arrendatario${this.deudores().length ? ` y ${this.deudores().length} deudor(es) solidario(s)` : ''} precargados. Revísalos antes de continuar.`,
         });
       },
       error: (err: { status?: number }) => {
         this.cargandoEstudio.set(false);
         this.mensajeEstudio.set(err?.status === 404
           ? { tipo: 'warning', titulo: 'Estudio no encontrado', texto: 'Revisa el número de estudio y el documento del arrendatario.' }
-          : { tipo: 'error', titulo: 'No se pudo consultar', texto: 'El estudio digital no respondió. Intenta de nuevo o diligencia los datos a mano.' });
+          : err?.status === 400
+            ? { tipo: 'warning', titulo: 'Revisa los datos', texto: 'El número de estudio o el documento del arrendatario no tienen un formato válido.' }
+            : { tipo: 'error', titulo: 'No se pudo consultar', texto: 'El estudio digital no respondió. Intenta de nuevo o diligencia los datos a mano.' });
       },
     });
   }
@@ -434,11 +470,17 @@ export class ContratoComponent {
     this.deudores.update((lista) => lista.map((d, j) => (j === i ? { ...d, [campo]: valor } : d)));
   }
 
-  /** Deudores con nombre y documento: solo con alguno el contrato declara deudores solidarios. */
+  /** Deudores con nombres, apellidos y documento (el backend exige los tres): solo ellos van al contrato. */
   private deudoresValidos(): DeudorSolidario[] {
     return this.conDeudoresSolidarios()
-      ? this.deudores().filter((d) => d.nombres.trim() && d.numeroIdentificacion.trim())
+      ? this.deudores().filter((d) => d.nombres.trim() && d.apellidos.trim() && d.numeroIdentificacion.trim())
       : [];
+  }
+
+  /** Marca o desmarca un servicio público del inmueble. */
+  protected alternarServicio(servicio: string, marcado: boolean): void {
+    this.conServicios.update((lista) =>
+      marcado ? [...new Set([...lista, servicio])] : lista.filter((s) => s !== servicio));
   }
 
   /** Marcar "Incluir deudores" con la lista vacía abre el primer deudor para diligenciarlo. */
@@ -553,7 +595,7 @@ export class ContratoComponent {
       next: (respuesta) => {
         this.confirmacion.set(respuesta);
         // La radicación exige este contrato: queda registrado en el borrador del flujo.
-        this.borrador.contrato.set({ referencia: respuesta.radicado });
+        this.borrador.contrato.set({ referencia: respuesta.radicado, leasing: this.inmLeasing() });
         this.estadoEnvio.set('exito');
         this.generado.emit(respuesta);
       },
@@ -600,7 +642,6 @@ export class ContratoComponent {
       numeroIdentificacion: this.ateNumeroIdentificacion(),
       telefono: this.ateTelefono(),
       correo: this.ateCorreo(),
-      ocupacion: this.ateOcupacion(),
     };
   }
 
@@ -612,8 +653,8 @@ export class ContratoComponent {
       direccionCompleta: this.inmDireccion(),
       ciudad: this.inmCiudad(),
       matriculaInmobiliaria: this.inmMatricula(),
-      ...(this.inmEstrato() !== null ? { estrato: this.inmEstrato() as number } : {}),
-      ...(this.inmArea() !== null ? { areaMetrosCuadrados: this.inmArea() as number } : {}),
+      leasing: this.inmLeasing(),
+      permisoSubarriendo: this.inmPermisoSubarriendo(),
     };
   }
 
@@ -625,10 +666,10 @@ export class ContratoComponent {
         ? { cuotaAdministracion: this.conAdministracion() as number }
         : {}),
       duracionMeses: this.conDuracion(),
-      ...(this.conDiaPago() !== null ? { diaPagoMensual: this.conDiaPago() as number } : {}),
+      ...(diaDeFecha(this.conFechaInicio()) ? { diaPagoMensual: diaDeFecha(this.conFechaInicio()) } : {}),
       fechaInicio: this.conFechaInicio(),
-      reajusteAnual: this.conReajuste(),
-      serviciosIncluidos: this.serviciosComoLista(),
+      reajusteAnual: this.reajusteTexto(),
+      serviciosIncluidos: this.conServicios(),
       incluyeDeudoresSolidarios: this.conDeudoresSolidarios(),
       ...this.datosPago(),
     };
@@ -640,14 +681,6 @@ export class ContratoComponent {
     return metodoPago === 'efectivo'
       ? { metodoPago }
       : { metodoPago, tipoCuenta: this.conTipoCuenta(), numeroCuenta: this.conNumeroCuenta().trim() };
-  }
-
-  /** Convierte el texto de servicios en una lista (separada por comas), sin vacíos. */
-  private serviciosComoLista(): readonly string[] {
-    return this.conServicios()
-      .split(',')
-      .map((servicio) => servicio.trim())
-      .filter((servicio) => servicio.length > 0);
   }
 
   /**
@@ -676,9 +709,8 @@ export class ContratoComponent {
       numeroIdentificacion: this.ateNumeroIdentificacion().trim(),
       telefono: this.ateTelefono().trim(),
       correo: this.ateCorreo().trim(),
-      ocupacion: this.ateOcupacion().trim(),
-      ciudadExpedicion: this.ateCiudadExpedicion().trim(),
-      direccionNotificacion: this.ateDireccionNotificacion().trim(),
+      // El arrendatario se notifica en el inmueble que arrienda.
+      direccionNotificacion: this.inmDireccion().trim(),
     };
     const inmueble: DatosInmueble = {
       tipoInmueble: this.inmTipoInmueble().trim(),
@@ -686,9 +718,6 @@ export class ContratoComponent {
       direccionCompleta: this.inmDireccion().trim(),
       ciudad: this.inmCiudad().trim(),
       matriculaInmobiliaria: this.inmMatricula().trim(),
-      estrato: this.inmEstrato() as number,
-      areaMetrosCuadrados: this.inmArea() as number,
-      lineaTelefonica: this.inmLineaTelefonica().trim(),
       ...(this.inmGaraje().trim() ? { garaje: this.inmGaraje().trim() } : {}),
       ...(this.inmDeposito().trim() ? { deposito: this.inmDeposito().trim() } : {}),
     };
@@ -696,10 +725,10 @@ export class ContratoComponent {
       canonMensual: this.conCanon() as number,
       cuotaAdministracion: this.conAdministracion() as number,
       duracionMeses: this.conDuracion(),
-      diaPagoMensual: this.conDiaPago() as number,
+      diaPagoMensual: diaDeFecha(this.conFechaInicio()) as number,
       fechaInicio: this.conFechaInicio().trim(),
-      reajusteAnual: this.conReajuste().trim(),
-      serviciosIncluidos: this.serviciosComoLista(),
+      reajusteAnual: this.reajusteTexto(),
+      serviciosIncluidos: this.conServicios(),
       incluyeDeudoresSolidarios: this.deudoresValidos().length > 0,
       ...this.datosPago(),
       ...(this.conMetodoPago() !== 'efectivo' && this.conBanco().trim() ? { banco: this.conBanco().trim() } : {}),

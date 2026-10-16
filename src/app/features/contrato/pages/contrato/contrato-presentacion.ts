@@ -133,8 +133,7 @@ export function esPasoArrendatarioValido(datos: Partial<DatosArrendatario>): boo
     campoDiligenciado(datos.tipoIdentificacion) &&
     esIdentificacionValida(datos.numeroIdentificacion) &&
     esTelefonoValido(datos.telefono) &&
-    esCorreoValido(datos.correo) &&
-    campoDiligenciado(datos.ocupacion)
+    esCorreoValido(datos.correo)
   );
 }
 
@@ -152,8 +151,8 @@ export function esPasoInmuebleValido(datos: Partial<DatosInmueble>): boolean {
     campoDiligenciado(datos.direccionCompleta) &&
     campoDiligenciado(datos.ciudad) &&
     campoDiligenciado(datos.matriculaInmobiliaria) &&
-    esEnteroEnRango(datos.estrato, ESTRATO_MIN, ESTRATO_MAX) &&
-    esNumeroPositivo(datos.areaMetrosCuadrados)
+    // Inmueble en leasing: sin permiso de subarriendo no se puede arrendar.
+    (!datos.leasing || datos.permisoSubarriendo === true)
   );
 }
 

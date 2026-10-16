@@ -27,15 +27,15 @@
     <dl class="sarlaft-renov__datos">
       <div>
         <dt>Última expedición</dt>
-        <dd>{{ r.ultimaExpedicion | date: 'dd/MM/yyyy' }}</dd>
+        <dd>{{ r.ultimaExpedicion ? (r.ultimaExpedicion | date: 'dd/MM/yyyy') : 'Sin registro' }}</dd>
       </div>
       <div>
         <dt>Tiempo transcurrido</dt>
         <dd>{{ r.tiempoTranscurrido }}</dd>
       </div>
       <div>
-        <dt>Validación</dt>
-        <dd>{{ r.validacionId }}</dd>
+        <dt>Estado</dt>
+        <dd>{{ r.estado === 'vigente' ? 'Vigente' : 'Requiere actualización' }}</dd>
       </div>
     </dl>
 

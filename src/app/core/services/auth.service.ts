@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, finalize, tap } from 'rxjs';
 
 import { LoginRequest, PerfilBroker, PerfilCompartido } from '../models/broker.model';
 import {
@@ -93,7 +93,8 @@ export class AuthService {
   logout(): Observable<void> {
     return this.http
       .post<void>(`${this.baseUrl}/auth/logout`, {}, { withCredentials: true })
-      .pipe(tap(() => this.session.limpiarPerfil()));
+      // El perfil local se limpia aunque el servidor falle: la sesión se da por cerrada en el cliente.
+      .pipe(finalize(() => this.session.limpiarPerfil()));
   }
 
   /**

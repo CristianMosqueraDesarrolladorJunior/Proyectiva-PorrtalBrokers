@@ -80,6 +80,11 @@ const ICONO_COBERTURA: Readonly<Record<string, string>> = {
   DESEMPLEO: 'work_off',
 };
 
+/** Servicios públicos incluidos sin costo; espejo de `TarifaParametros.EXENCION_SERVICIOS_*` del backend. */
+const CODIGO_SERVICIOS = 'SERVICIOS_PUBLICOS';
+const OBSEQUIO_SERVICIOS_VIVIENDA = 1_000_000;
+const OBSEQUIO_SERVICIOS_COMERCIO = 2_000_000;
+
 /** Estado interactivo de una cobertura en el formulario (Req 7.5, 7.6). */
 interface CoberturaEstado {
   readonly id: string;
@@ -441,6 +446,15 @@ export class CotizadorDatosComponent implements OnInit {
     this.onMesesChange(valor);
   }
 
+  /** Monto de servicios públicos que se obsequia según el destino (vivienda $1.000.000, comercio $2.000.000). */
+  protected readonly obsequioServicios = computed(() =>
+    this.esComercio() ? OBSEQUIO_SERVICIOS_COMERCIO : OBSEQUIO_SERVICIOS_VIVIENDA);
+
+  /** Monto mínimo de una cobertura: Servicios no baja del obsequio; las demás, de $0. */
+  protected montoMinimo(id: string): number {
+    return id === CODIGO_SERVICIOS ? this.obsequioServicios() : 0;
+  }
+
   protected limpiar(): void {
     this.departamento.set('');
     this.ciudad.set('');
@@ -455,7 +469,9 @@ export class CotizadorDatosComponent implements OnInit {
     this.intentoCalculo.set(false);
     this.errorCalculo.set('');
     this.resultado.set(null);
-    this.coberturas.update((lista) => lista.map((c) => ({ ...c, activa: false })));
+    this.coberturas.update((lista) => lista.map((c) => c.id === CODIGO_SERVICIOS
+      ? { ...c, activa: true, montoAsegurado: this.obsequioServicios() }
+      : { ...c, activa: false }));
   }
 
   ngOnInit(): void {
@@ -506,7 +522,11 @@ export class CotizadorDatosComponent implements OnInit {
 
   /** Actualiza el tipo de inmueble; desactiva el IVA si deja de ser Comercio (Req 7.4). */
   protected onTipoInmuebleChange(tipo: string): void {
+    const obsequioAnterior = this.obsequioServicios();
     this.tipoInmueble.set(tipo);
+    // Servicios conserva lo adicional que eligió el Broker sobre el nuevo obsequio.
+    const obsequio = this.obsequioServicios();
+    this.ajustarMonto(CODIGO_SERVICIOS, (monto) => obsequio + Math.max(0, monto - obsequioAnterior));
     if (tipo !== this.tipoComercio) {
       this.aseguraIva.set(false);
     }
@@ -539,7 +559,7 @@ export class CotizadorDatosComponent implements OnInit {
 
   /** Decrementa el monto de una cobertura sin permitir negativos (mínimo $0) (Req 7.6). */
   protected decrementar(id: string): void {
-    this.ajustarMonto(id, (monto) => decrementarMonto(monto, this.pasoMonto));
+    this.ajustarMonto(id, (monto) => Math.max(this.montoMinimo(id), decrementarMonto(monto, this.pasoMonto)));
   }
 
   /**
@@ -667,8 +687,11 @@ export class CotizadorDatosComponent implements OnInit {
         id: cobertura.nombre,
         nombre: cobertura.descripcion,
         descripcion: cobertura.descripcion,
-        activa: false,
-        montoAsegurado: normalizarMonto(cobertura.montoDefecto, this.pasoMonto),
+        // Servicios públicos viene incluido con el obsequio; lo adicional se cobra (5 % + IVA, backend).
+        activa: cobertura.nombre === CODIGO_SERVICIOS,
+        montoAsegurado: cobertura.nombre === CODIGO_SERVICIOS
+          ? this.obsequioServicios()
+          : normalizarMonto(cobertura.montoDefecto, this.pasoMonto),
       }));
   }
 

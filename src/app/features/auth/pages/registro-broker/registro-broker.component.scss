@@ -208,6 +208,64 @@
   }
 }
 
+// Formulario físico: carga y, al lado, descarga del formato (persona natural o jurídica).
+.registro-fisico {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+
+  app-doc-uploader {
+    flex: 1 1 320px;
+    min-width: 0;
+  }
+}
+
+// Cómo funciona la validación (antes de verificar).
+.registro-flujo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-2) var(--space-0) var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+  counter-reset: flujo;
+
+  li {
+    display: grid;
+    grid-template-columns: var(--section-number-size) 1fr;
+    column-gap: var(--space-3);
+    counter-increment: flujo;
+
+    &::before {
+      content: counter(flujo);
+      grid-row: span 2;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--section-number-size);
+      height: var(--section-number-size);
+      border: 2px solid var(--sb-tint-accent-border);
+      border-radius: var(--radius-full);
+      color: var(--color-accent-hover);
+      font-size: var(--text-body-sm);
+      font-weight: var(--font-weight-bold);
+    }
+  }
+
+  b {
+    font-size: var(--text-body);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+  }
+
+  span {
+    font-size: var(--text-body-sm);
+    line-height: var(--line-height-normal);
+    color: var(--color-muted);
+  }
+}
+
 .registro-resultado {
   display: flex;
   align-items: flex-start;
@@ -396,6 +454,147 @@
   border-top: 1px solid var(--color-border);
   font-size: var(--text-body);
   color: var(--color-muted);
+}
+
+// --- Escritorio: tarjeta ancha de alto fijo para los 3 pasos (sin scroll) ---
+// Izquierda: marca, etapas en vertical, aviso y pie. Derecha: contenido del paso
+// con las acciones abajo. El alto es el mismo en los 3 pasos.
+@media (width >= 768px) {
+  .registro-card {
+    display: grid;
+    grid-template-columns: var(--registro-lateral-width) 1fr;
+    grid-template-rows: minmax(0, 1fr); // la fila no crece más que la tarjeta
+
+    max-width: var(--registro-card-width-desktop);
+    height: min(var(--registro-card-height), calc(100vh - 2 * var(--space-5)));
+    padding: var(--space-0);
+    overflow: hidden;
+  }
+
+  .registro-lateral {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-7);
+    border-right: 1px solid var(--color-border);
+    background: var(--sb-surface-low);
+    overflow-y: auto;
+  }
+
+  .registro-header {
+    text-align: left;
+  }
+
+  .registro-marca {
+    margin: var(--space-0) var(--space-0) var(--space-6);
+  }
+
+  .registro-aviso {
+    margin-bottom: var(--space-0);
+  }
+
+  // Etapas en columna: círculo a la izquierda y línea vertical entre círculos.
+  .registro-pasos {
+    flex-direction: column;
+    gap: var(--space-4);
+    margin: var(--space-6) var(--space-0);
+    padding: var(--space-0);
+    border: 0;
+    background: none;
+  }
+
+  .registro-pasos__item {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+    text-align: left;
+
+    .registro-pasos__linea {
+      top: var(--section-number-size);
+      left: calc(var(--section-number-size) / 2 - 1px);
+      width: 2px;
+      height: var(--space-4);
+    }
+  }
+
+  .registro-pasos__texto {
+    align-items: flex-start;
+  }
+
+  .registro-footer {
+    justify-content: flex-start;
+    margin-top: auto;
+    white-space: nowrap;
+  }
+
+  .registro-cuerpo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-height: 0;
+    padding: var(--space-7) var(--space-8);
+    // Contenido centrado en vertical; "safe" evita recortar arriba si no cabe (pantallas bajas).
+    justify-content: safe center;
+    // Respaldo para pantallas bajas; en escritorio normal no aparece.
+    overflow-y: auto;
+  }
+
+  // Acciones centradas bajo el contenido del paso.
+  .registro-acciones,
+  .registro-acciones--fila {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: var(--space-4);
+
+    app-boton {
+      flex: 0 0 auto;
+    }
+  }
+}
+
+// Portátiles bajos (≈768px de alto): se compacta la columna lateral para que tampoco haga scroll.
+@media (width >= 768px) and (height <= 800px) {
+  .registro-lateral {
+    padding: var(--space-6);
+  }
+
+  .registro-marca {
+    margin-bottom: var(--space-4);
+  }
+
+  .registro-pasos {
+    gap: var(--space-3);
+    margin: var(--space-4) var(--space-0);
+  }
+
+  .registro-pasos__item .registro-pasos__linea {
+    height: var(--space-3);
+  }
+
+  .registro-cuerpo {
+    padding: var(--space-6) var(--space-8);
+  }
+}
+
+// Tablet y móvil: una sola columna como antes; el pie "¿Ya tienes cuenta?" vuelve al final.
+@media (width <= 767px) {
+  .registro-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .registro-lateral {
+    display: contents;
+  }
+
+  .registro-cuerpo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .registro-footer {
+    order: 1;
+  }
 }
 
 // --- Modal de credenciales ---

@@ -4,8 +4,7 @@
     <div class="opciones">
       <header class="opciones__header">
         <h1 class="opciones__titulo">
-          Elige cómo <strong>renovar tu póliza de arrendamiento</strong>
-          <strong>#{{ numeroPoliza() }}</strong>
+          Elige cómo <strong>renovar tu póliza de arrendamiento</strong>&nbsp;<strong>N.º {{ numeroPoliza() }}</strong>
         </h1>
         <p class="opciones__subtitulo">
           Selecciona la opción que mejor se adapte a tus necesidades y asegura la
@@ -685,7 +684,7 @@
           </div>
 
           <div class="flujo-especial__formulario">
-            <app-formato-renovacion [numeroPoliza]="numeroPoliza()" />
+            <app-formato-renovacion [numeroPoliza]="numeroPoliza()" [canonInicial]="condiciones()?.canon" [destinoInicial]="condiciones()?.destino" />
             <app-doc-uploader
               [reglas]="reglaFormularioRenovacion"
               [cargados]="cargados()"
@@ -749,7 +748,7 @@
         <div class="flujo-especial__acciones">
           <button type="button" class="btn btn--outline" (click)="volverAOpciones()">Cancelar</button>
           <button type="button" class="btn btn--primary" [disabled]="!motivoValido() || enviando()" (click)="enviarNoRenovacion()">
-            {{ enviando() ? 'Enviando…' : 'Confirmar no renovación' }}
+            {{ enviando() ? 'Enviando, puede tardar unos segundos…' : 'Confirmar no renovación' }}
           </button>
         </div>
         @if (errorEnvio(); as error) {
@@ -763,7 +762,7 @@
   @if (etapa() === 'sarlaft') {
     <app-sarlaft-renovacion
       [numeroPoliza]="numeroPoliza()"
-      [textoContinuar]="enviando() ? 'Enviando…' : 'Continuar y enviar'"
+      [textoContinuar]="enviando() ? 'Enviando, puede tardar unos segundos…' : 'Continuar y enviar'"
       (vigente)="onSarlaftVigente($event)"
       (cancelar)="volverAOpciones()"
     />

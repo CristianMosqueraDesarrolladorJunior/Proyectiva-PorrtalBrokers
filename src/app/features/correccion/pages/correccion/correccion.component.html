@@ -50,7 +50,7 @@
           <div class="correccion__acciones">
             <app-boton variante="ghost" (clicked)="volver()">Cancelar</app-boton>
             <app-boton variante="accent" icono="upload_file" [disabled]="!puedeEnviar() || enviando()" (clicked)="enviar()">
-              {{ enviando() ? 'Enviando…' : pendienteEnvio() ? 'Enviar al área' : 'Enviar corrección al área' }}
+              {{ enviando() ? 'Enviando, puede tardar unos segundos…' : pendienteEnvio() ? 'Enviar al área' : 'Enviar corrección al área' }}
             </app-boton>
           </div>
         }

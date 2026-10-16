@@ -6,7 +6,8 @@ import { of } from 'rxjs';
 
 import { AuthService } from '../../../../core/services/auth.service';
 import { PerfilService } from '../../../../core/services/perfil.service';
-import { RegistroBrokerComponent } from './registro-broker.component';
+import { DocumentosService } from '../../../../core/services/documentos.service';
+import { RegistroBrokerComponent, mensajeErrorRegistro } from './registro-broker.component';
 
 describe('RegistroBrokerComponent', () => {
   let fixture: ComponentFixture<RegistroBrokerComponent>;
@@ -52,6 +53,7 @@ describe('RegistroBrokerComponent', () => {
         { provide: AuthService, useValue: authSpy },
         { provide: Router, useValue: routerSpy },
         { provide: PerfilService, useValue: perfilSpy },
+        { provide: DocumentosService, useValue: { descargarRecurso: jest.fn() } },
       ],
     }).compileComponents();
 
@@ -104,5 +106,15 @@ describe('RegistroBrokerComponent', () => {
     fixture.detectChanges();
     expect(query('#registro-titulo').textContent).toContain('Adjunta tus documentos');
     expect(query('app-doc-uploader')).not.toBeNull();
+  });
+});
+
+describe('mensajeErrorRegistro', () => {
+  it('dice qué dato ya está registrado según el campo en conflicto del 409', () => {
+    expect(mensajeErrorRegistro({ status: 409, error: { fields: ['cedula'] } })).toContain('número de documento');
+    expect(mensajeErrorRegistro({ status: 409, error: { fields: ['correo'] } })).toContain('correo ya está registrado');
+    expect(mensajeErrorRegistro({ status: 409, error: { fields: [] } })).toContain('documento o correo');
+    expect(mensajeErrorRegistro({ status: 500 })).toBe('No fue posible crear tu cuenta. Intenta de nuevo.');
+    expect(mensajeErrorRegistro(undefined)).toBe('No fue posible crear tu cuenta. Intenta de nuevo.');
   });
 });

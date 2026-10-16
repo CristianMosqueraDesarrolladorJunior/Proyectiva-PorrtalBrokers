@@ -1,7 +1,7 @@
 <section class="coberturas" aria-labelledby="coberturas-titulo">
   <h1 id="coberturas-titulo" class="coberturas__titulo">Coberturas</h1>
   <p class="coberturas__intro">
-    Activa las coberturas que deseas configurar y ajusta su monto asegurado.
+    Conoce qué protege cada cobertura de la póliza de arrendamiento. Los montos los eliges al cotizar.
   </p>
 
   @if (cargando()) {
@@ -15,60 +15,16 @@
     </div>
   } @else {
     <ul class="coberturas__lista">
-      @for (estado of coberturas(); track trackCobertura($index, estado)) {
+      @for (cobertura of coberturas(); track cobertura.id) {
         <li>
-          <app-card variante="cobertura-card" [activa]="estado.activa">
+          <app-card variante="cobertura-card">
             <div class="cobertura">
               <div class="cobertura__cabecera">
                 <div class="cobertura__info">
-                  <h2 class="cobertura__nombre">{{ nombreCobertura(estado.catalogo.id, estado.catalogo.nombre) }}</h2>
-                  <p class="cobertura__descripcion">{{ estado.catalogo.descripcion }}</p>
+                  <h2 class="cobertura__nombre">{{ nombreCobertura(cobertura) }}</h2>
                 </div>
-                <app-toggle-switch
-                  [checked]="estado.activa"
-                  [ariaLabel]="'Activar cobertura ' + nombreCobertura(estado.catalogo.id, estado.catalogo.nombre)"
-                  (checkedChange)="alternarCobertura(estado.catalogo.id, $event)"
-                ></app-toggle-switch>
               </div>
-
-              @if (estado.activa) {
-                <div class="cobertura__monto">
-                  <span class="cobertura__monto-etiqueta" [id]="'monto-' + estado.catalogo.id">
-                    Monto asegurado
-                  </span>
-                  <div
-                    class="cobertura__control"
-                    role="group"
-                    [attr.aria-labelledby]="'monto-' + estado.catalogo.id"
-                  >
-                    <button
-                      type="button"
-                      class="cobertura__paso"
-                      [attr.aria-label]="'Disminuir monto de ' + nombreCobertura(estado.catalogo.id, estado.catalogo.nombre)"
-                      (click)="decrementar(estado.catalogo.id)"
-                    >
-                      −
-                    </button>
-                    <span class="cobertura__valor" aria-live="polite">
-                      {{ estado.montoAsegurado | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
-                    </span>
-                    <button
-                      type="button"
-                      class="cobertura__paso"
-                      [attr.aria-label]="'Aumentar monto de ' + nombreCobertura(estado.catalogo.id, estado.catalogo.nombre)"
-                      (click)="incrementar(estado.catalogo.id)"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              }
-
-              <button
-                type="button"
-                class="cobertura__detalle"
-                (click)="consultarDetalle(estado.catalogo)"
-              >
+              <button type="button" class="cobertura__detalle" (click)="consultarDetalle(cobertura)">
                 Consultar detalle
               </button>
             </div>
@@ -81,7 +37,7 @@
 
 <app-drawer-detalle
   [abierto]="detalleAbierto()"
-  [titulo]="coberturaDetalle()?.nombre ?? 'Detalle'"
+  [titulo]="coberturaDetalle() ? nombreCobertura(coberturaDetalle()!) : 'Detalle'"
   [filas]="filasDetalle()"
   (cerrar)="cerrarDetalle()"
 ></app-drawer-detalle>

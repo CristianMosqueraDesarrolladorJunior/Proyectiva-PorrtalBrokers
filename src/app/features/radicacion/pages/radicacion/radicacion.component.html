@@ -79,7 +79,7 @@
               [requerido]="true"
               controlId="rad-num-doc"
             >
-              <input
+              <input [appSoloDigitos]="tipoDocumentoPropietario() !== 'PA'"
                 id="rad-num-doc"
                 type="text"
                 inputmode="numeric"
@@ -132,7 +132,7 @@
               [requerido]="true"
               controlId="rad-doc-inquilino"
             >
-              <input
+              <input [appSoloDigitos]="tipoDocumentoInquilino() !== 'PA'"
                 id="rad-doc-inquilino"
                 type="text"
                 inputmode="numeric"
@@ -237,7 +237,7 @@
                   [requerido]="true"
                   controlId="rad-num-doc-apo"
                 >
-                  <input
+                  <input [appSoloDigitos]="tipoDocumentoApoderado() !== 'PA'"
                     id="rad-num-doc-apo"
                     type="text"
                     inputmode="numeric"
@@ -435,7 +435,7 @@
               La carga de documentos se habilita cuando la consulta de Conocimiento de Cliente resulte
               <b>actualizada</b>, o si cargas el <b>SARLAFT físico</b> diligenciado y firmado.
             </app-info-box>
-            @if (estadoSarlaft() === 'DESACTUALIZADO') {
+            @if (ofreceSarlaftFisico()) {
               <app-boton variante="outline" icono="upload_file" (clicked)="elegirSarlaftFisico()">Cargar SARLAFT físico</app-boton>
             }
           }
@@ -445,7 +445,7 @@
           [numero]="6"
           icono="description"
           titulo="Contrato de arrendamiento"
-          subtitulo="Obligatorio: la radicación se crea a partir del contrato generado."
+          subtitulo="Obligatorio: genera el contrato o carga el que ya está firmado."
         >
           @if (contratoReferencia(); as referencia) {
             <app-alert-banner variante="success" titulo="Contrato generado">
@@ -453,8 +453,8 @@
             </app-alert-banner>
           } @else {
             <app-info-box icono="info">
-              Genera el contrato con nuestra plantilla: de él se toman los datos del propietario,
-              el inquilino, el inmueble y el canon. Sin contrato no es posible radicar.
+              Si ya tienes el contrato firmado, cárgalo: leemos el propietario, el inquilino, el inmueble y el canon
+              y lo registramos para radicar. Si no, genéralo con nuestra plantilla, descárgalo, fírmalo y cárgalo aquí.
             </app-info-box>
           }
 
@@ -464,11 +464,22 @@
             </app-boton>
           </div>
 
-          <app-doc-uploader
-            [reglas]="[reglaOpcional]"
-            [cargados]="archivosCargados()"
-            (archivoSeleccionado)="onArchivo($event)"
-          ></app-doc-uploader>
+          <app-lector-contrato
+            titulo="¿Ya tienes el contrato firmado? Cárgalo"
+            (archivo)="onContratoFirmado($event)"
+            (leido)="onContratoLeido($event)"
+          />
+          @if (registrandoContratoLeido()) {
+            <app-info-box icono="hourglass_top">Registrando el contrato con los datos leídos…</app-info-box>
+          }
+          @if (mensajeContratoLeido(); as m) {
+            <app-alert-banner [variante]="m.variante" titulo="Contrato firmado">{{ m.texto }}</app-alert-banner>
+          }
+          @if (lecturaPorCompletar()) {
+            <app-boton variante="outline" icono="edit_document" (clicked)="completarContratoLeido()">
+              Completar el contrato en Contratos
+            </app-boton>
+          }
         </app-form-section-card>
 
         <app-form-field label="Observaciones para el área (opcional)" controlId="rad-observaciones">
@@ -522,7 +533,7 @@
             [disabled]="!envioHabilitado() || enviando()"
             (clicked)="enviar()"
           >
-            {{ enviando() ? 'Enviando…' : 'Enviar radicación' }}
+            {{ enviando() ? 'Enviando, puede tardar unos segundos…' : 'Enviar radicación' }}
           </app-boton>
         </app-sticky-actions>
       </div>

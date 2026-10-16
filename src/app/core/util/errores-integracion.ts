@@ -14,6 +14,9 @@ export function mensajeErrorIntegracion(error: unknown): string {
   if (status === 400 && campo('contratoReferencia')) {
     return 'Genera el contrato de arrendamiento antes de radicar.';
   }
+  if (status === 422 && campo('archivo')) {
+    return 'No pudimos leer el archivo: verifica que el PDF o la foto esté completo, legible y sin contraseña.';
+  }
   if (status === 422) {
     if (campo('contratoRadicado')) return 'Este contrato ya fue radicado. Genera un contrato nuevo.';
     if (campo('ciudadInmueble')) return 'La ciudad del inmueble no está soportada. Elige una ciudad del listado.';
@@ -25,7 +28,12 @@ export function mensajeErrorIntegracion(error: unknown): string {
     if (fields.length > 0) return 'Faltan documentos obligatorios por cargar.';
     return 'Revisa los datos ingresados e intenta nuevamente.';
   }
+  if (status === 400 && campo('archivo')) {
+    return 'El archivo no se pudo cargar: debe ser PDF, JPG o PNG, no estar vacío y pesar máximo 10 MB.';
+  }
+  if (status === 400 && campo('ciudad')) return 'Elige una ciudad del listado.';
   if (status === 400) return 'Hay datos incompletos o con formato inválido. Revísalos e intenta nuevamente.';
+  if (status === 409) return 'Esta acción ya no aplica: el dato ya existe o tu cuenta ya fue registrada.';
   if (status === 401 || status === 403) return 'Tu sesión no permite esta acción. Inicia sesión nuevamente.';
   if (status === 503) return 'El servicio no está disponible en este momento. Intenta en unos minutos.';
   return 'No fue posible completar la operación. Intenta nuevamente en unos minutos.';

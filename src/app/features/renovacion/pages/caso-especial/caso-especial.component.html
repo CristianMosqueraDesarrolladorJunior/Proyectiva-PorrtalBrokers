@@ -13,6 +13,11 @@
       [tarjetas]="tarjetas()"
       [mostrarVolver]="false"
     ></app-success-screen>
+  } @else if (!numeroPoliza) {
+    <!-- Sin póliza (abierto por URL) no hay trámite que enviar: se inicia desde Renovaciones. -->
+    <app-alert-banner variante="warning" titulo="Elige la póliza">
+      Este trámite se inicia desde Renovaciones: busca la póliza y pulsa «Gestionar».
+    </app-alert-banner>
   } @else {
     <!-- Tipo de trámite obligatorio del conjunto definido (Req 23) -->
     <div class="caso-especial-campo">
@@ -78,7 +83,7 @@
 
     <div class="caso-especial-acciones">
       <app-boton variante="primary" [disabled]="enviando()" (clicked)="enviar()">
-        {{ enviando() ? 'Enviando…' : 'Enviar caso especial' }}
+        {{ enviando() ? 'Enviando, puede tardar unos segundos…' : 'Enviar caso especial' }}
       </app-boton>
     </div>
   }

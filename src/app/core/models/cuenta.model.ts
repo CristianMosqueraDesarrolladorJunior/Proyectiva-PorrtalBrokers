@@ -92,4 +92,6 @@ export interface DatosPersonalesEditables {
   readonly nombreCompleto: string;
   readonly correo: string;
   readonly telefono: string;
+  /** Ciudad del catálogo `ciudad`; se guarda en el portal (la de Cien Cuadras es solo el valor inicial). */
+  readonly ciudad?: string;
 }

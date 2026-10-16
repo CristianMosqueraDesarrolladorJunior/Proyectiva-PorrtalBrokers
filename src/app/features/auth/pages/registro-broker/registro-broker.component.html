@@ -5,19 +5,21 @@
 -->
 <main class="registro" role="main">
   <section class="registro-card" aria-labelledby="registro-titulo">
+    <!-- Escritorio: columna izquierda fija (marca, etapas, aviso) y derecha con el contenido del paso. -->
+    <aside class="registro-lateral">
     <header class="registro-header">
       <img class="registro-marca" src="img/proyectiva-logo.svg" alt="Proyectiva Agencia de Seguros" width="595" height="150" />
       <h2 id="registro-titulo" class="registro-titulo">
         @switch (paso()) {
-          @case (1) { Únete como broker }
+          @case (1) { Inicia a vender pólizas con nosotros }
           @case (2) { Verifica tu Conocimiento de Cliente }
           @case (3) { Adjunta tus documentos }
         }
       </h2>
       <p class="registro-subtitulo">
         @switch (paso()) {
-          @case (1) { Cuéntanos quién eres para crear tu cuenta. }
-          @case (2) { Validamos tu SARLAFT con el documento que registraste. }
+          @case (1) { Califícate como broker. }
+          @case (2) { Validamos tu Conocimiento de Cliente con el documento que registraste. }
           @case (3) { Con tus documentos aprobados serás broker registrado. }
         }
       </p>
@@ -43,31 +45,40 @@
     <!-- Cómo funciona tu cuenta. -->
     @if (paso() === 1) {
       <div class="registro-aviso registro-aviso--prospecto">
-        <p class="registro-aviso__titulo"><app-icon nombre="rocket_launch" [tamano]="18" /> Empieza como prospecto</p>
-        <p>Sin documentos ya puedes radicar, cotizar y hacer seguimiento. Para ser broker verificas tu SARLAFT y cargas tus documentos: al aprobarlos se desbloquean {{ modulosRestringidos.length }} módulos más y tus comisiones, incluidas las de lo que radiques como prospecto.</p>
+        <p class="registro-aviso__titulo"><app-icon nombre="rocket_launch" [tamano]="18" /> Vende desde hoy</p>
+        <p>Con tu cuenta ya cotizas y radicas. Califícate como broker para desbloquear {{ modulosRestringidos.length }} módulos más y acceder a tus comisiones.</p>
       </div>
     } @else {
       <div class="registro-aviso registro-aviso--broker">
         <p class="registro-aviso__titulo"><app-icon nombre="verified" [tamano]="18" /> Tu cuenta ya está creada</p>
-        <p>Con tu SARLAFT vigente y tus documentos aprobados se desbloquean {{ modulosRestringidos.length }} módulos más y generas comisiones. Si prefieres, termina después desde Mi perfil.</p>
+        <p>Cuando tu Conocimiento de Cliente esté vigente y aprobemos tus documentos, desbloqueas {{ modulosRestringidos.length }} módulos más y empiezas a recibir comisiones. Si prefieres, termina después desde Mi perfil.</p>
       </div>
     }
 
     @if (paso() === 1) {
+      <footer class="registro-footer">
+        <span>¿Ya tienes cuenta?</span>
+        <app-boton variante="ghost" ariaLabel="Ya tengo cuenta: ir a la pantalla de inicio de sesión" (clicked)="irALogin()">Iniciar sesión</app-boton>
+      </footer>
+    }
+    </aside>
+
+    <div class="registro-cuerpo">
+    @if (paso() === 1) {
 
     <form class="registro-form" [formGroup]="formulario" (ngSubmit)="crearCuenta('perfil')" novalidate>
       <div class="registro-grid">
-        <app-form-field class="registro-grid__ancho" label="Nombre completo" controlId="reg-nombre" [requerido]="true" [error]="errorNombre">
+        <app-form-field label="Nombre completo" controlId="reg-nombre" [requerido]="true" [error]="errorNombre">
           <input id="reg-nombre" class="registro-input" type="text" autocomplete="name" placeholder="Juan Pérez Gómez"
             formControlName="nombreCompleto" [attr.minlength]="nombreLongitudMin" [attr.aria-invalid]="!!errorNombre" />
         </app-form-field>
 
-        <app-form-field class="registro-grid__ancho" label="Correo electrónico" controlId="reg-correo" [requerido]="true" [error]="errorCorreo">
+        <app-form-field label="Correo electrónico" controlId="reg-correo" [requerido]="true" [error]="errorCorreo">
           <input id="reg-correo" class="registro-input" type="email" autocomplete="email" placeholder="correo@ejemplo.com"
             formControlName="correo" [attr.aria-invalid]="!!errorCorreo" />
         </app-form-field>
 
-        <div class="registro-telefono registro-grid__ancho">
+        <div class="registro-telefono">
           <app-form-field label="Código" controlId="reg-codigo-pais" [requerido]="true">
             <select id="reg-codigo-pais" class="registro-input" formControlName="codigoPais">
               @for (codigo of codigosPais; track codigo) { <option [value]="codigo">{{ codigo }}</option> }
@@ -79,7 +90,7 @@
           </app-form-field>
         </div>
 
-        <app-form-field class="registro-grid__ancho" label="Ciudad" controlId="reg-ciudad" [requerido]="true" [error]="errorCiudad">
+        <app-form-field label="Ciudad" controlId="reg-ciudad" [requerido]="true" [error]="errorCiudad">
           <select id="reg-ciudad" class="registro-input" formControlName="ciudad" [attr.aria-invalid]="!!errorCiudad">
             <option value="" disabled>Selecciona tu ciudad</option>
             @for (ciudad of ciudades; track ciudad) { <option [value]="ciudad">{{ ciudad }}</option> }
@@ -93,11 +104,11 @@
         </app-form-field>
 
         <app-form-field label="Número de documento" ayuda="Será tu usuario para ingresar" controlId="reg-documento" [requerido]="true" [error]="errorDocumento">
-          <input id="reg-documento" class="registro-input" type="text" inputmode="numeric" placeholder="1020304050" formControlName="documento"
+          <input appSoloDigitos id="reg-documento" class="registro-input" type="text" inputmode="numeric" placeholder="1020304050" formControlName="documento"
             [attr.minlength]="documentoLongitudMin" [attr.maxlength]="documentoLongitudMax" [attr.aria-invalid]="!!errorDocumento" />
         </app-form-field>
 
-        <app-form-field label="Contraseña" ayuda="Mínimo 10 caracteres, con mayúscula, minúscula y número" controlId="reg-password" [requerido]="true" [error]="errorPassword">
+        <app-form-field label="Contraseña" [ayuda]="'Mínimo ' + passwordLongitudMin + ' caracteres'" controlId="reg-password" [requerido]="true" [error]="errorPassword">
           <input id="reg-password" class="registro-input" type="password" autocomplete="new-password" placeholder="••••••••••" formControlName="password"
             [attr.minlength]="passwordLongitudMin" [attr.aria-invalid]="!!errorPassword" />
         </app-form-field>
@@ -115,7 +126,7 @@
           {{ creandoHacia() === 'perfil' ? 'Creando tu cuenta…' : 'Continuar como broker' }}
         </app-boton>
         <app-boton variante="outline" [disabled]="!datosValidos() || creandoHacia() !== null" (clicked)="crearCuenta('inicio')">
-          {{ creandoHacia() === 'inicio' ? 'Creando tu cuenta…' : 'Registrarme como prospecto' }}
+          {{ creandoHacia() === 'inicio' ? 'Creando tu cuenta…' : 'Crear cuenta y calificarme después' }}
         </app-boton>
       </div>
     </form>
@@ -133,12 +144,20 @@
 
       @if (consultandoSarlaft()) {
         <app-escalerita-loader texto="Verificando tu Conocimiento de Cliente..."></app-escalerita-loader>
+      } @else if (!sarlaftConsultado() && !errorSarlaft()) {
+        <!-- Antes de verificar: cómo funciona la validación. -->
+        <ol class="registro-flujo" aria-label="Cómo validamos tu Conocimiento de Cliente">
+          <li><b>Consultamos tu documento</b><span>Verificamos en línea tu Conocimiento de Cliente, sin que tengas que llenar nada.</span></li>
+          <li><b>Si está vigente</b><span>Continúas de inmediato con tus documentos.</span></li>
+          <li><b>Si está desactualizado</b><span>Te enviamos por SMS un enlace para actualizarlo y luego verificas de nuevo.</span></li>
+          <li><b>Si algo falla</b><span>Cargas el formulario físico diligenciado y firmado; queda en revisión y puedes continuar.</span></li>
+        </ol>
       } @else if (sarlaftConsultado()) {
         @switch (perfil().sarlaft.estado) {
           @case ('vigente') {
             <div class="registro-resultado registro-resultado--ok" role="status">
               <app-icon nombre="verified_user" [tamano]="22" />
-              <div><b>SARLAFT actualizado</b><p>Tu Conocimiento de Cliente está vigente. Continúa con tus documentos.</p></div>
+              <div><b>Conocimiento de Cliente actualizado</b><p>Tu Conocimiento de Cliente está vigente. Continúa con tus documentos.</p></div>
             </div>
           }
           @case ('en_cumplimiento') {
@@ -154,20 +173,20 @@
           @case ('fisico') {
             <div class="registro-resultado registro-resultado--ok" role="status">
               <app-icon nombre="upload_file" [tamano]="22" />
-              <div><b>SARLAFT físico cargado</b><p>Queda en revisión del área. Continúa con tus documentos.</p></div>
+              <div><b>Formulario físico cargado</b><p>Queda en revisión del área. Continúa con tus documentos.</p></div>
             </div>
           }
           @case ('sin_consultar') {
             <div class="registro-resultado registro-resultado--error" role="alert">
               <app-icon nombre="error" [tamano]="22" />
-              <div><b>No pudimos consultar tu SARLAFT</b><p>Intenta de nuevo en unos minutos o termina después desde Mi perfil.</p></div>
+              <div><b>No pudimos consultar tu Conocimiento de Cliente</b><p>Intenta de nuevo en unos minutos o termina después desde Mi perfil.</p></div>
             </div>
           }
           @default {
             <div class="registro-resultado registro-resultado--aviso" role="status">
               <app-icon nombre="update" [tamano]="22" />
               <div>
-                <b>SARLAFT desactualizado</b>
+                <b>Conocimiento de Cliente desactualizado</b>
                 <ol>
                   @if (celularEnlace(); as celular) {
                     <li>Te enviamos el enlace de actualización por SMS a tu celular {{ celular }}.</li>
@@ -175,7 +194,7 @@
                   } @else {
                     <li>Tu teléfono registrado no es un celular: no pudimos enviarte el enlace por SMS.</li>
                   }
-                  <li>Vuelve aquí y verifica de nuevo, o carga tu SARLAFT físico.</li>
+                  <li>Vuelve aquí y verifica de nuevo, o carga el formulario físico de Conocimiento de Cliente.</li>
                 </ol>
               </div>
             </div>
@@ -188,12 +207,18 @@
         }
       }
 
-      @if (sarlaftConsultado() && perfil().sarlaft.estado !== 'vigente' && perfil().sarlaft.estado !== 'en_cumplimiento') {
-        <!-- Alternativa al enlace: cargar el SARLAFT físico (queda en revisión del área). -->
-        <app-doc-uploader [reglas]="reglaSarlaftFisico" [cargados]="cargadoSarlaftFisico()" (archivoSeleccionado)="onSarlaftFisico($event)"></app-doc-uploader>
-      }
-
       @if (errorSarlaft()) { <p class="registro-error" role="alert">{{ errorSarlaft() }}</p> }
+
+      @if (puedeCargarFisico()) {
+        <!-- Alternativa si la consulta falla o está desactualizado: cargar el formulario físico (queda en revisión del área). -->
+        <div class="registro-fisico">
+          <app-doc-uploader [reglas]="reglaSarlaftFisico" [cargados]="cargadoSarlaftFisico()" (archivoSeleccionado)="onSarlaftFisico($event)"></app-doc-uploader>
+          <app-boton variante="outline" icono="download" [disabled]="descargandoFormato()" (clicked)="descargarFormatoSarlaft()"
+            [ariaLabel]="'Descargar formato de Conocimiento de Cliente para persona ' + (formatoSarlaft() === 'juridica' ? 'jurídica' : 'natural')">
+            {{ descargandoFormato() ? 'Descargando…' : 'Descargar formato · ' + (formatoSarlaft() === 'juridica' ? 'Persona jurídica' : 'Persona natural') }}
+          </app-boton>
+        </div>
+      }
 
       <div class="registro-acciones">
         @if (sarlaftConsultado() && (perfil().sarlaft.estado === 'vigente' || perfil().sarlaft.estado === 'fisico')) {
@@ -202,7 +227,7 @@
           <app-boton variante="accent" (clicked)="irAlPortal()">Ir al portal</app-boton>
         } @else {
           <app-boton variante="accent" icono="policy" [disabled]="!puedeConsultarSarlaft()" (clicked)="verificarSarlaft()">
-            {{ sarlaftConsultado() ? 'Verificar de nuevo' : 'Verificar SARLAFT' }}
+            {{ sarlaftConsultado() ? 'Verificar de nuevo' : 'Verificar Conocimiento de Cliente' }}
           </app-boton>
         }
         <app-boton variante="ghost" (clicked)="irAlPortal()">Completar después</app-boton>
@@ -225,13 +250,7 @@
         </div>
       }
     }
-
-    @if (paso() === 1) {
-      <footer class="registro-footer">
-        <span>¿Ya tienes cuenta?</span>
-        <app-boton variante="ghost" ariaLabel="Ya tengo cuenta: ir a la pantalla de inicio de sesión" (clicked)="irALogin()">Iniciar sesión</app-boton>
-      </footer>
-    }
+    </div>
   </section>
 </main>
 

@@ -14,6 +14,8 @@
     >
       @if (errorCredenciales()) {
         <p class="login-error" role="alert">{{ errorCredenciales() }}</p>
+      } @else if (sesionVencida) {
+        <p class="login-error" role="status">Tu sesión venció por inactividad. Ingresa de nuevo para continuar.</p>
       }
 
       @if (avisoRestablecimiento()) {
@@ -86,17 +88,5 @@
         Me interesa vender pólizas
       </app-boton>
     </footer>
-
-    <!-- Acceso del equipo interno: administradores y comerciales (consola /admin). -->
-    <section class="login-interno" aria-labelledby="login-interno-titulo">
-      <div class="login-interno__panel">
-        <app-icon nombre="admin_panel_settings" [tamano]="20" />
-        <span id="login-interno-titulo">Consola de administración</span>
-        <p>
-          Para administradores y comerciales de la operación. Ingresa arriba con el usuario y la clave que te
-          asignó el administrador: el portal te lleva a la consola de brokers.
-        </p>
-      </div>
-    </section>
   </section>
 </main>

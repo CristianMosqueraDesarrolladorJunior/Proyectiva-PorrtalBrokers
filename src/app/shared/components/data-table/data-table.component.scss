@@ -265,7 +265,15 @@
   }
 
   .data-table {
+    // En tarjetas la tabla no debe medir lo que mide su texto más largo (desbordaba el celular).
+    display: block;
+    max-width: 100%;
     background: transparent;
+
+    td {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
 
     thead {
       // Se oculta visualmente pero se conserva para lectores de pantalla.

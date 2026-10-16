@@ -44,6 +44,8 @@ export interface EntradaRadicacion {
   readonly tipoPersona: TipoPersona;
   readonly firmaApoderado: boolean;
   readonly sarlaftRequiereFormulario: boolean;
+  /** El contrato tiene el inmueble en leasing (exige el permiso de subarriendo). */
+  readonly requierePermisoSubarriendo?: boolean;
   /** Filas del catálogo `documento_radicacion`. */
   readonly documentos: readonly { readonly codigo: string; readonly [columna: string]: unknown }[];
 }

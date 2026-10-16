@@ -31,6 +31,7 @@ import {
   type ReferidoRequest,
 } from '../../../core/services/referidos.service';
 import { validarReferido } from '../referido-validacion';
+import { SoloDigitosDirective } from '../../../shared/directives/solo-digitos.directive';
 
 /** Estado del envío del Referido para controlar loaders y confirmación (Req 15.3). */
 type EstadoEnvioReferido = 'inactivo' | 'enviando' | 'exito';
@@ -52,7 +53,7 @@ type EstadoEnvioReferido = 'inactivo' | 'enviando' | 'exito';
   selector: 'app-referir',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [SoloDigitosDirective, 
     FormsModule,
     BotonComponent,
     FormFieldComponent,

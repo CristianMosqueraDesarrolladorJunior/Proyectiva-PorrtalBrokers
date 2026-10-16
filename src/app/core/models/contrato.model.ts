@@ -30,7 +30,7 @@ export interface DatosArrendatario {
   readonly numeroIdentificacion: string;
   readonly telefono: string;
   readonly correo: string;
-  readonly ocupacion: string;
+  readonly ocupacion?: string;
   readonly ciudadExpedicion?: string;
   readonly direccionNotificacion?: string;
 }
@@ -42,8 +42,11 @@ export interface DatosInmueble {
   readonly direccionCompleta: string;
   readonly ciudad: string;
   readonly matriculaInmobiliaria: string;
-  readonly estrato: number;
-  readonly areaMetrosCuadrados: number;
+  readonly estrato?: number;
+  readonly areaMetrosCuadrados?: number;
+  /** Solo para validar en el front: el inmueble está en leasing y hay permiso de subarriendo. */
+  readonly leasing?: boolean;
+  readonly permisoSubarriendo?: boolean;
   readonly lineaTelefonica?: string; // opcional
   readonly garaje?: string; // número del garaje, si tiene
   readonly deposito?: string; // número del depósito, si tiene
@@ -145,6 +148,8 @@ export interface ParteLeida {
  * queda vacío y se lista en `falta`: es mejor una casilla vacía que una llena con el dato de otro.
  */
 export interface LecturaContratoResponse {
+  /** El lector vio las firmas de arrendador y arrendatario (indicio; el área lo confirma). */
+  readonly firmado?: boolean;
   readonly arrendador: ParteLeida;
   readonly arrendatario: ParteLeida;
   readonly deudorSolidario?: ParteLeida;
@@ -160,6 +165,9 @@ export interface LecturaContratoResponse {
     readonly cuotaAdministracion?: number;
     readonly fechaInicio?: string;
     readonly duracionMeses?: number;
+    readonly tipoCuenta?: string;
+    readonly numeroCuenta?: string;
+    readonly banco?: string;
   };
   /** Campos que no se encontraron (etiquetas legibles). */
   readonly falta: readonly string[];

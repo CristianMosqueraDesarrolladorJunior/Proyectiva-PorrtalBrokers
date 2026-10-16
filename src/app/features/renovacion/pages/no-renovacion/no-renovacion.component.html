@@ -13,6 +13,11 @@
       [tarjetas]="tarjetas()"
       [mostrarVolver]="false"
     ></app-success-screen>
+  } @else if (!numeroPoliza) {
+    <!-- Sin póliza (abierto por URL) no hay trámite que enviar: se inicia desde Renovaciones. -->
+    <app-alert-banner variante="warning" titulo="Elige la póliza">
+      Este trámite se inicia desde Renovaciones: busca la póliza y pulsa «Gestionar».
+    </app-alert-banner>
   } @else {
     <!-- Motivo principal obligatorio del conjunto definido (Req 22.1) -->
     <div class="no-renovacion-campo">

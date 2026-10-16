@@ -25,6 +25,10 @@ import { formatearCop } from '../../../../shared/util/moneda';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
 import { reglaDesdeCatalogo, validarDocumento } from '../../../../shared/validation/documento-validacion';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
+import { ContratoService } from '../../../../core/services/contrato.service';
+import type { LecturaContratoResponse } from '../../../../core/models/contrato.model';
+import { LectorContratoComponent } from '../../../contrato/components/lector-contrato/lector-contrato.component';
+import { contratoDesdeLectura } from './contrato-desde-lectura';
 import {
   AlertBannerComponent,
   BotonComponent,
@@ -63,6 +67,7 @@ import {
   sujetoSarlaft,
   validarDatosRadicacion,
 } from './radicacion-presentacion';
+import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
 
 /** Documento opcional que también puede cargarse en la radicación (Req 11.3). */
 const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmado';
@@ -95,7 +100,7 @@ const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmad
   selector: 'app-radicacion',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [SoloDigitosDirective, 
     FormsModule,
     TabsComponent,
     RadioGroupComponent,
@@ -112,6 +117,7 @@ const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmad
     StickyActionsComponent,
     ModalDialogComponent,
     InfoTipComponent,
+    LectorContratoComponent,
   ],
   templateUrl: './radicacion.component.html',
   styleUrl: './radicacion.component.scss',
@@ -125,6 +131,8 @@ export class RadicacionComponent {
   protected readonly cotizacion = this.borrador.cotizacion;
   /** Contrato generado: toda radicación lo exige. */
   protected readonly contratoReferencia = computed(() => this.borrador.contrato()?.referencia ?? null);
+  /** El contrato declara el inmueble en leasing: el permiso de subarriendo pasa a ser obligatorio. */
+  protected readonly contratoConLeasing = computed(() => this.borrador.contrato()?.leasing === true);
   /** Declaración de autorización de tratamiento de datos (Habeas Data), exigida por el backend. */
   protected readonly autorizacionDatos = signal(false);
   /** Observación del broker para el área (columna "Observaciones Usuario Radicación" del Consolidado). */
@@ -195,6 +203,8 @@ export class RadicacionComponent {
   /** Correo del apoderado: va a la columna "Correo Apoderado" del Consolidado. */
   protected readonly correoApoderado = signal('');
   protected readonly sarlaftRequiereFormulario = signal(false);
+  /** La consulta SARLAFT falló (servicio caído): se permite seguir con el SARLAFT físico. */
+  protected readonly sarlaftNoDisponible = signal(false);
 
   /**
    * Celular de quien firma (propietario/apoderado): destino del SMS de la URL de Conocimiento de
@@ -287,9 +297,14 @@ export class RadicacionComponent {
     permiteCargarDocumentos(this.estadoSarlaft()) || this.conSarlaftFisico(),
   );
 
-  /** El firmante quedó desactualizado y el broker eligió cargar el SARLAFT físico. */
+  /** Se puede ofrecer el SARLAFT físico: firmante desactualizado o consulta no disponible. */
+  protected readonly ofreceSarlaftFisico = computed(
+    () => this.estadoSarlaft() === 'DESACTUALIZADO' || (this.estadoSarlaft() === null && this.sarlaftNoDisponible()),
+  );
+
+  /** El broker eligió cargar el SARLAFT físico (desactualizado o SARLAFT caído). */
   protected readonly conSarlaftFisico = computed(
-    () => this.estadoSarlaft() === 'DESACTUALIZADO' && this.sarlaftRequiereFormulario(),
+    () => this.ofreceSarlaftFisico() && this.sarlaftRequiereFormulario(),
   );
 
   /** "Cargar SARLAFT físico": habilita los documentos con el formulario SARLAFT obligatorio. */
@@ -326,6 +341,7 @@ export class RadicacionComponent {
       tipoPersona: this.tipoPersona(),
       firmaApoderado: this.firmaApoderado(),
       sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+      requierePermisoSubarriendo: this.contratoConLeasing(),
       documentos: this.documentosCatalogo,
     }),
   );
@@ -380,6 +396,7 @@ export class RadicacionComponent {
         tipoPersona: this.tipoPersona(),
         firmaApoderado: this.firmaApoderado(),
         sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+        requierePermisoSubarriendo: this.contratoConLeasing(),
         documentos: this.documentosCatalogo,
       },
       this.cargadosValidos(),
@@ -406,6 +423,7 @@ export class RadicacionComponent {
         tipoPersona: this.tipoPersona(),
         firmaApoderado: this.firmaApoderado(),
         sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+        requierePermisoSubarriendo: this.contratoConLeasing(),
         documentos: this.documentosCatalogo,
       },
       this.cargadosValidos(),
@@ -577,6 +595,7 @@ export class RadicacionComponent {
     const documento = this.documentoSarlaft();
     this.consultandoSarlaft.set(true);
     this.errorSarlaft.set(null);
+    this.sarlaftNoDisponible.set(false);
     this.enlaceCopiado.set(false);
 
     this.radicacionService
@@ -600,8 +619,10 @@ export class RadicacionComponent {
         },
         error: () => {
           this.errorSarlaft.set(
-            'No fue posible consultar Conocimiento de Cliente en este momento. Intenta nuevamente.',
+            'No fue posible consultar Conocimiento de Cliente en este momento. Intenta nuevamente o continúa '
+              + 'cargando el SARLAFT físico diligenciado y firmado.',
           );
+          this.sarlaftNoDisponible.set(true);
           this.consultandoSarlaft.set(false);
         },
       });
@@ -758,6 +779,69 @@ export class RadicacionComponent {
    * navegación para que el contrato autollene los campos del inquilino, el inmueble
    * y el propietario desde los datos del estudio (todos enmascarados por el backend).</p>
    */
+  private readonly contratoService = inject(ContratoService);
+  /** Contrato firmado leído al que le faltan datos: se completa en Contratos con la lectura precargada. */
+  protected readonly lecturaPorCompletar = signal<LecturaContratoResponse | null>(null);
+  protected readonly registrandoContratoLeido = signal(false);
+  protected readonly mensajeContratoLeido = signal<{ variante: 'success' | 'warning' | 'error'; texto: string } | null>(null);
+
+  /** El contrato firmado cargado se adjunta a la radicación como "Contrato de arrendamiento firmado". */
+  protected onContratoFirmado(archivo: File): void {
+    this.onArchivo({ id: DOCUMENTO_OPCIONAL, archivo });
+  }
+
+  /**
+   * Con la lectura del contrato firmado: precarga los documentos de la radicación y, si trae todo lo que el
+   * contrato exige, lo registra de una (queda listo para radicar). Si falta algo, se completa en Contratos.
+   */
+  protected onContratoLeido(lectura: LecturaContratoResponse): void {
+    if (!this.numeroDocumentoPropietario().trim() && lectura.arrendador.numeroIdentificacion) {
+      this.numeroDocumentoPropietario.set(lectura.arrendador.numeroIdentificacion);
+    }
+    if (!this.documentoInquilino().trim() && lectura.arrendatario.numeroIdentificacion) {
+      this.documentoInquilino.set(lectura.arrendatario.numeroIdentificacion);
+    }
+    const usos = this.catalogo.opciones('uso_inmueble');
+    const request = contratoDesdeLectura(lectura, {
+      ciudades: this.catalogo.opciones('ciudad').map((c) => c.descripcion),
+      usoVivienda: usos.find((u) => u['plantilla'] !== 'COMERCIO')?.descripcion ?? 'Vivienda',
+      usoComercio: usos.find((u) => u['plantilla'] === 'COMERCIO')?.descripcion ?? 'Comercial',
+    });
+    if (!request) {
+      this.lecturaPorCompletar.set(lectura);
+      this.mensajeContratoLeido.set({
+        variante: 'warning',
+        texto: 'Al contrato le faltan datos para registrarlo (partes, ciudad con cobertura, canon, fecha o cuenta). '
+          + 'Complétalos en Contratos: ya van precargados.',
+      });
+      return;
+    }
+    this.lecturaPorCompletar.set(null);
+    this.registrandoContratoLeido.set(true);
+    this.contratoService.generar(request).subscribe({
+      next: (respuesta) => {
+        this.registrandoContratoLeido.set(false);
+        this.borrador.contrato.set({ referencia: respuesta.radicado, leasing: false });
+        this.mensajeContratoLeido.set({
+          variante: lectura.firmado ? 'success' : 'warning',
+          texto: lectura.firmado
+            ? 'Contrato firmado leído y registrado con sus datos. Ya puedes radicar.'
+            : 'Contrato registrado con sus datos, pero no vimos las firmas: el área lo revisará.',
+        });
+      },
+      error: (err: unknown) => {
+        this.registrandoContratoLeido.set(false);
+        this.lecturaPorCompletar.set(lectura);
+        this.mensajeContratoLeido.set({ variante: 'error', texto: `${mensajeErrorIntegracion(err)} Puedes completarlo en Contratos.` });
+      },
+    });
+  }
+
+  /** Abre Contratos con la lectura del contrato firmado precargada para completar lo que falta. */
+  protected completarContratoLeido(): void {
+    void this.router.navigate(['/app/contrato'], { state: { lectura: this.lecturaPorCompletar() } });
+  }
+
   protected crearContrato(): void {
     const estudio = this.resultadoEstudio();
     void this.router.navigate(['/app/contrato'], {

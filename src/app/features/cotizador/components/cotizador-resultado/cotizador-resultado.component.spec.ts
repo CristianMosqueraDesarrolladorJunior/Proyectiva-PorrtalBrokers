@@ -80,7 +80,7 @@ describe('CotizadorResultadoComponent', () => {
     const alerta = fixture.nativeElement.querySelector('app-alert-banner');
     expect(alerta).not.toBeNull();
     expect((alerta as HTMLElement).textContent).toContain(
-      'Sin contrato firmado no hay seguro',
+      'Sin contrato firmado la póliza no tiene cobertura',
     );
   });
 

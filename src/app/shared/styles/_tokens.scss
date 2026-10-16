@@ -204,6 +204,10 @@
   --login-card-width: 420px;
   // Tarjeta del registro de broker (comparte UI con el login, más ancha por el asistente).
   --registro-card-width: 640px;
+  // Escritorio: tarjeta ancha de alto fijo (columna lateral + contenido) para los 3 pasos sin scroll.
+  --registro-card-width-desktop: 1120px;
+  --registro-card-height: 700px;
+  --registro-lateral-width: clamp(300px, 32vw, 360px);
 
   // Fondo oscuro sólido de la pantalla de login (Req 1). El prototipo usa un
   // degradado #1a1a2e→#16213e; aquí se usa el tono más oscuro como color sólido
