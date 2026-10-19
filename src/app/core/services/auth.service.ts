@@ -8,6 +8,7 @@ import {
   RegistroProspectoRequest,
   ResultadoSarlaft,
 } from '../models/registro-broker.model';
+import { BorradorRadicacionService } from './borrador-radicacion.service';
 import { SessionService } from './session.service';
 
 /**
@@ -39,6 +40,7 @@ export interface RegistroBrokerResponse {
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly session = inject(SessionService);
+  private readonly borrador = inject(BorradorRadicacionService);
   private readonly baseUrl = '/api/v1';
 
   /**
@@ -51,7 +53,7 @@ export class AuthService {
       .post<PerfilBroker>(`${this.baseUrl}/auth/login`, request, {
         withCredentials: true,
       })
-      .pipe(tap((perfil) => this.session.establecerPerfil(perfil)));
+      .pipe(tap((perfil) => this.nuevaSesion(perfil)));
   }
 
   /**
@@ -64,7 +66,7 @@ export class AuthService {
   ingresarConToken(idToken: string): Observable<PerfilBroker> {
     return this.http
       .post<PerfilBroker>(`${this.baseUrl}/auth/sso`, { idToken }, { withCredentials: true })
-      .pipe(tap((perfil) => this.session.establecerPerfil(perfil)));
+      .pipe(tap((perfil) => this.nuevaSesion(perfil)));
   }
 
   /**
@@ -94,7 +96,19 @@ export class AuthService {
     return this.http
       .post<void>(`${this.baseUrl}/auth/logout`, {}, { withCredentials: true })
       // El perfil local se limpia aunque el servidor falle: la sesión se da por cerrada en el cliente.
-      .pipe(finalize(() => this.session.limpiarPerfil()));
+      .pipe(
+        finalize(() => {
+          this.session.limpiarPerfil();
+          this.borrador.limpiar();
+        }),
+      );
+  }
+
+  /** Login, ingreso con token o registro: otra cuenta puede estar entrando en este navegador. */
+  private nuevaSesion(perfil: PerfilBroker): void {
+    // El borrador de radicación (sessionStorage) es de la cuenta anterior: no debe verlo la nueva.
+    this.borrador.limpiar();
+    this.session.establecerPerfil(perfil);
   }
 
   /**
@@ -127,9 +141,10 @@ export class AuthService {
       codigoPais: datos.codigoPais,
       password: datos.password,
     };
-    return this.http.post<RegistroBrokerResponse>(`${this.baseUrl}/brokers/prospectos`, payload, {
-      withCredentials: true,
-    });
+    return this.http
+      .post<RegistroBrokerResponse>(`${this.baseUrl}/brokers/prospectos`, payload, { withCredentials: true })
+      // El registro deja abierta la sesión de la cuenta nueva: se descarta el borrador de la anterior.
+      .pipe(tap(() => this.borrador.limpiar()));
   }
 
   /**
