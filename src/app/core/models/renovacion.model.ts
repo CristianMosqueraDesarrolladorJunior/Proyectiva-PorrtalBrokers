@@ -163,6 +163,8 @@ export interface CondicionesRenovacion {
   readonly vigenciaMinimaMeses: number;
   readonly anterior: PropuestaRenovacion;
   readonly nueva: PropuestaRenovacion;
+  /** Lo que escribió el área al pedir la corrección (`null` si no hay corrección pendiente). */
+  readonly motivoCorreccion?: string | null;
 }
 
 /** Datos que se recotizan en el paso Ajuste (modalidad «nueva»). */

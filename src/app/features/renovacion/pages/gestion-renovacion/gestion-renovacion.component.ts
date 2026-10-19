@@ -242,6 +242,11 @@ export class GestionRenovacionComponent {
   /** Valor de renovar con las mismas condiciones (cotización «anterior» del backend). */
   protected readonly totalEstimado = computed(() => this.condiciones()?.anterior.cotizacion.granTotal ?? 0);
 
+  /** Motivo que escribió el área al pedir la corrección (columna G del Warehouse). */
+  protected readonly motivoCorreccion = computed(
+    () => this.condiciones()?.motivoCorreccion || 'Revisa y vuelve a cargar el documento que pidió el área.',
+  );
+
   /** Alertas de la cotización (las mismas que en Comercial renovaciones exigen proceso especial o corrección). */
   protected readonly alertas = computed(() => this.propuesta()?.cotizacion.alertas ?? []);
   protected readonly requiereOtroSi = computed(() =>

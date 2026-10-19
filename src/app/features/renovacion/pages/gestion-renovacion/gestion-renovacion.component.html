@@ -882,12 +882,8 @@
       <!-- Paso: Subir documento corregido -->
       @if (etapa() === 'captura') {
         <div class="flujo-correccion__contenido">
-          <app-alert-banner
-            variante="error"
-            titulo="Cédula de Identidad - Ilegible"
-          >
-            La imagen cargada anteriormente no cumple con los requisitos de legibilidad. Por favor,
-            sube una nueva imagen clara y sin recortes.
+          <app-alert-banner variante="error" titulo="El área pidió una corrección">
+            {{ motivoCorreccion() }}
           </app-alert-banner>
 
           <h2 class="flujo-correccion__titulo">
@@ -939,14 +935,8 @@
                   <span class="resumen-tramite__valor">#{{ numeroPoliza() }}</span>
                 </div>
                 <div class="resumen-tramite__item">
-                  <span class="resumen-tramite__label">Documento</span>
-                  <span class="resumen-tramite__valor">Identificación Oficial</span>
-                </div>
-                <div class="resumen-tramite__item">
                   <span class="resumen-tramite__label">Motivo de corrección</span>
-                  <span class="resumen-tramite__valor resumen-tramite__valor--error">
-                    Baja legibilidad / Imagen borrosa
-                  </span>
+                  <span class="resumen-tramite__valor resumen-tramite__valor--error">{{ motivoCorreccion() }}</span>
                 </div>
               </div>
 
@@ -995,8 +985,7 @@
 
               <div class="obs-correccion__tip">
                 <p class="obs-correccion__tip-texto">
-                  Recuerda que una descripción clara ayuda a nuestros analistas a procesar tu
-                  solicitud de renovación de póliza de arrendamiento un 40% más rápido.
+                  Una descripción clara de lo que corregiste ayuda al área a revisar tu solicitud más rápido.
                 </p>
               </div>
             </div>
