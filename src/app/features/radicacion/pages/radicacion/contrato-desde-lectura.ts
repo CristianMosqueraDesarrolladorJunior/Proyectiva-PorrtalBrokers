@@ -20,6 +20,7 @@ const lleno = (v: string | undefined | null): v is string => typeof v === 'strin
 export function contratoDesdeLectura(
   lectura: LecturaContratoResponse,
   catalogos: CatalogosContrato,
+  tipoFirma = '',
 ): ContratoArrendamientoRequest | null {
   const { arrendador: arr, arrendatario: ate, inmueble: inm, condiciones: con } = lectura;
   const parteCompleta = (p: typeof arr) =>
@@ -71,6 +72,6 @@ export function contratoDesdeLectura(
         ...parte(deudor), ciudadExpedicion: '', direccionNotificacion: deudor.direccion ?? '',
       }],
     } : {}),
-    adicionales: { leasing: false, arrendadorEsTitular: true, tieneClausulas: false },
+    adicionales: { leasing: false, arrendadorEsTitular: true, tieneClausulas: false, ...(tipoFirma ? { tipoFirma } : {}) },
   };
 }

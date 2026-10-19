@@ -59,6 +59,7 @@ import {
   documentosObligatoriosFaltantes,
   esNumeroDocumentoPropietarioValido,
   etiquetasDocumentos,
+  inmuebleSinCobertura,
   PASOS_RADICACION,
   pasoActivoRadicacion,
   permiteCargarDocumentos,
@@ -574,6 +575,7 @@ export class RadicacionComponent {
     this.restaurarBorrador({});
     this.observaciones.set('');
     this.readjuntarDocumentos.set(false);
+    this.firmaContratoCargado.set('');
     this.radicado.set(null);
   }
 
@@ -843,6 +845,15 @@ export class RadicacionComponent {
    * Con la lectura del contrato firmado: precarga los documentos de la radicación y, si trae todo lo que el
    * contrato exige, lo registra de una (queda listo para radicar). Si falta algo, se completa en Contratos.
    */
+  /** Cómo se firmó el contrato que se carga (el Consolidado lo pide: firma electrónica o por notaría). */
+  protected readonly tiposFirma = this.catalogo.opciones('tipo_firma');
+  protected readonly firmaContratoCargado = signal('');
+
+  /** El inmueble del estudio está en una ciudad sin cobertura: se advierte y el área decide. */
+  protected readonly estudioSinCobertura = computed(() =>
+    inmuebleSinCobertura(this.resultadoEstudio()?.inmueble, this.catalogo.opciones('ciudad').map((c) => c.descripcion)),
+  );
+
   protected onContratoLeido(lectura: LecturaContratoResponse): void {
     if (!this.numeroDocumentoPropietario().trim() && lectura.arrendador.numeroIdentificacion) {
       this.numeroDocumentoPropietario.set(lectura.arrendador.numeroIdentificacion);
@@ -855,7 +866,7 @@ export class RadicacionComponent {
       ciudades: this.catalogo.opciones('ciudad').map((c) => c.descripcion),
       usoVivienda: usos.find((u) => u['plantilla'] !== 'COMERCIO')?.descripcion ?? 'Vivienda',
       usoComercio: usos.find((u) => u['plantilla'] === 'COMERCIO')?.descripcion ?? 'Comercial',
-    });
+    }, this.firmaContratoCargado());
     if (!request) {
       this.lecturaPorCompletar.set(lectura);
       this.avisarContratoLeido({

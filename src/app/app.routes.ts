@@ -182,14 +182,8 @@ export const routes: Routes = [
             './features/renovacion/pages/caso-especial/caso-especial.component'
           ).then((m) => m.CasoEspecialComponent),
       },
-      {
-        path: 'nuevo-negocio',
-        title: 'Nuevo negocio — Portal Brokers Proyectiva',
-        loadComponent: () =>
-          import(
-            './features/nuevo-negocio/nuevo-negocio/nuevo-negocio.component'
-          ).then((m) => m.NuevoNegocioComponent),
-      },
+      // Un nuevo negocio es una radicación: la ruta vieja lleva al flujo real.
+      { path: 'nuevo-negocio', pathMatch: 'full', redirectTo: 'radicacion' },
       {
         path: 'correccion',
         title: 'Corrección de documentos — Portal Brokers Proyectiva',

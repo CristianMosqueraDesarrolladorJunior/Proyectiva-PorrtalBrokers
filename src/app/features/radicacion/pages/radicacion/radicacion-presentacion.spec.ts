@@ -7,6 +7,7 @@ import {
   esNumeroDocumentoPropietarioValido,
   esNumeroEstudioValido,
   etiquetasDocumentos,
+  inmuebleSinCobertura,
   pasoActivoRadicacion,
   permiteCargarDocumentos,
   puedeConsultarSarlaftRadicacion,
@@ -265,5 +266,20 @@ describe('construirPayloadRadicacion (alineado 1:1 con el backend)', () => {
     });
     expect(payload.documentoApoderado).toBe('41503593');
     expect(payload.correoApoderado).toBe('apo@correo.com');
+  });
+});
+
+describe('inmuebleSinCobertura', () => {
+  const ciudades = ['Bogotá D.C.', 'Agua de Dios', 'Villavicencio'];
+  it('reconoce la ciudad con cobertura aunque venga en mayúsculas, sin tildes o con puntuación', () => {
+    expect(inmuebleSinCobertura('Apartamento · RESIDENCIAL · CR 36A 53 85, BOGOTA, D.C.', ciudades)).toBe(false);
+    expect(inmuebleSinCobertura('Casa · CL 5, AGUA DE DIOS', ciudades)).toBe(false);
+  });
+  it('advierte cuando el inmueble está en una ciudad sin cobertura', () => {
+    expect(inmuebleSinCobertura('Apartamento · CR 14 48 10, SANTA ROSA DE CABAL', ciudades)).toBe(true);
+  });
+  it('no advierte sin datos', () => {
+    expect(inmuebleSinCobertura(undefined, ciudades)).toBe(false);
+    expect(inmuebleSinCobertura('CR 1', [])).toBe(false);
   });
 });

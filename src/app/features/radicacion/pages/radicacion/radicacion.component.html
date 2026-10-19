@@ -68,11 +68,25 @@
             </app-info-box>
           }
 
-          <app-lector-contrato
-            titulo="¿Ya tienes el contrato firmado? Cárgalo aquí"
-            (archivo)="onContratoFirmado($event)"
-            (leido)="onContratoLeido($event)"
-          />
+          <app-form-field label="¿Cómo se firmó el contrato que vas a cargar?" [requerido]="true" controlId="rad-firma-contrato">
+            <select
+              id="rad-firma-contrato"
+              [ngModel]="firmaContratoCargado()"
+              (ngModelChange)="firmaContratoCargado.set($event)"
+            >
+              <option value="">Selecciona…</option>
+              @for (f of tiposFirma; track f.codigo) {
+                <option [value]="f.codigo">{{ f.descripcion }}</option>
+              }
+            </select>
+          </app-form-field>
+          @if (firmaContratoCargado()) {
+            <app-lector-contrato
+              titulo="¿Ya tienes el contrato firmado? Cárgalo aquí"
+              (archivo)="onContratoFirmado($event)"
+              (leido)="onContratoLeido($event)"
+            />
+          }
           @if (registrandoContratoLeido()) {
             <app-info-box icono="hourglass_top">Registrando el contrato con los datos leídos…</app-info-box>
           }
@@ -214,6 +228,12 @@
                     <div><span>Vigente hasta</span><strong>{{ estudio.vigenteHasta }}</strong></div>
                   }
                 </div>
+                @if (estudioSinCobertura()) {
+                  <app-alert-banner variante="warning" titulo="Inmueble fuera de cobertura">
+                    El inmueble del estudio no está en una ciudad con cobertura (Bogotá D.C., Cundinamarca y
+                    Villavicencio). Puedes radicar, pero el área revisará si procede.
+                  </app-alert-banner>
+                }
               }
               @case ('NO_APROBADO') {
                 <app-alert-banner variante="warning" titulo="Estudio no aprobado">

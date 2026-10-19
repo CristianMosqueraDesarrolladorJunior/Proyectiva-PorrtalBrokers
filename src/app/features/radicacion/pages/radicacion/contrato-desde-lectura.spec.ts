@@ -19,6 +19,7 @@ describe('contratoDesdeLectura', () => {
     expect(req.condiciones.diaPagoMensual).toBe(7);
     expect(req.condiciones.reajusteAnual).toBe('IPC');
     expect(req.arrendatario.direccionNotificacion).toBe('CL 1 2 3');
+    expect(contratoDesdeLectura(completa, catalogos, 'FISICA')!.adicionales?.tipoFirma).toBe('FISICA');
   });
 
   it('devuelve null si falta lo que el backend exige (cuenta o ciudad sin cobertura)', () => {

@@ -222,7 +222,7 @@ export class PerfilComponent implements OnInit {
       { titulo: 'Ingreso al portal', detalle: 'Cuenta creada', hecho: true },
       { titulo: 'Documentación', detalle: `${this.documentosAportados()} de ${p.documentos.length} aportados`, hecho: docsOk },
       {
-        titulo: 'Conocimiento de Cliente (opcional)',
+        titulo: 'Conocimiento de Cliente',
         detalle: ETIQUETA_SARLAFT[p.sarlaft.estado],
         hecho: p.sarlaft.estado === 'vigente' || p.sarlaft.estado === 'fisico',
       },

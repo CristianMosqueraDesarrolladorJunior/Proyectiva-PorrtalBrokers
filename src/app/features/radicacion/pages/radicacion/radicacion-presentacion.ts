@@ -279,3 +279,18 @@ export function construirPayloadRadicacion(e: EntradaPayloadRadicacion): Radicac
     ...(e.observaciones?.trim() ? { observaciones: e.observaciones.trim() } : {}),
   };
 }
+
+const normalizarLugar = (t: string): string =>
+  ` ${t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+
+/**
+ * El inmueble del estudio (texto libre del Estudio Digital, p. ej. "Apartamento · CR 1 2 3, SANTA ROSA DE CABAL")
+ * no nombra ninguna ciudad con cobertura. Solo advierte: el área decide.
+ */
+export function inmuebleSinCobertura(inmueble: string | null | undefined, ciudades: readonly string[]): boolean {
+  if (!inmueble?.trim() || ciudades.length === 0) {
+    return false;
+  }
+  const texto = normalizarLugar(inmueble);
+  return !ciudades.some((c) => normalizarLugar(c).trim() && texto.includes(normalizarLugar(c)));
+}
