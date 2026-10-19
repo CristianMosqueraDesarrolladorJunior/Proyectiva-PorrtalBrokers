@@ -27,14 +27,21 @@
 
     <!-- Flujo de emisión: de dónde viene el contrato y atajo para quien ya lo tiene firmado. -->
     @if (pasoActual() === 0) {
-      <app-info-box icono="route">
-        @if (cotizacionOrigen(); as cot) {
+      @if (cotizacionOrigen(); as cot) {
+        <app-info-box icono="route">
           Desde tu cotización <strong>{{ cot.referencia }}</strong>: canon, ciudad y vigencia ya van precargados.
-        }
-        ¿Ya tienes el contrato firmado?
-        <button type="button" class="contrato-enlace" (click)="cargarFirmadoEnRadicacion()">Cárgalo en Radicación</button>
-        y sigue con la solicitud.
-      </app-info-box>
+        </app-info-box>
+      }
+      <!-- Dos caminos: cargar el contrato ya firmado (lo leemos y llenamos el formulario) o diligenciarlo aquí. -->
+      <app-lector-contrato
+        titulo="¿Ya tienes el contrato firmado? Cárgalo aquí"
+        (archivo)="onContratoFirmado($event)"
+        (leido)="onContratoLeido($event)"
+      />
+      <p class="contrato-carga-nota">
+        Leemos las partes, el inmueble y el canon y llenamos los pasos por ti; el archivo firmado se adjunta a la
+        radicación. Si aún no lo tienes, diligencia el formulario y lo generamos con nuestra plantilla.
+      </p>
     }
 
     <!-- Indicador de pasos (Req 30.1) -->
@@ -141,15 +148,34 @@
 
 
           <app-form-field label="Ciudad de expedición del documento" controlId="arr-ciudad-exp">
-            <input
+            <select
               id="arr-ciudad-exp"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: Bogotá D.C."
-              [ngModel]="arrCiudadExpedicion()"
-              (ngModelChange)="arrCiudadExpedicion.set($event)"
-            />
+              [ngModel]="expedicionOtra() ? '__otra__' : arrCiudadExpedicion()"
+              (ngModelChange)="elegirCiudadExpedicion($event)"
+            >
+              <option value="">Selecciona…</option>
+              @for (g of ciudadesPorDepartamento; track g.departamento) {
+                <optgroup [label]="g.departamento">
+                  @for (c of g.ciudades; track c) {
+                    <option [value]="c">{{ c }}</option>
+                  }
+                </optgroup>
+              }
+              <option value="__otra__">Otra ciudad…</option>
+            </select>
           </app-form-field>
+          @if (expedicionOtra()) {
+            <app-form-field label="¿En qué ciudad se expidió?" controlId="arr-ciudad-exp-otra">
+              <input
+                id="arr-ciudad-exp-otra"
+                type="text"
+                autocomplete="off"
+                placeholder="Ej: Medellín"
+                [ngModel]="arrCiudadExpedicion()"
+                (ngModelChange)="arrCiudadExpedicion.set($event)"
+              />
+            </app-form-field>
+          }
 
           <app-form-field
             label="Dirección de notificación"

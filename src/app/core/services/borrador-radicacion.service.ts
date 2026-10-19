@@ -48,6 +48,8 @@ export class BorradorRadicacionService {
   readonly cotizacion = signal<CotizacionParaRadicar | null>(this.inicial.cotizacion);
   readonly contrato = signal<ContratoGenerado | null>(this.inicial.contrato);
   readonly formulario = signal<Readonly<Record<string, unknown>> | null>(this.inicial.formulario);
+  /** Contrato firmado cargado en Contratación: solo en memoria (un File no cabe en sessionStorage); Radicación lo adjunta. */
+  readonly archivoContratoFirmado = signal<File | null>(null);
 
   constructor() {
     effect(() => {
@@ -75,6 +77,7 @@ export class BorradorRadicacionService {
     this.cotizacion.set(null);
     this.contrato.set(null);
     this.formulario.set(null);
+    this.archivoContratoFirmado.set(null);
   }
 }
 

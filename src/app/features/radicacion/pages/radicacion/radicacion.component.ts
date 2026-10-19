@@ -490,6 +490,12 @@ export class RadicacionComponent {
   constructor() {
     this.restaurarBorrador(this.borrador.formulario() as Record<string, never> | null);
     this.precargarDesdeContrato();
+    // Contrato firmado cargado en Contratación: se adjunta aquí como documento de la radicación.
+    const firmado = this.borrador.archivoContratoFirmado();
+    if (firmado) {
+      this.onContratoFirmado(firmado);
+      this.borrador.archivoContratoFirmado.set(null);
+    }
     // Todo cambio del formulario queda en el borrador: al volver del contrato no se pierde nada.
     effect(() => this.borrador.formulario.set(this.instantanea()));
   }

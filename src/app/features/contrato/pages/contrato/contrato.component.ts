@@ -56,6 +56,7 @@ import {
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
 import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
+import { LectorContratoComponent } from '../../components/lector-contrato/lector-contrato.component';
 
 /** Servicios públicos que puede tener el inmueble (los mismos del cotizador actual). */
 const SERVICIOS_PUBLICOS: readonly string[] = ['Acueducto', 'Energía', 'Gas', 'Caldera', 'Teléfono'];
@@ -89,6 +90,8 @@ type EstadoEnvioContrato = 'inactivo' | 'enviando' | 'exito';
  * valida por UX y muestra el resultado. Reutiliza componentes compartidos sin
  * duplicar marcado (Req 24.4, 35.21).
  */
+const OTRA_CIUDAD = '__otra__';
+
 @Component({
   selector: 'app-contrato',
   standalone: true,
@@ -102,6 +105,7 @@ type EstadoEnvioContrato = 'inactivo' | 'enviando' | 'exito';
     EscaleritaLoaderComponent,
     InfoBoxComponent,
     SuccessScreenComponent,
+    LectorContratoComponent,
   ],
   templateUrl: './contrato.component.html',
   styleUrl: './contrato.component.scss',
@@ -174,6 +178,23 @@ export class ContratoComponent {
   protected readonly arrCorreo = signal('');
   protected readonly arrDireccion = signal('');
   protected readonly arrCiudadExpedicion = signal('');
+  /** Ciudades del catálogo agrupadas por departamento para el select de expedición. */
+  protected readonly ciudadesPorDepartamento = Object.entries(
+    inject(CatalogoService).opciones('ciudad').reduce<Record<string, string[]>>((g, c) => {
+      (g[String(c['departamento'] ?? 'Otras')] ??= []).push(c.descripcion);
+      return g;
+    }, {}),
+  ).map(([departamento, ciudades]) => ({ departamento, ciudades: ciudades.sort((a, b) => a.localeCompare(b, 'es')) }))
+    .sort((a, b) => a.departamento.localeCompare(b.departamento, 'es'));
+  private readonly arrExpedicionOtra = signal(false);
+  /** La cédula pudo expedirse fuera del catálogo (p. ej. Medellín): "Otra ciudad…" abre un campo libre. */
+  protected readonly expedicionOtra = computed(() => this.arrExpedicionOtra()
+    || (!!this.arrCiudadExpedicion() && !this.ciudadesPorDepartamento.some((g) => g.ciudades.includes(this.arrCiudadExpedicion()))));
+
+  protected elegirCiudadExpedicion(valor: string): void {
+    this.arrExpedicionOtra.set(valor === OTRA_CIUDAD);
+    this.arrCiudadExpedicion.set(valor === OTRA_CIUDAD ? '' : valor);
+  }
 
   // --- Paso 2: datos del arrendatario (Req 30.3) ---
   protected readonly ateNombres = signal('');
@@ -620,8 +641,21 @@ export class ContratoComponent {
   }
 
   /** Lleva a Radicación, donde se carga el contrato ya firmado (sección 1). */
-  protected cargarFirmadoEnRadicacion(): void {
-    void this.router.navigate(['/app/radicacion']);
+  /** El contrato firmado se adjunta luego en Radicación (viaja en memoria). */
+  protected onContratoFirmado(archivo: File): void {
+    this.borrador.archivoContratoFirmado.set(archivo);
+  }
+
+  /** La lectura del contrato firmado llena el formulario: el broker solo revisa y genera. */
+  protected onContratoLeido(lectura: LecturaContratoResponse): void {
+    this.precargarDesdeLectura(lectura);
+    this.feedback.toast({
+      variante: 'exito',
+      titulo: 'Contrato leído',
+      mensaje: lectura.falta.length
+        ? 'Precargamos lo que encontramos. Completa lo que falta en cada paso.'
+        : 'Precargamos todos los datos. Revísalos en cada paso y genera el contrato.',
+    });
   }
 
   protected volverASeguimiento(): void {
