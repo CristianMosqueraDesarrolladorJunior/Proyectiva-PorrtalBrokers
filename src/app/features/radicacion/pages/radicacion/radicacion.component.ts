@@ -439,6 +439,7 @@ export class RadicacionComponent {
 
   protected readonly pasoActivo = computed(() =>
     pasoActivoRadicacion(
+      this.contratoReferencia() !== null,
       this.datosSarlaftCompletos(),
       this.estadoSarlaft(),
       this.faltantes().length,
@@ -487,6 +488,7 @@ export class RadicacionComponent {
 
   constructor() {
     this.restaurarBorrador(this.borrador.formulario() as Record<string, never> | null);
+    this.precargarDesdeContrato();
     // Todo cambio del formulario queda en el borrador: al volver del contrato no se pierde nada.
     effect(() => this.borrador.formulario.set(this.instantanea()));
   }
@@ -543,6 +545,27 @@ export class RadicacionComponent {
     this.readjuntarDocumentos.set(Boolean(f['habiaDocumentos']) || Object.keys(f['archivosCargados'] ?? {}).length > 0);
     this.radicadoPendiente.set(f['radicadoPendiente'] ?? null);
     this.autorizacionDatos.set(f['autorizacionDatos'] ?? false);
+  }
+
+  /** Con el contrato del flujo (generado en Contratación): propietario, inquilino y estudio, solo si están vacíos. */
+  private precargarDesdeContrato(): void {
+    const contrato = this.borrador.contrato();
+    if (!contrato) {
+      return;
+    }
+    const tipo = (t: string | undefined): TipoDocumentoIdentidad | null =>
+      t === 'CC' || t === 'CE' || t === 'NIT' || t === 'PA' ? t : null;
+    if (contrato.propietario?.numeroDocumento && !this.numeroDocumentoPropietario().trim()) {
+      this.numeroDocumentoPropietario.set(contrato.propietario.numeroDocumento);
+      this.tipoDocumentoPropietario.set(tipo(contrato.propietario.tipoDocumento) ?? this.tipoDocumentoPropietario());
+    }
+    if (contrato.inquilino?.numeroDocumento && !this.documentoInquilino().trim()) {
+      this.documentoInquilino.set(contrato.inquilino.numeroDocumento);
+      this.tipoDocumentoInquilino.set(tipo(contrato.inquilino.tipoDocumento) ?? this.tipoDocumentoInquilino());
+    }
+    if (contrato.numeroEstudio && !this.numeroEstudioArrendamiento().trim()) {
+      this.numeroEstudioArrendamiento.set(contrato.numeroEstudio);
+    }
   }
 
   /** Tras radicar: deja la pantalla lista para una nueva radicación (sin borrador ni datos anteriores). */

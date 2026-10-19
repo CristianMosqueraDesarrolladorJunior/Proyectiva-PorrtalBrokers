@@ -620,11 +620,11 @@ export class CotizadorDatosComponent implements OnInit {
     this.resultado.set(null);
   }
 
-  /** Navega a la sección Radicación conservando el contexto (Req 9.3). */
-  protected onRadicarPoliza(): void {
+  /** Lleva la cotización a Contratación: siguiente paso del flujo de emisión (no se radica sin contrato). */
+  protected onGenerarContrato(): void {
     const resultado = this.resultado();
     if (resultado?.referencia) {
-      // La cotización viaja a la radicación y al contrato para precargar sus campos.
+      // La cotización viaja al contrato y luego a la radicación para precargar sus campos.
       const req = this.construirRequest();
       this.borrador.iniciarDesdeCotizacion({
         referencia: resultado.referencia,
@@ -638,7 +638,7 @@ export class CotizadorDatosComponent implements OnInit {
         total: resultado.total,
       });
     }
-    void this.router.navigate(['/app/radicacion']);
+    void this.router.navigate(['/app/contrato']);
   }
 
   /** trackBy de coberturas para render eficiente. */

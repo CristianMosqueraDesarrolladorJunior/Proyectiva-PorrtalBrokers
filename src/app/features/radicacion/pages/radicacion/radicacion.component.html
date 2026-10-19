@@ -47,11 +47,50 @@
             Radicando la cotización <strong>{{ cot.referencia }}</strong>:
             {{ cot.tipoInmueble }} en {{ cot.ciudad }} · canon {{ formatearCop(cot.canon) }}
             · vigencia {{ cot.mesesVigencia }} meses · total {{ formatearCop(cot.total) }}.
-            Estos datos se precargan en el contrato.
+            Estos datos ya van en el contrato.
           </app-info-box>
         }
+        <!-- Sección 1: sin contrato no se radica; quien ya lo tiene firmado lo carga aquí y sigue. -->
         <app-form-section-card
           [numero]="1"
+          icono="description"
+          titulo="Contrato de arrendamiento"
+          subtitulo="Empieza aquí: carga el contrato firmado o genéralo con nuestra plantilla."
+        >
+          @if (contratoReferencia(); as referencia) {
+            <app-alert-banner variante="success" titulo="Contrato listo">
+              El contrato <strong>{{ referencia }}</strong> quedó guardado y se enlazará a esta radicación.
+            </app-alert-banner>
+          } @else {
+            <app-info-box icono="info">
+              Al cargar el contrato firmado leemos el propietario, el inquilino, el inmueble y el canon, lo registramos
+              y precargamos esta radicación.
+            </app-info-box>
+          }
+
+          <app-lector-contrato
+            titulo="¿Ya tienes el contrato firmado? Cárgalo aquí"
+            (archivo)="onContratoFirmado($event)"
+            (leido)="onContratoLeido($event)"
+          />
+          @if (registrandoContratoLeido()) {
+            <app-info-box icono="hourglass_top">Registrando el contrato con los datos leídos…</app-info-box>
+          }
+          @if (lecturaPorCompletar()) {
+            <app-boton variante="outline" icono="edit_document" (clicked)="completarContratoLeido()">
+              Completar el contrato en Contratación
+            </app-boton>
+          }
+
+          <div class="rad-contrato-accion">
+            <app-boton variante="outline" icono="edit_document" (clicked)="crearContrato()">
+              {{ contratoReferencia() ? 'Generar otro contrato' : '¿Aún no lo tienes? Genera tu contrato' }}
+            </app-boton>
+          </div>
+        </app-form-section-card>
+
+        <app-form-section-card
+          [numero]="2"
           icono="person"
           titulo="Datos del propietario"
           subtitulo="Información del titular legal del inmueble."
@@ -93,7 +132,7 @@
         </app-form-section-card>
 
         <app-form-section-card
-          [numero]="2"
+          [numero]="3"
           icono="task_alt"
           titulo="Estudio de arrendamiento"
           subtitulo="Consulta el estudio del inquilino en Estudio Digital del Libertador con su número de estudio y su cédula."
@@ -200,7 +239,7 @@
         </app-form-section-card>
 
         <app-form-section-card
-          [numero]="3"
+          [numero]="4"
           icono="draw"
           titulo="¿Quién firma el contrato?"
           subtitulo="Define la titularidad jurídica del suscriptor ante la póliza."
@@ -274,7 +313,7 @@
         </app-form-section-card>
 
         <app-form-section-card
-          [numero]="4"
+          [numero]="5"
           icono="verified_user"
           titulo="Validación de Conocimiento de Cliente"
           [subtitulo]="'Consulta en listas del ' + etiquetaSujetoSarlaft() + ' antes de cargar los documentos.'"
@@ -303,8 +342,8 @@
                     <li>El {{ etiquetaSujetoSarlaft() }} diligencia la actualización desde el enlace.</li>
                   } @else {
                     <li>
-                      No recibimos un enlace automático: el <strong>{{ etiquetaSujetoSarlaft() }}</strong> debe actualizar
-                      su Conocimiento de Cliente directamente con Seguros Bolívar.
+                      No recibimos un enlace automático: comunícate con tu <strong>asesor comercial</strong> para que le
+                      genere o envíe el enlace al <strong>{{ etiquetaSujetoSarlaft() }}</strong>.
                     </li>
                   }
                   <li>Cuando confirme, vuelve a consultar para continuar con los documentos.</li>
@@ -321,6 +360,12 @@
                     </app-boton>
                   </div>
                 }
+
+                <app-info-box icono="support_agent">
+                  Si el enlace no llega o no funciona, comunícate con tu <b>asesor comercial</b> para que le genere o
+                  envíe el enlace de actualización al {{ etiquetaSujetoSarlaft() }}. Cuando tengas el formulario de
+                  Conocimiento de Cliente diligenciado y firmado, cárgalo en los documentos y continúa.
+                </app-info-box>
               </div>
 
               <div class="rad-sarlaft-acciones">
@@ -390,12 +435,17 @@
 
           @if (errorSarlaft(); as error) {
             <app-alert-banner variante="error" titulo="Consulta no disponible">{{ error }}</app-alert-banner>
+            <app-info-box icono="support_agent">
+              Comunícate con tu <b>asesor comercial</b> para que le genere o envíe el enlace de actualización al
+              {{ etiquetaSujetoSarlaft() }}. Cuando tengas el formulario de Conocimiento de Cliente diligenciado y firmado,
+              usa «Cargar formulario de Conocimiento de Cliente» en los documentos y continúa.
+            </app-info-box>
           }
 
         </app-form-section-card>
 
         <app-form-section-card
-          [numero]="5"
+          [numero]="6"
           icono="upload_file"
           titulo="Documentos requeridos"
           subtitulo="Validación por documento con verificación inmediata."
@@ -426,8 +476,8 @@
 
             @if (conSarlaftFisico()) {
               <app-info-box icono="upload_file">
-                SARLAFT físico: carga el Formulario Conocimiento de Cliente diligenciado y firmado en la lista. El área
-                lo revisa con la radicación.
+                Carga el formulario de Conocimiento de Cliente diligenciado y firmado en la lista. El área lo revisa con
+                la radicación.
               </app-info-box>
             }
             @if (tipoPersona() === 'juridica') {
@@ -439,51 +489,14 @@
           } @else {
             <app-info-box icono="lock">
               La carga de documentos se habilita cuando la consulta de Conocimiento de Cliente resulte
-              <b>actualizada</b>, o si cargas el <b>SARLAFT físico</b> diligenciado y firmado.
+              <b>actualizada</b>, o si cargas el <b>formulario de Conocimiento de Cliente</b> diligenciado y firmado.
             </app-info-box>
             @if (ofreceSarlaftFisico()) {
-              <app-boton variante="outline" icono="upload_file" (clicked)="elegirSarlaftFisico()">Cargar SARLAFT físico</app-boton>
+              <app-boton variante="outline" icono="upload_file" (clicked)="elegirSarlaftFisico()">Cargar formulario de Conocimiento de Cliente</app-boton>
             }
           }
         </app-form-section-card>
 
-        <app-form-section-card
-          [numero]="6"
-          icono="description"
-          titulo="Contrato de arrendamiento"
-          subtitulo="Obligatorio: genera el contrato o carga el que ya está firmado."
-        >
-          @if (contratoReferencia(); as referencia) {
-            <app-alert-banner variante="success" titulo="Contrato generado">
-              El contrato <strong>{{ referencia }}</strong> quedó guardado y se enlazará a esta radicación.
-            </app-alert-banner>
-          } @else {
-            <app-info-box icono="info">
-              Si ya tienes el contrato firmado, cárgalo: leemos el propietario, el inquilino, el inmueble y el canon
-              y lo registramos para radicar. Si no, genéralo con nuestra plantilla, descárgalo, fírmalo y cárgalo aquí.
-            </app-info-box>
-          }
-
-          <div class="rad-contrato-accion">
-            <app-boton variante="accent" (clicked)="crearContrato()">
-              ✎ {{ contratoReferencia() ? 'Generar otro contrato' : 'Crear contrato' }}
-            </app-boton>
-          </div>
-
-          <app-lector-contrato
-            titulo="¿Ya tienes el contrato firmado? Cárgalo"
-            (archivo)="onContratoFirmado($event)"
-            (leido)="onContratoLeido($event)"
-          />
-          @if (registrandoContratoLeido()) {
-            <app-info-box icono="hourglass_top">Registrando el contrato con los datos leídos…</app-info-box>
-          }
-          @if (lecturaPorCompletar()) {
-            <app-boton variante="outline" icono="edit_document" (clicked)="completarContratoLeido()">
-              Completar el contrato en Contratos
-            </app-boton>
-          }
-        </app-form-section-card>
 
         <app-form-field label="Observaciones para el área (opcional)" controlId="rad-observaciones">
           <textarea

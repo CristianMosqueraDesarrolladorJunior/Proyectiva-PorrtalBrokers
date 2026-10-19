@@ -13,11 +13,20 @@ export interface CotizacionParaRadicar {
   readonly total: number;
 }
 
-/** Contrato ya generado y guardado en el backend; la radicación lo exige. */
+/** Documento de una de las partes del contrato. */
+export interface ParteContrato {
+  readonly tipoDocumento: string;
+  readonly numeroDocumento: string;
+}
+
+/** Contrato ya generado y guardado en el backend; la radicación lo exige y se precarga con él. */
 export interface ContratoGenerado {
   readonly referencia: string;
   /** El inmueble está en leasing: la radicación exige el permiso de subarriendo. */
   readonly leasing?: boolean;
+  readonly propietario?: ParteContrato;
+  readonly inquilino?: ParteContrato;
+  readonly numeroEstudio?: string;
 }
 
 const CLAVE = 'portal.borradorRadicacion';

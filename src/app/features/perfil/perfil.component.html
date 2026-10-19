@@ -179,8 +179,8 @@
 
     }
 
-    <!-- ===================== Conocimiento de Cliente ===================== -->
-    @if (!guiado() || paso() === 1) {
+    <!-- ===================== Conocimiento de Cliente (paso 2 del registro, opcional) ===================== -->
+    @if (!guiado() || paso() === 2) {
     <article class="perfil-tarjeta" id="perfil-sarlaft" aria-labelledby="perfil-sarlaft-titulo">
       <header class="perfil-tarjeta__cabecera">
         <div>
@@ -228,8 +228,8 @@
     }
   </div>
 
-  <!-- ===================== Documentos ===================== -->
-  @if (!guiado() || paso() === 2) {
+  <!-- ===================== Documentos (paso 1 del registro) ===================== -->
+  @if (!guiado() || paso() === 1) {
   <article class="perfil-tarjeta" id="perfil-documentos" aria-labelledby="perfil-docs-titulo">
     <header class="perfil-tarjeta__cabecera">
       <div>

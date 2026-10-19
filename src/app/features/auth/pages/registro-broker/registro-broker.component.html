@@ -12,25 +12,25 @@
       <h2 id="registro-titulo" class="registro-titulo">
         @switch (paso()) {
           @case (1) { Inicia a vender pólizas con nosotros }
-          @case (2) { Verifica tu Conocimiento de Cliente }
-          @case (3) { Adjunta tus documentos }
+          @case (2) { Adjunta tus documentos }
+          @case (3) { Verifica tu Conocimiento de Cliente }
         }
       </h2>
       <p class="registro-subtitulo">
         @switch (paso()) {
           @case (1) { Califícate como broker. }
-          @case (2) { Validamos tu Conocimiento de Cliente con el documento que registraste. }
-          @case (3) { Con tus documentos aprobados serás broker registrado. }
+          @case (2) { Con tus documentos aprobados serás broker registrado. }
+          @case (3) { Opcional: si ya lo tienes vigente o cargaste el formulario, envía tu solicitud. }
         }
       </p>
 
       <!-- Etapas del proceso: parte de la instrucción de unirse, siempre visibles. -->
       <ol class="registro-pasos" aria-label="Etapas del registro de broker">
         @for (titulo of etapas; track $index; let i = $index; let ultimo = $last) {
-          <li class="registro-pasos__item" [class.hecho]="i + 1 < paso()" [class.activo]="i + 1 === paso()"
+          <li class="registro-pasos__item" [class.hecho]="etapaHecha(i)" [class.activo]="i + 1 === paso()"
             [attr.aria-current]="i + 1 === paso() ? 'step' : null">
             <span class="registro-pasos__nodo" aria-hidden="true">
-              @if (i + 1 < paso()) { <app-icon nombre="check" [tamano]="16" /> } @else { {{ i + 1 }} }
+              @if (etapaHecha(i)) { <app-icon nombre="check" [tamano]="16" /> } @else { {{ i + 1 }} }
             </span>
             <span class="registro-pasos__texto">
               <small>Paso {{ i + 1 }}</small>
@@ -131,8 +131,18 @@
     </form>
     }
 
-    <!-- ===================== Paso 2 · Conocimiento de Cliente (SARLAFT) ===================== -->
+    <!-- ===================== Paso 2 · Documentos ===================== -->
     @if (paso() === 2) {
+      <app-doc-uploader [reglas]="reglasUploader" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)"></app-doc-uploader>
+
+      <div class="registro-acciones">
+        <app-boton variante="accent" [disabled]="!puedeCompletarRegistro()" (clicked)="paso.set(3)">Continuar</app-boton>
+        <app-boton variante="ghost" (clicked)="irAlPortal()">Completar después</app-boton>
+      </div>
+    }
+
+    <!-- ===================== Paso 3 · Conocimiento de Cliente (opcional) ===================== -->
+    @if (paso() === 3) {
       <div class="registro-documento">
         <app-icon nombre="badge" [tamano]="20" />
         <span>
@@ -147,16 +157,16 @@
         <!-- Antes de verificar: cómo funciona la validación. -->
         <ol class="registro-flujo" aria-label="Cómo validamos tu Conocimiento de Cliente">
           <li><b>Consultamos tu documento</b><span>Verificamos en línea tu Conocimiento de Cliente, sin que tengas que llenar nada.</span></li>
-          <li><b>Si está vigente</b><span>Continúas de inmediato con tus documentos.</span></li>
+          <li><b>Si está vigente</b><span>Queda listo y envías tu solicitud de inmediato.</span></li>
           <li><b>Si está desactualizado</b><span>Te enviamos por SMS un enlace para actualizarlo y luego verificas de nuevo.</span></li>
           <li><b>Si algo falla</b><span>Cargas el formulario físico diligenciado y firmado; queda en revisión y puedes continuar.</span></li>
         </ol>
-      } @else if (sarlaftConsultado()) {
+      } @else if (sarlaftConsultado() || sarlaftListo()) {
         @switch (perfil().sarlaft.estado) {
           @case ('vigente') {
             <div class="registro-resultado registro-resultado--ok" role="status">
               <app-icon nombre="verified_user" [tamano]="22" />
-              <div><b>Conocimiento de Cliente actualizado</b><p>Tu Conocimiento de Cliente está vigente. Continúa con tus documentos.</p></div>
+              <div><b>Conocimiento de Cliente actualizado</b><p>Tu Conocimiento de Cliente está vigente. Ya puedes enviar tu solicitud.</p></div>
             </div>
           }
           @case ('en_cumplimiento') {
@@ -172,7 +182,7 @@
           @case ('fisico') {
             <div class="registro-resultado registro-resultado--ok" role="status">
               <app-icon nombre="upload_file" [tamano]="22" />
-              <div><b>Formulario físico cargado</b><p>Queda en revisión del área. Continúa con tus documentos.</p></div>
+              <div><b>Formulario físico cargado</b><p>Queda en revisión del área. Ya puedes enviar tu solicitud.</p></div>
             </div>
           }
           @case ('sin_consultar') {
@@ -218,34 +228,22 @@
         </div>
       }
 
-      <div class="registro-acciones">
-        @if (sarlaftConsultado() && (perfil().sarlaft.estado === 'vigente' || perfil().sarlaft.estado === 'fisico')) {
-          <app-boton variante="accent" (clicked)="paso.set(3)">Continuar a documentos</app-boton>
-        } @else if (sarlaftConsultado() && perfil().sarlaft.estado === 'en_cumplimiento') {
-          <app-boton variante="accent" (clicked)="irAlPortal()">Ir al portal</app-boton>
-        } @else {
-          <app-boton variante="accent" icono="policy" [disabled]="!puedeConsultarSarlaft()" (clicked)="verificarSarlaft()">
-            {{ sarlaftConsultado() ? 'Verificar de nuevo' : 'Verificar Conocimiento de Cliente' }}
-          </app-boton>
-        }
-        <app-boton variante="ghost" (clicked)="irAlPortal()">Completar después</app-boton>
-      </div>
-    }
-
-    <!-- ===================== Paso 3 · Documentos ===================== -->
-    @if (paso() === 3) {
-      <app-doc-uploader [reglas]="reglasUploader" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)"></app-doc-uploader>
-
       @if (enviandoSolicitud()) {
         <app-escalerita-loader texto="Enviando solicitud..."></app-escalerita-loader>
       } @else {
         <div class="registro-acciones">
           <app-boton variante="accent" icono="send" [disabled]="!puedeCompletarRegistro()" (clicked)="enviarSolicitud()">Enviar solicitud de registro</app-boton>
+          @if (!sarlaftListo() && perfil().sarlaft.estado !== 'en_cumplimiento') {
+            <app-boton variante="outline" icono="policy" [disabled]="!puedeConsultarSarlaft()" (clicked)="verificarSarlaft()">
+              {{ sarlaftConsultado() ? 'Verificar de nuevo' : 'Verificar Conocimiento de Cliente' }}
+            </app-boton>
+          }
           <app-boton variante="ghost" (clicked)="paso.set(2)">Atrás</app-boton>
           <app-boton variante="ghost" (clicked)="irAlPortal()">Completar después</app-boton>
         </div>
       }
     }
+
     </div>
   </section>
 </main>

@@ -1,6 +1,6 @@
 <!--
-  Validación SARLAFT de renovación (proceso real): vigente -> Continuar;
-  no vigente (>= 36 meses) -> cargar SARLAFT actualizado y reconsultar.
+  Validación de Conocimiento de Cliente de renovación: vigente -> Continuar; no vigente o consulta caída ->
+  enlace al asegurado (o vía el asesor comercial) y cargar el formulario diligenciado para continuar.
 -->
 <section class="sarlaft-renov" aria-labelledby="sarlaft-renov-titulo">
   <header class="sarlaft-renov__header">
@@ -18,6 +18,16 @@
     <app-escalerita-loader texto="Validando Conocimiento de Cliente…" />
   } @else if (error()) {
     <app-alert-banner variante="error" titulo="Validación no disponible">{{ error() }}</app-alert-banner>
+    <app-info-box icono="support_agent">
+      Si el enlace no llega o no funciona, comunícate con tu <b>asesor comercial</b> para que le genere o envíe el
+      enlace de actualización al asegurado. Cuando tengas el formulario de Conocimiento de Cliente diligenciado y
+      firmado, cárgalo aquí y continúa con la gestión.
+    </app-info-box>
+    <app-doc-uploader
+      [reglas]="reglaActualizacion"
+      [cargados]="archivoActualizado()"
+      (archivoSeleccionado)="onArchivoActualizado($event)"
+    />
     <div class="sarlaft-renov__acciones">
       <app-boton variante="ghost" (clicked)="cancelar.emit()">Volver a opciones</app-boton>
       <app-boton variante="accent" (clicked)="reintentar()">Reintentar</app-boton>
@@ -49,8 +59,7 @@
       </div>
     } @else {
       <app-alert-banner variante="error" titulo="Documento de Conocimiento de Cliente no vigente">
-        El Conocimiento de Cliente del asegurado está desactualizado. Envíale el enlace de actualización a su celular o
-        carga el SARLAFT físico diligenciado y firmado.
+        El Conocimiento de Cliente del asegurado está desactualizado. Envíale el enlace de actualización a su celular.
       </app-alert-banner>
 
       @if (r.celularEnlace) {
@@ -60,6 +69,12 @@
           </app-boton>
         </div>
       }
+
+      <app-info-box icono="support_agent">
+        Si el enlace no llega o no funciona, comunícate con tu <b>asesor comercial</b> para que le genere o envíe el
+        enlace de actualización al asegurado. Cuando tengas el formulario de Conocimiento de Cliente diligenciado y
+        firmado, cárgalo aquí y continúa con la gestión.
+      </app-info-box>
 
       <app-doc-uploader
         [reglas]="reglaActualizacion"

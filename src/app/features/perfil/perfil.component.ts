@@ -149,7 +149,7 @@ export class PerfilComponent implements OnInit {
   /** Carga el perfil real del backend y sincroniza los campos editables. */
   private readonly ruta = inject(ActivatedRoute);
 
-  /** Recorrido guiado de registro (Conocimiento de Cliente → documentos → envío); llega con `?registro=1`. */
+  /** Recorrido guiado de registro (documentos → Conocimiento de Cliente, opcional → envío); llega con `?registro=1`. */
   protected readonly guiado = signal(this.ruta.snapshot.queryParamMap.get('registro') === '1');
   protected readonly paso = signal<1 | 2 | 3>(1);
 
@@ -170,20 +170,16 @@ export class PerfilComponent implements OnInit {
     if (this.puedeAvanzar()) this.paso.update((p) => (p < 3 ? ((p + 1) as 1 | 2 | 3) : p));
   }
 
-  /** El paso 1 avanza con el Conocimiento de Cliente consultado; el 2, con los 4 documentos aportados. */
+  /** El paso 1 avanza con los documentos aportados; el 2 (Conocimiento de Cliente) es opcional. */
   protected readonly puedeAvanzar = computed(() =>
-    this.paso() === 1
-      ? this.perfil().sarlaft.estado !== 'sin_consultar'
-      : this.paso() === 2
-        ? this.perfil().documentos.every((d) => d.estado !== 'pendiente')
-        : false,
+    this.paso() === 1 ? this.perfil().documentos.every((d) => d.estado !== 'pendiente') : this.paso() === 2,
   );
 
-  /** Primer paso pendiente: sin Conocimiento de Cliente → 1; sin documentos → 2; todo listo → 3. */
+  /** Primer paso pendiente: sin documentos → 1; sin Conocimiento de Cliente → 2; todo listo → 3. */
   private pasoInicial(): 1 | 2 | 3 {
     const p = this.perfil();
-    if (p.sarlaft.estado === 'sin_consultar') return 1;
-    return p.documentos.every((d) => d.estado !== 'pendiente') ? 3 : 2;
+    if (!p.documentos.every((d) => d.estado !== 'pendiente')) return 1;
+    return p.sarlaft.estado === 'sin_consultar' ? 2 : 3;
   }
 
   ngOnInit(): void {
@@ -224,8 +220,12 @@ export class PerfilComponent implements OnInit {
     const docsOk = p.documentos.every((d) => d.estado !== 'pendiente');
     return [
       { titulo: 'Ingreso al portal', detalle: 'Cuenta creada', hecho: true },
-      { titulo: 'Conocimiento de Cliente vigente', detalle: ETIQUETA_SARLAFT[p.sarlaft.estado], hecho: p.sarlaft.estado === 'vigente' },
       { titulo: 'Documentación', detalle: `${this.documentosAportados()} de ${p.documentos.length} aportados`, hecho: docsOk },
+      {
+        titulo: 'Conocimiento de Cliente (opcional)',
+        detalle: ETIQUETA_SARLAFT[p.sarlaft.estado],
+        hecho: p.sarlaft.estado === 'vigente' || p.sarlaft.estado === 'fisico',
+      },
       { titulo: 'Broker registrado', detalle: p.fechaRegistro ? `Desde ${this.fecha(p.fechaRegistro)}` : 'Acceso completo y comisiones', hecho: p.estadoCuenta === 'REGISTRADO' },
     ];
   });

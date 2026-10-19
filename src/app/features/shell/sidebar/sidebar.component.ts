@@ -30,8 +30,9 @@ export interface AccesoSidebar {
 }
 
 /**
- * Accesos visibles del sidebar (Req 4.1): Seguimiento, Nueva radicación, Cotizador,
- * Contratos, Renovaciones, Comisiones, Calendario, Documentos y Ayuda.
+ * Accesos visibles del sidebar (Req 4.1): Seguimiento, el flujo de emisión de póliza
+ * (Cotización → Contratación → Radicación) y luego Renovaciones, Comisiones, Calendario,
+ * Documentos y Ayuda.
  *
  * "Agente IA", "Referir cliente" y "Estado referidos" quedan ocultos del sidebar
  * (sus rutas siguen existiendo). Cada `ruta` corresponde al mapa de enrutamiento
@@ -39,10 +40,11 @@ export interface AccesoSidebar {
  */
 export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
   { ruta: 'seguimiento', icono: 'grid_view', etiqueta: 'Seguimiento' },
-  { ruta: 'radicacion', icono: 'post_add', etiqueta: 'Nueva radicación' },
+  // Orden del flujo de emisión: no se radica sin contrato (spec flujo-emision-poliza).
+  { ruta: 'cotizador', icono: 'calculate', etiqueta: 'Cotización' },
+  { ruta: 'contrato', icono: 'description', etiqueta: 'Contratación' },
+  { ruta: 'radicacion', icono: 'post_add', etiqueta: 'Radicación' },
   // "Agente IA", "Referir cliente" y "Estado referidos" se ocultan del sidebar (sus rutas siguen existiendo).
-  { ruta: 'cotizador', icono: 'calculate', etiqueta: 'Cotizador' },
-  { ruta: 'contrato', icono: 'description', etiqueta: 'Contratos' },
   { ruta: 'renovaciones', icono: 'update', etiqueta: 'Renovaciones' },
   { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
   { ruta: 'calendario', icono: 'calendar_today', etiqueta: 'Calendario' },

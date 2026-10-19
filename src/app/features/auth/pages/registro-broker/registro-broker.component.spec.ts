@@ -87,25 +87,25 @@ describe('RegistroBrokerComponent', () => {
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/app']);
   });
 
-  it('continuar como broker crea la cuenta, abre la sesión y sigue en el asistente: SARLAFT y luego documentos', () => {
+  it('continuar como broker crea la cuenta y sigue con documentos; el Conocimiento de Cliente (paso 3) es opcional', () => {
     llenarFormulario();
     (query('.registro-acciones--fila .btn-accent') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     expect(authSpy.registrarProspecto).toHaveBeenCalled();
     expect(routerSpy.navigate).not.toHaveBeenCalled();
-    expect(query('#registro-titulo').textContent).toContain('Conocimiento de Cliente');
-
-    // Sin fecha de expedición: se verifica directamente con el documento registrado.
-    expect(query('#reg-fecha-exp')).toBeNull();
-    (query('.registro-acciones .btn-accent') as HTMLButtonElement).click();
-    fixture.detectChanges();
-    expect(perfilSpy.actualizarSarlaft).toHaveBeenCalledWith();
-
-    (query('.registro-acciones .btn-accent') as HTMLButtonElement).click(); // Continuar a documentos
-    fixture.detectChanges();
+    // Paso 2: documentos, con el formulario de Conocimiento de Cliente como carga opcional.
     expect(query('#registro-titulo').textContent).toContain('Adjunta tus documentos');
-    expect(query('app-doc-uploader')).not.toBeNull();
+    expect(query('app-doc-uploader').textContent).toContain('Formulario de Conocimiento de Cliente');
+    // Sin los documentos obligatorios no se continúa.
+    expect((query('.registro-acciones .btn-accent') as HTMLButtonElement).disabled).toBe(true);
+
+    // Con el formulario cargado, el paso 3 queda listo (check) aunque no se haya consultado.
+    const etapa3 = () => fixture.nativeElement.querySelectorAll('.registro-pasos__item')[2] as HTMLElement;
+    expect(etapa3().classList).not.toContain('hecho');
+    perfil.update((p) => ({ ...p, sarlaft: { estado: 'fisico' } }));
+    fixture.detectChanges();
+    expect(etapa3().classList).toContain('hecho');
   });
 });
 

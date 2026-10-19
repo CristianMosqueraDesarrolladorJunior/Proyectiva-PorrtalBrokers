@@ -150,6 +150,7 @@ export function etiquetasDocumentos(
 
 /** Pasos del stepper de la radicación, alineados al flujo 02. */
 export const PASOS_RADICACION: readonly string[] = [
+  'Contrato',
   'Datos y estudio',
   'Firmante',
   'Conocimiento de Cliente',
@@ -207,22 +208,28 @@ export function permiteCargarDocumentos(estado: EstadoSarlaftRadicacion | null):
 
 /**
  * Paso activo del stepper (0-indexado) según el avance real. Función pura y total.
+ * Sin contrato no se avanza: es el primer paso (no se radica sin contrato).
+ * @param tieneContrato hay un contrato generado o cargado para esta radicación.
  * @param datosValidos datos del propietario y estudio válidos.
  * @param estadoSarlaft resultado vigente de la consulta SARLAFT, o `null`.
  * @param faltantes cantidad de documentos obligatorios pendientes.
  */
 export function pasoActivoRadicacion(
+  tieneContrato: boolean,
   datosValidos: boolean,
   estadoSarlaft: EstadoSarlaftRadicacion | null,
   faltantes: number,
 ): number {
-  if (!datosValidos) {
+  if (!tieneContrato) {
     return 0;
   }
-  if (!permiteCargarDocumentos(estadoSarlaft)) {
-    return 2;
+  if (!datosValidos) {
+    return 1;
   }
-  return faltantes > 0 ? 3 : 4;
+  if (!permiteCargarDocumentos(estadoSarlaft)) {
+    return 3;
+  }
+  return faltantes > 0 ? 4 : 5;
 }
 
 

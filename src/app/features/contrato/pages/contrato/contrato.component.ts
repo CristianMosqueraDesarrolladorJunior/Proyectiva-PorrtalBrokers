@@ -8,6 +8,7 @@ import {
   signal,
   type WritableSignal,
 } from '@angular/core';
+import { Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -16,6 +17,7 @@ import {
   BotonComponent,
   EscaleritaLoaderComponent,
   FormFieldComponent,
+  InfoBoxComponent,
   StepTabsComponent,
   SuccessScreenComponent,
 } from '../../../../shared/components';
@@ -98,6 +100,7 @@ type EstadoEnvioContrato = 'inactivo' | 'enviando' | 'exito';
     BotonComponent,
     AlertBannerComponent,
     EscaleritaLoaderComponent,
+    InfoBoxComponent,
     SuccessScreenComponent,
   ],
   templateUrl: './contrato.component.html',
@@ -107,7 +110,10 @@ export class ContratoComponent {
   private readonly feedback = inject(FeedbackService);
   private readonly contratoService = inject(ContratoService);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly borrador = inject(BorradorRadicacionService);
+  /** Cotización que originó este contrato (flujo Cotización → Contrato → Radicación). */
+  protected readonly cotizacionOrigen = this.borrador.cotizacion;
   /** Ciudades del catálogo `ciudad` de la BD: las que acepta el backend (evita `ciudad_no_soportada`). */
   protected readonly ciudades = signal<readonly string[]>(
     inject(CatalogoService).opciones('ciudad').map((c) => c.descripcion).sort((a, b) => a.localeCompare(b, 'es')),
@@ -584,8 +590,14 @@ export class ContratoComponent {
     this.contratoService.generar(request).subscribe({
       next: (respuesta) => {
         this.confirmacion.set(respuesta);
-        // La radicación exige este contrato: queda registrado en el borrador del flujo.
-        this.borrador.contrato.set({ referencia: respuesta.radicado, leasing: this.inmLeasing() });
+        // La radicación exige este contrato: queda en el borrador con lo que la precarga.
+        this.borrador.contrato.set({
+          referencia: respuesta.radicado,
+          leasing: this.inmLeasing(),
+          propietario: { tipoDocumento: this.arrTipoIdentificacion(), numeroDocumento: this.arrNumeroIdentificacion().trim() },
+          inquilino: { tipoDocumento: this.ateTipoIdentificacion(), numeroDocumento: this.ateNumeroIdentificacion().trim() },
+          numeroEstudio: this.estudioConsecutivo().trim() || undefined,
+        });
         this.estadoEnvio.set('exito');
         this.generado.emit(respuesta);
       },
@@ -596,16 +608,25 @@ export class ContratoComponent {
     });
   }
 
-  /** Cancela el Generador_Contrato y regresa a Radicación sin generar (Req 30.8). */
+  /** Cancela el Generador_Contrato sin generar y vuelve a la pantalla anterior (Req 30.8). */
   protected cancelar(): void {
     this.cancelado.emit();
+    this.location.back();
+  }
+
+  /** Siguiente paso del flujo de emisión: radicar con el contrato ya registrado. */
+  protected radicarSolicitud(): void {
     void this.router.navigate(['/app/radicacion']);
   }
 
-  /** Cierra la confirmación de éxito regresando a Radicación (Req 30.7, 30.8). */
-  protected volverARadicacion(): void {
-    this.cancelado.emit();
+  /** Lleva a Radicación, donde se carga el contrato ya firmado (sección 1). */
+  protected cargarFirmadoEnRadicacion(): void {
     void this.router.navigate(['/app/radicacion']);
+  }
+
+  protected volverASeguimiento(): void {
+    this.cancelado.emit();
+    void this.router.navigate(['/app/seguimiento']);
   }
 
   // --- Ensamblado del estado parcial por paso (para la lógica pura de gating) ------

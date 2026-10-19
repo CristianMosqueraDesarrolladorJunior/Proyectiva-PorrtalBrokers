@@ -180,11 +180,13 @@ describe('radicacion-presentacion', () => {
     });
 
     it('ubica el stepper según datos, SARLAFT y documentos', () => {
-      expect(pasoActivoRadicacion(false, 'ACTUALIZADO', 0)).toBe(0);
-      expect(pasoActivoRadicacion(true, null, 2)).toBe(2);
-      expect(pasoActivoRadicacion(true, 'DESACTUALIZADO', 2)).toBe(2);
-      expect(pasoActivoRadicacion(true, 'ACTUALIZADO', 2)).toBe(3);
-      expect(pasoActivoRadicacion(true, 'ACTUALIZADO', 0)).toBe(4);
+      // Sin contrato no se avanza aunque lo demás esté completo.
+      expect(pasoActivoRadicacion(false, true, 'ACTUALIZADO', 0)).toBe(0);
+      expect(pasoActivoRadicacion(true, false, 'ACTUALIZADO', 0)).toBe(1);
+      expect(pasoActivoRadicacion(true, true, null, 2)).toBe(3);
+      expect(pasoActivoRadicacion(true, true, 'DESACTUALIZADO', 2)).toBe(3);
+      expect(pasoActivoRadicacion(true, true, 'ACTUALIZADO', 2)).toBe(4);
+      expect(pasoActivoRadicacion(true, true, 'ACTUALIZADO', 0)).toBe(5);
     });
 
     it('invalida la consulta si cambia firmante, documento o tipo de persona', () => {

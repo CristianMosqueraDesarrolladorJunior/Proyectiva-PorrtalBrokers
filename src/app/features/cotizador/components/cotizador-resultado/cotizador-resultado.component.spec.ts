@@ -141,14 +141,14 @@ describe('CotizadorResultadoComponent', () => {
     expect(emitido).toEqual([1]);
   });
 
-  it('emite "radicar póliza" conservando el contexto (Req 9.3)', () => {
+  it('emite "genera tu contrato" conservando el contexto', () => {
     // Given
     component.resultado = resultado;
     fixture.detectChanges();
     const emitido: number[] = [];
-    component.radicarPoliza.subscribe(() => emitido.push(1));
+    component.generarContrato.subscribe(() => emitido.push(1));
     // When
-    (component as unknown as { onRadicarPoliza(): void }).onRadicarPoliza();
+    (component as unknown as { onGenerarContrato(): void }).onGenerarContrato();
     // Then
     expect(emitido).toEqual([1]);
   });

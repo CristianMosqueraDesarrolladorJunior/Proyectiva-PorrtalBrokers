@@ -22,6 +22,7 @@ import {
   BotonComponent,
   DocUploaderComponent,
   EscaleritaLoaderComponent,
+  InfoBoxComponent,
 } from '../../../../shared/components';
 import type {
   ArchivoSeleccionado,
@@ -50,6 +51,7 @@ import { MESES_VIGENCIA_SARLAFT } from '../../gestion-renovacion-flujo';
     BotonComponent,
     DocUploaderComponent,
     EscaleritaLoaderComponent,
+    InfoBoxComponent,
   ],
   templateUrl: './sarlaft-renovacion.component.html',
   styleUrl: './sarlaft-renovacion.component.scss',
@@ -82,7 +84,7 @@ export class SarlaftRenovacionComponent implements OnInit {
   protected readonly reglaActualizacion: readonly ReglaDocumentoUploader[] = [
     {
       id: 'sarlaft-actualizado',
-      etiqueta: 'Cargar SARLAFT físico',
+      etiqueta: 'Cargar formulario de Conocimiento de Cliente',
       descripcion: 'Formulario de Conocimiento de Cliente diligenciado y firmado · PDF, JPG o PNG · máx. 5 MB',
       obligatorio: true,
     },
@@ -103,12 +105,12 @@ export class SarlaftRenovacionComponent implements OnInit {
         this.feedback.toast(
           r.enviado
             ? { variante: 'exito', titulo: 'Enlace enviado', mensaje: 'Lo enviamos por SMS. Cuando el cliente lo diligencie, verifica de nuevo.' }
-            : { variante: 'info', mensaje: 'No se generó el enlace para este cliente. Carga el formulario físico de Conocimiento de Cliente.' },
+            : { variante: 'info', mensaje: 'No se generó el enlace. Comunícate con tu asesor comercial para que se lo genere o envíe al asegurado.' },
         );
       },
       error: () => {
         this.enviandoEnlace.set(false);
-        this.feedback.toast({ variante: 'error', mensaje: 'No fue posible enviar el enlace. Intenta de nuevo o carga el formulario físico.' });
+        this.feedback.toast({ variante: 'error', mensaje: 'No fue posible enviar el enlace. Comunícate con tu asesor comercial para que se lo genere o envíe al asegurado.' });
       },
     });
   }

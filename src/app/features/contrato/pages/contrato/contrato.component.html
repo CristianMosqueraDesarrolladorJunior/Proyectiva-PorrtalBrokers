@@ -3,24 +3,39 @@
     <!-- Confirmación de generación del contrato (Req 30.7) -->
     <app-success-screen
       titulo="Contrato generado"
-      mensaje="El contrato de arrendamiento se generó correctamente y quedó asociado a tu radicación."
+      mensaje="El contrato de arrendamiento quedó registrado. Ahora radica la solicitud para emitir la póliza: los datos del contrato ya van precargados."
       [tarjetas]="tarjetasConfirmacion()"
-      textoVolver="Volver a Radicación"
-      (volver)="volverARadicacion()"
+      textoVolver="Volver a Seguimiento"
+      (volver)="volverASeguimiento()"
     >
       <div accionesExito>
-        <app-boton variante="accent" icono="download" [disabled]="descargando()" (clicked)="descargarContrato()">
+        <app-boton variante="accent" icono="post_add" (clicked)="radicarSolicitud()">
+          Radicar solicitud para emisión de póliza
+        </app-boton>
+        <app-boton variante="outline" icono="download" [disabled]="descargando()" (clicked)="descargarContrato()">
           {{ descargando() ? 'Generando contrato…' : 'Descargar contrato (Word)' }}
         </app-boton>
       </div>
     </app-success-screen>
   } @else {
     <app-page-header
-    eyebrow="Contratos"
+    eyebrow="Contratación"
     tituloId="contrato-titulo"
     titulo="Crear contrato de arrendamiento"
     subtitulo="Completa los datos en cada paso para generar automáticamente el contrato de arrendamiento."
   ></app-page-header>
+
+    <!-- Flujo de emisión: de dónde viene el contrato y atajo para quien ya lo tiene firmado. -->
+    @if (pasoActual() === 0) {
+      <app-info-box icono="route">
+        @if (cotizacionOrigen(); as cot) {
+          Desde tu cotización <strong>{{ cot.referencia }}</strong>: canon, ciudad y vigencia ya van precargados.
+        }
+        ¿Ya tienes el contrato firmado?
+        <button type="button" class="contrato-enlace" (click)="cargarFirmadoEnRadicacion()">Cárgalo en Radicación</button>
+        y sigue con la solicitud.
+      </app-info-box>
+    }
 
     <!-- Indicador de pasos (Req 30.1) -->
     <app-step-tabs

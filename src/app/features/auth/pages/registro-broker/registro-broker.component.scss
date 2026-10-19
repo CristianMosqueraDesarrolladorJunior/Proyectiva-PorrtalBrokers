@@ -499,11 +499,12 @@
     gap: var(--space-3);
     text-align: left;
 
+    // De borde a borde: el círculo está centrado en el ítem; la línea cruza el gap hasta el siguiente.
     .registro-pasos__linea {
-      top: var(--section-number-size);
+      top: calc(50% + var(--section-number-size) / 2);
       left: calc(var(--section-number-size) / 2 - 1px);
       width: 2px;
-      height: var(--space-4);
+      height: calc(100% + var(--space-4) - var(--section-number-size));
     }
   }
 
@@ -532,7 +533,7 @@
   // Acciones centradas bajo el contenido del paso.
   .registro-acciones,
   .registro-acciones--fila {
-    flex-direction: row;
+    flex-flow: row wrap;
     justify-content: center;
     margin-top: var(--space-4);
 
@@ -558,7 +559,7 @@
   }
 
   .registro-pasos__item .registro-pasos__linea {
-    height: var(--space-3);
+    height: calc(100% + var(--space-3) - var(--section-number-size));
   }
 
   .registro-cuerpo {

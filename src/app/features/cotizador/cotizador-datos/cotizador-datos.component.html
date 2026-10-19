@@ -277,7 +277,7 @@
       >
         <div acciones class="cotizador-datos__acciones-panel">
           @if (resultado()) {
-            <app-boton variante="accent" (clicked)="onRadicarPoliza()">Radicar póliza</app-boton>
+            <app-boton variante="accent" icono="description" (clicked)="onGenerarContrato()">Genera tu contrato</app-boton>
             <app-boton variante="outline" [disabled]="descargandoPdf()" (clicked)="onDescargarPdf()">
               Descargar PDF
             </app-boton>
@@ -299,7 +299,7 @@
       [mostrarAcciones]="false"
       (descargarPdf)="onDescargarPdf()"
       (modificarDatos)="onModificarDatos()"
-      (radicarPoliza)="onRadicarPoliza()"
+      (generarContrato)="onGenerarContrato()"
     ></app-cotizador-resultado>
   }
 

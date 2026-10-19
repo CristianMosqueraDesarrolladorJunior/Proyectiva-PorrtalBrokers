@@ -39,8 +39,8 @@ export interface ColumnaDesglose {
  *   exista una Cotizacion calculada (`resultado === null`) (Req 9.1, 9.4).
  * - "Modificar datos": emite `modificarDatos` para que el contenedor oculte el
  *   resultado y rehabilite la edición de los datos de entrada (Req 9.2).
- * - "Radicar póliza": emite `radicarPoliza` para que el contenedor navegue a la
- *   sección Radicación conservando el contexto de la Cotizacion (Req 9.3).
+ * - "Genera tu contrato": emite `generarContrato` para que el contenedor lleve la
+ *   Cotizacion a Contratación (flujo Cotización → Contrato → Radicación).
  *
  * Standalone + `inject()`-friendly, estilos solo vía Design_Token, tabla
  * accesible con `scope` de encabezados y foco visible en las acciones.
@@ -80,7 +80,7 @@ export class CotizadorResultadoComponent {
   @Output() modificarDatos = new EventEmitter<void>();
 
   /** Emite la intención de radicar la póliza a partir del resultado (Req 9.3). */
-  @Output() radicarPoliza = new EventEmitter<void>();
+  @Output() generarContrato = new EventEmitter<void>();
 
   /** Columnas del desglose en el orden exacto del prototipo (Req 8.1). */
   protected readonly columnas: readonly ColumnaDesglose[] = [
@@ -118,9 +118,9 @@ export class CotizadorResultadoComponent {
     this.modificarDatos.emit();
   }
 
-  /** Emite la intención de radicar la póliza (Req 9.3). */
-  protected onRadicarPoliza(): void {
-    this.radicarPoliza.emit();
+  /** Emite la intención de generar el contrato con esta cotización. */
+  protected onGenerarContrato(): void {
+    this.generarContrato.emit();
   }
 
   /**

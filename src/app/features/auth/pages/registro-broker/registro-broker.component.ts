@@ -143,10 +143,10 @@ export class RegistroBrokerComponent {
   protected readonly perfil = this.perfilServicio.perfil;
   protected readonly abrirFormularioSarlaft = abrirFormularioSarlaft;
 
-  /** Paso del asistente: 1 datos (crea la cuenta), 2 Conocimiento de Cliente, 3 documentos. */
+  /** Paso del asistente: 1 datos (crea la cuenta), 2 documentos, 3 Conocimiento de Cliente (opcional). */
   protected readonly paso = signal<1 | 2 | 3>(1);
 
-  // --- Paso 2 · SARLAFT ---
+  // --- Paso 3 · Conocimiento de Cliente (opcional en el onboarding) ---
   protected readonly consultandoSarlaft = signal(false);
   protected readonly sarlaftConsultado = signal(false);
   protected readonly errorSarlaft = signal(false);
@@ -175,15 +175,26 @@ export class RegistroBrokerComponent {
   protected readonly cargadoSarlaftFisico = computed<Readonly<Record<string, string>>>(() =>
     this.perfil().sarlaft.fisico ? { formularioSarlaft: this.perfil().sarlaft.fisico as string } : ({} as Record<string, string>),
   );
+  /** Conocimiento de Cliente resuelto (vigente o formulario cargado): el paso 3 queda listo. */
+  protected readonly sarlaftListo = computed(() => ['vigente', 'fisico'].includes(this.perfil().sarlaft.estado));
 
-  // --- Paso 3 · Documentos ---
+  // --- Paso 2 · Documentos ---
   private readonly documentosRegistro = documentosRegistroBroker(inject(CatalogoService).opciones('documento_legalizacion'));
-  protected readonly reglasUploader: readonly ReglaDocumentoUploader[] = this.documentosRegistro.map((r) => ({
-    id: r.tipo, etiqueta: r.etiqueta, descripcion: r.descripcion, icono: 'upload_file', obligatorio: true,
+  /** Obligatorios + el formulario de Conocimiento de Cliente opcional: si se carga aquí, el paso 3 queda listo. */
+  protected readonly reglasUploader: readonly ReglaDocumentoUploader[] = [
+    ...this.documentosRegistro.map((r) => ({
+      id: r.tipo, etiqueta: r.etiqueta, descripcion: r.descripcion, icono: 'upload_file', obligatorio: true,
+    })),
+    {
+      ...this.reglaSarlaftFisico[0],
+      etiqueta: 'Formulario de Conocimiento de Cliente',
+      descripcion: 'Opcional: si ya lo tienes diligenciado y firmado (PDF, JPG o PNG)',
+    },
+  ];
+  protected readonly cargados = computed<Readonly<Record<string, string>>>(() => ({
+    ...Object.fromEntries(this.perfil().documentos.filter((d) => d.archivo).map((d) => [d.tipo, d.archivo])),
+    ...this.cargadoSarlaftFisico(),
   }));
-  protected readonly cargados = computed<Readonly<Record<string, string>>>(() =>
-    Object.fromEntries(this.perfil().documentos.filter((d) => d.archivo).map((d) => [d.tipo, d.archivo])),
-  );
   protected readonly enviandoSolicitud = signal(false);
   protected readonly puedeCompletarRegistro = this.perfilServicio.puedeCompletarRegistro;
 
@@ -201,7 +212,12 @@ export class RegistroBrokerComponent {
   protected readonly tiposDocumento = this.catalogo.opciones('tipo_documento').filter((t) => t['registro_broker'] === true);
   protected readonly modulosRestringidos = this.catalogo.modulosRestringidos();
   /** Etapas del registro de broker (las dos últimas se completan en el perfil). */
-  protected readonly etapas = ['Tus datos', 'Conocimiento de Cliente', 'Documentos'];
+  protected readonly etapas = ['Tus datos', 'Documentos', 'Conocimiento de Cliente'];
+
+  /** Etapa completada: las anteriores a la actual, y el Conocimiento de Cliente apenas queda resuelto. */
+  protected etapaHecha(indice: number): boolean {
+    return indice + 1 < this.paso() || (indice === 2 && this.sarlaftListo());
+  }
 
   /** Formulario reactivo. */
   protected readonly formulario = new FormGroup<FormularioRegistro>({
@@ -364,7 +380,7 @@ export class RegistroBrokerComponent {
                   mensaje:
                     destino === 'inicio'
                       ? 'Tu cuenta quedó creada. Ya puedes cotizar y radicar.'
-                      : 'Tu cuenta quedó creada. Sigue con tu Conocimiento de Cliente para calificarte como broker.',
+                      : 'Tu cuenta quedó creada. Sigue con tus documentos para calificarte como broker.',
                   acciones: { confirmar: destino === 'inicio' ? 'Empezar' : 'Continuar' },
                 });
                 if (destino === 'inicio') {
@@ -393,7 +409,7 @@ export class RegistroBrokerComponent {
       });
   }
 
-  /** Paso 2: consulta el Conocimiento de Cliente con el documento (sin fecha); desactualizado → SMS al celular. */
+  /** Paso 3: consulta el Conocimiento de Cliente con el documento (sin fecha); desactualizado → SMS al celular. */
   protected verificarSarlaft(): void {
     if (!this.puedeConsultarSarlaft()) {
       return;
@@ -426,7 +442,7 @@ export class RegistroBrokerComponent {
       });
   }
 
-  /** Paso 2: descarga el formato de Conocimiento de Cliente del bucket (persona natural o jurídica). */
+  /** Paso 3: descarga el formato de Conocimiento de Cliente del bucket (persona natural o jurídica). */
   protected descargarFormatoSarlaft(): void {
     const tipo = this.formatoSarlaft();
     this.descargandoFormato.set(true);
@@ -445,7 +461,7 @@ export class RegistroBrokerComponent {
       });
   }
 
-  /** Paso 2: alternativa al enlace, carga el SARLAFT físico (queda en revisión del área) y deja continuar. */
+  /** Formulario físico (paso 2 o 3): queda en revisión del área y deja el paso 3 listo. */
   protected onSarlaftFisico(evento: ArchivoSeleccionado): void {
     this.errorSarlaft.set(false);
     this.perfilServicio
@@ -460,8 +476,12 @@ export class RegistroBrokerComponent {
       });
   }
 
-  /** Paso 3: valida el archivo con la lógica compartida y lo carga (el backend revalida siempre). */
+  /** Paso 2: valida el archivo con la lógica compartida y lo carga (el backend revalida siempre). */
   protected onDocumento(evento: ArchivoSeleccionado): void {
+    if (evento.id === 'formularioSarlaft') {
+      this.onSarlaftFisico(evento);
+      return;
+    }
     const tipo = evento.id as TipoDocumentoRegistro;
     const regla = this.documentosRegistro.find((r) => r.tipo === tipo);
     if (!regla) {

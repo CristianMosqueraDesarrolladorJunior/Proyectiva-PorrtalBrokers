@@ -161,3 +161,20 @@
     font-weight: 600;
   }
 }
+
+// Enlace en línea del aviso del flujo (atajo a Radicación para el contrato ya firmado).
+.contrato-enlace {
+  padding: var(--space-0);
+  border: 0;
+  background: none;
+  color: var(--sb-primary);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
