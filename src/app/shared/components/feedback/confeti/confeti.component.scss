@@ -1,0 +1,75 @@
+// ConfetiComponent — estallido de confeti en CSS puro. Solo Design_Token.
+
+.cf {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-feedback-confeti);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cf__pieza {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  width: 8px;
+  height: 14px;
+  background: var(--color);
+  opacity: 0;
+  will-change: transform, opacity;
+  // Fase 1: estalla hacia arriba y afuera; fase 2: cae girando con vaivén.
+  animation:
+    cf-estallido var(--duracion) var(--retraso) cubic-bezier(0.15, 0.65, 0.35, 1) forwards,
+    cf-giro var(--duracion) var(--retraso) linear forwards;
+}
+
+.cf__pieza--cinta {
+  width: 6px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+}
+
+.cf__pieza--cuadro {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-xs);
+}
+
+.cf__pieza--circulo {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+}
+
+@keyframes cf-estallido {
+  0% {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  30% {
+    opacity: 1;
+    translate: calc(var(--x) * 0.75) var(--alto);
+  }
+
+  100% {
+    opacity: 0;
+    translate: calc(var(--x) + var(--vaiven)) 70vh;
+  }
+}
+
+@keyframes cf-giro {
+  from {
+    transform: rotate(0) scale(var(--escala)) rotateX(0);
+  }
+
+  to {
+    transform: rotate(var(--giro)) scale(var(--escala)) rotateX(720deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf {
+    display: none;
+  }
+}

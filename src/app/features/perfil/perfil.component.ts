@@ -16,7 +16,8 @@ import {
   type EstadoDocumentoPerfil,
   type EstadoSarlaftPerfil,
 } from '../../core/models/cuenta.model';
-import { documentosRegistroBroker, type TipoDocumentoRegistro } from '../../core/models/registro-broker.model';
+import { SOLICITUD_REGISTRO_ENVIADA, documentosRegistroBroker, type TipoDocumentoRegistro } from '../../core/models/registro-broker.model';
+import { FeedbackService } from '../../shared/services/feedback/feedback.service';
 import { CatalogoService } from '../../core/services/catalogo.service';
 import type { TipoMimePermitido } from '../../core/models/documento.model';
 import { MiPerfilService } from '../../core/services/mi-perfil.service';
@@ -114,19 +115,22 @@ export class PerfilComponent implements OnInit {
   private readonly documentosRegistro = documentosRegistroBroker(this.catalogo.opciones('documento_legalizacion'));
   private readonly destroyRef = inject(DestroyRef);
   private readonly miPerfil = inject(MiPerfilService);
+  private readonly feedback = inject(FeedbackService);
 
   /** Foto del broker (compartida con el sidebar). */
   protected readonly foto = this.miPerfil.foto;
   protected readonly subiendoFoto = signal(false);
-  protected readonly errorFoto = signal('');
 
   protected subirFoto(archivo: File): void {
     this.subiendoFoto.set(true);
     this.miPerfil.subirFoto(archivo).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => this.subiendoFoto.set(false),
+      next: () => {
+        this.subiendoFoto.set(false);
+        this.feedback.toast({ variante: 'exito', mensaje: 'Tu foto de perfil se actualizó.' });
+      },
       error: (err: unknown) => {
         this.subiendoFoto.set(false);
-        this.errorFoto.set(mensajeErrorIntegracion(err));
+        this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
       },
     });
   }
@@ -137,7 +141,7 @@ export class PerfilComponent implements OnInit {
       next: () => this.subiendoFoto.set(false),
       error: (err: unknown) => {
         this.subiendoFoto.set(false);
-        this.errorFoto.set(mensajeErrorIntegracion(err));
+        this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
       },
     });
   }
@@ -232,8 +236,6 @@ export class PerfilComponent implements OnInit {
   protected readonly telefono = signal(this.perfil().telefono);
   protected readonly ciudad = signal(this.perfil().ciudad);
   protected readonly guardandoDatos = signal(false);
-  protected readonly mensajeDatos = signal('');
-  protected readonly errorDatos = signal(false);
 
   protected readonly datosValidos = computed(
     () =>
@@ -262,7 +264,6 @@ export class PerfilComponent implements OnInit {
 
   // --- SARLAFT ---
   protected readonly consultandoSarlaft = signal(false);
-  protected readonly mensajeSarlaft = signal('');
   protected readonly puedeActualizarSarlaft = computed(() => !this.consultandoSarlaft());
   /** Celular registrado (últimos 4 dígitos) al que SARLAFT envía el enlace; nulo si no es celular. */
   protected readonly celularEnlace = computed(() => {
@@ -277,8 +278,6 @@ export class PerfilComponent implements OnInit {
   );
 
   // --- Documentos ---
-  protected readonly errorDocumento = signal('');
-  protected readonly mensajeDocumento = signal('');
 
   /** El documento de identidad ya está cargado (tiene archivo): entonces es inmodificable. */
   protected readonly identidadCargada = computed(() => {
@@ -339,7 +338,6 @@ export class PerfilComponent implements OnInit {
       return;
     }
     this.guardandoDatos.set(true);
-    this.mensajeDatos.set('');
     this.servicio
       .actualizarDatos({
         nombreCompleto: this.nombre().trim(),
@@ -352,13 +350,11 @@ export class PerfilComponent implements OnInit {
       .subscribe({
         next: () => {
           this.guardandoDatos.set(false);
-          this.errorDatos.set(false);
-          this.mensajeDatos.set('Tus datos personales se actualizaron.');
+          this.feedback.toast({ variante: 'exito', mensaje: 'Tus datos personales se actualizaron.' });
         },
         error: () => {
           this.guardandoDatos.set(false);
-          this.errorDatos.set(true);
-          this.mensajeDatos.set('No pudimos guardar tus datos. Revisa la información e intenta de nuevo.');
+          this.feedback.toast({ variante: 'error', mensaje: 'No pudimos guardar tus datos. Revisa la información e intenta de nuevo.' });
         },
       });
   }
@@ -368,7 +364,6 @@ export class PerfilComponent implements OnInit {
     this.nombre.set(p.nombreCompleto);
     this.correo.set(p.correo);
     this.telefono.set(p.telefono);
-    this.mensajeDatos.set('');
   }
 
   protected actualizarSarlaft(): void {
@@ -376,25 +371,30 @@ export class PerfilComponent implements OnInit {
       return;
     }
     this.consultandoSarlaft.set(true);
-    this.mensajeSarlaft.set('');
     this.servicio
       .actualizarSarlaft()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (p) => {
           this.consultandoSarlaft.set(false);
-          this.mensajeSarlaft.set(MENSAJE_SARLAFT[p.sarlaft.estado]);
+          this.avisarSarlaft(p.sarlaft.estado);
         },
         error: () => {
           this.consultandoSarlaft.set(false);
-          this.mensajeSarlaft.set('No pudimos consultar tu Conocimiento de Cliente en este momento. Intenta de nuevo más tarde.');
+          this.feedback.error({
+            titulo: 'No pudimos consultar',
+            mensaje: 'Tu Conocimiento de Cliente no respondió en este momento. Intenta de nuevo o carga el formulario físico.',
+            acciones: { cancelar: 'Más tarde', reintentar: 'Reintentar' },
+            alResolver: (r) => {
+              if (r === 'reintentar') this.actualizarSarlaft();
+            },
+          });
         },
       });
   }
 
   /** Carga el SARLAFT físico (alternativa al enlace): queda en revisión del área. El backend valida el archivo. */
   protected onSarlaftFisico(evento: ArchivoSeleccionado): void {
-    this.mensajeSarlaft.set('');
     this.perfilSarlaftFisico(evento.archivo);
   }
 
@@ -403,8 +403,8 @@ export class PerfilComponent implements OnInit {
       .cargarSarlaftFisico(archivo)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (p) => this.mensajeSarlaft.set(MENSAJE_SARLAFT[p.sarlaft.estado]),
-        error: (err: unknown) => this.mensajeSarlaft.set(mensajeErrorIntegracion(err)),
+        next: (p) => this.avisarSarlaft(p.sarlaft.estado),
+        error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
       });
   }
 
@@ -428,22 +428,23 @@ export class PerfilComponent implements OnInit {
       new Date().toISOString(),
     );
     if (!resultado.valido) {
-      this.errorDocumento.set(
+      this.feedback.toast({
+        variante: 'error',
+        mensaje:
         resultado.motivo === 'vigencia_excedida'
           ? `${regla.etiqueta}: debe tener máximo ${regla.vigenciaMaxDias} días de expedida.`
           : resultado.motivo === 'tamano_excedido'
             ? `${regla.etiqueta}: supera el tamaño máximo (${Math.round(regla.tamanoMaxBytes / 1_048_576)} MB).`
             : `${regla.etiqueta}: formato no permitido. Usa PDF, JPG o PNG.`,
-      );
+      });
       return;
     }
-    this.errorDocumento.set('');
     this.servicio
       .reemplazarDocumento(tipo, evento.archivo)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => this.mensajeDocumento.set(`${regla.etiqueta} cargado. Queda en revisión del área.`),
-        error: (err: unknown) => this.errorDocumento.set(mensajeErrorIntegracion(err)),
+        next: () => this.feedback.toast({ variante: 'exito', mensaje: `${regla.etiqueta} cargado. Queda en revisión del área.` }),
+        error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
       });
   }
 
@@ -460,13 +461,18 @@ export class PerfilComponent implements OnInit {
           this.registrando.set(false);
           this.confirmarRegistro.set(false);
           this.registroCompletado.set(true);
+          this.feedback.exito(SOLICITUD_REGISTRO_ENVIADA);
         },
         error: (err: unknown) => {
           this.registrando.set(false);
           this.confirmarRegistro.set(false);
-          this.errorDocumento.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }
 
+  /** Resultado de consultar o cargar el Conocimiento de Cliente: vigente es un momento de éxito. */
+  private avisarSarlaft(estado: EstadoSarlaftPerfil): void {
+    this.feedback.toast({ variante: estado === 'vigente' ? 'exito' : 'info', mensaje: MENSAJE_SARLAFT[estado] });
+  }
 }

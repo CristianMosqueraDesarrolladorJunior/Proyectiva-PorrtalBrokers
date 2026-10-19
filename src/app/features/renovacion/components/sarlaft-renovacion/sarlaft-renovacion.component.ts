@@ -8,6 +8,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 import { DatePipe } from '@angular/common';
 
 import type { DocumentoCargado } from '../../../../core/models/documento.model';
@@ -54,6 +55,7 @@ import { MESES_VIGENCIA_SARLAFT } from '../../gestion-renovacion-flujo';
   styleUrl: './sarlaft-renovacion.component.scss',
 })
 export class SarlaftRenovacionComponent implements OnInit {
+  private readonly feedback = inject(FeedbackService);
   private readonly renovacionService = inject(RenovacionService);
 
   /** Póliza cuya gestión se valida. */
@@ -91,7 +93,6 @@ export class SarlaftRenovacionComponent implements OnInit {
   }
 
   protected readonly enviandoEnlace = signal(false);
-  protected readonly enlaceEnviado = signal<string | null>(null);
 
   /** Envía el enlace de actualización al celular del asegurado (el broker lo decide: es un cliente real). */
   protected enviarEnlace(): void {
@@ -99,13 +100,15 @@ export class SarlaftRenovacionComponent implements OnInit {
     this.renovacionService.enviarEnlaceSarlaft(this.numeroPoliza).subscribe({
       next: (r) => {
         this.enviandoEnlace.set(false);
-        this.enlaceEnviado.set(r.enviado
-          ? 'Enviamos el enlace de actualización por SMS. Cuando el cliente lo diligencie, verifica de nuevo.'
-          : 'SARLAFT no generó el enlace para este cliente. Carga el SARLAFT físico.');
+        this.feedback.toast(
+          r.enviado
+            ? { variante: 'exito', titulo: 'Enlace enviado', mensaje: 'Lo enviamos por SMS. Cuando el cliente lo diligencie, verifica de nuevo.' }
+            : { variante: 'info', mensaje: 'No se generó el enlace para este cliente. Carga el formulario físico de Conocimiento de Cliente.' },
+        );
       },
       error: () => {
         this.enviandoEnlace.set(false);
-        this.enlaceEnviado.set('No fue posible enviar el enlace. Intenta de nuevo o carga el SARLAFT físico.');
+        this.feedback.toast({ variante: 'error', mensaje: 'No fue posible enviar el enlace. Intenta de nuevo o carga el formulario físico.' });
       },
     });
   }

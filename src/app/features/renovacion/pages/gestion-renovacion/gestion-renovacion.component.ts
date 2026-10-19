@@ -54,6 +54,7 @@ import {
 import {
   puedeEnviarNoRenovacion,
 } from '../../no-renovacion-habilitacion';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /** Modalidad de renovación digital elegida en Detalles. */
 type ModalidadDetalle = 'anterior' | 'ajustar' | null;
@@ -127,6 +128,7 @@ interface Confirmacion {
   styleUrl: './gestion-renovacion.component.scss',
 })
 export class GestionRenovacionComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly catalogo = inject(CatalogoService);
 
   private readonly route = inject(ActivatedRoute);
@@ -249,7 +251,6 @@ export class GestionRenovacionComponent {
   // --- Envío tras SARLAFT vigente -----------------------------------------
 
   protected readonly enviando = signal(false);
-  protected readonly errorEnvio = signal<string | null>(null);
   protected readonly confirmacion = signal<Confirmacion | null>(null);
 
   /** Tarjetas de seguimiento de las pantallas de éxito. */
@@ -569,7 +570,6 @@ export class GestionRenovacionComponent {
       return;
     }
     this.enviando.set(true);
-    this.errorEnvio.set(null);
     this.registrar(validacionSarlaftId).subscribe({
       next: (respuesta) => {
         this.confirmacion.set({ radicado: respuesta.radicado, estado: respuesta.estado });
@@ -578,13 +578,15 @@ export class GestionRenovacionComponent {
       },
       error: (err: { status?: number }) => {
         this.enviando.set(false);
-        this.errorEnvio.set(
-          err?.status === 422 && this.flujo() === 'correccion'
-            ? 'Esta póliza no tiene una corrección pendiente del área de renovaciones.'
-            : err?.status === 422 || err?.status === 400
-              ? 'Revisa los datos y documentos de la gestión: el área no los pudo recibir así.'
-              : 'No se pudo registrar la gestión. Intenta nuevamente en unos minutos.',
-        );
+        this.feedback.error({
+          titulo: 'No se pudo enviar',
+          mensaje:
+            err?.status === 422 && this.flujo() === 'correccion'
+              ? 'Esta póliza no tiene una corrección pendiente del área de renovaciones.'
+              : err?.status === 422 || err?.status === 400
+                ? 'Revisa los datos y documentos de la gestión: el área no los pudo recibir así.'
+                : 'No se pudo registrar la gestión. Intenta nuevamente en unos minutos.',
+        });
       },
     });
   }
@@ -607,7 +609,6 @@ export class GestionRenovacionComponent {
     this.sarlaftActualizado = null;
     this.comentarios.set('');
     this.confirmacion.set(null);
-    this.errorEnvio.set(null);
   }
 
   /** Arma el payload de la gestión activa y lo envía al endpoint correspondiente. */

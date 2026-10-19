@@ -3,6 +3,7 @@ import { of, throwError } from 'rxjs';
 
 import { LecturaContratoResponse } from '../../../../core/models/contrato.model';
 import { ContratoService } from '../../../../core/services/contrato.service';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 import { LectorContratoComponent } from './lector-contrato.component';
 
 const LECTURA: LecturaContratoResponse = {
@@ -33,7 +34,7 @@ describe('LectorContratoComponent', () => {
     const { cmp } = crear(leer);
     cmp.leer({ id: 'contrato', archivo: archivo('application/msword') });
     expect(leer).not.toHaveBeenCalled();
-    expect(cmp.error()).toContain('PDF');
+    expect(TestBed.inject(FeedbackService).toasts().at(-1)?.mensaje).toContain('PDF');
   });
 
   it('rechaza archivos de más de 10 MB', () => {
@@ -41,7 +42,7 @@ describe('LectorContratoComponent', () => {
     const { cmp } = crear(leer);
     cmp.leer({ id: 'contrato', archivo: archivo('application/pdf', 10 * 1024 * 1024 + 1) });
     expect(leer).not.toHaveBeenCalled();
-    expect(cmp.error()).toContain('10 MB');
+    expect(TestBed.inject(FeedbackService).toasts().at(-1)?.mensaje).toContain('10 MB');
   });
 
   it('emite la lectura y cuenta los datos encontrados', () => {
@@ -63,7 +64,7 @@ describe('LectorContratoComponent', () => {
     cmp.archivo.subscribe((a: File) => archivos.push(a));
     cmp.leer({ id: 'contrato', archivo: archivo('image/png') });
     expect(cmp.leyendo()).toBe(false);
-    expect(cmp.error()).toContain('a mano');
+    expect(TestBed.inject(FeedbackService).toasts().at(-1)?.mensaje).toContain('a mano');
     // El archivo queda elegido: quien lo aloja puede adjuntarlo aunque la lectura falle.
     expect(archivos).toHaveLength(1);
     expect(cmp.cargados()).toEqual({ contrato: 'contrato' });

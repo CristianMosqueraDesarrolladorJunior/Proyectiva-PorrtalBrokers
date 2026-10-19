@@ -12,9 +12,6 @@
         <app-boton variante="accent" icono="download" [disabled]="descargando()" (clicked)="descargarContrato()">
           {{ descargando() ? 'Generando contrato…' : 'Descargar contrato (Word)' }}
         </app-boton>
-        @if (errorDescarga()) {
-          <app-alert-banner variante="error" titulo="No se pudo descargar">{{ errorDescarga() }}</app-alert-banner>
-        }
       </div>
     </app-success-screen>
   } @else {
@@ -191,9 +188,6 @@
           <app-boton variante="outline" icono="cloud_download" [disabled]="cargandoEstudio()" (clicked)="precargarDeEstudio()">
             {{ cargandoEstudio() ? 'Consultando estudio…' : 'Traer datos del estudio' }}
           </app-boton>
-          @if (mensajeEstudio(); as m) {
-            <app-alert-banner [variante]="m.tipo" [titulo]="m.titulo">{{ m.texto }}</app-alert-banner>
-          }
         </div>
         <div class="contrato-grid">
           <app-form-field label="Nombres" [requerido]="true" controlId="ate-nombres">
@@ -687,11 +681,6 @@
       </app-alert-banner>
     }
 
-    @if (errorMensaje(); as error) {
-      <app-alert-banner variante="error" titulo="No se pudo continuar">
-        {{ error }}
-      </app-alert-banner>
-    }
 
     @if (enviando()) {
       <app-escalerita-loader texto="Generando contrato..."></app-escalerita-loader>

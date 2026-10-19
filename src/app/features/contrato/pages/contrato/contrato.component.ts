@@ -53,6 +53,7 @@ import {
 
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /** Servicios públicos que puede tener el inmueble (los mismos del cotizador actual). */
 const SERVICIOS_PUBLICOS: readonly string[] = ['Acueducto', 'Energía', 'Gas', 'Caldera', 'Teléfono'];
@@ -64,7 +65,6 @@ function diaDeFecha(fecha: string): number | undefined {
 }
 /** Estado del envío del Contrato_Arrendamiento para controlar loader y confirmación (Req 30.7). */
 type EstadoEnvioContrato = 'inactivo' | 'enviando' | 'exito';
-
 
 /**
  * ContratoComponent — Generador_Contrato de Arrendamiento multipaso (Req 30).
@@ -104,6 +104,7 @@ type EstadoEnvioContrato = 'inactivo' | 'enviando' | 'exito';
   styleUrl: './contrato.component.scss',
 })
 export class ContratoComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly contratoService = inject(ContratoService);
   private readonly router = inject(Router);
   private readonly borrador = inject(BorradorRadicacionService);
@@ -158,9 +159,6 @@ export class ContratoComponent {
   /** Confirmación de generación devuelta por el backend (Req 30.7). */
   protected readonly confirmacion = signal<ContratoArrendamientoResponse | null>(null);
 
-  /** Mensaje de error genérico, sin exponer detalles internos (Req 28.5). */
-  protected readonly errorMensaje = signal('');
-
   // --- Paso 1: datos del arrendador (Req 30.2) ---
   protected readonly arrNombres = signal('');
   protected readonly arrApellidos = signal('');
@@ -182,7 +180,6 @@ export class ContratoComponent {
   /** Precarga desde el estudio digital (arrendatario, codeudores, propietario e inmueble). */
   protected readonly estudioConsecutivo = signal('');
   protected readonly cargandoEstudio = signal(false);
-  protected readonly mensajeEstudio = signal<{ tipo: 'success' | 'warning' | 'error'; titulo: string; texto: string } | null>(null);
   protected readonly deudores = signal<DeudorSolidario[]>([]);
 
   // --- Paso 3: datos del inmueble (Req 30.4). Preselección fiel al prototipo. ---
@@ -400,11 +397,10 @@ export class ContratoComponent {
     const documento = this.ateNumeroIdentificacion().replace(/\D/g, '');
     this.ateNumeroIdentificacion.set(documento);
     if (!consecutivo || !documento) {
-      this.mensajeEstudio.set({ tipo: 'warning', titulo: 'Faltan datos', texto: 'Escribe el número de estudio y el documento del arrendatario evaluado.' });
+      this.avisarEstudio({ tipo: 'warning', titulo: 'Faltan datos', texto: 'Escribe el número de estudio y el documento del arrendatario evaluado.' });
       return;
     }
     this.cargandoEstudio.set(true);
-    this.mensajeEstudio.set(null);
     this.contratoService.prellenado(consecutivo, documento, this.ateTipoIdentificacion()).subscribe({
       next: (p) => {
         this.cargandoEstudio.set(false);
@@ -449,7 +445,7 @@ export class ContratoComponent {
         if (this.deudores().length) {
           this.conDeudoresSolidarios.set(true);
         }
-        this.mensajeEstudio.set({
+        this.avisarEstudio({
           tipo: 'success',
           titulo: 'Datos del estudio cargados',
           texto: `Arrendatario${this.deudores().length ? ` y ${this.deudores().length} deudor(es) solidario(s)` : ''} precargados. Revísalos antes de continuar.`,
@@ -457,7 +453,7 @@ export class ContratoComponent {
       },
       error: (err: { status?: number }) => {
         this.cargandoEstudio.set(false);
-        this.mensajeEstudio.set(err?.status === 404
+        this.avisarEstudio(err?.status === 404
           ? { tipo: 'warning', titulo: 'Estudio no encontrado', texto: 'Revisa el número de estudio y el documento del arrendatario.' }
           : err?.status === 400
             ? { tipo: 'warning', titulo: 'Revisa los datos', texto: 'El número de estudio o el documento del arrendatario no tienen un formato válido.' }
@@ -503,7 +499,6 @@ export class ContratoComponent {
   }
 
   protected readonly descargando = signal(false);
-  protected readonly errorDescarga = signal('');
 
   /** Descarga el contrato en Word: el backend usa la plantilla de vivienda o comercio según el uso del inmueble. */
   protected descargarContrato(): void {
@@ -512,7 +507,6 @@ export class ContratoComponent {
       return;
     }
     this.descargando.set(true);
-    this.errorDescarga.set('');
     this.contratoService.descargarDocumento(referencia).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
@@ -525,7 +519,7 @@ export class ContratoComponent {
       },
       error: () => {
         this.descargando.set(false);
-        this.errorDescarga.set('No fue posible generar el documento del contrato. Intenta nuevamente.');
+        this.feedback.toast({ variante: 'error', mensaje: 'No fue posible generar el documento del contrato. Intenta nuevamente.' });
       },
     });
   }
@@ -547,7 +541,6 @@ export class ContratoComponent {
    */
   protected siguiente(): void {
     this.intento.set(true);
-    this.errorMensaje.set('');
     if (!this.avanceHabilitado()) {
       return;
     }
@@ -561,7 +554,6 @@ export class ContratoComponent {
       return;
     }
     this.intento.set(false);
-    this.errorMensaje.set('');
     this.pasoActual.set(indice);
   }
 
@@ -571,7 +563,6 @@ export class ContratoComponent {
       return;
     }
     this.intento.set(false);
-    this.errorMensaje.set('');
     this.pasoActual.update((paso) => paso - 1);
   }
 
@@ -581,13 +572,12 @@ export class ContratoComponent {
    */
   protected generar(): void {
     this.intento.set(true);
-    this.errorMensaje.set('');
     if (!this.generacionHabilitada() || this.enviando()) {
       return;
     }
     const request = this.construirRequest();
     if (request === null) {
-      this.errorMensaje.set('Completa los datos requeridos antes de generar el contrato.');
+      this.feedback.toast({ variante: 'error', mensaje: 'Completa los datos requeridos antes de generar el contrato.' });
       return;
     }
     this.estadoEnvio.set('enviando');
@@ -601,7 +591,7 @@ export class ContratoComponent {
       },
       error: (err: unknown) => {
         this.estadoEnvio.set('inactivo');
-        this.errorMensaje.set(mensajeErrorIntegracion(err));
+        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: mensajeErrorIntegracion(err) });
       },
     });
   }
@@ -753,5 +743,10 @@ export class ContratoComponent {
         ...(this.conTipoFirma() ? { tipoFirma: this.conTipoFirma() } : {}),
       },
     };
+  }
+
+  /** Resultado de precargar el estudio: éxito o aviso para corregir los datos. */
+  private avisarEstudio(m: { tipo: 'success' | 'warning' | 'error'; titulo: string; texto: string }): void {
+    this.feedback.toast({ variante: m.tipo === 'success' ? 'exito' : 'error', titulo: m.titulo, mensaje: m.texto });
   }
 }

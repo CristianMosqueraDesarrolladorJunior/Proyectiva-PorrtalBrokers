@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
-import { AlertBannerComponent } from '../alert-banner/alert-banner.component';
 import { BotonComponent } from '../boton/boton.component';
 import { FormFieldComponent } from '../form-field/form-field.component';
 
@@ -19,7 +18,7 @@ export interface CambioClave {
   selector: 'app-form-clave',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AlertBannerComponent, BotonComponent, FormFieldComponent],
+  imports: [BotonComponent, FormFieldComponent],
   template: `
     <form class="fc" (submit)="$event.preventDefault(); enviar()" novalidate>
       <app-form-field [label]="etiquetaActual" [controlId]="id + '-actual'" [requerido]="true">
@@ -33,9 +32,6 @@ export interface CambioClave {
         [error]="intento() && !coincide() ? 'No coincide con la nueva contraseña.' : ''">
         <input [id]="id + '-confirmar'" type="password" autocomplete="new-password" [value]="confirmar()" (input)="confirmar.set(v($event))" />
       </app-form-field>
-      @if (error) {
-        <app-alert-banner variante="error" titulo="No se pudo cambiar">{{ error }}</app-alert-banner>
-      }
       <div class="fc__acciones">
         <app-boton variante="accent" type="submit" icono="lock_reset" [disabled]="enviando">
           {{ enviando ? 'Guardando…' : textoBoton }}
@@ -62,7 +58,6 @@ export class FormClaveComponent {
   @Input() etiquetaActual = 'Contraseña actual';
   @Input() textoBoton = 'Cambiar contraseña';
   @Input() enviando = false;
-  @Input() error = '';
   @Output() readonly guardar = new EventEmitter<CambioClave>();
 
   protected readonly actual = signal('');

@@ -9,7 +9,6 @@ import { COLUMNA_GESTIONAR, COLUMNAS_FECHAS, celdasFechas, cop, copCompacto } fr
 import { ConsolaService } from '../../../core/services/consola.service';
 import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion';
 import {
-  AlertBannerComponent,
   BadgeEstadoComponent,
   BitacoraComponent,
   BotonComponent,
@@ -24,6 +23,7 @@ import {
   SegmentedControlComponent,
 } from '../../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaTabla, OpcionSegmentada, SeccionFicha, Tab } from '../../../shared/components';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /**
  * Brokers REGISTRADOS y activos (los prospectos viven en su propia vista). Un botón por fila abre el
@@ -35,7 +35,6 @@ import type { AccionFila, ColumnaTabla, FilaTabla, OpcionSegmentada, SeccionFich
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    AlertBannerComponent,
     BadgeEstadoComponent,
     BitacoraComponent,
     BotonComponent,
@@ -53,6 +52,7 @@ import type { AccionFila, ColumnaTabla, FilaTabla, OpcionSegmentada, SeccionFich
   styleUrls: ['../admin-comun.scss'],
 })
 export class BrokersComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly admin = inject(AdminService);
   private readonly consola = inject(ConsolaService);
   private readonly destroyRef = inject(DestroyRef);
@@ -64,7 +64,6 @@ export class BrokersComponent {
   protected readonly comerciales = signal<readonly ComercialConsola[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
-  protected readonly mensaje = signal('');
 
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'broker', header: 'Broker', tipo: 'principal', ordenable: true },
@@ -113,7 +112,6 @@ export class BrokersComponent {
   protected readonly acuerdo = signal('20');
   protected readonly comercialDestino = signal('');
   protected readonly guardando = signal(false);
-  protected readonly errorAccion = signal('');
   /** Acuerdos de comisión (catálogo `acuerdo_comision`). */
   protected readonly opcionesAcuerdo: readonly OpcionSegmentada[] = inject(CatalogoService)
     .opciones('acuerdo_comision')
@@ -195,7 +193,6 @@ export class BrokersComponent {
     this.pestana.set('detalle');
     this.acuerdo.set(String(b.porcentajeComision));
     this.comercialDestino.set('');
-    this.errorAccion.set('');
     this.actividad.set([]);
     this.consola
       .actividadBroker(b.id)
@@ -224,17 +221,16 @@ export class BrokersComponent {
 
   private ejecutar(accion: Observable<unknown>, exito: string): void {
     this.guardando.set(true);
-    this.errorAccion.set('');
     accion.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.guardando.set(false);
         this.seleccionado.set(null);
-        this.mensaje.set(exito);
+        this.feedback.toast({ variante: 'exito', mensaje: exito });
         this.cargar();
       },
       error: (err: unknown) => {
         this.guardando.set(false);
-        this.errorAccion.set(mensajeErrorIntegracion(err));
+        this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
       },
     });
   }

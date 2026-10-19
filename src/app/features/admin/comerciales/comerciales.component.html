@@ -16,9 +16,6 @@
     <app-kpi-card label="Primas de las carteras" [valor]="compacto(totalIngreso())" icono="account_balance" sub="Pólizas expedidas" />
   </app-grid-layout>
 
-  @if (mensaje()) {
-    <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
-  }
 
   <app-estado-vista
     [cargando]="cargando()"
@@ -55,9 +52,6 @@
     <app-credencial-unica [usuario]="c.usuario" [credencial]="c.credencial" />
   } @else {
     <app-form-persona [enviando]="enviandoAlta()" ayudaCorreo="Será su usuario para entrar a la consola." (enviar)="crear($event)" />
-    @if (errorAlta()) {
-      <app-alert-banner variante="error" titulo="No se pudo crear">{{ errorAlta() }}</app-alert-banner>
-    }
   }
   @if (credencial()) {
     <div acciones>
@@ -128,9 +122,6 @@
           </div>
         </div>
       }
-    }
-    @if (errorAccion()) {
-      <app-alert-banner variante="error" titulo="No se pudo completar">{{ errorAccion() }}</app-alert-banner>
     }
   }
 </app-modal-dialog>

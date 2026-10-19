@@ -14,9 +14,6 @@
     <app-estado-vista [cargando]="cargando()" [error]="error()" [vacio]="false" entidad="la solicitud" (reintentar)="cargar()">
       @if (datos(); as d) {
         @if (listo()) {
-          <app-alert-banner variante="success" [titulo]="d.procedimiento.estadoPortal === 'EN_GESTION' ? 'Enviada al área' : 'Corrección enviada'" icono="task_alt">
-            Tus documentos quedaron en revisión del área ({{ d.procedimiento.etiqueta }}). Te avisaremos cuando avance.
-          </app-alert-banner>
           <div class="correccion__acciones">
             <app-boton variante="accent" icono="arrow_back" (clicked)="volver()">Volver a Seguimiento</app-boton>
           </div>
@@ -44,9 +41,6 @@
 
           <app-doc-uploader [reglas]="reglas()" [cargados]="cargados()" [disabled]="enviando()" (archivoSeleccionado)="onArchivo($event)" />
 
-          @if (errorEnvio()) {
-            <app-alert-banner variante="error" titulo="No se pudo enviar la corrección">{{ errorEnvio() }}</app-alert-banner>
-          }
           <div class="correccion__acciones">
             <app-boton variante="ghost" (clicked)="volver()">Cancelar</app-boton>
             <app-boton variante="accent" icono="upload_file" [disabled]="!puedeEnviar() || enviando()" (clicked)="enviar()">

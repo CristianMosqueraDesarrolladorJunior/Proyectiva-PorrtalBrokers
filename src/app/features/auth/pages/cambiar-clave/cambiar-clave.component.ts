@@ -7,6 +7,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { SessionService } from '../../../../core/services/session.service';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
 import { FormClaveComponent, type CambioClave } from '../../../../shared/components';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /**
  * Cambio de clave obligatorio en el primer ingreso con una credencial generada por el portal
@@ -30,7 +31,6 @@ import { FormClaveComponent, type CambioClave } from '../../../../shared/compone
           etiquetaActual="Contraseña temporal"
           textoBoton="Guardar y continuar"
           [enviando]="enviando()"
-          [error]="error()"
           (guardar)="guardar($event)"
         />
       </section>
@@ -78,6 +78,7 @@ import { FormClaveComponent, type CambioClave } from '../../../../shared/compone
   ],
 })
 export class CambiarClaveComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly auth = inject(AuthService);
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
@@ -85,10 +86,8 @@ export class CambiarClaveComponent {
 
   protected readonly nombre = computed(() => this.session.perfil()?.nombre ?? '');
   protected readonly enviando = signal(false);
-  protected readonly error = signal('');
 
   protected guardar(cambio: CambioClave): void {
-    this.error.set('');
     this.enviando.set(true);
     this.auth
       .cambiarClave(cambio.actual, cambio.nueva)
@@ -101,11 +100,13 @@ export class CambiarClaveComponent {
         error: (err: unknown) => {
           this.enviando.set(false);
           const status = (err as { status?: number })?.status;
-          this.error.set(
-            status === 401 || status === 422
-              ? 'La contraseña actual no es correcta. Si es tu primer ingreso, usa la contraseña temporal que te entregaron.'
-              : mensajeErrorIntegracion(err),
-          );
+          this.feedback.error({
+            titulo: 'No se pudo cambiar tu contraseña',
+            mensaje:
+              status === 401 || status === 422
+                ? 'La contraseña actual no es correcta. Si es tu primer ingreso, usa la contraseña temporal que te entregaron.'
+                : mensajeErrorIntegracion(err),
+          });
         },
       });
   }

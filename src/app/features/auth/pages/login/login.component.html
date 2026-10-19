@@ -12,16 +12,6 @@
       (ngSubmit)="iniciarSesion()"
       novalidate
     >
-      @if (errorCredenciales()) {
-        <p class="login-error" role="alert">{{ errorCredenciales() }}</p>
-      } @else if (sesionVencida) {
-        <p class="login-error" role="status">Tu sesión venció por inactividad. Ingresa de nuevo para continuar.</p>
-      }
-
-      @if (avisoRestablecimiento()) {
-        <p class="login-aviso" role="status">{{ avisoRestablecimiento() }}</p>
-      }
-
       <app-form-field
         label="Cédula o correo"
         ayuda="Ingresa tu número de cédula o tu correo electrónico"

@@ -7,7 +7,6 @@ import { MiPerfilService, type CambiosPerfil, type PerfilInterno } from '../../.
 import { SessionService } from '../../../core/services/session.service';
 import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion';
 import {
-  AlertBannerComponent,
   BadgeEstadoComponent,
   BotonComponent,
   EstadoVistaComponent,
@@ -19,6 +18,7 @@ import {
   type CambioClave,
 } from '../../../shared/components';
 import { SoloDigitosDirective } from '../../../shared/directives/solo-digitos.directive';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 type Campo = keyof CambiosPerfil;
 
@@ -31,7 +31,6 @@ type Campo = keyof CambiosPerfil;
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [SoloDigitosDirective, 
-    AlertBannerComponent,
     BadgeEstadoComponent,
     BotonComponent,
     EstadoVistaComponent,
@@ -45,6 +44,7 @@ type Campo = keyof CambiosPerfil;
   styleUrls: ['../admin-comun.scss', './perfil-admin.component.scss'],
 })
 export class PerfilAdminComponent implements OnInit {
+  private readonly feedback = inject(FeedbackService);
   private readonly miPerfil = inject(MiPerfilService);
   private readonly auth = inject(AuthService);
   private readonly session = inject(SessionService);
@@ -62,15 +62,10 @@ export class PerfilAdminComponent implements OnInit {
 
   protected readonly form = signal<CambiosPerfil>({ nombre: '', documento: null, telefono: null, cargo: null, area: null, ciudad: null });
   protected readonly guardando = signal(false);
-  protected readonly mensaje = signal('');
-  protected readonly errorDatos = signal('');
 
   protected readonly subiendoFoto = signal(false);
-  protected readonly errorFoto = signal('');
 
   protected readonly cambiandoClave = signal(false);
-  protected readonly errorClave = signal('');
-  protected readonly claveCambiada = signal(false);
 
   /** Porcentaje del perfil diligenciado: invita a completar los datos de contacto. */
   protected readonly completitud = computed(() => {
@@ -115,7 +110,6 @@ export class PerfilAdminComponent implements OnInit {
   protected poner(campo: Campo, evento: Event): void {
     const valor = (evento.target as HTMLInputElement).value;
     this.form.update((f) => ({ ...f, [campo]: campo === 'nombre' ? valor : valor || null }));
-    this.mensaje.set('');
   }
 
   protected descartar(): void {
@@ -124,10 +118,8 @@ export class PerfilAdminComponent implements OnInit {
   }
 
   protected guardar(): void {
-    this.errorDatos.set('');
-    this.mensaje.set('');
     if (!this.form().nombre.trim()) {
-      this.errorDatos.set('El nombre es obligatorio.');
+      this.feedback.toast({ variante: 'error', mensaje: 'El nombre es obligatorio.' });
       return;
     }
     this.guardando.set(true);
@@ -138,19 +130,18 @@ export class PerfilAdminComponent implements OnInit {
         next: (p) => {
           this.ponerPerfil(p);
           this.guardando.set(false);
-          this.mensaje.set('Tus datos quedaron actualizados.');
+          this.feedback.toast({ variante: 'exito', mensaje: 'Tus datos quedaron actualizados.' });
           const sesion = this.session.perfil();
           if (sesion) this.session.establecerPerfil({ ...sesion, nombre: p.nombre });
         },
         error: (err: unknown) => {
           this.guardando.set(false);
-          this.errorDatos.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }
 
   protected subirFoto(archivo: File): void {
-    this.errorFoto.set('');
     this.subiendoFoto.set(true);
     this.miPerfil
       .subirFoto(archivo)
@@ -159,13 +150,12 @@ export class PerfilAdminComponent implements OnInit {
         next: () => this.subiendoFoto.set(false),
         error: (err: unknown) => {
           this.subiendoFoto.set(false);
-          this.errorFoto.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }
 
   protected quitarFoto(): void {
-    this.errorFoto.set('');
     this.subiendoFoto.set(true);
     this.miPerfil
       .quitarFoto()
@@ -174,14 +164,12 @@ export class PerfilAdminComponent implements OnInit {
         next: () => this.subiendoFoto.set(false),
         error: (err: unknown) => {
           this.subiendoFoto.set(false);
-          this.errorFoto.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }
 
   protected cambiarClave(cambio: CambioClave): void {
-    this.errorClave.set('');
-    this.claveCambiada.set(false);
     this.cambiandoClave.set(true);
     this.auth
       .cambiarClave(cambio.actual, cambio.nueva)
@@ -189,12 +177,12 @@ export class PerfilAdminComponent implements OnInit {
       .subscribe({
         next: () => {
           this.cambiandoClave.set(false);
-          this.claveCambiada.set(true);
+          this.feedback.toast({ variante: 'exito', titulo: 'Contraseña actualizada', mensaje: 'Úsala desde tu próximo ingreso.' });
           this.formClave?.reiniciar();
         },
         error: (err: unknown) => {
           this.cambiandoClave.set(false);
-          this.errorClave.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }

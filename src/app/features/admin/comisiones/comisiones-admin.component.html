@@ -18,9 +18,6 @@
     </div>
   </app-barra-acciones>
 
-  @if (mensaje()) {
-    <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
-  }
 
   <app-estado-vista
     [cargando]="cargando()"
@@ -93,9 +90,6 @@
             <app-form-field label="Motivo del rechazo" controlId="pago-motivo" [requerido]="true" ayuda="El broker podrá volver a cobrar esas pólizas.">
               <textarea id="pago-motivo" rows="3" maxlength="300" [value]="motivo()" (input)="motivo.set(v($event))"></textarea>
             </app-form-field>
-          }
-          @if (errorPago()) {
-            <app-alert-banner variante="error" titulo="No se pudo registrar">{{ errorPago() }}</app-alert-banner>
           }
         </div>
       }

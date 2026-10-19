@@ -35,6 +35,7 @@ import {
   revisarParte,
   type ClaveParte,
 } from '../../induccion-habilitacion';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /**
  * Inducción de una póliza ya vencida: contrato (con lectura inteligente que precarga las partes),
@@ -62,6 +63,7 @@ import {
   styleUrl: './induccion.component.scss',
 })
 export class InduccionComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly renovaciones = inject(RenovacionService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -111,7 +113,6 @@ export class InduccionComponent {
 
   protected readonly intento = signal(false);
   protected readonly enviando = signal(false);
-  protected readonly errorEnvio = signal('');
   protected readonly confirmacion = signal<RenovacionResponse | null>(null);
 
   protected readonly errores = computed(() =>
@@ -164,7 +165,6 @@ export class InduccionComponent {
 
   protected enviar(): void {
     this.intento.set(true);
-    this.errorEnvio.set('');
     const contrato = this.contrato();
     const pazYSalvo = this.pazYSalvo();
     if (this.errores().length > 0 || !contrato || !pazYSalvo || this.enviando()) return;
@@ -190,7 +190,7 @@ export class InduccionComponent {
         },
         error: (err: unknown) => {
           this.enviando.set(false);
-          this.errorEnvio.set(mensajeErrorIntegracion(err));
+          this.feedback.error({ titulo: 'No se pudo enviar', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }

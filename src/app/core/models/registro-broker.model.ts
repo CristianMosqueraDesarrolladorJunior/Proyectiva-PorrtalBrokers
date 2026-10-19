@@ -97,3 +97,11 @@ export interface ResultadoSarlaft {
   readonly estado: string;        // 'Vigente'
   readonly vigencia: string;      // 'Menor a 3 años'
 }
+
+/** Momento de éxito al enviar la solicitud de registro (FeedbackService.exito), desde el asistente o Mi perfil. */
+export const SOLICITUD_REGISTRO_ENVIADA = {
+  titulo: '¡Solicitud enviada!',
+  mensaje:
+    'Revisaremos tus documentos y te avisaremos por correo. Al aprobarla quedas como broker registrado y se acreditan tus comisiones.',
+  acciones: { confirmar: 'Entendido' },
+} as const;

@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ConfetiComponent } from '../feedback/confeti/confeti.component';
 
 /** Variante de color del ícono de éxito (Req 35.13). */
 export type VarianteIconoExito = 'success' | 'accent';
@@ -32,6 +33,7 @@ export interface TarjetaSeguimiento {
 @Component({
   selector: 'app-success-screen',
   standalone: true,
+  imports: [ConfetiComponent],
   templateUrl: './success-screen.component.html',
   styleUrl: './success-screen.component.scss',
 })

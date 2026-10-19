@@ -1,5 +1,5 @@
 import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
-import { concat, switchMap, toArray } from 'rxjs';
+import { concat, of, switchMap, toArray, type Observable } from 'rxjs';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -68,6 +68,7 @@ import {
   validarDatosRadicacion,
 } from './radicacion-presentacion';
 import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /** Documento opcional que también puede cargarse en la radicación (Req 11.3). */
 const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmado';
@@ -123,6 +124,7 @@ const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmad
   styleUrl: './radicacion.component.scss',
 })
 export class RadicacionComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly radicacionService = inject(RadicacionService);
   private readonly router = inject(Router);
   private readonly borrador = inject(BorradorRadicacionService);
@@ -222,11 +224,12 @@ export class RadicacionComponent {
   private readonly archivos = new Map<TipoDocumentoRadicacion, File>();
   private readonly tiposValidos = signal<ReadonlySet<TipoDocumentoRadicacion>>(new Set());
 
-  /** Mensaje de error de envío (por ejemplo, tras un fallo del backend). */
-  protected readonly errorEnvio = signal<string | null>(null);
-
   /** Radicado devuelto por el backend tras un envío exitoso (Req 10, 11). */
   protected readonly radicado = signal<string | null>(null);
+  /** Radicación ya creada que aún no llegó al área (falló la carga o el envío): el reintento la reutiliza. */
+  private readonly radicadoPendiente = signal<string | null>(null);
+  /** Se volvió a la pantalla (p. ej. desde Contratos): los archivos no se conservan y hay que adjuntarlos de nuevo. */
+  protected readonly readjuntarDocumentos = signal(false);
 
   /** Indicador de envío en curso. */
   protected readonly enviando = signal(false);
@@ -483,7 +486,7 @@ export class RadicacionComponent {
   protected readonly confirmarCancelar = signal(false);
 
   constructor() {
-    this.restaurarBorrador();
+    this.restaurarBorrador(this.borrador.formulario() as Record<string, never> | null);
     // Todo cambio del formulario queda en el borrador: al volver del contrato no se pierde nada.
     effect(() => this.borrador.formulario.set(this.instantanea()));
   }
@@ -504,14 +507,15 @@ export class RadicacionComponent {
       sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
       telefonoSarlaft: this.telefonoSarlaft(),
       consultaSarlaft: this.consultaSarlaft(),
-      archivosCargados: this.archivosCargados(),
-      tiposValidos: [...this.tiposValidos()],
+      // Los archivos no se pueden guardar en el borrador: solo se recuerda que hubo documentos para pedirlos de nuevo.
+      habiaDocumentos: Object.keys(this.archivosCargados()).length > 0 || this.readjuntarDocumentos(),
+      radicadoPendiente: this.radicadoPendiente(),
       autorizacionDatos: this.autorizacionDatos(),
     };
   }
 
-  private restaurarBorrador(): void {
-    const f = this.borrador.formulario() as Record<string, never> | null;
+  /** Repone el formulario desde el borrador; con `{}` lo deja en blanco (nueva radicación). */
+  private restaurarBorrador(f: Record<string, never> | null): void {
     if (!f) {
       return;
     }
@@ -528,9 +532,23 @@ export class RadicacionComponent {
     this.sarlaftRequiereFormulario.set(f['sarlaftRequiereFormulario'] ?? false);
     this.telefonoSarlaft.set(f['telefonoSarlaft'] ?? '');
     this.consultaSarlaft.set(f['consultaSarlaft'] ?? null);
-    this.archivosCargados.set(f['archivosCargados'] ?? {});
-    this.tiposValidos.set(new Set(f['tiposValidos'] ?? []));
+    // Sin los archivos no hay documentos válidos: se marcan para adjuntar de nuevo (antes se mostraban como
+    // cargados y el envío creaba la radicación sin documentos → 422 documentos_incompletos en el Warehouse).
+    this.archivos.clear();
+    this.archivosCargados.set({});
+    this.tiposValidos.set(new Set());
+    this.readjuntarDocumentos.set(Boolean(f['habiaDocumentos']) || Object.keys(f['archivosCargados'] ?? {}).length > 0);
+    this.radicadoPendiente.set(f['radicadoPendiente'] ?? null);
     this.autorizacionDatos.set(f['autorizacionDatos'] ?? false);
+  }
+
+  /** Tras radicar: deja la pantalla lista para una nueva radicación (sin borrador ni datos anteriores). */
+  protected nuevaRadicacion(): void {
+    this.borrador.limpiar();
+    this.restaurarBorrador({});
+    this.observaciones.set('');
+    this.readjuntarDocumentos.set(false);
+    this.radicado.set(null);
   }
 
   protected cancelar(): void {
@@ -669,7 +687,6 @@ export class RadicacionComponent {
     if (tipo === 'juridica') {
       this.sarlaftRequiereFormulario.set(false);
     }
-    this.errorEnvio.set(null);
   }
 
   /**
@@ -695,13 +712,10 @@ export class RadicacionComponent {
     );
 
     if (!resultado.valido) {
-      this.errorEnvio.set(
-        `El archivo de "${this.etiquetaDocumento[tipo] ?? tipo}" no cumple los requisitos de carga.`,
-      );
+      this.feedback.toast({ variante: 'error', mensaje: `El archivo de "${this.etiquetaDocumento[tipo] ?? tipo}" no cumple los requisitos de carga.` });
       return;
     }
 
-    this.errorEnvio.set(null);
     this.archivos.set(tipo, evento.archivo);
     this.archivosCargados.update((actual) => ({
       ...actual,
@@ -720,7 +734,6 @@ export class RadicacionComponent {
       return;
     }
     this.enviando.set(true);
-    this.errorEnvio.set(null);
 
     const request = construirPayloadRadicacion({
       contratoReferencia: this.contratoReferencia(),
@@ -740,11 +753,16 @@ export class RadicacionComponent {
 
     // Radica, sube cada documento y envía al área (fila en el Warehouse en "Pendiente Validación Documental").
     let codigo = '';
-    this.radicacionService
-      .radicar(request)
+    const pendiente = this.radicadoPendiente();
+    const creacion$: Observable<{ readonly radicado: string }> = pendiente
+      ? of({ radicado: pendiente })
+      : this.radicacionService.radicar(request);
+    creacion$
       .pipe(
         switchMap((respuesta) => {
           codigo = respuesta.radicado;
+          // Si la carga o el envío fallan, el reintento sube los documentos a ESTA radicación (no crea otra).
+          this.radicadoPendiente.set(codigo);
           const tipos = this.cargadosValidos().filter((t) => this.archivos.has(t));
           return concat(...tipos.map((t) => this.radicacionService.subirDocumento(codigo, t, this.archivos.get(t)!))).pipe(
             toArray(),
@@ -754,19 +772,25 @@ export class RadicacionComponent {
       )
       .subscribe({
       next: () => {
-        this.radicado.set(codigo);
         this.enviando.set(false);
-        // Radicada: el borrador (cotización, contrato y formulario) ya no aplica.
-        this.borrador.limpiar();
-        this.archivos.clear();
+        // Radicada y enviada al área: el borrador (cotización, contrato y formulario) ya no aplica.
+        this.nuevaRadicacion();
+        this.radicado.set(codigo);
+        this.feedback.exito({
+          titulo: '¡Radicación enviada!',
+          mensaje: `Tu radicado es ${codigo}. El equipo revisará la documentación y verás el avance en Seguimiento.`,
+          acciones: { confirmar: 'Entendido' },
+        });
       },
       error: (err: unknown) => {
         // Se conserva el formulario; el mensaje orienta la corrección sin detalle técnico. Si ya quedó radicada,
         // se informa el código: los documentos se pueden reenviar desde Seguimiento.
-        this.errorEnvio.set(
-          (codigo ? `La solicitud ${codigo} quedó radicada pero no se pudo enviar al área: ` : '') +
-            mensajeErrorIntegracion(err),
-        );
+        this.feedback.error({
+          titulo: 'No se pudo continuar',
+          mensaje:
+            (codigo ? `La solicitud ${codigo} quedó radicada pero no se pudo enviar al área: ` : '') +
+              mensajeErrorIntegracion(err),
+        });
         this.enviando.set(false);
       },
     });
@@ -783,7 +807,6 @@ export class RadicacionComponent {
   /** Contrato firmado leído al que le faltan datos: se completa en Contratos con la lectura precargada. */
   protected readonly lecturaPorCompletar = signal<LecturaContratoResponse | null>(null);
   protected readonly registrandoContratoLeido = signal(false);
-  protected readonly mensajeContratoLeido = signal<{ variante: 'success' | 'warning' | 'error'; texto: string } | null>(null);
 
   /** El contrato firmado cargado se adjunta a la radicación como "Contrato de arrendamiento firmado". */
   protected onContratoFirmado(archivo: File): void {
@@ -809,7 +832,7 @@ export class RadicacionComponent {
     });
     if (!request) {
       this.lecturaPorCompletar.set(lectura);
-      this.mensajeContratoLeido.set({
+      this.avisarContratoLeido({
         variante: 'warning',
         texto: 'Al contrato le faltan datos para registrarlo (partes, ciudad con cobertura, canon, fecha o cuenta). '
           + 'Complétalos en Contratos: ya van precargados.',
@@ -822,7 +845,7 @@ export class RadicacionComponent {
       next: (respuesta) => {
         this.registrandoContratoLeido.set(false);
         this.borrador.contrato.set({ referencia: respuesta.radicado, leasing: false });
-        this.mensajeContratoLeido.set({
+        this.avisarContratoLeido({
           variante: lectura.firmado ? 'success' : 'warning',
           texto: lectura.firmado
             ? 'Contrato firmado leído y registrado con sus datos. Ya puedes radicar.'
@@ -832,7 +855,7 @@ export class RadicacionComponent {
       error: (err: unknown) => {
         this.registrandoContratoLeido.set(false);
         this.lecturaPorCompletar.set(lectura);
-        this.mensajeContratoLeido.set({ variante: 'error', texto: `${mensajeErrorIntegracion(err)} Puedes completarlo en Contratos.` });
+        this.avisarContratoLeido({ variante: 'error', texto: `${mensajeErrorIntegracion(err)} Puedes completarlo en Contratos.` });
       },
     });
   }
@@ -874,5 +897,11 @@ export class RadicacionComponent {
       descripcion: String(this.documentosCatalogo.find((d) => d.codigo === tipo)?.['ayuda'] ?? ''),
       obligatorio,
     };
+  }
+
+  /** Resultado de registrar el contrato firmado leído. */
+  private avisarContratoLeido(m: { variante: 'success' | 'warning' | 'error'; texto: string }): void {
+    const variante = m.variante === 'success' ? 'exito' : m.variante === 'warning' ? 'info' : 'error';
+    this.feedback.toast({ variante, titulo: 'Contrato firmado', mensaje: m.texto });
   }
 }

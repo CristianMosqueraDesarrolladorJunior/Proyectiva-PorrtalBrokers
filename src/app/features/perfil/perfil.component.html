@@ -15,7 +15,7 @@
 
   @if (registroCompletado() || perfil().legalizacion === 'EN_REVISION') {
     <app-alert-banner variante="success" titulo="Tu solicitud de registro está en revisión" icono="fact_check">
-      Consultamos tu SARLAFT y el área está revisando tus documentos. Cuando la aprueben pasarás a Broker registrado
+      Consultamos tu Conocimiento de Cliente y el área está revisando tus documentos. Cuando la aprueben pasarás a Broker registrado
       sin perder tu historial y se acreditarán tus comisiones.
     </app-alert-banner>
   } @else if (perfil().legalizacion === 'RECHAZADA') {
@@ -35,9 +35,6 @@
         (elegida)="subirFoto($event)"
         (quitar)="quitarFoto()"
       />
-      @if (errorFoto()) {
-        <small class="perfil-identidad__doc" role="alert">{{ errorFoto() }}</small>
-      }
       <div>
         <h2 class="perfil-identidad__nombre">{{ perfil().nombreCompleto }}</h2>
         <p class="perfil-identidad__doc">
@@ -172,11 +169,6 @@
         </app-form-field>
       </div>
 
-      @if (mensajeDatos()) {
-        <p class="perfil-ok" [class.perfil-ok--alerta]="errorDatos()" role="status">
-          <app-icon [nombre]="errorDatos() ? 'error' : 'check_circle'" [tamano]="16" /> {{ mensajeDatos() }}
-        </p>
-      }
       <div class="perfil-acciones">
         <app-boton variante="ghost" [disabled]="!datosCambiados() || guardandoDatos()" (clicked)="descartarDatos()">Descartar</app-boton>
         <app-boton variante="accent" icono="save" [disabled]="!datosValidos() || !datosCambiados() || guardandoDatos()" (clicked)="guardarDatos()">
@@ -232,11 +224,6 @@
         <!-- Alternativa al enlace: cargar el SARLAFT físico (queda en revisión del área). -->
         <app-doc-uploader [reglas]="reglaSarlaftFisico" [cargados]="cargadoSarlaftFisico()" (archivoSeleccionado)="onSarlaftFisico($event)" />
       }
-      @if (mensajeSarlaft()) {
-        <p class="perfil-ok" [class.perfil-ok--alerta]="perfil().sarlaft.estado !== 'vigente'" role="status">
-          <app-icon [nombre]="perfil().sarlaft.estado === 'vigente' ? 'check_circle' : 'error'" [tamano]="16" /> {{ mensajeSarlaft() }}
-        </p>
-      }
     </article>
     }
   </div>
@@ -279,11 +266,6 @@
     <p class="perfil-etiqueta">Cargar o reemplazar</p>
     <app-doc-uploader [reglas]="reglasEditables()" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)" />
 
-    @if (errorDocumento()) {
-      <p class="perfil-ok perfil-ok--alerta" role="alert"><app-icon nombre="error" [tamano]="16" /> {{ errorDocumento() }}</p>
-    } @else if (mensajeDocumento()) {
-      <p class="perfil-ok" role="status"><app-icon nombre="check_circle" [tamano]="16" /> {{ mensajeDocumento() }}</p>
-    }
   </article>
   }
 </section>

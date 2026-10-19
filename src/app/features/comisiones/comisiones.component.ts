@@ -28,6 +28,7 @@ import {
   SummaryCardComponent,
 } from '../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaResumen, FilaTabla } from '../../shared/components';
+import { FeedbackService } from '../../shared/services/feedback/feedback.service';
 
 /**
  * Comisiones del broker REGISTRADO: valor estimado del periodo y la cuenta de cobro.
@@ -62,6 +63,7 @@ const REVISION_VACIA: RevisionCuenta = { filas: [], errores: [], avisos: [], tot
   styleUrl: './comisiones.component.scss',
 })
 export class ComisionesComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly comisiones = inject(ComisionesService);
   private readonly dashboard = inject(DashboardService);
   private readonly router = inject(Router);
@@ -86,7 +88,6 @@ export class ComisionesComponent {
   protected readonly filasCrudas = signal<readonly FilaCruda[]>([{ poliza: '', valor: '' }]);
   protected readonly intento = signal(false);
   protected readonly generando = signal(false);
-  protected readonly errorEnvio = signal('');
   protected readonly generada = signal<CuentaCobroResponse | null>(null);
 
   /** Revisión del servidor (reglas y comisión del acuerdo del broker); el front no calcula. */
@@ -197,7 +198,6 @@ export class ComisionesComponent {
   // --- Generar ---
   protected generar(): void {
     this.intento.set(true);
-    this.errorEnvio.set('');
     if (!this.puedeGenerar()) return;
     this.generando.set(true);
     this.comisiones
@@ -207,13 +207,17 @@ export class ComisionesComponent {
         next: (cuenta) => {
           this.generando.set(false);
           this.generada.set(cuenta);
+          this.feedback.exito({
+            titulo: '¡Cuenta de cobro generada!',
+            mensaje: `${cuenta.polizas} pólizas por ${this.pesos(cuenta.totalComision)}. Descárgala y cárgala en la plataforma de proveedores para recibir tu pago.`,
+          });
           this.filasCrudas.set([{ poliza: '', valor: '' }]);
           this.intento.set(false);
           this.cargarHistorial();
         },
         error: (err: unknown) => {
           this.generando.set(false);
-          this.errorEnvio.set(mensajeErrorIntegracion(err));
+          this.feedback.error({ titulo: 'No se pudo generar la cuenta', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }
@@ -229,7 +233,7 @@ export class ComisionesComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (blob) => descargarArchivo(blob, `cuenta-de-cobro-${id}.pdf`),
-        error: (err: unknown) => this.errorEnvio.set(mensajeErrorIntegracion(err)),
+        error: (err: unknown) => this.feedback.error({ titulo: 'No se pudo generar la cuenta', mensaje: mensajeErrorIntegracion(err) }),
       });
   }
 

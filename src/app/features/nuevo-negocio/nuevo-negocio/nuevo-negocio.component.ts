@@ -13,7 +13,6 @@ import {
   BotonComponent,
   FormFieldComponent,
   StepTabsComponent,
-  AlertBannerComponent,
   EscaleritaLoaderComponent,
   SuccessScreenComponent,
   PageHeaderComponent,
@@ -35,6 +34,7 @@ import {
   recuperarBorrador,
   type EstadoFormularioNN,
 } from '../nuevo-negocio-borrador';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /** Etiquetas de los 3 pasos del flujo Nuevo_Negocio (Req 31.1). */
 const PASOS_NUEVO_NEGOCIO: readonly string[] = [
@@ -76,7 +76,6 @@ type EstadoEnvioNN = 'inactivo' | 'enviando' | 'exito';
     BotonComponent,
     FormFieldComponent,
     StepTabsComponent,
-    AlertBannerComponent,
     EscaleritaLoaderComponent,
     SuccessScreenComponent,
     PageHeaderComponent,
@@ -85,6 +84,7 @@ type EstadoEnvioNN = 'inactivo' | 'enviando' | 'exito';
   styleUrl: './nuevo-negocio.component.scss',
 })
 export class NuevoNegocioComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly nuevoNegocioService = inject(NuevoNegocioService);
 
   /** Etiquetas de los pasos del stepper (Req 31.1). */
@@ -127,12 +127,6 @@ export class NuevoNegocioComponent {
 
   /** Confirmación del Nuevo_Negocio registrado (radicado, estado, prima total) (Req 31.7). */
   protected readonly confirmacion = signal<NuevoNegocioResponse | null>(null);
-
-  /** Mensaje de error genérico, sin exponer detalles internos (Req 28.5). */
-  protected readonly errorMensaje = signal('');
-
-  /** Aviso de que el borrador fue guardado en el estado del feature (Req 31.9). */
-  protected readonly borradorGuardado = signal(false);
 
   /** Borrador conservado en memoria del feature; NUNCA en localStorage (Req 31.9, 28.1). */
   private borrador: EstadoFormularioNN | null = null;
@@ -190,7 +184,6 @@ export class NuevoNegocioComponent {
    */
   protected avanzarAPrecios(): void {
     this.intentoAvance.set(true);
-    this.borradorGuardado.set(false);
     if (!this.paso1Valido()) {
       return;
     }
@@ -206,7 +199,6 @@ export class NuevoNegocioComponent {
   }
 
   protected volverADatosCliente(): void {
-    this.borradorGuardado.set(false);
     this.pasoActual.set(0);
   }
 
@@ -216,11 +208,9 @@ export class NuevoNegocioComponent {
    * parámetros financieros estén completos.
    */
   protected calcularResumen(): void {
-    this.borradorGuardado.set(false);
-    this.errorMensaje.set('');
     const parametros = this.construirParametros();
     if (parametros === null) {
-      this.errorMensaje.set('Completa los parámetros de precios para calcular el resumen.');
+      this.feedback.toast({ variante: 'error', mensaje: 'Completa los parámetros de precios para calcular el resumen.' });
       return;
     }
     this.calculando.set(true);
@@ -231,7 +221,7 @@ export class NuevoNegocioComponent {
       },
       error: () => {
         this.calculando.set(false);
-        this.errorMensaje.set('No fue posible calcular el resumen. Intenta nuevamente.');
+        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: 'No fue posible calcular el resumen. Intenta nuevamente.' });
       },
     });
   }
@@ -241,11 +231,9 @@ export class NuevoNegocioComponent {
    * Requiere datos del cliente válidos y parámetros de precios completos.
    */
   protected enviar(): void {
-    this.errorMensaje.set('');
-    this.borradorGuardado.set(false);
     const request = this.construirRequest();
     if (request === null) {
-      this.errorMensaje.set('Completa los datos requeridos antes de enviar la solicitud.');
+      this.feedback.toast({ variante: 'error', mensaje: 'Completa los datos requeridos antes de enviar la solicitud.' });
       return;
     }
     this.estadoEnvio.set('enviando');
@@ -257,7 +245,7 @@ export class NuevoNegocioComponent {
       },
       error: () => {
         this.estadoEnvio.set('inactivo');
-        this.errorMensaje.set('No fue posible registrar el nuevo negocio. Intenta nuevamente.');
+        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: 'No fue posible registrar el nuevo negocio. Intenta nuevamente.' });
       },
     });
   }
@@ -275,7 +263,7 @@ export class NuevoNegocioComponent {
     };
     // Se conserva en memoria del feature; NUNCA en localStorage/sessionStorage (Req 28.1).
     this.borrador = recuperarBorrador(guardarBorrador(estado, new Date().toISOString()));
-    this.borradorGuardado.set(true);
+    this.feedback.toast({ variante: 'exito', titulo: 'Borrador guardado', mensaje: 'Puedes retomar el registro cuando quieras.' });
   }
 
   /**
@@ -295,8 +283,6 @@ export class NuevoNegocioComponent {
     this.intentoAvance.set(false);
     this.resumen.set(null);
     this.confirmacion.set(null);
-    this.errorMensaje.set('');
-    this.borradorGuardado.set(false);
     this.borrador = null;
     this.estadoEnvio.set('inactivo');
     this.pasoActual.set(0);

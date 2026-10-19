@@ -485,9 +485,6 @@
                   <p class="brok-etiqueta brok-bloque">Opcional</p>
                   <app-doc-uploader [reglas]="reglaOpcional" [cargados]="archivosCargados()" (archivoSeleccionado)="onArchivo($event)" />
 
-                  @if (errorArchivo(); as error) {
-                    <p class="brok-error" role="alert"><app-icon nombre="error" [tamano]="16" /> {{ error }}</p>
-                  }
 
                   <div class="brok-acciones">
                     <button id="brok-continuar-docs" type="button" class="brok-btn brok-acciones__fin" [disabled]="!documentosCompletos()" (click)="continuarDocumentos()">
@@ -525,9 +522,6 @@
                     <span>Declaro, como broker, que la información del negocio es veraz y que cuento con la autorización del propietario y del inquilino para el tratamiento de sus datos personales.</span>
                   </button>
 
-                  @if (errorEnvio(); as error) {
-                    <p class="brok-error" role="alert"><app-icon nombre="error" [tamano]="16" /> {{ error }}</p>
-                  }
 
                   <button id="brok-radicar" type="button" class="brok-btn brok-btn--bloque" [disabled]="!declarado() || enviando()" (click)="radicar()">
                     <app-icon nombre="send" [tamano]="18" /> Radicar negocio

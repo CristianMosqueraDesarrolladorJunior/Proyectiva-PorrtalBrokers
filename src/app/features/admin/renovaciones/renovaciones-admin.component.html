@@ -32,9 +32,6 @@
     }
   </app-barra-acciones>
 
-  @if (mensaje()) {
-    <app-alert-banner variante="success" titulo="Warehouse" icono="sync">{{ mensaje() }}</app-alert-banner>
-  }
 
   @if (vista() === 'inducciones') {
     <app-estado-vista

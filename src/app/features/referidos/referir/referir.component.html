@@ -177,12 +177,6 @@
           </app-form-field>
         </app-form-section-card>
 
-        @if (errorEnvio()) {
-          <app-alert-banner variante="error" titulo="No se pudo enviar">
-            {{ errorEnvio() }}
-            <app-boton variante="outline" (clicked)="enviar()">Reintentar</app-boton>
-          </app-alert-banner>
-        }
 
         @if (enviando()) {
           <app-escalerita-loader texto="Enviando referido..."></app-escalerita-loader>

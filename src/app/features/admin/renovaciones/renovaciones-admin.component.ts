@@ -10,7 +10,6 @@ import { ConsolaService } from '../../../core/services/consola.service';
 import { RenovacionService } from '../../../core/services/renovacion.service';
 import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion';
 import {
-  AlertBannerComponent,
   BadgeEstadoComponent,
   BarraAccionesComponent,
   BitacoraComponent,
@@ -35,6 +34,7 @@ import type {
   Tab,
   VarianteBadge,
 } from '../../../shared/components';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /** Color de la insignia por estado de renovación (presentación; etiqueta del catálogo `estado_renovacion`). */
 const VARIANTE_ESTADO: Readonly<Partial<Record<string, VarianteBadge>>> = {
@@ -68,7 +68,6 @@ export function pasosHistorial(historial: string | null): readonly EventoBitacor
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    AlertBannerComponent,
     BadgeEstadoComponent,
     BarraAccionesComponent,
     BitacoraComponent,
@@ -87,6 +86,7 @@ export function pasosHistorial(historial: string | null): readonly EventoBitacor
   styleUrls: ['../admin-comun.scss'],
 })
 export class RenovacionesAdminComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly admin = inject(AdminService);
   private readonly consola = inject(ConsolaService);
   private readonly renovacionesBroker = inject(RenovacionService);
@@ -114,7 +114,6 @@ export class RenovacionesAdminComponent {
   protected readonly inducciones = signal<readonly InduccionAdminResponse[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
-  protected readonly mensaje = signal('');
   protected readonly ingiriendo = signal(false);
 
   protected readonly columnas: readonly ColumnaTabla[] = [
@@ -301,12 +300,12 @@ export class RenovacionesAdminComponent {
       .subscribe({
         next: (r) => {
           this.ingiriendo.set(false);
-          this.mensaje.set(`Se actualizaron ${r.renovaciones} renovaciones desde el Warehouse.`);
+          this.feedback.toast({ variante: 'exito', mensaje: `Se actualizaron ${r.renovaciones} renovaciones desde el Warehouse.` });
           this.cargar();
         },
         error: (err: unknown) => {
           this.ingiriendo.set(false);
-          this.mensaje.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }

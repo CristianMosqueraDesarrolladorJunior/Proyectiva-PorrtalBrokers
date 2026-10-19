@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { LoginComponent } from './login.component';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PerfilBroker } from '../../../../core/models/broker.model';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 describe('LoginComponent', () => {
   let fixture: ComponentFixture<LoginComponent>;
@@ -14,6 +15,8 @@ describe('LoginComponent', () => {
 
   const perfil: PerfilBroker = { nombre: 'Ana Broker', rol: 'BROKER' };
 
+  /** Último toast publicado por el login (los mensajes ya no se pintan en el formulario). */
+  const ultimoToast = (): string => TestBed.inject(FeedbackService).toasts().at(-1)?.mensaje ?? '';
   const query = (selector: string): HTMLElement =>
     fixture.nativeElement.querySelector(selector) as HTMLElement;
 
@@ -77,10 +80,8 @@ describe('LoginComponent', () => {
     query('.login-form').dispatchEvent(new Event('submit'));
     fixture.detectChanges();
     // Then
-    const error = query('.login-error');
-    expect(error).toBeTruthy();
-    expect(error.textContent).toContain('Usuario o contraseña incorrectos');
-    expect(error.textContent?.toLowerCase()).not.toContain('cédula no existe');
+    expect(ultimoToast()).toContain('Usuario o contraseña incorrectos');
+    expect(ultimoToast().toLowerCase()).not.toContain('cédula no existe');
     expect(routerSpy.navigate).not.toHaveBeenCalled();
   });
 
@@ -99,7 +100,7 @@ describe('LoginComponent', () => {
       password: 'secreta',
     });
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/app']);
-    expect(query('.login-error')).toBeNull();
+    expect(TestBed.inject(FeedbackService).toasts()).toHaveLength(0);
   });
 
   it('lleva a la consola /admin cuando el usuario es Administrador o Comercial', () => {
@@ -140,7 +141,7 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
     query('.login-form').dispatchEvent(new Event('submit'));
     fixture.detectChanges();
-    expect(query('.login-error').textContent).toContain('No pudimos validar tu ingreso');
+    expect(ultimoToast()).toContain('No pudimos validar tu ingreso');
   });
 
   it('solicita el restablecimiento de contraseña y confirma sin revelar si la cuenta existe', () => {
@@ -153,14 +154,14 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
     // Then
     expect(authSpy.restablecerPassword).toHaveBeenCalledWith('1023018112');
-    expect(query('.login-aviso').textContent).toContain('Si tu cédula o correo están registrados');
+    expect(ultimoToast()).toContain('Si tu cédula o correo están registrados');
   });
 
   it('pide el usuario antes de solicitar el restablecimiento', () => {
     query('.login-olvido').click();
     fixture.detectChanges();
     expect(authSpy.restablecerPassword).not.toHaveBeenCalled();
-    expect(query('.login-error').textContent).toContain('Escribe tu cédula o tu correo');
+    expect(ultimoToast()).toContain('Escribe tu cédula o tu correo');
   });
 
   it('no invoca a AuthService cuando el formulario es inválido al enviar', () => {

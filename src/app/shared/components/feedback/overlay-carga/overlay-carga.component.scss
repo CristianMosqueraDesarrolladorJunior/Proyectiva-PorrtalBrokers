@@ -1,0 +1,43 @@
+// OverlayCargaComponent — overlay de carga inline o de pantalla completa. Solo Design_Token.
+
+.oc {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  animation: oc-fundido var(--duration-base) var(--ease-out);
+}
+
+.oc--inline {
+  position: absolute;
+  z-index: 1;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--sb-surface) 80%, transparent);
+}
+
+.oc--pantalla {
+  position: fixed;
+  z-index: var(--z-feedback-carga);
+  padding: var(--space-4);
+  background: var(--color-overlay);
+  backdrop-filter: blur(2px);
+
+  .oc__panel {
+    padding: var(--space-6) var(--space-8);
+    background: var(--sb-surface);
+    border: 1px solid var(--sb-border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-modal);
+  }
+}
+
+@keyframes oc-fundido {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oc {
+    animation: none;
+  }
+}

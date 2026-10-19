@@ -9,7 +9,6 @@ import { ComisionesService } from '../../../core/services/comisiones.service';
 import { ConsolaService } from '../../../core/services/consola.service';
 import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion';
 import {
-  AlertBannerComponent,
   BadgeEstadoComponent,
   BarraAccionesComponent,
   BotonComponent,
@@ -26,6 +25,7 @@ import {
   VisorArchivoComponent,
 } from '../../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaTabla, OpcionSegmentada, SeccionFicha, Tab, VarianteBadge } from '../../../shared/components';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /** Color de la insignia por estado de pago (presentación; la etiqueta sale del catálogo `estado_pago_comision`). */
 const VARIANTE_PAGO: Readonly<Partial<Record<string, VarianteBadge>>> = {
@@ -43,7 +43,6 @@ const VARIANTE_PAGO: Readonly<Partial<Record<string, VarianteBadge>>> = {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    AlertBannerComponent,
     BadgeEstadoComponent,
     BarraAccionesComponent,
     BotonComponent,
@@ -63,6 +62,7 @@ const VARIANTE_PAGO: Readonly<Partial<Record<string, VarianteBadge>>> = {
   styleUrls: ['../admin-comun.scss'],
 })
 export class ComisionesAdminComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly admin = inject(AdminService);
   private readonly consola = inject(ConsolaService);
   private readonly comisiones = inject(ComisionesService);
@@ -75,7 +75,6 @@ export class ComisionesAdminComponent {
   protected readonly cuentas = signal<readonly CuentaCobroResponse[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
-  protected readonly mensaje = signal('');
 
   protected readonly filtros: readonly OpcionSegmentada[] = [
     { valor: 'pendiente', etiqueta: 'Pendientes' },
@@ -154,7 +153,6 @@ export class ComisionesAdminComponent {
   protected readonly referencia = signal('');
   protected readonly motivo = signal('');
   protected readonly guardando = signal(false);
-  protected readonly errorPago = signal('');
   protected readonly hoy = new Date().toISOString().slice(0, 10);
 
   protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
@@ -226,7 +224,6 @@ export class ComisionesAdminComponent {
     this.fechaPago.set(c.pagadoAt ?? this.hoy);
     this.referencia.set(c.referenciaPago ?? '');
     this.motivo.set(c.motivoPago ?? '');
-    this.errorPago.set('');
     this.cambiarPestana('detalle');
   }
 
@@ -253,7 +250,6 @@ export class ComisionesAdminComponent {
     if (!c) return;
     const estado = this.estadoPago() as 'pendiente' | 'pagada' | 'rechazada';
     this.guardando.set(true);
-    this.errorPago.set('');
     this.consola
       .registrarPago(c.id, {
         estado,
@@ -267,18 +263,20 @@ export class ComisionesAdminComponent {
         next: () => {
           this.guardando.set(false);
           this.seleccionada.set(null);
-          this.mensaje.set(
-            estado === 'pagada'
-              ? `Pago registrado: ${c.broker} recibió su comisión.`
-              : estado === 'rechazada'
-                ? `Cuenta rechazada: ${c.broker} puede volver a cobrar esas pólizas.`
-                : 'La cuenta volvió a pendiente.',
-          );
+          this.feedback.toast({
+            variante: 'exito',
+            mensaje:
+              estado === 'pagada'
+                ? `Pago registrado: ${c.broker} recibió su comisión.`
+                : estado === 'rechazada'
+                  ? `Cuenta rechazada: ${c.broker} puede volver a cobrar esas pólizas.`
+                  : 'La cuenta volvió a pendiente.',
+          });
           this.cargar();
         },
         error: (err: unknown) => {
           this.guardando.set(false);
-          this.errorPago.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }

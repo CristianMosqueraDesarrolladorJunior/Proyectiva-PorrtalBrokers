@@ -16,7 +16,7 @@ import {
   type ReglaDocumentoUploader,
 } from '../../../../shared/components';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
-
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /**
  * Corrección documental pedida por el área en el Warehouse (estado "Pendiente Corrección Documental"): muestra
@@ -31,6 +31,7 @@ import { CatalogoService } from '../../../../core/services/catalogo.service';
   styleUrl: './correccion.component.scss',
 })
 export class CorreccionComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly radicacion = inject(RadicacionService);
   private readonly catalogo = inject(CatalogoService);
   private readonly router = inject(Router);
@@ -41,7 +42,6 @@ export class CorreccionComponent {
   protected readonly cargando = signal(true);
   protected readonly error = signal(false);
   protected readonly enviando = signal(false);
-  protected readonly errorEnvio = signal('');
   protected readonly listo = signal(false);
 
   private readonly archivos = new Map<string, File>();
@@ -115,13 +115,11 @@ export class CorreccionComponent {
   protected onArchivo(evento: ArchivoSeleccionado): void {
     this.archivos.set(evento.id, evento.archivo);
     this.cargados.update((c) => ({ ...c, [evento.id]: evento.archivo.name }));
-    this.errorEnvio.set('');
   }
 
   protected enviar(): void {
     if (!this.puedeEnviar() || this.enviando()) return;
     this.enviando.set(true);
-    this.errorEnvio.set('');
     const codigo = this.referencia();
     concat(...[...this.archivos].map(([tipo, archivo]) => this.radicacion.subirDocumento(codigo, tipo, archivo)))
       .pipe(
@@ -136,12 +134,20 @@ export class CorreccionComponent {
           this.datos.set(r);
           this.enviando.set(false);
           this.listo.set(true);
+          this.feedback.exito({
+            titulo: r.procedimiento.estadoPortal === 'EN_GESTION' ? '¡Enviada al área!' : '¡Corrección enviada!',
+            mensaje: `Tus documentos quedaron en revisión del área (${r.procedimiento.etiqueta}). Te avisaremos cuando avance.`,
+            acciones: { cancelar: 'Quedarme aquí', confirmar: 'Volver a Seguimiento' },
+            alResolver: (resultado) => {
+              if (resultado === 'confirmar') this.volver();
+            },
+          });
           this.archivos.clear();
           this.cargados.set({});
         },
         error: (err: unknown) => {
           this.enviando.set(false);
-          this.errorEnvio.set(mensajeErrorIntegracion(err));
+          this.feedback.error({ titulo: 'No se pudo enviar la corrección', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }

@@ -23,6 +23,7 @@ import {
   EscaleritaLoaderComponent,
 } from '../../../../shared/components';
 import type { ArchivoSeleccionado, ReglaDocumentoUploader } from '../../../../shared/components';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /** Tamaño máximo aceptado antes de enviar (el backend revalida tipo real y tamaño). */
 const TAMANO_MAXIMO_BYTES = 10 * 1024 * 1024;
@@ -66,10 +67,6 @@ const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png'];
 
       @if (leyendo()) {
         <app-escalerita-loader texto="Leyendo el contrato… puede tardar unos segundos"></app-escalerita-loader>
-      }
-
-      @if (error()) {
-        <app-alert-banner variante="error" titulo="No pudimos leer el contrato">{{ error() }}</app-alert-banner>
       }
 
       @if (lectura(); as l) {
@@ -120,6 +117,7 @@ const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png'];
   ],
 })
 export class LectorContratoComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly contratos = inject(ContratoService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -142,7 +140,6 @@ export class LectorContratoComponent {
 
   protected readonly cargados = signal<Readonly<Record<string, string>>>({});
   protected readonly leyendo = signal(false);
-  protected readonly error = signal('');
   protected readonly lectura = signal<LecturaContratoResponse | null>(null);
 
   /** Cuántos campos llegaron con valor (para el mensaje de confirmación). */
@@ -156,13 +153,12 @@ export class LectorContratoComponent {
 
   protected leer(evento: ArchivoSeleccionado): void {
     const archivo = evento.archivo;
-    this.error.set('');
     if (!TIPOS_PERMITIDOS.includes(archivo.type)) {
-      this.error.set('El archivo debe ser PDF, JPG o PNG.');
+      this.feedback.toast({ variante: 'error', mensaje: 'El archivo debe ser PDF, JPG o PNG.' });
       return;
     }
     if (archivo.size > TAMANO_MAXIMO_BYTES) {
-      this.error.set('El archivo supera los 10 MB. Comprímelo o envía solo las páginas de las partes.');
+      this.feedback.toast({ variante: 'error', mensaje: 'El archivo supera los 10 MB. Comprímelo o envía solo las páginas de las partes.' });
       return;
     }
     this.cargados.set({ contrato: archivo.name });
@@ -180,7 +176,7 @@ export class LectorContratoComponent {
         },
         error: (err: unknown) => {
           this.leyendo.set(false);
-          this.error.set(`${mensajeErrorIntegracion(err)} Si persiste, escribe los datos a mano.`);
+          this.feedback.toast({ variante: 'error', mensaje: `${mensajeErrorIntegracion(err)} Si persiste, escribe los datos a mano.` });
         },
       });
   }
@@ -188,6 +184,5 @@ export class LectorContratoComponent {
   protected reiniciar(): void {
     this.lectura.set(null);
     this.cargados.set({});
-    this.error.set('');
   }
 }

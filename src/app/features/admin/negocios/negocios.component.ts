@@ -32,6 +32,7 @@ import type {
   Tab,
   VarianteBadge,
 } from '../../../shared/components';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 function varianteEstado(estado: string): VarianteBadge {
   if (estado === 'EXPEDIDA' || estado === 'APROBADA') return 'success';
@@ -68,6 +69,7 @@ function varianteEstado(estado: string): VarianteBadge {
   styleUrls: ['../admin-comun.scss'],
 })
 export class NegociosComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly admin = inject(AdminService);
   private readonly consola = inject(ConsolaService);
   private readonly catalogo = inject(CatalogoService);
@@ -83,7 +85,6 @@ export class NegociosComponent {
   protected readonly negocios = signal<readonly NegocioConsola[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
-  protected readonly mensaje = signal('');
 
   protected readonly filtros: readonly OpcionSegmentada[] = [
     { valor: 'curso', etiqueta: 'En curso' },
@@ -160,7 +161,6 @@ export class NegociosComponent {
   protected readonly estadoDestino = signal('');
   protected readonly observacion = signal('');
   protected readonly guardando = signal(false);
-  protected readonly errorAccion = signal('');
 
   protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
     const d = this.detalle();
@@ -269,12 +269,11 @@ export class NegociosComponent {
     this.pestana.set('negocio');
     this.estadoDestino.set('');
     this.observacion.set('');
-    this.errorAccion.set('');
     this.opcionesEstado.set([]);
     this.consola
       .negocio(radicado)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({ next: (d) => this.detalle.set(d), error: (err: unknown) => this.mensaje.set(mensajeErrorIntegracion(err)) });
+      .subscribe({ next: (d) => this.detalle.set(d), error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }) });
     if (this.esAdmin) {
       this.admin
         .siguientesEstados(radicado)
@@ -292,24 +291,25 @@ export class NegociosComponent {
     const destino = this.estadoDestino();
     if (!d || !destino) return;
     this.guardando.set(true);
-    this.errorAccion.set('');
     this.admin
       .cambiarEstadoNegocio(d.negocio.radicado, destino, this.observacion())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (r) => {
           this.guardando.set(false);
-          this.mensaje.set(
-            r.numeroPoliza
-              ? `Negocio ${r.radicado} expedido con la póliza ${r.numeroPoliza}: el negocio terminó.`
-              : `Negocio ${r.radicado} quedó ${this.etiquetaEstado[destino] ?? destino}.`,
-          );
+          this.feedback.toast({
+            variante: 'exito',
+            mensaje:
+              r.numeroPoliza
+                ? `Negocio ${r.radicado} expedido con la póliza ${r.numeroPoliza}: el negocio terminó.`
+                : `Negocio ${r.radicado} quedó ${this.etiquetaEstado[destino] ?? destino}.`,
+          });
           this.cargar();
           this.abrir(r.radicado);
         },
         error: (err: unknown) => {
           this.guardando.set(false);
-          this.errorAccion.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }

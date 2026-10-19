@@ -12,10 +12,10 @@
   ></app-page-header>
 
   @if (radicado(); as numeroRadicado) {
-    <app-alert-banner variante="success" titulo="Radicación registrada">
-      Tu radicación fue enviada correctamente con el radicado
-      <strong>{{ numeroRadicado }}</strong>. El equipo revisará la documentación.
-    </app-alert-banner>
+    <p class="rad-radicado">Radicado <strong>{{ numeroRadicado }}</strong> · en revisión del área.</p>
+    <div class="rad-contrato-accion">
+      <app-boton variante="accent" icono="add" (clicked)="nuevaRadicacion()">Nueva radicación</app-boton>
+    </div>
   } @else if (casoConsultable()) {
     <!-- Salida 3 de SARLAFT: consultable -> el caso baja al Warehouse y termina aquí. -->
     <app-step-tabs [pasos]="pasos" [pasoActivo]="pasoActivo()" ariaLabel="Pasos de la radicación" />
@@ -401,6 +401,12 @@
           subtitulo="Validación por documento con verificación inmediata."
         >
           @if (documentosHabilitados()) {
+            @if (readjuntarDocumentos()) {
+              <app-alert-banner variante="warning" titulo="Vuelve a adjuntar los documentos">
+                Por seguridad los archivos no se conservan al salir de esta pantalla (por ejemplo, al crear el contrato).
+                Adjúntalos de nuevo antes de enviar.
+              </app-alert-banner>
+            }
             <span class="rad-obligatorios">{{ reglasObligatorias().length }} obligatorios</span>
 
             <app-doc-uploader
@@ -472,9 +478,6 @@
           @if (registrandoContratoLeido()) {
             <app-info-box icono="hourglass_top">Registrando el contrato con los datos leídos…</app-info-box>
           }
-          @if (mensajeContratoLeido(); as m) {
-            <app-alert-banner [variante]="m.variante" titulo="Contrato firmado">{{ m.texto }}</app-alert-banner>
-          }
           @if (lecturaPorCompletar()) {
             <app-boton variante="outline" icono="edit_document" (clicked)="completarContratoLeido()">
               Completar el contrato en Contratos
@@ -516,11 +519,6 @@
           </app-alert-banner>
         }
 
-        @if (errorEnvio(); as error) {
-          <app-alert-banner variante="error" titulo="No se pudo continuar">
-            {{ error }}
-          </app-alert-banner>
-        }
 
         <app-sticky-actions
           [fija]="true"

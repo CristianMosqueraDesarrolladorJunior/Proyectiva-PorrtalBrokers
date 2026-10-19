@@ -127,3 +127,21 @@ export type { Tab } from './tabs/tabs.component';
 export { FotoPerfilComponent } from './foto-perfil/foto-perfil.component';
 export { FormClaveComponent, CLAVE_FUERTE } from './form-clave/form-clave.component';
 export type { CambioClave } from './form-clave/form-clave.component';
+
+// --- Feedback de estado (spec componentes-feedback-estado); el servicio vive en shared/services/feedback ---
+export { DialogoEstadoComponent } from './feedback/dialogo-estado/dialogo-estado.component';
+export { ToastHostComponent } from './feedback/toast-host/toast-host.component';
+export { OverlayCargaComponent } from './feedback/overlay-carga/overlay-carga.component';
+export type {
+  VarianteEstado,
+  VarianteResultado,
+  VarianteCarga,
+  IdFeedback,
+  TipoAccion,
+  ResultadoDialogo,
+  ConfiguracionAcciones,
+  OpcionesDialogo,
+  OpcionesCarga,
+  OpcionesToast,
+  Toast,
+} from './feedback/feedback.types';

@@ -12,9 +12,6 @@
   @if (errorCarga()) {
     <p role="alert">No fue posible cargar los documentos. Intenta nuevamente.</p>
   }
-  @if (errorDescarga()) {
-    <p role="alert">No fue posible descargar el documento. Intenta nuevamente.</p>
-  }
   @if (!cargando() && !errorCarga() && secciones().length === 0) {
     <p>No hay documentos disponibles.</p>
   }

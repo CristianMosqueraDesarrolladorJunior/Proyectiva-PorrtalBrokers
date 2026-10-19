@@ -40,9 +40,6 @@
           <small>Perfil diligenciado</small>
         </div>
       </article>
-      @if (errorFoto()) {
-        <app-alert-banner variante="error" titulo="No se pudo actualizar la foto">{{ errorFoto() }}</app-alert-banner>
-      }
 
       <div class="pf-rejilla">
         <section class="pf-panel" aria-labelledby="pf-datos">
@@ -75,12 +72,6 @@
             <app-form-field label="Ciudad" controlId="pf-ciudad">
               <input id="pf-ciudad" maxlength="80" autocomplete="address-level2" [value]="valor('ciudad')" (input)="poner('ciudad', $event)" />
             </app-form-field>
-            @if (errorDatos()) {
-              <app-alert-banner variante="error" titulo="No se pudo guardar">{{ errorDatos() }}</app-alert-banner>
-            }
-            @if (mensaje()) {
-              <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
-            }
             <div class="pf-form__acciones">
               <app-boton variante="ghost" [disabled]="!cambios() || guardando()" (clicked)="descartar()">Descartar</app-boton>
               <app-boton variante="accent" type="submit" icono="save" [disabled]="!cambios() || guardando()">
@@ -98,12 +89,7 @@
               <p>Cambia tu contraseña. Te pediremos la actual para confirmar que eres tú.</p>
             </div>
           </header>
-          @if (claveCambiada()) {
-            <app-alert-banner variante="success" titulo="Contraseña actualizada" icono="verified_user">
-              Úsala desde tu próximo ingreso.
-            </app-alert-banner>
-          }
-          <app-form-clave id="pf-clave" [enviando]="cambiandoClave()" [error]="errorClave()" (guardar)="cambiarClave($event)" />
+          <app-form-clave id="pf-clave" [enviando]="cambiandoClave()" (guardar)="cambiarClave($event)" />
           <ul class="pf-consejos">
             <li><app-icon nombre="check" [tamano]="16" /> Mínimo 8 caracteres.</li>
             <li><app-icon nombre="check" [tamano]="16" /> No la compartas: la consola muestra datos completos de asegurados.</li>

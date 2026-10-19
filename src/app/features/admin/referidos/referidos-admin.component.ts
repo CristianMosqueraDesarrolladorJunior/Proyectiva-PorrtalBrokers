@@ -8,7 +8,6 @@ import { COLUMNA_GESTIONAR, COLUMNAS_FECHAS, celdasFechas, fechaHora } from '../
 import { ConsolaService } from '../../../core/services/consola.service';
 import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion';
 import {
-  AlertBannerComponent,
   BadgeEstadoComponent,
   BarraAccionesComponent,
   BitacoraComponent,
@@ -24,6 +23,7 @@ import {
   SegmentedControlComponent,
 } from '../../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaTabla, OpcionSegmentada, SeccionFicha, Tab, VarianteBadge } from '../../../shared/components';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /** Color de la insignia por estado del referido (presentación; etiqueta del catálogo `estado_referido`). */
 const VARIANTE_ESTADO: Readonly<Partial<Record<string, VarianteBadge>>> = { ACEPTADA: 'success', RECHAZADA: 'danger' };
@@ -34,7 +34,6 @@ const VARIANTE_ESTADO: Readonly<Partial<Record<string, VarianteBadge>>> = { ACEP
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    AlertBannerComponent,
     BadgeEstadoComponent,
     BarraAccionesComponent,
     BitacoraComponent,
@@ -53,6 +52,7 @@ const VARIANTE_ESTADO: Readonly<Partial<Record<string, VarianteBadge>>> = { ACEP
   styleUrls: ['../admin-comun.scss'],
 })
 export class ReferidosAdminComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly consola = inject(ConsolaService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -62,7 +62,6 @@ export class ReferidosAdminComponent {
   protected readonly referidos = signal<readonly ReferidoConsola[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
-  protected readonly mensaje = signal('');
 
   protected readonly filtros: readonly OpcionSegmentada[] = [
     { valor: '', etiqueta: 'Todos' },
@@ -123,7 +122,6 @@ export class ReferidosAdminComponent {
   protected readonly estadoDestino = signal('EN_PROCESO');
   protected readonly nota = signal('');
   protected readonly guardando = signal(false);
-  protected readonly errorAccion = signal('');
 
   protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
     const r = this.seleccionado();
@@ -190,14 +188,12 @@ export class ReferidosAdminComponent {
     this.pestana.set('detalle');
     this.estadoDestino.set(r.estado ?? 'EN_PROCESO');
     this.nota.set('');
-    this.errorAccion.set('');
   }
 
   protected guardar(): void {
     const r = this.seleccionado();
     if (!r) return;
     this.guardando.set(true);
-    this.errorAccion.set('');
     this.consola
       .cambiarEstadoReferido(r.radicado, this.estadoDestino(), this.nota())
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -205,12 +201,12 @@ export class ReferidosAdminComponent {
         next: () => {
           this.guardando.set(false);
           this.seleccionado.set(null);
-          this.mensaje.set(`Referido ${r.radicado} actualizado.`);
+          this.feedback.toast({ variante: 'exito', mensaje: `Referido ${r.radicado} actualizado.` });
           this.cargar();
         },
         error: (err: unknown) => {
           this.guardando.set(false);
-          this.errorAccion.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }

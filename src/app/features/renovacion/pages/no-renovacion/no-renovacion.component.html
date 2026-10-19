@@ -57,11 +57,6 @@
       <app-escalerita-loader texto="Registrando no renovación..."></app-escalerita-loader>
     }
 
-    @if (errorEnvio(); as error) {
-      <app-alert-banner variante="error" titulo="No se pudo continuar">
-        {{ error }}
-      </app-alert-banner>
-    }
 
     <div class="no-renovacion-acciones">
       <app-boton

@@ -229,6 +229,11 @@
   --z-topbar: 120;
   --z-sidebar-overlay: 150;
   --z-sidebar: 200;
+  // Feedback de estado: por encima de modales (1100) y drawers (1600); los toasts siempre visibles.
+  --z-feedback-dialogo: 1700;
+  --z-feedback-confeti: 1750;
+  --z-feedback-carga: 1800;
+  --z-feedback-toast: 1900;
 
   // Superposición semitransparente para el cajón del sidebar en tablet/móvil
   // (Estrategia responsiva, Req 36.5) y overlays modales del prototipo.

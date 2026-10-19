@@ -13,7 +13,6 @@ import {
   BotonComponent,
   FormFieldComponent,
   GridLayoutComponent,
-  AlertBannerComponent,
   EscaleritaLoaderComponent,
   SuccessScreenComponent,
   PageHeaderComponent,
@@ -32,6 +31,7 @@ import {
 } from '../../../core/services/referidos.service';
 import { validarReferido } from '../referido-validacion';
 import { SoloDigitosDirective } from '../../../shared/directives/solo-digitos.directive';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /** Estado del envío del Referido para controlar loaders y confirmación (Req 15.3). */
 type EstadoEnvioReferido = 'inactivo' | 'enviando' | 'exito';
@@ -58,7 +58,6 @@ type EstadoEnvioReferido = 'inactivo' | 'enviando' | 'exito';
     BotonComponent,
     FormFieldComponent,
     GridLayoutComponent,
-    AlertBannerComponent,
     EscaleritaLoaderComponent,
     SuccessScreenComponent,
     PageHeaderComponent,
@@ -73,6 +72,7 @@ type EstadoEnvioReferido = 'inactivo' | 'enviando' | 'exito';
   styleUrl: './referir.component.scss',
 })
 export class ReferirComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly referidosService = inject(ReferidosService);
   private readonly router = inject(Router);
 
@@ -162,9 +162,6 @@ export class ReferirComponent {
   /** Estado del envío (inactivo/enviando/éxito) (Req 15.3). */
   protected readonly estadoEnvio = signal<EstadoEnvioReferido>('inactivo');
 
-  /** Mensaje de error genérico de envío, sin exponer detalles internos. */
-  protected readonly errorEnvio = signal('');
-
   /** Radicado de confirmación devuelto por el backend (Req 15.3). */
   protected readonly radicado = signal('');
 
@@ -219,7 +216,6 @@ export class ReferirComponent {
    */
   protected enviar(): void {
     this.intentoEnvio.set(true);
-    this.errorEnvio.set('');
     if (!this.formularioValido()) {
       return;
     }
@@ -233,7 +229,7 @@ export class ReferirComponent {
       },
       error: () => {
         this.estadoEnvio.set('inactivo');
-        this.errorEnvio.set('No fue posible registrar el referido. Intenta nuevamente.');
+        this.feedback.error({ titulo: 'No se pudo enviar', mensaje: 'No fue posible registrar el referido. Intenta nuevamente.' });
       },
     });
   }
@@ -249,7 +245,6 @@ export class ReferirComponent {
     this.producto.set('');
     this.comentario.set('');
     this.intentoEnvio.set(false);
-    this.errorEnvio.set('');
     this.radicado.set('');
     this.estadoEnvio.set('inactivo');
   }

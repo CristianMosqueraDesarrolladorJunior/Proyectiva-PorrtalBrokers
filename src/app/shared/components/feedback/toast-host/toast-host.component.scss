@@ -1,0 +1,110 @@
+// ToastHostComponent — pila de toasts no bloqueantes. Solo Design_Token.
+
+.th {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  z-index: var(--z-feedback-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(380px, calc(100vw - 2 * var(--space-4)));
+  // El contenedor deja pasar los clics; solo las tarjetas los reciben.
+  pointer-events: none;
+}
+
+.th__toast {
+  --th-color: var(--sb-info);
+
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  background: var(--sb-surface);
+  border: 1px solid var(--sb-border);
+  border-left: 4px solid var(--th-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  animation: th-entrada var(--duration-base) var(--ease-spring);
+}
+
+.th__toast--exito {
+  --th-color: var(--sb-tertiary);
+}
+
+.th__toast--error {
+  --th-color: var(--sb-error);
+}
+
+.th__icono {
+  flex-shrink: 0;
+  color: var(--th-color);
+}
+
+.th__texto {
+  flex: 1;
+  min-width: 0;
+  margin: var(--space-0);
+  font-size: var(--text-body-sm);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.th__titulo {
+  display: block;
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.th__cerrar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: var(--space-1);
+  color: var(--color-muted);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+
+  &:hover {
+    background: var(--sb-surface-low);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+@keyframes th-entrada {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@media (width <= 639px) {
+  .th {
+    top: var(--space-3);
+    right: var(--space-4);
+    left: var(--space-4);
+    width: auto;
+  }
+
+  @keyframes th-entrada {
+    from {
+      opacity: 0;
+      transform: translateY(-16px);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .th__toast {
+    animation: none;
+  }
+}

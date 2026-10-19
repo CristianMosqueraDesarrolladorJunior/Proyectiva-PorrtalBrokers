@@ -254,12 +254,6 @@
         }
       </app-form-section-card>
 
-      @if (errorCalculo()) {
-        <app-alert-banner variante="error" titulo="No se pudo calcular">
-          {{ errorCalculo() }}
-          <app-boton variante="outline" (clicked)="solicitarCalculo()">Reintentar</app-boton>
-        </app-alert-banner>
-      }
 
       <app-sticky-actions [nota]="notaAcciones()">
         <app-boton secundarias variante="ghost" (clicked)="pedirLimpiar()">Limpiar</app-boton>

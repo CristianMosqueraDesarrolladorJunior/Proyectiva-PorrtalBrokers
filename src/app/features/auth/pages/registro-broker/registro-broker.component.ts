@@ -26,7 +26,7 @@ import {
   ModalDialogComponent,
 } from '../../../../shared/components';
 import type { ArchivoSeleccionado, ReglaDocumentoUploader } from '../../../../shared/components/doc-uploader/doc-uploader.component';
-import { documentosRegistroBroker, type TipoDocumentoRegistro } from '../../../../core/models/registro-broker.model';
+import { SOLICITUD_REGISTRO_ENVIADA, documentosRegistroBroker, type TipoDocumentoRegistro } from '../../../../core/models/registro-broker.model';
 import type { TipoMimePermitido } from '../../../../core/models/documento.model';
 import { PerfilService } from '../../../../core/services/perfil.service';
 import { DocumentosService } from '../../../../core/services/documentos.service';
@@ -55,6 +55,7 @@ import {
   esTelefonoValido,
 } from './registro-validacion';
 import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /** Ruta de la pantalla de login (acceso "Ya tengo cuenta") (Req 2.3). */
 const RUTA_LOGIN = '/login';
@@ -138,6 +139,7 @@ export class RegistroBrokerComponent {
   /** Pasos 2 y 3 usan los mismos servicios de Mi perfil (la sesión ya está abierta tras el paso 1). */
   private readonly perfilServicio = inject(PerfilService);
   private readonly documentos = inject(DocumentosService);
+  private readonly feedback = inject(FeedbackService);
   protected readonly perfil = this.perfilServicio.perfil;
   protected readonly abrirFormularioSarlaft = abrirFormularioSarlaft;
 
@@ -147,7 +149,7 @@ export class RegistroBrokerComponent {
   // --- Paso 2 · SARLAFT ---
   protected readonly consultandoSarlaft = signal(false);
   protected readonly sarlaftConsultado = signal(false);
-  protected readonly errorSarlaft = signal('');
+  protected readonly errorSarlaft = signal(false);
   protected readonly puedeConsultarSarlaft = computed(() => !this.consultandoSarlaft());
   /** Formulario físico: si la consulta falló (error de red o sin respuesta) o quedó desactualizado. */
   protected readonly puedeCargarFisico = computed(() => {
@@ -182,8 +184,6 @@ export class RegistroBrokerComponent {
   protected readonly cargados = computed<Readonly<Record<string, string>>>(() =>
     Object.fromEntries(this.perfil().documentos.filter((d) => d.archivo).map((d) => [d.tipo, d.archivo])),
   );
-  protected readonly mensajeCarga = signal('');
-  protected readonly errorCarga = signal('');
   protected readonly enviandoSolicitud = signal(false);
   protected readonly puedeCompletarRegistro = this.perfilServicio.puedeCompletarRegistro;
 
@@ -225,7 +225,6 @@ export class RegistroBrokerComponent {
   // --- Envío ---
   /** Destino elegido mientras se crea la cuenta (`null` = no hay creación en curso). */
   protected readonly creandoHacia = signal<'inicio' | 'perfil' | null>(null);
-  protected readonly errorEnvio = signal('');
   protected readonly credenciales = signal<Credenciales | null>(null);
 
   constructor() {
@@ -340,7 +339,6 @@ export class RegistroBrokerComponent {
     }
     const v = this.valores();
     this.creandoHacia.set(destino);
-    this.errorEnvio.set('');
     this.auth
       .registrarProspecto({
         nombreCompleto: v.nombreCompleto.trim(),
@@ -361,6 +359,14 @@ export class RegistroBrokerComponent {
             .subscribe({
               next: (perfil) => {
                 this.creandoHacia.set(null);
+                this.feedback.exito({
+                  titulo: '¡Bienvenido a Proyectiva!',
+                  mensaje:
+                    destino === 'inicio'
+                      ? 'Tu cuenta quedó creada. Ya puedes cotizar y radicar.'
+                      : 'Tu cuenta quedó creada. Sigue con tu Conocimiento de Cliente para calificarte como broker.',
+                  acciones: { confirmar: destino === 'inicio' ? 'Empezar' : 'Continuar' },
+                });
                 if (destino === 'inicio') {
                   void this.router.navigate([rutaInicio(perfil.rol)]);
                   return;
@@ -382,7 +388,7 @@ export class RegistroBrokerComponent {
         },
         error: (error: unknown) => {
           this.creandoHacia.set(null);
-          this.errorEnvio.set(mensajeErrorRegistro(error));
+          this.feedback.error({ titulo: 'No pudimos crear tu cuenta', mensaje: mensajeErrorRegistro(error) });
         },
       });
   }
@@ -393,18 +399,29 @@ export class RegistroBrokerComponent {
       return;
     }
     this.consultandoSarlaft.set(true);
-    this.errorSarlaft.set('');
+    this.errorSarlaft.set(false);
     this.perfilServicio
       .actualizarSarlaft()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: (perfil) => {
           this.consultandoSarlaft.set(false);
           this.sarlaftConsultado.set(true);
+          if (perfil.sarlaft.estado === 'vigente' || perfil.sarlaft.estado === 'en_cumplimiento') {
+            this.feedback.toast({ variante: 'exito', titulo: '¡Verificado!', mensaje: 'Tu Conocimiento de Cliente está vigente.' });
+          }
         },
         error: () => {
           this.consultandoSarlaft.set(false);
-          this.errorSarlaft.set('No pudimos consultar tu Conocimiento de Cliente en este momento. Intenta de nuevo, carga el formulario físico o termina después desde Mi perfil.');
+          this.errorSarlaft.set(true);
+          this.feedback.error({
+            titulo: 'No pudimos consultar',
+            mensaje: 'Tu Conocimiento de Cliente no respondió en este momento. Intenta de nuevo, carga el formulario físico o termina después desde Mi perfil.',
+            acciones: { cancelar: 'Cargar formulario físico', reintentar: 'Reintentar' },
+            alResolver: (r) => {
+              if (r === 'reintentar') this.verificarSarlaft();
+            },
+          });
         },
       });
   }
@@ -423,20 +440,23 @@ export class RegistroBrokerComponent {
         },
         error: () => {
           this.descargandoFormato.set(false);
-          this.errorSarlaft.set('No pudimos descargar el formato en este momento. Intenta de nuevo.');
+          this.feedback.toast({ variante: 'error', mensaje: 'No pudimos descargar el formato en este momento. Intenta de nuevo.' });
         },
       });
   }
 
   /** Paso 2: alternativa al enlace, carga el SARLAFT físico (queda en revisión del área) y deja continuar. */
   protected onSarlaftFisico(evento: ArchivoSeleccionado): void {
-    this.errorSarlaft.set('');
+    this.errorSarlaft.set(false);
     this.perfilServicio
       .cargarSarlaftFisico(evento.archivo)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => this.sarlaftConsultado.set(true),
-        error: (err: unknown) => this.errorSarlaft.set(mensajeErrorIntegracion(err)),
+        next: () => {
+          this.sarlaftConsultado.set(true);
+          this.feedback.toast({ variante: 'exito', mensaje: 'Formulario cargado. Queda en revisión del área.' });
+        },
+        error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
       });
   }
 
@@ -458,22 +478,23 @@ export class RegistroBrokerComponent {
       new Date().toISOString(),
     );
     if (!resultado.valido) {
-      this.errorCarga.set(
-        resultado.motivo === 'vigencia_excedida'
-          ? `${regla.etiqueta}: debe tener máximo ${regla.vigenciaMaxDias} días de expedida.`
-          : resultado.motivo === 'tamano_excedido'
-            ? `${regla.etiqueta}: supera el tamaño máximo (${Math.round(regla.tamanoMaxBytes / 1_048_576)} MB).`
-            : `${regla.etiqueta}: formato no permitido. Usa PDF, JPG o PNG.`,
-      );
+      this.feedback.toast({
+        variante: 'error',
+        mensaje:
+          resultado.motivo === 'vigencia_excedida'
+            ? `${regla.etiqueta}: debe tener máximo ${regla.vigenciaMaxDias} días de expedida.`
+            : resultado.motivo === 'tamano_excedido'
+              ? `${regla.etiqueta}: supera el tamaño máximo (${Math.round(regla.tamanoMaxBytes / 1_048_576)} MB).`
+              : `${regla.etiqueta}: formato no permitido. Usa PDF, JPG o PNG.`,
+      });
       return;
     }
-    this.errorCarga.set('');
     this.perfilServicio
       .reemplazarDocumento(tipo, evento.archivo)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => this.mensajeCarga.set(`${regla.etiqueta} cargado.`),
-        error: (err: unknown) => this.errorCarga.set(mensajeErrorIntegracion(err)),
+        next: () => this.feedback.toast({ variante: 'exito', mensaje: `${regla.etiqueta} cargado.` }),
+        error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
       });
   }
 
@@ -487,10 +508,13 @@ export class RegistroBrokerComponent {
       .completarRegistro()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => void this.router.navigate([RUTA_PERFIL], { queryParams: { registro: 1 } }),
+        next: () => {
+          void this.router.navigate([RUTA_PERFIL], { queryParams: { registro: 1 } });
+          this.feedback.exito(SOLICITUD_REGISTRO_ENVIADA);
+        },
         error: (err: unknown) => {
           this.enviandoSolicitud.set(false);
-          this.errorCarga.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }

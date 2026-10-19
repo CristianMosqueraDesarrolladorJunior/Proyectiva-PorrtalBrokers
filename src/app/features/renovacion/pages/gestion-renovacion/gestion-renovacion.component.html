@@ -751,9 +751,6 @@
             {{ enviando() ? 'Enviando, puede tardar unos segundos…' : 'Confirmar no renovación' }}
           </button>
         </div>
-        @if (errorEnvio(); as error) {
-          <app-alert-banner variante="error" titulo="No se pudo enviar">{{ error }}</app-alert-banner>
-        }
       </div>
     </div>
   }
@@ -766,9 +763,6 @@
       (vigente)="onSarlaftVigente($event)"
       (cancelar)="volverAOpciones()"
     />
-    @if (errorEnvio(); as error) {
-      <app-alert-banner variante="error" titulo="No se pudo enviar">{{ error }}</app-alert-banner>
-    }
   }
 
   <!-- ══════════════════ ÉXITO — FÍSICA / NO RENOVAR ══════════════════ -->

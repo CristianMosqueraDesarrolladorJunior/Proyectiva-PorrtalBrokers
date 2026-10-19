@@ -161,15 +161,6 @@
   }
 }
 
-.registro-error {
-  margin: var(--space-0);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-sm);
-  background: var(--color-badge-danger-bg);
-  color: var(--color-badge-danger-text);
-  font-size: var(--text-body);
-  font-weight: var(--font-weight-medium);
-}
 
 .registro-guia,
 .registro-legal {
@@ -665,9 +656,3 @@
   }
 }
 
-// Confirmación de un documento cargado en el paso 3.
-.registro-ok {
-  margin: var(--space-2) var(--space-0) var(--space-0);
-  color: var(--color-success, #15803d);
-  font-size: var(--text-body-sm);
-}

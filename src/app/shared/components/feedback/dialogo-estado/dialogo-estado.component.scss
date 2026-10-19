@@ -1,0 +1,136 @@
+// DialogoEstadoComponent — diálogo de estado tipo SweetAlert. Solo Design_Token.
+
+.de__fondo {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-feedback-dialogo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--color-overlay);
+  backdrop-filter: blur(2px);
+  animation: de-fundido var(--duration-base) var(--ease-out);
+}
+
+.de {
+  --de-color: var(--sb-info);
+  --de-tinte: var(--color-badge-info-bg);
+
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-6) var(--space-6);
+  text-align: center;
+  background: var(--sb-surface);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-modal);
+  animation: de-entrada var(--duration-base) var(--ease-out);
+
+  // Franja superior en el color del estado, como la franja corporativa de app-modal-dialog.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: var(--de-color);
+  }
+}
+
+.de--exito {
+  --de-color: var(--sb-tertiary);
+  --de-tinte: var(--sb-tint-success-bg);
+}
+
+.de--error {
+  --de-color: var(--sb-error);
+  --de-tinte: var(--sb-tint-danger-bg);
+}
+
+.de__icono {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-full);
+  color: var(--de-color);
+  background: var(--de-tinte);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--de-tinte) 50%, transparent);
+  animation: de-icono var(--duration-slow) var(--ease-spring) both;
+  animation-delay: var(--duration-fast);
+}
+
+.de__titulo {
+  margin: var(--space-0);
+  font-size: var(--text-title);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+}
+
+.de__mensaje {
+  margin: var(--space-0);
+  font-size: var(--text-body);
+  color: var(--color-muted);
+  white-space: pre-line;
+}
+
+.de__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+@keyframes de-fundido {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes de-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+
+@keyframes de-icono {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-20deg);
+  }
+}
+
+@media (width <= 639px) {
+  .de {
+    padding: var(--space-6) var(--space-4) var(--space-4);
+  }
+
+  .de__acciones {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .de__fondo,
+  .de,
+  .de__icono {
+    animation: none;
+  }
+}

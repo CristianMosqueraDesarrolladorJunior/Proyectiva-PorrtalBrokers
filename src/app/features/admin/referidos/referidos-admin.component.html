@@ -18,9 +18,6 @@
     </div>
   </app-barra-acciones>
 
-  @if (mensaje()) {
-    <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
-  }
 
   <app-estado-vista
     [cargando]="cargando()"
@@ -76,9 +73,6 @@
           <app-form-field label="Nota (queda en el historial)" controlId="ref-nota">
             <textarea id="ref-nota" rows="3" maxlength="300" [value]="nota()" (input)="nota.set(v($event))"></textarea>
           </app-form-field>
-          @if (errorAccion()) {
-            <app-alert-banner variante="error" titulo="No se pudo actualizar">{{ errorAccion() }}</app-alert-banner>
-          }
         </div>
       }
       @case ('historial') {

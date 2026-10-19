@@ -59,27 +59,6 @@
   gap: var(--space-4);
 }
 
-.login-error {
-  margin: var(--space-0);
-  padding: var(--space-3) var(--space-4);
-  color: var(--color-badge-danger-text);
-  font-size: var(--text-body);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--line-height-normal);
-  background: var(--color-badge-danger-bg);
-  border-radius: var(--radius-sm);
-}
-
-.login-aviso {
-  margin: var(--space-0);
-  padding: var(--space-3) var(--space-4);
-  color: var(--color-text);
-  font-size: var(--text-body);
-  line-height: var(--line-height-normal);
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-}
 
 .login-olvido {
   align-self: center;

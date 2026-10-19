@@ -112,11 +112,6 @@
           </app-form-field>
         </div>
 
-        @if (borradorGuardado()) {
-          <app-alert-banner variante="success" titulo="Borrador guardado">
-            Se conservaron los datos ingresados. Puedes retomar el registro cuando quieras.
-          </app-alert-banner>
-        }
 
         <div class="nn-acciones">
           <app-boton variante="ghost" (clicked)="guardarBorrador()">
@@ -202,11 +197,6 @@
           <app-escalerita-loader texto="Calculando resumen..."></app-escalerita-loader>
         }
 
-        @if (errorMensaje(); as error) {
-          <app-alert-banner variante="error" titulo="No se pudo continuar">
-            {{ error }}
-          </app-alert-banner>
-        }
 
         <!-- Resumen recibido del Motor_Precios_NN; el front solo lo muestra (Req 31.5, 31.8) -->
         @if (resumen(); as res) {

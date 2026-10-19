@@ -12,9 +12,6 @@
     <app-kpi-card label="Comisión por pagar" [valor]="compacto(totalPendiente())" icono="schedule" tono="accent" sub="Cuentas de cobro radicadas" />
   </app-grid-layout>
 
-  @if (mensaje()) {
-    <app-alert-banner variante="success" titulo="Listo" icono="check_circle">{{ mensaje() }}</app-alert-banner>
-  }
 
   <app-estado-vista
     [cargando]="cargando()"
@@ -89,9 +86,6 @@
             </app-boton>
           </div>
 
-          @if (errorAccion()) {
-            <app-alert-banner variante="error" titulo="No se pudo completar">{{ errorAccion() }}</app-alert-banner>
-          }
         </div>
       }
       @case ('actividad') {

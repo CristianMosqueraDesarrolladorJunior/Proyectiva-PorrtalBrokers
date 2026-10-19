@@ -48,6 +48,7 @@ import {
   sujetoSarlaft,
 } from '../radicacion/pages/radicacion/radicacion-presentacion';
 import { SoloDigitosDirective } from '../../shared/directives/solo-digitos.directive';
+import { FeedbackService } from '../../shared/services/feedback/feedback.service';
 
 /** Pantalla del escenario (una por paso o salida del flujo 02). */
 type Escena =
@@ -116,7 +117,6 @@ const LISTAS_SARLAFT = [
 
 const PASOS_ENVIO = ['Empaquetando expediente…', 'Enviando a la aseguradora…', 'Generando número de radicado…'];
 
-
 const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmado';
 
 const CIRCUNFERENCIA_ANILLO = 119.4;
@@ -160,6 +160,7 @@ function normalizar(texto: string): string {
   styleUrl: './agente.component.scss',
 })
 export class AgenteComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly radicacion = inject(RadicacionService);
   private readonly borrador = inject(BorradorRadicacionService);
   private readonly router = inject(Router);
@@ -254,7 +255,6 @@ export class AgenteComponent {
   protected readonly enlaceCopiado = signal(false);
   protected readonly archivosCargados = signal<Readonly<Record<string, string>>>({});
   private readonly tiposValidos = signal<ReadonlySet<TipoDocumentoRadicacion>>(new Set());
-  protected readonly errorArchivo = signal<string | null>(null);
 
   private readonly obligatorios = computed(() =>
     documentosRequeridosRadicacion({
@@ -288,7 +288,6 @@ export class AgenteComponent {
   protected readonly declarado = signal(false);
   protected readonly enviando = signal(false);
   protected readonly pasoEnvio = signal('');
-  protected readonly errorEnvio = signal<string | null>(null);
   protected readonly radicado = signal('');
   protected readonly radicadoVisible = signal('');
   protected readonly fechaRadicado = signal('');
@@ -403,10 +402,8 @@ export class AgenteComponent {
     this.consultandoSarlaft.set(false);
     this.archivosCargados.set({});
     this.tiposValidos.set(new Set());
-    this.errorArchivo.set(null);
     this.declarado.set(false);
     this.enviando.set(false);
-    this.errorEnvio.set(null);
     this.radicado.set('');
     this.radicadoVisible.set('');
     this.guiaContinuarDatos = false;
@@ -724,11 +721,10 @@ export class AgenteComponent {
     );
     const etiqueta = this.etiquetaDocumento[tipo] ?? tipo;
     if (!resultado.valido) {
-      this.errorArchivo.set(`«${archivo.name}» no cumple los requisitos de ${etiqueta}: usa PDF, JPG o PNG dentro del tamaño permitido.`);
+      this.feedback.toast({ variante: 'error', mensaje: `«${archivo.name}» no cumple los requisitos de ${etiqueta}: usa PDF, JPG o PNG dentro del tamaño permitido.` });
       this.encolar(() => this.decir(`Ese archivo no lo pude procesar para **${etiqueta}**. Súbelo en PDF, JPG o PNG, por favor.`));
       return;
     }
-    this.errorArchivo.set(null);
     this.archivosCargados.update((a) => ({ ...a, [tipo]: archivo.name }));
     this.tiposValidos.update((a) => new Set(a).add(tipo));
     const completos = this.documentosCompletos();
@@ -770,11 +766,10 @@ export class AgenteComponent {
     this.encolar(async () => {
       this.quitarFoco();
       this.enviando.set(true);
-      this.errorEnvio.set(null);
       const contratoReferencia = this.borrador.contrato()?.referencia;
       if (!contratoReferencia) {
         this.enviando.set(false);
-        this.errorEnvio.set('Genera el contrato de arrendamiento antes de radicar.');
+        this.feedback.toast({ variante: 'error', mensaje: 'Genera el contrato de arrendamiento antes de radicar.' });
         await this.decir('Antes de radicar necesitas generar el contrato de arrendamiento.');
         return;
       }
@@ -809,7 +804,7 @@ export class AgenteComponent {
           throw e;
         }
         this.enviando.set(false);
-        this.errorEnvio.set(mensajeErrorIntegracion(e));
+        this.feedback.error({ titulo: 'No se pudo radicar', mensaje: mensajeErrorIntegracion(e) });
         await this.decir('No pude registrar la radicación. Inténtalo de nuevo en unos minutos.');
         return;
       }

@@ -18,6 +18,7 @@ import {
   esUsuarioValido,
   validarLogin,
 } from './login-validacion';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /** Ruta del formulario de Solicitud_Registro_Broker (Req 1.8, 2.1, 2.2). */
 const RUTA_REGISTRO_BROKER = '/registro-broker';
@@ -72,6 +73,7 @@ interface FormularioLogin {
   styleUrl: './login.component.scss',
 })
 export class LoginComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -91,15 +93,15 @@ export class LoginComponent {
     }),
   });
 
-  /** Mensaje de error mostrado ante un ingreso fallido (Req 1.2). */
-  protected readonly errorCredenciales = signal('');
-
   /** Llegó aquí porque la sesión venció en otra pantalla (interceptor de errores). */
-  protected readonly sesionVencida =
+  private readonly sesionVencida =
     typeof location !== 'undefined' && new URLSearchParams(location.search).get('sesion') === 'vencida';
 
-  /** Mensaje informativo tras solicitar el restablecimiento de contraseña. */
-  protected readonly avisoRestablecimiento = signal('');
+  constructor() {
+    if (this.sesionVencida) {
+      this.feedback.toast({ variante: 'info', titulo: 'Tu sesión venció', mensaje: 'Por inactividad. Ingresa de nuevo para continuar.' });
+    }
+  }
 
   /** Indica que hay una solicitud de login en curso (deshabilita el envío). */
   protected readonly enviando = signal(false);
@@ -149,8 +151,6 @@ export class LoginComponent {
    * JS: la cookie `HttpOnly` la gestiona el backend/interceptor (Req 28.1).
    */
   protected iniciarSesion(): void {
-    this.errorCredenciales.set('');
-    this.avisoRestablecimiento.set('');
     if (!this.formularioValido || this.enviando()) {
       this.formulario.markAllAsTouched();
       return;
@@ -174,15 +174,13 @@ export class LoginComponent {
             .then((navego) => {
               // Si un guard rechaza la navegación, la pantalla no se queda muda en /login.
               if (!navego) {
-                this.errorCredenciales.set('No pudimos abrir tu sesión. Intenta de nuevo.');
+                this.feedback.toast({ variante: 'error', mensaje: 'No pudimos abrir tu sesión. Intenta de nuevo.' });
               }
             });
         },
         error: (error: { status?: number }) => {
           this.enviando.set(false);
-          this.errorCredenciales.set(
-            error?.status === 503 ? MENSAJE_SERVICIO_NO_DISPONIBLE : MENSAJE_CREDENCIALES_INVALIDAS,
-          );
+          this.feedback.toast({ variante: 'error', mensaje: error?.status === 503 ? MENSAJE_SERVICIO_NO_DISPONIBLE : MENSAJE_CREDENCIALES_INVALIDAS });
         },
       });
   }
@@ -192,14 +190,12 @@ export class LoginComponent {
    * olvido). El mensaje es el mismo exista o no la cuenta.
    */
   protected restablecerPassword(): void {
-    this.errorCredenciales.set('');
-    this.avisoRestablecimiento.set('');
     if (this.restableciendo()) {
       return;
     }
     if (!this.usuarioValido) {
       this.formulario.controls.usuario.markAsTouched();
-      this.errorCredenciales.set(MENSAJE_USUARIO_REQUERIDO);
+      this.feedback.toast({ variante: 'error', mensaje: MENSAJE_USUARIO_REQUERIDO });
       return;
     }
 
@@ -210,11 +206,11 @@ export class LoginComponent {
       .subscribe({
         next: () => {
           this.restableciendo.set(false);
-          this.avisoRestablecimiento.set(MENSAJE_RESTABLECIMIENTO);
+          this.feedback.toast({ variante: 'exito', mensaje: MENSAJE_RESTABLECIMIENTO });
         },
         error: () => {
           this.restableciendo.set(false);
-          this.errorCredenciales.set(MENSAJE_SERVICIO_NO_DISPONIBLE);
+          this.feedback.toast({ variante: 'error', mensaje: MENSAJE_SERVICIO_NO_DISPONIBLE });
         },
       });
   }

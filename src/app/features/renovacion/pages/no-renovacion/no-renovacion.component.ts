@@ -28,6 +28,7 @@ import {
 } from '../../no-renovacion-habilitacion';
 
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 /** Estado del envío de la No Renovación para controlar loaders y confirmación (Req 22.2). */
 type EstadoEnvioNoRenovacion = 'inactivo' | 'enviando' | 'exito';
 
@@ -66,6 +67,7 @@ type EstadoEnvioNoRenovacion = 'inactivo' | 'enviando' | 'exito';
   styleUrl: './no-renovacion.component.scss',
 })
 export class NoRenovacionComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly catalogo = inject(CatalogoService);
 
   private readonly renovacionService = inject(RenovacionService);
@@ -90,9 +92,6 @@ export class NoRenovacionComponent {
 
   /** Estado del envío (inactivo/enviando/éxito) (Req 22.2). */
   protected readonly estadoEnvio = signal<EstadoEnvioNoRenovacion>('inactivo');
-
-  /** Mensaje de error genérico de envío, sin exponer detalles internos. */
-  protected readonly errorEnvio = signal('');
 
   /** Radicado de confirmación devuelto por el backend (Req 22.2). */
   protected readonly radicado = signal('');
@@ -129,7 +128,6 @@ export class NoRenovacionComponent {
    */
   protected confirmar(): void {
     this.intentoEnvio.set(true);
-    this.errorEnvio.set('');
     if (!this.envioHabilitado()) {
       return;
     }
@@ -149,9 +147,7 @@ export class NoRenovacionComponent {
       },
       error: () => {
         this.estadoEnvio.set('inactivo');
-        this.errorEnvio.set(
-          'No fue posible registrar la no renovación. Intenta nuevamente.',
-        );
+        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: 'No fue posible registrar la no renovación. Intenta nuevamente.' });
       },
     });
   }

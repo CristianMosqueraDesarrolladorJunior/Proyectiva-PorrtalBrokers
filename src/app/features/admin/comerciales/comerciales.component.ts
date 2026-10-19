@@ -22,6 +22,7 @@ import {
 } from '../../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaTabla, SeccionFicha, Tab } from '../../../shared/components';
 import { FormPersonaComponent } from '../componentes/form-persona.component';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /**
  * Comerciales (solo Administrador): alta con credenciales generadas, cartera (brokers, prospectos,
@@ -51,6 +52,7 @@ import { FormPersonaComponent } from '../componentes/form-persona.component';
   styleUrls: ['../admin-comun.scss'],
 })
 export class ComercialesComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly consola = inject(ConsolaService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -59,7 +61,6 @@ export class ComercialesComponent {
   protected readonly comerciales = signal<readonly ComercialConsola[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
-  protected readonly mensaje = signal('');
 
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'comercial', header: 'Comercial', tipo: 'principal', ordenable: true },
@@ -103,7 +104,6 @@ export class ComercialesComponent {
   // --- Alta ---
   protected readonly creando = signal(false);
   protected readonly enviandoAlta = signal(false);
-  protected readonly errorAlta = signal('');
   protected readonly credencial = signal<CredencialGenerada | null>(null);
 
   // --- Operación ---
@@ -118,7 +118,6 @@ export class ComercialesComponent {
   protected readonly correo = signal('');
   protected readonly telefono = signal('');
   protected readonly guardando = signal(false);
-  protected readonly errorAccion = signal('');
   protected readonly credencialNueva = signal<CredencialGenerada | null>(null);
 
   protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
@@ -193,12 +192,10 @@ export class ComercialesComponent {
   protected abrirAlta(): void {
     this.creando.set(true);
     this.credencial.set(null);
-    this.errorAlta.set('');
   }
 
   protected crear(datos: PersonaRequest): void {
     this.enviandoAlta.set(true);
-    this.errorAlta.set('');
     this.consola
       .crearComercial(datos)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -206,12 +203,12 @@ export class ComercialesComponent {
         next: (alta) => {
           this.enviandoAlta.set(false);
           this.credencial.set(alta.credencial);
-          this.mensaje.set(`Comercial ${datos.nombre} creado (${alta.codigo}); entra a la rotación de prospectos.`);
+          this.feedback.toast({ variante: 'exito', mensaje: `Comercial ${datos.nombre} creado (${alta.codigo}); entra a la rotación de prospectos.` });
           this.cargar();
         },
         error: (err: unknown) => {
           this.enviandoAlta.set(false);
-          this.errorAlta.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }
@@ -230,7 +227,6 @@ export class ComercialesComponent {
     this.nombre.set(c.nombre);
     this.correo.set(c.correo ?? '');
     this.telefono.set(c.telefono ?? '');
-    this.errorAccion.set('');
     this.credencialNueva.set(null);
   }
 
@@ -258,7 +254,6 @@ export class ComercialesComponent {
     const c = this.seleccionado();
     if (!c) return;
     this.guardando.set(true);
-    this.errorAccion.set('');
     this.consola
       .restablecerAccesoComercial(c.codigo)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -270,24 +265,23 @@ export class ComercialesComponent {
         },
         error: (err: unknown) => {
           this.guardando.set(false);
-          this.errorAccion.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }
 
   private ejecutar(accion: Observable<unknown>, exito: string): void {
     this.guardando.set(true);
-    this.errorAccion.set('');
     accion.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.guardando.set(false);
         this.seleccionado.set(null);
-        this.mensaje.set(exito);
+        this.feedback.toast({ variante: 'exito', mensaje: exito });
         this.cargar();
       },
       error: (err: unknown) => {
         this.guardando.set(false);
-        this.errorAccion.set(mensajeErrorIntegracion(err));
+        this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
       },
     });
   }

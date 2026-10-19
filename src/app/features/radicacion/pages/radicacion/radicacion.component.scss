@@ -142,6 +142,16 @@
   }
 }
 
+.rad-radicado {
+  margin: var(--space-0) var(--space-0) var(--space-4);
+  font-size: var(--text-body);
+  color: var(--color-muted);
+
+  strong {
+    color: var(--color-text);
+  }
+}
+
 .rad-contrato-accion {
   display: flex;
   margin-top: var(--space-2);

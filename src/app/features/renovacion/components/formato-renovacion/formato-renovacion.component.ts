@@ -22,6 +22,7 @@ import {
   SegmentedControlComponent,
 } from '../../../../shared/components';
 import type { ItemInfoLista, OpcionSegmentada } from '../../../../shared/components';
+import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 
 /**
  * Formato oficial de renovación de Bolívar, relleno por el portal (renovación física).
@@ -84,14 +85,6 @@ import type { ItemInfoLista, OpcionSegmentada } from '../../../../shared/compone
         @if (revision().aviso) {
           <app-alert-banner variante="warning" titulo="Necesitas un otro sí">{{ revision().aviso }}</app-alert-banner>
         }
-        @if (error()) {
-          <app-alert-banner variante="error" titulo="No se pudo generar el formato">{{ error() }}</app-alert-banner>
-        }
-        @if (generado(); as f) {
-          <app-alert-banner variante="success" titulo="Formato generado" icono="task_alt">
-            Lo descargamos en tu equipo{{ f.requiereOtroSi ? '; recuerda adjuntar el otro sí firmado' : '' }}.
-          </app-alert-banner>
-        }
 
         <div class="fr__acciones">
           @if (generado()) {
@@ -126,6 +119,7 @@ import type { ItemInfoLista, OpcionSegmentada } from '../../../../shared/compone
   ],
 })
 export class FormatoRenovacionComponent {
+  private readonly feedback = inject(FeedbackService);
   private readonly renovaciones = inject(RenovacionService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -155,7 +149,6 @@ export class FormatoRenovacionComponent {
   protected readonly canonNuevo = signal('');
   protected readonly intento = signal(false);
   protected readonly generando = signal(false);
-  protected readonly error = signal('');
   protected readonly generado = signal<FormatoRenovacionResponse | null>(null);
 
   /** IPC vigente y su año (`parametro_negocio` IPC_RENOVACION / ANIO_IPC). */
@@ -188,7 +181,6 @@ export class FormatoRenovacionComponent {
 
   protected generar(): void {
     this.intento.set(true);
-    this.error.set('');
     if (this.revision().error) return;
     this.generando.set(true);
     this.renovaciones
@@ -204,10 +196,15 @@ export class FormatoRenovacionComponent {
           this.generando.set(false);
           this.generado.set(formato);
           this.descargar();
+          this.feedback.toast({
+            variante: 'exito',
+            titulo: 'Formato generado',
+            mensaje: `Lo descargamos en tu equipo${formato.requiereOtroSi ? '; recuerda adjuntar el otro sí firmado' : ''}.`,
+          });
         },
         error: (err: unknown) => {
           this.generando.set(false);
-          this.error.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
         },
       });
   }
@@ -218,7 +215,7 @@ export class FormatoRenovacionComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (pdf) => descargarArchivo(pdf, `formato-renovacion-${this.numeroPoliza}.pdf`),
-        error: (err: unknown) => this.error.set(mensajeErrorIntegracion(err)),
+        error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
       });
   }
 }

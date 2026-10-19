@@ -55,6 +55,7 @@ import {
   normalizarMonto,
 } from '../../../shared/util/monto-escalonado';
 import { CatalogoService } from '../../../core/services/catalogo.service';
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /** Código del destino que habilita asegurar el IVA del canon (catálogo `destino_inmueble`). */
 const CODIGO_COMERCIO = 'COMERCIO';
@@ -143,6 +144,7 @@ interface CoberturaEstado {
   styleUrl: './cotizador-datos.component.scss',
 })
 export class CotizadorDatosComponent implements OnInit {
+  private readonly feedback = inject(FeedbackService);
   private readonly coberturasService = inject(CoberturasService);
   private readonly catalogo = inject(CatalogoService);
   private readonly cotizadorService = inject(CotizadorService);
@@ -159,9 +161,6 @@ export class CotizadorDatosComponent implements OnInit {
 
   /** Verdadero mientras se genera el PDF (Req 9.1). */
   protected readonly descargandoPdf = signal(false);
-
-  /** Mensaje de error genérico del cálculo. */
-  protected readonly errorCalculo = signal('');
 
   /** Departamentos con ciudades en cobertura (catálogo `ciudad`). */
   protected readonly departamentos = computed(() => [
@@ -467,7 +466,6 @@ export class CotizadorDatosComponent implements OnInit {
     this.mesesVigencia.set(this.mesesDefecto);
     this.aseguraIva.set(false);
     this.intentoCalculo.set(false);
-    this.errorCalculo.set('');
     this.resultado.set(null);
     this.coberturas.update((lista) => lista.map((c) => c.id === CODIGO_SERVICIOS
       ? { ...c, activa: true, montoAsegurado: this.obsequioServicios() }
@@ -568,7 +566,6 @@ export class CotizadorDatosComponent implements OnInit {
    */
   protected solicitarCalculo(): void {
     this.intentoCalculo.set(true);
-    this.errorCalculo.set('');
     if (!this.puedeCalcular()) {
       queueMicrotask(() => this.enfocarPrimerError());
       return;
@@ -584,7 +581,7 @@ export class CotizadorDatosComponent implements OnInit {
         },
         error: () => {
           this.calculando.set(false);
-          this.errorCalculo.set('No fue posible calcular la cotización. Intenta nuevamente.');
+          this.feedback.toast({ variante: 'error', mensaje: 'No fue posible calcular la cotización. Intenta nuevamente.' });
         },
       });
   }
@@ -613,7 +610,7 @@ export class CotizadorDatosComponent implements OnInit {
         },
         error: () => {
           this.descargandoPdf.set(false);
-          this.errorCalculo.set('No se pudo descargar el PDF de la cotización. Intenta de nuevo.');
+          this.feedback.toast({ variante: 'error', mensaje: 'No se pudo descargar el PDF de la cotización. Intenta de nuevo.' });
         },
       });
   }
@@ -621,7 +618,6 @@ export class CotizadorDatosComponent implements OnInit {
   /** Oculta el resultado y rehabilita la edición de los datos (Req 9.2). */
   protected onModificarDatos(): void {
     this.resultado.set(null);
-    this.errorCalculo.set('');
   }
 
   /** Navega a la sección Radicación conservando el contexto (Req 9.3). */

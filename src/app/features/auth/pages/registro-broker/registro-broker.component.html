@@ -119,7 +119,6 @@
         </app-form-field>
       </div>
 
-      @if (errorEnvio()) { <p class="registro-error" role="alert">{{ errorEnvio() }}</p> }
 
       <div class="registro-acciones registro-acciones--fila">
         <app-boton variante="accent" [disabled]="!datosValidos() || creandoHacia() !== null" (clicked)="crearCuenta('perfil')">
@@ -207,7 +206,6 @@
         }
       }
 
-      @if (errorSarlaft()) { <p class="registro-error" role="alert">{{ errorSarlaft() }}</p> }
 
       @if (puedeCargarFisico()) {
         <!-- Alternativa si la consulta falla o está desactualizado: cargar el formulario físico (queda en revisión del área). -->
@@ -237,8 +235,6 @@
     <!-- ===================== Paso 3 · Documentos ===================== -->
     @if (paso() === 3) {
       <app-doc-uploader [reglas]="reglasUploader" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)"></app-doc-uploader>
-      @if (mensajeCarga()) { <p class="registro-ok" role="status">{{ mensajeCarga() }}</p> }
-      @if (errorCarga()) { <p class="registro-error" role="alert">{{ errorCarga() }}</p> }
 
       @if (enviandoSolicitud()) {
         <app-escalerita-loader texto="Enviando solicitud..."></app-escalerita-loader>

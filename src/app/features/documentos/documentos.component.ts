@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DocumentosService, type RecursoDescargable } from '../../core/services/documentos.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { descargarArchivo } from '../../core/util/descargar-archivo';
+import { FeedbackService } from '../../shared/services/feedback/feedback.service';
 
 /** Recurso descargable de la Seccion_Documentos (Req 33.3, 33.4). */
 interface RecursoDoc {
@@ -37,12 +38,12 @@ interface SeccionDoc {
   styleUrl: './documentos.component.scss',
 })
 export class DocumentosComponent implements OnInit {
+  private readonly feedback = inject(FeedbackService);
   private readonly documentosService = inject(DocumentosService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly recursos = signal<readonly RecursoDescargable[]>([]);
   protected readonly cargando = signal(true);
   protected readonly errorCarga = signal(false);
-  protected readonly errorDescarga = signal(false);
   protected readonly descargandoId = signal<string | null>(null);
 
   protected readonly secciones = computed(() => {
@@ -96,7 +97,6 @@ export class DocumentosComponent implements OnInit {
 
   /** Descarga el PDF a través del API autenticado del portal (Req 33.4). */
   protected abrir(recurso: RecursoDoc): void {
-    this.errorDescarga.set(false);
     this.descargandoId.set(recurso.id);
     this.documentosService
       .descargarRecurso(recurso.id)
@@ -108,7 +108,7 @@ export class DocumentosComponent implements OnInit {
           this.descargandoId.set(null);
         },
         error: () => {
-          this.errorDescarga.set(true);
+          this.feedback.toast({ variante: 'error', mensaje: 'No fue posible descargar el documento. Intenta nuevamente.' });
           this.descargandoId.set(null);
         },
       });
