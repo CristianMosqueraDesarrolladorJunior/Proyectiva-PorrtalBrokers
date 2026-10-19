@@ -505,6 +505,8 @@ export class RadicacionComponent {
       numeroDocumentoApoderado: this.numeroDocumentoApoderado(),
       correoApoderado: this.correoApoderado(),
       sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+      // Sin esto, al volver de Contratos con SARLAFT caído se pierde la salida del SARLAFT físico y los documentos se bloquean.
+      sarlaftNoDisponible: this.sarlaftNoDisponible(),
       telefonoSarlaft: this.telefonoSarlaft(),
       consultaSarlaft: this.consultaSarlaft(),
       // Los archivos no se pueden guardar en el borrador: solo se recuerda que hubo documentos para pedirlos de nuevo.
@@ -530,6 +532,7 @@ export class RadicacionComponent {
     this.numeroDocumentoApoderado.set(f['numeroDocumentoApoderado'] ?? '');
     this.correoApoderado.set(f['correoApoderado'] ?? '');
     this.sarlaftRequiereFormulario.set(f['sarlaftRequiereFormulario'] ?? false);
+    this.sarlaftNoDisponible.set(f['sarlaftNoDisponible'] ?? false);
     this.telefonoSarlaft.set(f['telefonoSarlaft'] ?? '');
     this.consultaSarlaft.set(f['consultaSarlaft'] ?? null);
     // Sin los archivos no hay documentos válidos: se marcan para adjuntar de nuevo (antes se mostraban como
