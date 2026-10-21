@@ -30,8 +30,8 @@ describe('numeros-letras (porte de cuentas/numeros)', () => {
 
   it('cifra con puntos y pesos con signo', () => {
     expect(conPuntos(324769)).toBe('324.769');
-    expect(pesos(-1500)).toBe('-$ 1.500');
-    expect(pesos(Number.NaN)).toBe('$ 0');
+    expect(pesos(-1500)).toBe('-$1.500');
+    expect(pesos(Number.NaN)).toBe('$0');
   });
 
   it('la letra es determinista y siempre termina en «Pesos m/cte.»', () => {

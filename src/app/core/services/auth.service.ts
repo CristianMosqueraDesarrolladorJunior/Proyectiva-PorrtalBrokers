@@ -140,6 +140,8 @@ export class AuthService {
       tipoDocumento: datos.tipoDocumento,
       codigoPais: datos.codigoPais,
       password: datos.password,
+      declaracionInmobiliaria: datos.declaracionInmobiliaria,
+      aceptaTratamientoDatos: datos.aceptaTratamientoDatos,
     };
     return this.http
       .post<RegistroBrokerResponse>(`${this.baseUrl}/brokers/prospectos`, payload, { withCredentials: true })

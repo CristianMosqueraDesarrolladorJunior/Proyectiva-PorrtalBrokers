@@ -40,6 +40,8 @@ export interface AcuerdoComision {
 
 /** Cuenta de cobro generada (historial y confirmación). */
 export interface CuentaCobroResponse {
+  /** Número único de la cuenta de cobro («CUENTA DE COBRO N° …»), lo asigna el portal. */
+  readonly consecutivo: number;
   readonly id: string;
   /** ISO-8601. */
   readonly fecha: string;
@@ -61,4 +63,23 @@ export interface CuentaCobroResponse {
   readonly referenciaPago?: string | null;
   readonly motivoPago?: string | null;
   readonly ultimoMovimiento?: string | null;
+}
+
+/** Estado de cobro de la comisión de una póliza. Solo `PENDIENTE` se puede incluir en una cuenta de cobro. */
+export type EstadoCobro = 'PENDIENTE' | 'EN_COBRO' | 'ORDEN_PAGO' | 'PAGADA' | 'FUERA_PLAZO' | 'SIN_RECAUDO';
+
+/** Póliza expedida del broker con los datos de su pago (libro de comisiones). Fechas ISO `AAAA-MM-DD`. */
+export interface PolizaExpedida {
+  readonly numeroPoliza: string;
+  readonly fechaEmision: string | null;
+  readonly estadoPago: EstadoCobro;
+  readonly fechaPago: string | null;
+  /** Último día para cobrarla por el portal; `null` si no se informa. */
+  readonly fechaLimiteCobro: string | null;
+  /** Valor pagado por el propietario (con IVA); 0 si no se conoce. */
+  readonly valorPoliza: number;
+  readonly porcentaje: number;
+  readonly comision: number;
+  /** Orden de pago o factura con la que se pagó; vacío si no hay. */
+  readonly ordenPago: string;
 }

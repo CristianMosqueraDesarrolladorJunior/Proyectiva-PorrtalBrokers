@@ -27,6 +27,7 @@ export type {
 } from './data-table/data-table.component';
 export { ToggleSwitchComponent } from './toggle-switch/toggle-switch.component';
 export { DocUploaderComponent } from './doc-uploader/doc-uploader.component';
+export { AvisoSarlaftComponent } from './aviso-sarlaft/aviso-sarlaft.component';
 export type {
   ReglaDocumentoUploader,
   ArchivoSeleccionado,
@@ -145,3 +146,4 @@ export type {
   OpcionesToast,
   Toast,
 } from './feedback/feedback.types';
+export { CheckDeclaracionComponent } from './check-declaracion/check-declaracion.component';

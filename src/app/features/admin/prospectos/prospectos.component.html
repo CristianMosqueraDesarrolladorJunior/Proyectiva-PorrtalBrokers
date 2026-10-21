@@ -16,7 +16,7 @@
     <app-kpi-card label="Prospectos" [valor]="prospectos().length" icono="person_search" sub="Intermediarios en vinculación" />
     <app-kpi-card label="Por aprobar" [valor]="enLegalizacion()" icono="fact_check" tono="accent" sub="Documentos y SARLAFT en revisión" />
     <app-kpi-card label="Estudios de riesgo" [valor]="totalEstudios()" icono="query_stats" sub="Solicitados por prospectos" />
-    <app-kpi-card label="Comisión en curso" [valor]="compacto(totalComision())" icono="payments" sub="Se causa al expedir la póliza" />
+    <app-kpi-card label="Comisión estimada" [valor]="compacto(totalComision())" icono="payments" sub="De sus cotizaciones; se causa al expedir" />
   </app-grid-layout>
 
   @if (mensaje()) {
@@ -159,6 +159,7 @@
   }
   @if (expediente() && pestana() === 'decision') {
     <div acciones>
+      <app-boton variante="ghost" icono="person_off" [disabled]="decidiendo()" (clicked)="desactivar()">Desactivar prospecto</app-boton>
       @if (confirmando()) {
         <app-boton variante="ghost" icono="close" [disabled]="decidiendo()" (clicked)="confirmando.set(null)">Cancelar</app-boton>
       }

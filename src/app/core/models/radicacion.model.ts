@@ -89,6 +89,8 @@ export interface RadicacionRequest {
   readonly correoApoderado?: string;
   /** Observación del broker para el área. */
   readonly observaciones?: string;
+  /** Si el canon del contrato difiere del cotizado: cuál se radica. */
+  readonly canonDe?: 'contrato' | 'cotizacion';
 }
 
 /**

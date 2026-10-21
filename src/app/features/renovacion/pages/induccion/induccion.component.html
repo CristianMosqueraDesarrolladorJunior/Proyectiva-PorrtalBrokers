@@ -2,7 +2,7 @@
   @if (confirmacion()) {
     <app-success-screen
       titulo="Inducción enviada"
-      mensaje="El área de renovaciones recibió los datos de las partes, el contrato y el paz y salvo. Te avisaremos por correo cuando quede expedida."
+      mensaje="Recibimos los datos de las partes, el contrato y el paz y salvo. Te avisaremos por correo cuando quede expedida."
       [tarjetas]="tarjetasExito()"
       textoVolver="Volver a Renovaciones"
       (volver)="volver()"
@@ -75,7 +75,7 @@
 
         <app-form-section-card [numero]="clavesVisibles().length + 2" icono="verified" titulo="Paz y salvo" subtitulo="Confirma que el inquilino está al día con el arriendo.">
           <app-doc-uploader [reglas]="reglaPazYSalvo" [cargados]="cargadosPazYSalvo()" (archivoSeleccionado)="onPazYSalvo($event)" />
-          <app-form-field label="Observaciones para el área (opcional)" controlId="induccion-obs">
+          <app-form-field label="Observaciones (opcional)" controlId="induccion-obs">
             <textarea id="induccion-obs" rows="3" maxlength="500" [value]="observaciones()" (input)="observaciones.set(valorDe($event))"></textarea>
           </app-form-field>
         </app-form-section-card>

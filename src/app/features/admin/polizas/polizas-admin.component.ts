@@ -23,13 +23,6 @@ import {
 } from '../../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaTabla, OpcionSegmentada, SeccionFicha, Tab, VarianteBadge } from '../../../shared/components';
 
-/** Color de la insignia del pago de la comisión (presentación; etiqueta del catálogo `estado_pago_comision`). */
-const VARIANTE_PAGO: Readonly<Partial<Record<string, VarianteBadge>>> = {
-  pendiente: 'warning',
-  pagada: 'success',
-  rechazada: 'danger',
-};
-
 /**
  * Pólizas EXPEDIDAS (los negocios terminan al expedir; aquí no hay pólizas en estudio). Por cada una:
  * si ya se le pagó la comisión al broker, la cuenta de cobro que la cobró y los documentos.
@@ -61,19 +54,10 @@ export class PolizasAdminComponent {
 
   protected readonly esAdmin = inject(AdminService).esAdmin();
   protected readonly compacto = copCompacto;
-  protected readonly pago = inject(CatalogoService).insignias('estado_pago_comision', VARIANTE_PAGO, 'info' as VarianteBadge);
 
   protected readonly polizas = signal<readonly PolizaConsola[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
-
-  protected readonly filtros: readonly OpcionSegmentada[] = [
-    { valor: '', etiqueta: 'Todas' },
-    { valor: 'pagada', etiqueta: 'Pagadas al broker' },
-    { valor: 'pendiente', etiqueta: 'Pago pendiente' },
-    { valor: 'sin_cobrar', etiqueta: 'Sin cuenta de cobro' },
-  ];
-  protected readonly filtro = signal('');
 
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'poliza', header: 'Póliza', tipo: 'principal', ordenable: true },
@@ -83,14 +67,11 @@ export class PolizasAdminComponent {
     { key: 'prima', header: 'Prima', alinear: 'derecha', ordenable: true },
     { key: 'comision', header: 'Comisión', alinear: 'derecha', ordenable: true },
     { key: 'vigencia', header: 'Vigencia', tipo: 'principal' },
-    { key: 'pago', header: 'Pago al broker', tipo: 'badge', ordenable: true },
     ...COLUMNAS_FECHAS,
     COLUMNA_GESTIONAR,
   ];
 
-  protected readonly visibles = computed(() =>
-    this.filtro() ? this.polizas().filter((p) => p.estadoPago === this.filtro()) : this.polizas(),
-  );
+  protected readonly visibles = computed(() => this.polizas());
 
   protected readonly filas = computed<readonly FilaTabla[]>(() =>
     this.visibles().map((p) => ({
@@ -106,16 +87,13 @@ export class PolizasAdminComponent {
       comisionOrden: p.comision ?? 0,
       vigencia: p.inicio ? fechaCorta(p.inicio) : '—',
       vigenciaSub: p.vence ? `hasta ${fechaCorta(p.vence)}` : '',
-      pago: (this.pago[p.estadoPago] ?? { etiqueta: p.estadoPago }).etiqueta,
-      pagoVariante: (this.pago[p.estadoPago] ?? { variante: 'info' }).variante,
       ...celdasFechas(p.creado, p.ultimoMovimiento),
       gestionar: '',
     })),
   );
 
-  protected readonly pagadas = computed(() => this.polizas().filter((p) => p.estadoPago === 'pagada').length);
-  protected readonly pendientes = computed(() => this.polizas().filter((p) => p.estadoPago === 'pendiente').length);
-  protected readonly sinCobrar = computed(() => this.polizas().filter((p) => p.estadoPago === 'sin_cobrar').length);
+  protected readonly comisionTotal = computed(() => this.polizas().reduce((t, p) => t + (p.comision ?? 0), 0));
+  protected readonly conCuenta = computed(() => this.polizas().filter((p) => !!p.cuentaCobroFecha).length);
   protected readonly primaTotal = computed(() => this.polizas().reduce((t, p) => t + (p.prima ?? 0), 0));
 
   // --- Modal ---
@@ -152,7 +130,6 @@ export class PolizasAdminComponent {
           { etiqueta: 'Broker', valor: `${p.broker} (${p.brokerEstado === 'PROSPECTO' ? 'prospecto' : 'registrado'})` },
           { etiqueta: 'Comercial', valor: p.comercial },
           { etiqueta: 'Comisión', valor: p.comision === null ? null : cop(p.comision), destacado: true },
-          { etiqueta: 'Estado del pago', valor: (this.pago[p.estadoPago] ?? { etiqueta: p.estadoPago }).etiqueta },
           { etiqueta: 'Cuenta de cobro', valor: p.cuentaCobroFecha ? `Generada el ${fechaHora(p.cuentaCobroFecha)}` : 'Aún no la cobra' },
           { etiqueta: 'Expedida', valor: fechaHora(p.creado) },
           { etiqueta: 'Último movimiento', valor: fechaHora(p.ultimoMovimiento ?? p.creado) },

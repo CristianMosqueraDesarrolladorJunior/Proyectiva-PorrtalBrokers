@@ -205,3 +205,13 @@
   font-size: var(--text-body);
   color: var(--color-text);
 }
+
+// Lo que ya pasó se atenúa; hoy se resalta.
+.cal-day--pasado {
+  opacity: 0.55;
+}
+
+.cal-day--hoy .cal-day__num {
+  font-weight: var(--font-weight-bold);
+  text-decoration: underline;
+}

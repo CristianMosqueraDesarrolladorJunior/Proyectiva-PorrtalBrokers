@@ -42,22 +42,6 @@ export class AdminService {
     return this.http.get<InduccionAdminResponse[]>(`${this.baseUrl}/inducciones`, { withCredentials: true });
   }
 
-  /** Estados a los que la consola puede mover el negocio (los decide el backend; vacío si lo gestiona el área). */
-  siguientesEstados(radicado: string): Observable<readonly string[]> {
-    return this.http.get<string[]>(`${this.baseUrl}/negocios/${encodeURIComponent(radicado)}/estados`, {
-      withCredentials: true,
-    });
-  }
-
-  /** Mueve un negocio de estado (solo Administrador); al expedirlo el backend emite la póliza. */
-  cambiarEstadoNegocio(radicado: string, estado: string, observacion?: string): Observable<NegocioAdminResponse> {
-    return this.http.patch<NegocioAdminResponse>(
-      `${this.baseUrl}/negocios/${encodeURIComponent(radicado)}/estado`,
-      { estado, observacion: observacion?.trim() || undefined },
-      { withCredentials: true },
-    );
-  }
-
   /** Cambia el acuerdo de comisión del broker: 20 o 25 % (solo Administrador; el backend valida). */
   cambiarComision(brokerId: string, porcentaje: number): Observable<BrokerAdminResponse> {
     return this.http.patch<BrokerAdminResponse>(

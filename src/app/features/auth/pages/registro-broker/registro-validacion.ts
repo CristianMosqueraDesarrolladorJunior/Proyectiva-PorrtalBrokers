@@ -1,3 +1,4 @@
+import { esClaveSegura } from '../../../../core/util/clave-segura';
 /**
  * Lógica PURA de validación de la sección "Información Personal" de la
  * Solicitud_Registro_Broker (Req 3.2, 3.3, 3.4, 3.5, 3.7, 3.8).
@@ -77,7 +78,9 @@ export interface ResultadoValidacionSarlaftForm {
  * caracteres (ignorando espacios en los extremos). Función pura y total.
  */
 export function esNombreValido(nombre: string): boolean {
-  return nombre.trim().length >= NOMBRE_LONGITUD_MIN;
+  // Misma regla que el backend: solo letras, espacios y signos de nombre, hasta 120 caracteres.
+  const limpio = nombre.trim();
+  return limpio.length >= NOMBRE_LONGITUD_MIN && limpio.length <= 120 && /^\p{L}[\p{L} .'-]*$/u.test(limpio);
 }
 
 /**
@@ -129,8 +132,9 @@ export function esDocumentoValido(documento: string): boolean {
  * @param password contraseña en claro capturada en el formulario.
  * @returns `true` si la contraseña satisface la política de alta.
  */
-export function esPasswordValida(password: string): boolean {
-  return password.length >= PASSWORD_LONGITUD_MIN && password.length <= PASSWORD_LONGITUD_MAX;
+export function esPasswordValida(password: string, cedula?: string): boolean {
+  return password.length >= PASSWORD_LONGITUD_MIN && password.length <= PASSWORD_LONGITUD_MAX
+    && esClaveSegura(password, cedula);
 }
 
 /**

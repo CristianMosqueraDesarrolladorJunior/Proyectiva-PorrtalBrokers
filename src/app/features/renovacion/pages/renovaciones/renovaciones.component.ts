@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 
 import {
   BarraAccionesComponent,
+  BotonComponent,
   DataTableComponent,
   EstadoVistaComponent,
   FormFieldComponent,
@@ -28,6 +29,7 @@ import {
 import type { Poliza } from '../../../../core/models/poliza.model';
 import { estadoABadge } from '../../../../shared/pipes/estado-badge';
 import { esPolizaVencida } from '../../induccion-habilitacion';
+import { accionRenovacion, ordenarPorUrgencia } from '../../renovaciones-lista';
 
 
 /**
@@ -47,6 +49,7 @@ import { esPolizaVencida } from '../../induccion-habilitacion';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     BarraAccionesComponent,
+    BotonComponent,
     DataTableComponent,
     EstadoVistaComponent,
     FormFieldComponent,
@@ -74,21 +77,35 @@ export class RenovacionesComponent {
   /** Texto del buscador: filtra por número de póliza en el portafolio cargado. */
   protected readonly busqueda = signal('');
 
-  /** Pólizas del portafolio que coinciden con la búsqueda. */
+  /** Filtro por vigencia de la póliza (`estado_poliza` del catálogo); vacío = todas. */
+  protected readonly estadoFiltro = signal('');
+  protected readonly estados = this.catalogo.opciones('estado_poliza');
+
+  /** Pólizas que coinciden con la búsqueda y el filtro, de la más urgente a la menos urgente. */
   private readonly polizasVisibles = computed(() => {
     const polizas = this.portafolio()?.polizas ?? [];
     const q = this.busqueda().trim().toLowerCase();
-    return q ? polizas.filter((p) => p.numero.toLowerCase().includes(q)) : polizas;
+    const estado = this.estadoFiltro();
+    return ordenarPorUrgencia(
+      polizas.filter((p) => (!q || p.numero.toLowerCase().includes(q)) && (!estado || p.estado === estado)),
+    );
   });
+
+  protected readonly hayFiltros = computed(() => !!this.busqueda().trim() || !!this.estadoFiltro());
+
+  protected limpiarFiltros(): void {
+    this.busqueda.set('');
+    this.estadoFiltro.set('');
+  }
 
   /** Columnas del DataTable de pólizas, con sort, insignia y acción (Req 16.2, 16.3). */
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'numero', header: 'Póliza', ordenable: true },
     { key: 'producto', header: 'Producto', ordenable: true },
     { key: 'fechaVencimiento', header: 'Vencimiento', ordenable: true },
-    { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
-    { key: 'gestion', header: 'Gestión del área', tipo: 'principal', ordenable: true },
-    { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Gestionar', alinear: 'derecha' },
+    { key: 'estado', header: 'Vigencia', tipo: 'badge', ordenable: true },
+    { key: 'gestion', header: 'Estado de la gestión', tipo: 'principal', ordenable: true },
+    { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Renovar', alinear: 'derecha' },
   ];
 
   /** Filas mapeadas para el DataTable, con la variante de insignia por estado. */
@@ -105,6 +122,7 @@ export class RenovacionesComponent {
       gestion: p.gestion ?? 'Sin gestión aún',
       gestionSub: p.estadoWarehouse ?? '',
       gestionar: '',
+      gestionarTexto: accionRenovacion(p),
     }));
   });
 
@@ -153,5 +171,10 @@ export class RenovacionesComponent {
     void this.router.navigate(['/app/renovaciones/detalle'], {
       queryParams: { numeroPolizaInicial: poliza.numero },
     });
+  }
+
+  /** Estado vacío: el primer paso para tener pólizas es cotizar. */
+  protected irACotizar(): void {
+    void this.router.navigate(['/app/cotizador']);
   }
 }

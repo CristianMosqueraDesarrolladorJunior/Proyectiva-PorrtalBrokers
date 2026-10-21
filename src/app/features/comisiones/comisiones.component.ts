@@ -4,7 +4,8 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { catchError, debounceTime, of, switchMap } from 'rxjs';
 import { Router } from '@angular/router';
 
-import { CuentaCobroResponse, FilaCruda, RevisionCuenta } from '../../core/models/comisiones.model';
+import { CuentaCobroResponse, EstadoCobro, FilaCruda, PolizaExpedida, RevisionCuenta } from '../../core/models/comisiones.model';
+import { ESTADOS_COBRO, esCobrable, etiquetaEstado, fechaCorta, filaPoliza, filtrarPolizas } from './comisiones-polizas';
 import { ComisionesService } from '../../core/services/comisiones.service';
 import { ComisionesResponse, DashboardService } from '../../core/services/dashboard.service';
 import { PerfilService } from '../../core/services/perfil.service';
@@ -28,7 +29,10 @@ import {
   SummaryCardComponent,
 } from '../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaResumen, FilaTabla } from '../../shared/components';
+import { FichaComponent, type SeccionFicha } from '../../shared/components/ficha/ficha.component';
+import { ModalDialogComponent } from '../../shared/components/modal-dialog/modal-dialog.component';
 import { FeedbackService } from '../../shared/services/feedback/feedback.service';
+import { plural } from '../../core/util/plural';
 
 /**
  * Comisiones del broker REGISTRADO: valor estimado del periodo y la cuenta de cobro.
@@ -58,11 +62,14 @@ const REVISION_VACIA: RevisionCuenta = { filas: [], errores: [], avisos: [], tot
     MoneyInputComponent,
     PageHeaderComponent,
     SummaryCardComponent,
+    ModalDialogComponent,
+    FichaComponent,
   ],
   templateUrl: './comisiones.component.html',
   styleUrl: './comisiones.component.scss',
 })
 export class ComisionesComponent {
+  protected readonly plural = plural;
   private readonly feedback = inject(FeedbackService);
   private readonly comisiones = inject(ComisionesService);
   private readonly dashboard = inject(DashboardService);
@@ -85,7 +92,40 @@ export class ComisionesComponent {
   protected readonly porcentajeConfirmado = signal(false);
 
   // --- Cuenta de cobro en edición ---
-  protected readonly filasCrudas = signal<readonly FilaCruda[]>([{ poliza: '', valor: '' }]);
+  protected readonly filasCrudas = signal<readonly FilaCruda[]>([]);
+
+  // --- Pólizas a cobrar: tabla con filtros, orden, paginación, selección y detalle ---
+  protected readonly polizas = signal<readonly PolizaExpedida[]>([]);
+  protected readonly cargandoPolizas = signal(true);
+  protected readonly errorPolizas = signal(false);
+  protected readonly estadoFiltro = signal<EstadoCobro | ''>('');
+  protected readonly desde = signal('');
+  protected readonly hasta = signal('');
+  protected readonly seleccionadas = signal<readonly string[]>([]);
+  protected readonly detalle = signal<PolizaExpedida | null>(null);
+  protected readonly estadosCobro = ESTADOS_COBRO;
+  protected readonly hayFiltros = computed(() => !!this.estadoFiltro() || !!this.desde() || !!this.hasta());
+  protected readonly polizasFiltradas = computed(() =>
+    filtrarPolizas(this.polizas(), { estado: this.estadoFiltro(), desde: this.desde(), hasta: this.hasta() }),
+  );
+  protected readonly filasPolizas = computed<readonly FilaTabla[]>(() => this.polizasFiltradas().map(filaPoliza));
+  protected readonly columnasPolizas: readonly ColumnaTabla[] = [
+    { key: 'poliza', header: 'N° póliza', ordenable: true },
+    { key: 'emision', header: 'Emisión', ordenable: true },
+    { key: 'estado', header: 'Estado de pago', tipo: 'badge', ordenable: true },
+    { key: 'comision', header: 'Comisión', alinear: 'derecha', ordenable: true },
+    {
+      key: 'ver',
+      header: 'Detalle',
+      tipo: 'acciones',
+      acciones: [{ id: 'ver', etiqueta: 'Ver detalle', icono: 'visibility' }],
+      alinear: 'derecha',
+    },
+  ];
+  protected readonly pendientesCobro = computed(() => this.polizas().filter(esCobrable).length);
+  protected readonly pagadas = computed(() => this.polizas().filter((p) => p.estadoPago === 'PAGADA').length);
+  protected readonly otrasPolizas = computed(() => this.polizas().length - this.pendientesCobro() - this.pagadas());
+  protected readonly limiteSuperado = computed(() => this.seleccionadas().length >= this.maximoFilas);
   protected readonly intento = signal(false);
   protected readonly generando = signal(false);
   protected readonly generada = signal<CuentaCobroResponse | null>(null);
@@ -105,22 +145,21 @@ export class ComisionesComponent {
   protected readonly errorHistorial = signal(false);
 
   protected readonly columnasHistorial: readonly ColumnaTabla[] = [
+    { key: 'numero', header: 'N°', ordenable: true, nowrap: true },
     { key: 'fecha', header: 'Fecha', ordenable: true },
     { key: 'polizas', header: 'Pólizas', alinear: 'derecha' },
     { key: 'valor', header: 'Valor cobrado', alinear: 'derecha', ordenable: true },
     { key: 'comision', header: 'Comisión', alinear: 'derecha', ordenable: true },
-    { key: 'estado', header: 'Envío', tipo: 'badge' },
     { key: 'descargar', header: '', tipo: 'accion', textoAccion: 'Descargar PDF', alinear: 'derecha' },
   ];
 
   protected readonly filasHistorial = computed<readonly FilaTabla[]>(() =>
     this.historial().map((c) => ({
+      numero: c.consecutivo,
       fecha: new Date(c.fecha).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }),
       polizas: c.polizas,
       valor: pesos(c.totalValor),
       comision: pesos(c.totalComision),
-      estado: c.enviada ? 'Enviada al área' : 'Pendiente de envío',
-      estadoVariante: c.enviada ? 'success' : 'warning',
     })),
   );
 
@@ -149,6 +188,7 @@ export class ComisionesComponent {
     this.cargarPeriodo();
     this.cargarAcuerdo();
     this.cargarHistorial();
+    this.cargarPolizas();
     toObservable(this.filasCrudas)
       .pipe(
         debounceTime(300),
@@ -171,29 +211,68 @@ export class ComisionesComponent {
       });
   }
 
-  // --- Filas ---
-  protected comisionFila(indice: number): string {
-    const cruda = this.filasCrudas()[indice];
-    const fila = this.revision().filas.find((f) => f.poliza === cruda.poliza.replace(/\D/g, ''));
-    return fila ? pesos(fila.comision) : '—';
+  // --- Selección de pólizas ---
+  /** Elegir pólizas: arma las filas de la cuenta (valor pagado por el propietario) y el servidor las revisa. */
+  protected alElegir(ids: readonly string[]): void {
+    const permitidas = ids.slice(0, this.maximoFilas);
+    this.seleccionadas.set(permitidas);
+    const porNumero = new Map(this.polizas().map((p) => [p.numeroPoliza, p]));
+    this.filasCrudas.set(
+      permitidas.flatMap((id) => {
+        const p = porNumero.get(id);
+        return p ? [{ poliza: p.numeroPoliza, valor: String(p.valorPoliza) }] : [];
+      }),
+    );
   }
 
-  protected actualizarFila(indice: number, campo: keyof FilaCruda, valor: string): void {
-    this.filasCrudas.update((filas) => filas.map((f, i) => (i === indice ? { ...f, [campo]: valor } : f)));
+  protected limpiarSeleccion(): void {
+    this.alElegir([]);
+  }
+
+  protected limpiarFiltros(): void {
+    this.estadoFiltro.set('');
+    this.desde.set('');
+    this.hasta.set('');
   }
 
   protected valorDe(evento: Event): string {
-    return (evento.target as HTMLInputElement).value;
+    return (evento.target as HTMLInputElement | HTMLSelectElement).value;
   }
 
-  protected agregarFila(): void {
-    if (this.filasCrudas().length >= this.maximoFilas) return;
-    this.filasCrudas.update((filas) => [...filas, { poliza: '', valor: '' }]);
+  /** «Ver detalle» de una fila: abre los datos de la póliza y de su pago. */
+  protected verDetalle(evento: AccionFila): void {
+    const poliza = this.polizasFiltradas().at(evento.indice);
+    if (poliza) this.detalle.set(poliza);
   }
 
-  protected quitarFila(indice: number): void {
-    this.filasCrudas.update((filas) => (filas.length === 1 ? [{ poliza: '', valor: '' }] : filas.filter((_, i) => i !== indice)));
-  }
+  protected readonly seccionesDetalle = computed<readonly SeccionFicha[]>(() => {
+    const p = this.detalle();
+    if (!p) return [];
+    const monto = (v: number) => (v > 0 ? pesos(v) : '—');
+    return [
+      {
+        titulo: 'Datos de la póliza',
+        icono: 'policy',
+        datos: [
+          { etiqueta: 'N° de póliza', valor: p.numeroPoliza },
+          { etiqueta: 'Fecha de emisión', valor: fechaCorta(p.fechaEmision) },
+          { etiqueta: 'Valor pagado por el propietario', valor: monto(p.valorPoliza) },
+          { etiqueta: 'Último día para cobrarla', valor: fechaCorta(p.fechaLimiteCobro) },
+        ],
+      },
+      {
+        titulo: 'Datos del pago',
+        icono: 'payments',
+        datos: [
+          { etiqueta: 'Estado', valor: etiquetaEstado(p.estadoPago) },
+          { etiqueta: 'Tu comisión', valor: monto(p.comision), destacado: true },
+          { etiqueta: 'Porcentaje del acuerdo', valor: p.porcentaje > 0 ? `${p.porcentaje} %` : '—' },
+          { etiqueta: 'Fecha de pago', valor: fechaCorta(p.fechaPago) },
+          { etiqueta: 'Orden de pago / factura', valor: p.ordenPago || '—' },
+        ],
+      },
+    ];
+  });
 
   // --- Generar ---
   protected generar(): void {
@@ -207,13 +286,12 @@ export class ComisionesComponent {
         next: (cuenta) => {
           this.generando.set(false);
           this.generada.set(cuenta);
-          this.feedback.exito({
-            titulo: '¡Cuenta de cobro generada!',
-            mensaje: `${cuenta.polizas} pólizas por ${this.pesos(cuenta.totalComision)}. Descárgala y cárgala en la plataforma de proveedores para recibir tu pago.`,
-          });
-          this.filasCrudas.set([{ poliza: '', valor: '' }]);
+          // Aviso breve; la descarga queda en la misma tarjeta de la cuenta de cobro.
+          this.feedback.toast({ variante: 'exito', mensaje: `Cuenta de cobro N° ${cuenta.consecutivo} generada.` });
+          this.limpiarSeleccion();
           this.intento.set(false);
           this.cargarHistorial();
+          this.cargarPolizas();
         },
         error: (err: unknown) => {
           this.generando.set(false);
@@ -242,6 +320,25 @@ export class ComisionesComponent {
   }
 
   // --- Carga ---
+  protected cargarPolizas(): void {
+    this.cargandoPolizas.set(true);
+    this.errorPolizas.set(false);
+    this.comisiones
+      .polizasExpedidas()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (r) => {
+          this.polizas.set(r);
+          this.cargandoPolizas.set(false);
+        },
+        error: () => {
+          this.polizas.set([]);
+          this.errorPolizas.set(true);
+          this.cargandoPolizas.set(false);
+        },
+      });
+  }
+
   private cargarPeriodo(): void {
     this.dashboard
       .obtenerComisiones()
@@ -280,5 +377,10 @@ export class ComisionesComponent {
           this.errorHistorial.set(true);
         },
       });
+  }
+
+  /** Estado vacío: el primer paso para tener pólizas es cotizar. */
+  protected irACotizar(): void {
+    void this.router.navigate(['/app/cotizador']);
   }
 }

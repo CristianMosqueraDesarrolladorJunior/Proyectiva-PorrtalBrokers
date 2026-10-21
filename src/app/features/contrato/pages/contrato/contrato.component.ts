@@ -1,3 +1,4 @@
+import { CtlValidacionComponent } from '../../components/ctl-validacion/ctl-validacion.component';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -36,8 +37,10 @@ import type {
   DuracionContratoMeses,
   LecturaContratoResponse,
   MetodoPagoContrato,
+  FormatoContrato,
 } from '../../../../core/models/contrato.model';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
+import { descargarArchivo } from '../../../../core/util/descargar-archivo';
 import { BorradorRadicacionService } from '../../../../core/services/borrador-radicacion.service';
 import type { TipoDocumentoIdentidad } from '../../../../core/models/radicacion.model';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
@@ -106,6 +109,7 @@ const OTRA_CIUDAD = '__otra__';
     InfoBoxComponent,
     SuccessScreenComponent,
     LectorContratoComponent,
+    CtlValidacionComponent,
   ],
   templateUrl: './contrato.component.html',
   styleUrl: './contrato.component.scss',
@@ -258,8 +262,6 @@ export class ContratoComponent {
   protected readonly numeroCuentaValido = computed(() => esNumeroCuentaValido(this.conNumeroCuenta()));
   protected readonly metodosPago: readonly { valor: MetodoPagoContrato; etiqueta: string }[] = [
     { valor: 'transferencia', etiqueta: 'Transferencia bancaria' },
-    { valor: 'consignacion', etiqueta: 'Consignación' },
-    { valor: 'debito_automatico', etiqueta: 'Débito automático' },
     { valor: 'efectivo', etiqueta: 'Efectivo' },
   ];
 
@@ -318,7 +320,15 @@ export class ContratoComponent {
     if (con.duracionMeses && (this.duraciones as readonly number[]).includes(con.duracionMeses)) {
       this.conDuracion.set(con.duracionMeses as DuracionContratoMeses);
     }
-    if (lectura.deudorSolidario?.nombres) this.conDeudoresSolidarios.set(true);
+    // El deudor leído del PDF se suma a los del estudio digital; el broker conserva u descarta cada uno.
+    const deu = lectura.deudorSolidario;
+    if (deu?.numeroIdentificacion) {
+      this.sumarDeudores([{
+        nombres: deu.nombres ?? '', apellidos: deu.apellidos ?? '', tipoIdentificacion: deu.tipoIdentificacion ?? 'CC',
+        numeroIdentificacion: deu.numeroIdentificacion, ciudadExpedicion: '', direccionNotificacion: deu.direccion ?? '',
+        telefono: deu.telefono ?? '', correo: deu.correo ?? '',
+      }]);
+    }
   }
 
   /**
@@ -408,7 +418,7 @@ export class ContratoComponent {
   protected readonly esUltimoPaso = computed(() => this.pasoActual() === ULTIMO_PASO);
 
   /** Habilitación de "Generar contrato": todos los pasos válidos (Req 30.7). */
-  protected readonly generacionHabilitada = computed(() => puedeGenerar(this.estado()));
+  protected readonly generacionHabilitada = computed(() => puedeGenerar(this.estado()) && !this.deudoresExceden());
 
   /** Verdadero mientras se solicita la generación al backend (Req 30.7). */
   protected readonly enviando = computed(() => this.estadoEnvio() === 'enviando');
@@ -459,7 +469,7 @@ export class ContratoComponent {
           if (inm.canon && this.conCanon() === null) this.conCanon.set(Number(inm.canon) || null);
           if (inm.administracion && this.conAdministracion() === null) this.conAdministracion.set(Number(inm.administracion) || null);
         }
-        this.deudores.set(p.deudores.slice(0, 2).map((d) => ({
+        this.sumarDeudores(p.deudores.map((d) => ({
           nombres: d.nombres ?? '',
           apellidos: d.apellidos ?? '',
           tipoIdentificacion: d.tipoIdentificacion ?? 'CC',
@@ -469,9 +479,6 @@ export class ContratoComponent {
           telefono: d.telefono ?? '',
           correo: d.correo ?? '',
         })));
-        if (this.deudores().length) {
-          this.conDeudoresSolidarios.set(true);
-        }
         this.avisarEstudio({
           tipo: 'success',
           titulo: 'Datos del estudio cargados',
@@ -489,7 +496,24 @@ export class ContratoComponent {
     });
   }
 
-  protected editarDeudor(i: number, campo: keyof DeudorSolidario, valor: string): void {
+  /** Suma deudores a la lista sin repetir por número de identificación (estudio digital y contrato leído). */
+  private sumarDeudores(nuevos: readonly DeudorSolidario[]): void {
+    this.deudores.update((lista) => [
+      ...lista,
+      ...nuevos.filter((n) => !lista.some((d) => d.numeroIdentificacion.trim() === n.numeroIdentificacion.trim())),
+    ]);
+    this.conDeudoresSolidarios.set(this.deudores().length > 0);
+  }
+
+  protected quitarDeudor(i: number): void {
+    this.deudores.update((lista) => lista.filter((_, j) => j !== i));
+    this.conDeudoresSolidarios.set(this.deudores().length > 0);
+  }
+
+  /** La plantilla del contrato tiene espacio para dos deudores: si hay más, el broker descarta los que sobren. */
+  protected readonly deudoresExceden = computed(() => this.deudores().length > 2);
+
+  protected editarDeudor(i: number, campo: Exclude<keyof DeudorSolidario, 'tipoIdentificacion' | 'numeroIdentificacion'>, valor: string): void {
     this.deudores.update((lista) => lista.map((d, j) => (j === i ? { ...d, [campo]: valor } : d)));
   }
 
@@ -506,47 +530,27 @@ export class ContratoComponent {
       marcado ? [...new Set([...lista, servicio])] : lista.filter((s) => s !== servicio));
   }
 
-  /** Marcar "Incluir deudores" con la lista vacía abre el primer deudor para diligenciarlo. */
-  protected alternarDeudores(incluir: boolean): void {
-    this.conDeudoresSolidarios.set(incluir);
-    if (incluir && this.deudores().length === 0) {
-      this.agregarDeudor();
-    }
-  }
+  /** Formato en descarga (null = ninguno); cada botón se bloquea solo mientras genera su archivo. */
+  protected readonly descargando = signal<FormatoContrato | null>(null);
 
-  protected agregarDeudor(): void {
-    this.deudores.update((lista) => lista.length >= 2 ? lista : [...lista, {
-      nombres: '', apellidos: '', tipoIdentificacion: 'CC', numeroIdentificacion: '', ciudadExpedicion: '',
-      direccionNotificacion: '', telefono: '', correo: '',
-    }]);
-  }
-
-  protected quitarDeudor(i: number): void {
-    this.deudores.update((lista) => lista.filter((_, j) => j !== i));
-  }
-
-  protected readonly descargando = signal(false);
-
-  /** Descarga el contrato en Word: el backend usa la plantilla de vivienda o comercio según el uso del inmueble. */
-  protected descargarContrato(): void {
+  /** Descarga el contrato como archivo individual (PDF o Word), nunca empaquetado: el backend elige la plantilla. */
+  protected descargarContrato(formato: FormatoContrato): void {
     const referencia = this.confirmacion()?.radicado;
-    if (!referencia || this.descargando()) {
+    if (!referencia || this.descargando() !== null) {
       return;
     }
-    this.descargando.set(true);
-    this.contratoService.descargarDocumento(referencia).subscribe({
+    this.descargando.set(formato);
+    this.contratoService.descargarDocumento(referencia, formato).subscribe({
       next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const enlace = document.createElement('a');
-        enlace.href = url;
-        enlace.download = `Contrato-${referencia}.docx`;
-        enlace.click();
-        URL.revokeObjectURL(url);
-        this.descargando.set(false);
+        descargarArchivo(blob, `Contrato-${referencia}.${formato}`);
+        this.descargando.set(null);
       },
       error: () => {
-        this.descargando.set(false);
-        this.feedback.toast({ variante: 'error', mensaje: 'No fue posible generar el documento del contrato. Intenta nuevamente.' });
+        this.descargando.set(null);
+        this.feedback.toast({
+          variante: 'error',
+          mensaje: `No pudimos generar el contrato en ${formato === 'pdf' ? 'PDF' : 'Word'}. Intenta de nuevo.`,
+        });
       },
     });
   }

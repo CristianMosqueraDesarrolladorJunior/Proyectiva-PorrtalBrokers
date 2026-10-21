@@ -35,6 +35,8 @@ export interface ColumnaTabla {
   readonly textoAccion?: string;
   /** Alineación del contenido de la celda. */
   readonly alinear?: 'izquierda' | 'centro' | 'derecha';
+  /** Evita que el valor se parta en dos líneas (referencias, montos, fechas). */
+  readonly nowrap?: boolean;
 }
 
 /** Fila genérica de la tabla: mapa de clave de columna a valor mostrable. */
@@ -127,6 +129,18 @@ export class DataTableComponent {
 
   /** Emite cuando se activa el botón de una columna de acción. */
   @Output() accion = new EventEmitter<AccionFila>();
+
+  /** Muestra una casilla por fila para elegir varias (las filas con `seleccionable: 0` quedan deshabilitadas). */
+  @Input() seleccionable = false;
+
+  /** Ids (valor de `claveFila`) de las filas elegidas; los mantiene el contenedor. */
+  @Input() seleccionadas: readonly string[] = [];
+
+  /** Propiedad de la fila que la identifica al seleccionarla. */
+  @Input() claveFila = 'id';
+
+  /** Emite la nueva lista de ids elegidos. */
+  @Output() seleccionadasChange = new EventEmitter<readonly string[]>();
 
   /** Texto de búsqueda incrustada. */
   protected readonly busqueda = signal('');
@@ -255,6 +269,45 @@ export class DataTableComponent {
       return;
     }
     this.cambioPagina.emit(pagina);
+  }
+
+  protected idFila(fila: FilaTabla): string {
+    return String(fila[this.claveFila] ?? '');
+  }
+
+  protected puedeElegir(fila: FilaTabla): boolean {
+    return fila['seleccionable'] !== 0;
+  }
+
+  protected estaElegida(fila: FilaTabla): boolean {
+    return this.seleccionadas.includes(this.idFila(fila));
+  }
+
+  /** Marca o desmarca una fila. */
+  protected alternarEleccion(fila: FilaTabla): void {
+    if (!this.puedeElegir(fila)) {
+      return;
+    }
+    const id = this.idFila(fila);
+    this.seleccionadasChange.emit(
+      this.seleccionadas.includes(id) ? this.seleccionadas.filter((x) => x !== id) : [...this.seleccionadas, id],
+    );
+  }
+
+  /** ¿Todas las filas elegibles de la página están elegidas? */
+  protected paginaCompletaElegida(): boolean {
+    const elegibles = this.filasMostradas().filter((f) => this.puedeElegir(f));
+    return elegibles.length > 0 && elegibles.every((f) => this.estaElegida(f));
+  }
+
+  /** Marca o desmarca todas las filas elegibles de la página. */
+  protected alternarPaginaCompleta(): void {
+    const ids = this.filasMostradas().filter((f) => this.puedeElegir(f)).map((f) => this.idFila(f));
+    this.seleccionadasChange.emit(
+      this.paginaCompletaElegida()
+        ? this.seleccionadas.filter((x) => !ids.includes(x))
+        : [...new Set([...this.seleccionadas, ...ids])],
+    );
   }
 
   /** Notifica la selección de una fila (índice dentro de la página original). */

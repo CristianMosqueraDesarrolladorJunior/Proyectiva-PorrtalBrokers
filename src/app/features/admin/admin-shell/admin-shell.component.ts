@@ -5,6 +5,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { LayoutService } from '../../../core/services/layout.service';
 import { SessionService } from '../../../core/services/session.service';
 import { IconComponent } from '../../../shared/components';
+import { RecorridoPlataformaComponent } from '../../shell/recorrido/recorrido-plataforma.component';
 import { AccesoSidebar, SidebarComponent } from '../../shell/sidebar/sidebar.component';
 
 const ACCESOS_ADMIN: readonly AccesoSidebar[] = [
@@ -16,7 +17,7 @@ const ACCESOS_ADMIN: readonly AccesoSidebar[] = [
   { ruta: 'polizas', icono: 'policy', etiqueta: 'Pólizas' },
   { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
   // "Referidos" queda oculto del menú (la ruta sigue existiendo).
-  { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
+  { ruta: 'comisiones', icono: 'receipt_long', etiqueta: 'Cuentas de cobro' },
 ];
 
 const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
@@ -25,7 +26,7 @@ const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
   { ruta: 'prospectos', icono: 'how_to_reg', etiqueta: 'Mis prospectos' },
   { ruta: 'negocios', icono: 'description', etiqueta: 'Negocios' },
   { ruta: 'polizas', icono: 'policy', etiqueta: 'Pólizas' },
-  { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
+  { ruta: 'comisiones', icono: 'receipt_long', etiqueta: 'Cuentas de cobro' },
   { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
 ];
 
@@ -40,7 +41,7 @@ const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
   selector: 'app-admin-shell',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, SidebarComponent, IconComponent],
+  imports: [RouterOutlet, SidebarComponent, IconComponent, RecorridoPlataformaComponent],
   templateUrl: './admin-shell.component.html',
   styleUrls: ['../../shell/shell.component.scss', './admin-shell.component.scss'],
 })

@@ -12,22 +12,29 @@
   </app-page-header>
 
   @if (moduloBloqueado(); as modulo) {
-    <app-alert-banner variante="warning" titulo="Módulo no disponible todavía">
-      «{{ modulo }}» se habilita cuando tu cuenta pase a broker registrado. Completa tu legalización desde Mi perfil.
+    <app-alert-banner variante="warning" titulo="Esta sección se habilita cuando seas broker registrado">
+      {{ etiquetaModulo(modulo) }} estará disponible apenas aprobemos tu registro. Completa tu legalización desde Mi perfil.
+    </app-alert-banner>
+  }
+
+  @if (!veComisiones() && !moduloBloqueado()) {
+    <app-alert-banner variante="success" titulo="Cuando aprobemos tu registro" icono="lock_open">
+      Se habilitan {{ modulosPorHabilitar() }}. Mientras tanto puedes cotizar, generar contratos y radicar.
     </app-alert-banner>
   }
 
   <!-- Banner Herramienta Rápida (Req 5.1, 5.5) -->
   <app-quick-tool-banner
-    titulo="Cotiza en segundos la póliza ideal para tu cliente"
-    descripcion="Calcula primas, coberturas y comisiones al instante. Comparte la cotización directamente con tu cliente."
+    titulo="Cotiza en segundos la póliza ideal para el propietario"
+    descripcion="Calcula primas, coberturas y comisiones al instante. Comparte la cotización directamente con el propietario."
     textoAccion="Ir al cotizador"
     (accion)="irAlCotizador()"
   ></app-quick-tool-banner>
 
   <!-- Dashboard grid: comisión (izq, ancha) + KPIs (der, 2x2) (Req 5.2, 5.3) -->
-  <div class="dash-grid">
-    <!-- Tarjeta de comisión estimada con barra apilada por ramo (Req 5.2) -->
+  <div class="dash-grid" [class.dash-grid--sin-comision]="!veComisiones()">
+    <!-- Tarjeta de comisión estimada con barra apilada por ramo (Req 5.2); el prospecto no la ve. -->
+    @if (veComisiones()) {
     <app-commission-breakdown-card
       class="dash-comm"
       [valorEstimado]="comisiones()?.valorEstimado ?? 0"
@@ -37,6 +44,7 @@
         [polizasPendientes]="comisiones()?.polizasPendientes ?? 0"
         [plazoMeses]="plazoCobroMeses"
     />
+    }
 
     <!-- KPIs en grid 2x2 con íconos + delta de tendencia (Req 5.3, 5.4) -->
     <div class="dash-kpis-grid">
@@ -44,20 +52,20 @@
         label="Primas generadas"
         [valor]="kpis() ? formatearCop(kpis()!.primasGeneradas) : '—'"
         icono="trending_up"
-        sub="Pólizas expedidas, con IVA"
+        [sub]="plural(kpis()?.emitidas ?? 0, 'póliza expedida', 'pólizas expedidas') + ' · con IVA'"
       />
       <app-kpi-card
         label="Total radicadas"
         [valor]="kpis()?.totalRadicadas ?? '—'"
         icono="contract"
         variante="exito"
-        sub="Solicitudes gestionadas"
+        sub="Expedidas, en trámite y bloqueadas"
       />
       <app-kpi-card
-        label="En revisión"
+        label="En trámite"
         [valor]="kpis()?.enRevision ?? '—'"
         icono="pending_actions"
-        sub="En revisión del área"
+        sub="Por enviar, en revisión o por corregir"
       />
       <!-- KPI de alerta con estilo danger (Req 5.4) -->
       <app-kpi-card
@@ -69,6 +77,12 @@
       />
     </div>
   </div>
+
+  @if (kpis(); as k) {
+    <p class="dash-cuadre" role="note">
+      {{ plural(k.totalRadicadas, 'radicada', 'radicadas') }} = {{ plural(k.emitidas, 'expedida', 'expedidas') }} + {{ k.enRevision }} en trámite + {{ plural(k.bloqueadas, 'bloqueada', 'bloqueadas') }}.
+    </p>
+  }
 
   <!-- Filtrado inteligente colapsable (Req 6.2) -->
   <app-filtrado-inteligente [totalFiltros]="5">
@@ -147,5 +161,6 @@
   <app-detalle-solicitud
     [referencia]="referenciaSeleccionada()"
     (cerrar)="onCerrarDetalle()"
+    (actualizado)="cargarSolicitudes()"
   ></app-detalle-solicitud>
 </section>

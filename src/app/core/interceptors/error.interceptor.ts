@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 
 /** Mensaje genérico en español mostrado ante cualquier fallo (Req 28.5). */
-export const MENSAJE_ERROR_GENERICO = 'Ocurrió un error. Intenta nuevamente.';
+export const MENSAJE_ERROR_GENERICO = 'Algo salió mal. Intenta de nuevo.';
 
 /**
  * Error normalizado que se propaga hacia la UI. No contiene trazas, cuerpos de

@@ -1,8 +1,23 @@
 <!--
-  Registro de broker: comparte la UI del login (fondo y tarjeta). Asistente de 3 pasos: 1) datos (crea la
-  cuenta y abre la sesión), 2) Conocimiento de Cliente (SARLAFT) y 3) documentos. Desde el paso 1 se puede
-  quedar como prospecto, y en los pasos 2 y 3 completarlo después desde Mi perfil.
+  Registro de broker: comparte la UI del login (fondo y tarjeta). Asistente de 3 pasos: 1) cómo funciona, 2) tus datos
+  (crea la cuenta y abre la sesión) y 3) documentos. Desde el paso 2 se puede quedar como prospecto y completar después.
 -->
+@if (registroEnviado()) {
+  <!-- Confirmación: el registro quedó enviado. Siempre hay salida («Entendido» lleva al portal). -->
+  <main class="registro" role="main">
+    <section class="registro-card registro-card--confirmacion" aria-labelledby="registro-confirmacion">
+      <app-success-screen
+        titulo="¡Ya tenemos tus datos!"
+        mensaje="Recibimos tu solicitud. Nuestro equipo revisará tu información, y te contactará con el resultado."
+        icono="check"
+        varianteIcono="success"
+        [tarjetas]="[{ etiqueta: 'Estado', valor: 'En revisión' }]"
+        textoVolver="Entendido"
+        (volver)="irAlPortal()"
+      />
+    </section>
+  </main>
+} @else {
 <main class="registro" role="main">
   <section class="registro-card" aria-labelledby="registro-titulo">
     <!-- Escritorio: columna izquierda fija (marca, etapas, aviso) y derecha con el contenido del paso. -->
@@ -12,15 +27,15 @@
       <h2 id="registro-titulo" class="registro-titulo">
         @switch (paso()) {
           @case (1) { Inicia a vender pólizas con nosotros }
-          @case (2) { Adjunta tus documentos }
-          @case (3) { Verifica tu Conocimiento de Cliente }
+          @case (2) { Cuéntanos quién eres }
+          @case (3) { Adjunta tus documentos }
         }
       </h2>
       <p class="registro-subtitulo">
         @switch (paso()) {
-          @case (1) { Califícate como broker. }
-          @case (2) { Con tus documentos aprobados serás broker registrado. }
-          @case (3) { Opcional: si ya lo tienes vigente o cargaste el formulario, envía tu solicitud. }
+          @case (1) { Esto es lo que necesitas para calificarte como broker. }
+          @case (2) { Con tus datos creamos tu cuenta y ya puedes cotizar y radicar. }
+          @case (3) { Con tus documentos aprobados, serás broker registrado. }
         }
       </p>
 
@@ -43,7 +58,7 @@
     </header>
 
     <!-- Cómo funciona tu cuenta. -->
-    @if (paso() === 1) {
+    @if (paso() < 3) {
       <div class="registro-aviso registro-aviso--prospecto">
         <p class="registro-aviso__titulo"><app-icon nombre="rocket_launch" [tamano]="18" /> Vende desde hoy</p>
         <p>Con tu cuenta ya cotizas y radicas. Califícate como broker para desbloquear {{ modulosRestringidos.length }} módulos más y acceder a tus comisiones.</p>
@@ -51,7 +66,7 @@
     } @else {
       <div class="registro-aviso registro-aviso--broker">
         <p class="registro-aviso__titulo"><app-icon nombre="verified" [tamano]="18" /> Tu cuenta ya está creada</p>
-        <p>Cuando tu Conocimiento de Cliente esté vigente y aprobemos tus documentos, desbloqueas {{ modulosRestringidos.length }} módulos más y empiezas a recibir comisiones. Si prefieres, termina después desde Mi perfil.</p>
+        <p>Cuando aprobemos tus documentos, desbloqueas {{ modulosRestringidos.length }} módulos más y empiezas a recibir comisiones. Si prefieres, termina después desde Mi perfil.</p>
       </div>
     }
 
@@ -64,9 +79,19 @@
     </aside>
 
     <div class="registro-cuerpo">
+    <!-- ===================== Paso 1 · Cómo funciona ===================== -->
     @if (paso() === 1) {
+      <app-paso-como-funciona [requisitos]="requisitos" (aceptar)="aceptarComoFunciona()" />
+    }
 
-    <form class="registro-form" [formGroup]="formulario" (ngSubmit)="crearCuenta('perfil')" novalidate>
+    <!-- ===================== Paso 2 · Tus datos ===================== -->
+    @if (paso() === 2) {
+    <form class="registro-form" [formGroup]="formulario" (ngSubmit)="crearCuenta('documentos')" novalidate aria-labelledby="registro-seccion-datos">
+      <header class="registro-seccion">
+        <span class="registro-seccion__eyebrow">Paso 2 de 3</span>
+        <h3 id="registro-seccion-datos" class="registro-seccion__titulo">Tus datos</h3>
+        <p class="registro-seccion__texto">Con esto creamos tu cuenta. Tu número de documento será tu usuario para ingresar.</p>
+      </header>
       <div class="registro-grid">
         <app-form-field label="Nombre completo" controlId="reg-nombre" [requerido]="true" [error]="errorNombre">
           <input id="reg-nombre" class="registro-input" type="text" autocomplete="name" placeholder="Juan Pérez Gómez"
@@ -91,10 +116,12 @@
         </div>
 
         <app-form-field label="Ciudad" controlId="reg-ciudad" [requerido]="true" [error]="errorCiudad">
-          <select id="reg-ciudad" class="registro-input" formControlName="ciudad" [attr.aria-invalid]="!!errorCiudad">
-            <option value="" disabled>Selecciona tu ciudad</option>
-            @for (ciudad of ciudades; track ciudad) { <option [value]="ciudad">{{ ciudad }}</option> }
-          </select>
+          <!-- Escribe para filtrar las ciudades (son cerca de 190); solo se acepta una de la lista. -->
+          <input id="reg-ciudad" class="registro-input" formControlName="ciudad" list="reg-ciudades" autocomplete="off"
+            placeholder="Escribe tu ciudad y elígela" [attr.aria-invalid]="!!errorCiudad" />
+          <datalist id="reg-ciudades">
+            @for (ciudad of ciudades; track ciudad) { <option [value]="ciudad"></option> }
+          </datalist>
         </app-form-field>
 
         <app-form-field label="Tipo de documento" controlId="reg-tipo-doc" [requerido]="true">
@@ -108,21 +135,33 @@
             [attr.minlength]="documentoLongitudMin" [attr.maxlength]="documentoLongitudMax" [attr.aria-invalid]="!!errorDocumento" />
         </app-form-field>
 
-        <app-form-field label="Contraseña" [ayuda]="'Mínimo ' + passwordLongitudMin + ' caracteres'" controlId="reg-password" [requerido]="true" [error]="errorPassword">
-          <input id="reg-password" class="registro-input" type="password" autocomplete="new-password" placeholder="••••••••••" formControlName="password"
+        <div class="registro-grid__ancho registro-checks">
+          <app-check-declaracion [compacta]="true" controlId="reg-declaracion-inmobiliaria" formControlName="declaracionInmobiliaria"
+            [error]="errorDeclaracion">
+            Declaro que no he trabajado para inmobiliarias.
+            <app-info-tip texto="El programa es para agentes inmobiliarios independientes: es requisito para registrarte como broker." />
+          </app-check-declaracion>
+          <app-check-declaracion [compacta]="true" controlId="reg-tratamiento-datos" formControlName="aceptaTratamientoDatos"
+            [error]="errorTratamientoDatos">
+            Autorizo el tratamiento de mis datos personales.
+          </app-check-declaracion>
+        </div>
+
+        <app-form-field label="Contraseña" [ayuda]="mensajeClave" controlId="reg-password" [requerido]="true" [error]="errorPassword">
+          <input appVerClave id="reg-password" class="registro-input" type="password" autocomplete="new-password" placeholder="••••••••••" formControlName="password"
             [attr.minlength]="passwordLongitudMin" [attr.aria-invalid]="!!errorPassword" />
         </app-form-field>
 
         <app-form-field label="Confirmar contraseña" controlId="reg-password-confirm" [requerido]="true" [error]="errorPasswordConfirmacion">
-          <input id="reg-password-confirm" class="registro-input" type="password" autocomplete="new-password" placeholder="••••••••••" formControlName="passwordConfirmacion"
+          <input appVerClave id="reg-password-confirm" class="registro-input" type="password" autocomplete="new-password" placeholder="••••••••••" formControlName="passwordConfirmacion"
             [attr.minlength]="passwordLongitudMin" [attr.aria-invalid]="!!errorPasswordConfirmacion" />
         </app-form-field>
       </div>
 
-
       <div class="registro-acciones registro-acciones--fila">
-        <app-boton variante="accent" [disabled]="!datosValidos() || creandoHacia() !== null" (clicked)="crearCuenta('perfil')">
-          {{ creandoHacia() === 'perfil' ? 'Creando tu cuenta…' : 'Continuar como broker' }}
+        <app-boton variante="ghost" [disabled]="creandoHacia() !== null" (clicked)="paso.set(1)">Atrás</app-boton>
+        <app-boton variante="accent" [disabled]="!datosValidos() || creandoHacia() !== null" (clicked)="crearCuenta('documentos')">
+          {{ creandoHacia() === 'documentos' ? 'Creando tu cuenta…' : 'Continuar' }}
         </app-boton>
         <app-boton variante="outline" [disabled]="!datosValidos() || creandoHacia() !== null" (clicked)="crearCuenta('inicio')">
           {{ creandoHacia() === 'inicio' ? 'Creando tu cuenta…' : 'Crear cuenta y calificarme después' }}
@@ -131,114 +170,23 @@
     </form>
     }
 
-    <!-- ===================== Paso 2 · Documentos ===================== -->
-    @if (paso() === 2) {
-      <app-doc-uploader [reglas]="reglasUploader" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)"></app-doc-uploader>
-
-      <div class="registro-acciones">
-        <app-boton variante="accent" [disabled]="!puedeCompletarRegistro()" (clicked)="paso.set(3)">Continuar</app-boton>
-        <app-boton variante="ghost" (clicked)="irAlPortal()">Completar después</app-boton>
-      </div>
-    }
-
-    <!-- ===================== Paso 3 · Conocimiento de Cliente (opcional) ===================== -->
+    <!-- ===================== Paso 3 · Documentos ===================== -->
     @if (paso() === 3) {
-      <div class="registro-documento">
-        <app-icon nombre="badge" [tamano]="20" />
-        <span>
-          <small>Documento a verificar</small>
-          <b>{{ perfil().numeroDocumento }}</b>
-        </span>
-      </div>
-
-      @if (consultandoSarlaft()) {
-        <app-escalerita-loader texto="Verificando tu Conocimiento de Cliente..."></app-escalerita-loader>
-      } @else if (!sarlaftConsultado() && !errorSarlaft()) {
-        <!-- Antes de verificar: cómo funciona la validación. -->
-        <ol class="registro-flujo" aria-label="Cómo validamos tu Conocimiento de Cliente">
-          <li><b>Consultamos tu documento</b><span>Verificamos en línea tu Conocimiento de Cliente, sin que tengas que llenar nada.</span></li>
-          <li><b>Si está vigente</b><span>Queda listo y envías tu solicitud de inmediato.</span></li>
-          <li><b>Si está desactualizado</b><span>Te enviamos por SMS un enlace para actualizarlo y luego verificas de nuevo.</span></li>
-          <li><b>Si algo falla</b><span>Cargas el formulario físico diligenciado y firmado; queda en revisión y puedes continuar.</span></li>
-        </ol>
-      } @else if (sarlaftConsultado() || sarlaftListo()) {
-        @switch (perfil().sarlaft.estado) {
-          @case ('vigente') {
-            <div class="registro-resultado registro-resultado--ok" role="status">
-              <app-icon nombre="verified_user" [tamano]="22" />
-              <div><b>Conocimiento de Cliente actualizado</b><p>Tu Conocimiento de Cliente está vigente. Ya puedes enviar tu solicitud.</p></div>
-            </div>
-          }
-          @case ('en_cumplimiento') {
-            <div class="registro-resultado registro-resultado--error" role="alert">
-              <app-icon nombre="policy" [tamano]="22" />
-              <div>
-                <b>Tu solicitud pasa a revisión</b>
-                <p>Tu caso pasó a revisión del área de Cumplimiento. Te contactaremos por correo.</p>
-                @if (perfil().sarlaft.radicadoCumplimiento; as radicado) { <p>Radicado: <b>{{ radicado }}</b>.</p> }
-              </div>
-            </div>
-          }
-          @case ('fisico') {
-            <div class="registro-resultado registro-resultado--ok" role="status">
-              <app-icon nombre="upload_file" [tamano]="22" />
-              <div><b>Formulario físico cargado</b><p>Queda en revisión del área. Ya puedes enviar tu solicitud.</p></div>
-            </div>
-          }
-          @case ('sin_consultar') {
-            <div class="registro-resultado registro-resultado--error" role="alert">
-              <app-icon nombre="error" [tamano]="22" />
-              <div><b>No pudimos consultar tu Conocimiento de Cliente</b><p>Intenta de nuevo en unos minutos o termina después desde Mi perfil.</p></div>
-            </div>
-          }
-          @default {
-            <div class="registro-resultado registro-resultado--aviso" role="status">
-              <app-icon nombre="update" [tamano]="22" />
-              <div>
-                <b>Conocimiento de Cliente desactualizado</b>
-                <ol>
-                  @if (celularEnlace(); as celular) {
-                    <li>Te enviamos el enlace de actualización por SMS a tu celular {{ celular }}.</li>
-                    <li>Diligencia la actualización en ese formulario.</li>
-                  } @else {
-                    <li>Tu teléfono registrado no es un celular: no pudimos enviarte el enlace por SMS.</li>
-                  }
-                  <li>Vuelve aquí y verifica de nuevo, o carga el formulario físico de Conocimiento de Cliente.</li>
-                </ol>
-              </div>
-            </div>
-            @if (perfil().sarlaft.enlaceActualizacion; as enlace) {
-              <div class="registro-enlace">
-                <app-boton variante="accent" icono="open_in_new" (clicked)="abrirFormularioSarlaft(enlace)">Abrir formulario de actualización</app-boton>
-              </div>
-            }
-          }
-        }
-      }
-
-
-      @if (puedeCargarFisico()) {
-        <!-- Alternativa si la consulta falla o está desactualizado: cargar el formulario físico (queda en revisión del área). -->
-        <div class="registro-fisico">
-          <app-doc-uploader [reglas]="reglaSarlaftFisico" [cargados]="cargadoSarlaftFisico()" (archivoSeleccionado)="onSarlaftFisico($event)"></app-doc-uploader>
-          <app-boton variante="outline" icono="download" [disabled]="descargandoFormato()" (clicked)="descargarFormatoSarlaft()"
-            [ariaLabel]="'Descargar formato de Conocimiento de Cliente para persona ' + (formatoSarlaft() === 'juridica' ? 'jurídica' : 'natural')">
-            {{ descargandoFormato() ? 'Descargando…' : 'Descargar formato · ' + (formatoSarlaft() === 'juridica' ? 'Persona jurídica' : 'Persona natural') }}
-          </app-boton>
-        </div>
-      }
+      <header class="registro-seccion">
+        <span class="registro-seccion__eyebrow">Paso 3 de 3</span>
+        <h3 id="registro-seccion-documentos" class="registro-seccion__titulo">Documentos</h3>
+        <p class="registro-seccion__texto">Sube los {{ reglasUploader.length }} documentos para calificarte como broker. Formatos PDF, JPG o PNG.</p>
+        <p class="registro-seccion__avance" role="status">
+          <app-icon nombre="task_alt" [tamano]="16" /> {{ documentosCargados() }} de {{ reglasUploader.length }} cargados
+        </p>
+      </header>
+      <app-doc-uploader [reglas]="reglasUploader" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)"></app-doc-uploader>
 
       @if (enviandoSolicitud()) {
         <app-escalerita-loader texto="Enviando solicitud..."></app-escalerita-loader>
       } @else {
         <div class="registro-acciones">
-          <app-boton variante="accent" icono="send" [disabled]="!puedeCompletarRegistro()" (clicked)="enviarSolicitud()">Enviar solicitud de registro</app-boton>
-          @if (!sarlaftListo() && perfil().sarlaft.estado !== 'en_cumplimiento') {
-            <app-boton variante="outline" icono="policy" [disabled]="!puedeConsultarSarlaft()" (clicked)="verificarSarlaft()">
-              {{ sarlaftConsultado() ? 'Verificar de nuevo' : 'Verificar Conocimiento de Cliente' }}
-            </app-boton>
-          }
-          <app-boton variante="ghost" (clicked)="paso.set(2)">Atrás</app-boton>
+          <app-boton variante="accent" icono="send" [disabled]="!puedeEnviarSolicitud()" (clicked)="enviarSolicitud()">Enviar solicitud de registro</app-boton>
           <app-boton variante="ghost" (clicked)="irAlPortal()">Completar después</app-boton>
         </div>
       }
@@ -247,6 +195,7 @@
     </div>
   </section>
 </main>
+}
 
 <!-- Credenciales de acceso si el ingreso automático falla. -->
 <app-modal-dialog [abierto]="credenciales() !== null" [titulo]="credenciales()?.titulo ?? ''" (cerrar)="aceptarCredenciales()">

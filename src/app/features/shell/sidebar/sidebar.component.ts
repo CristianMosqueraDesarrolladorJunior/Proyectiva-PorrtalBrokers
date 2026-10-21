@@ -14,6 +14,7 @@ import { CatalogoService } from '../../../core/services/catalogo.service';
 import { LayoutService } from '../../../core/services/layout.service';
 import { MiPerfilService } from '../../../core/services/mi-perfil.service';
 import { PerfilService } from '../../../core/services/perfil.service';
+import { TourBienvenidaService } from '../../../core/onboarding/tour-bienvenida.service';
 import { SessionService } from '../../../core/services/session.service';
 import { IconComponent } from '../../../shared/components';
 
@@ -47,6 +48,8 @@ export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
   // "Agente IA", "Referir cliente" y "Estado referidos" se ocultan del sidebar (sus rutas siguen existiendo).
   { ruta: 'renovaciones', icono: 'update', etiqueta: 'Renovaciones' },
   { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
+  { ruta: 'polizas', icono: 'policy', etiqueta: 'Pólizas' },
+  { ruta: 'coberturas', icono: 'shield', etiqueta: 'Coberturas' },
   { ruta: 'calendario', icono: 'calendar_today', etiqueta: 'Calendario' },
   { ruta: 'documentos', icono: 'folder_open', etiqueta: 'Documentos' },
   { ruta: 'ayuda', icono: 'help_outline', etiqueta: 'Ayuda' },
@@ -82,6 +85,7 @@ export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
   styleUrl: './sidebar.component.scss',
 })
 export class SidebarComponent {
+  protected readonly tour = inject(TourBienvenidaService);
   private readonly session = inject(SessionService);
   private readonly layout = inject(LayoutService);
 

@@ -10,7 +10,7 @@
     <p role="status">Cargando documentos…</p>
   }
   @if (errorCarga()) {
-    <p role="alert">No fue posible cargar los documentos. Intenta nuevamente.</p>
+    <p role="alert">No pudimos cargar los documentos. Intenta de nuevo.</p>
   }
   @if (!cargando() && !errorCarga() && secciones().length === 0) {
     <p>No hay documentos disponibles.</p>

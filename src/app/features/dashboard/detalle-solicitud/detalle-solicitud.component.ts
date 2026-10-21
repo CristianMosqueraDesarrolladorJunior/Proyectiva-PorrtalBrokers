@@ -7,10 +7,10 @@ import {
   OnChanges,
   Output,
   SimpleChanges,
+  computed,
   inject,
   signal,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import { catchError, finalize, of } from 'rxjs';
 
 import { DashboardService } from '../../../core/services/dashboard.service';
@@ -18,6 +18,7 @@ import { RadicacionService, type ProcedimientoResponse } from '../../../core/ser
 import { BitacoraComponent, type EventoBitacora } from '../../../shared/components/bitacora/bitacora.component';
 import {
   DetalleSolicitud,
+  DocumentoSolicitud,
   HitoTimeline,
 } from '../../../core/models/solicitud.model';
 import type { FilaDetalle } from '../../../shared/components/drawer-detalle/drawer-detalle.component';
@@ -28,6 +29,8 @@ import { FichaComponent, type SeccionFicha } from '../../../shared/components/fi
 import { BadgeEstadoComponent } from '../../../shared/components/badge-estado/badge-estado.component';
 import { AlertBannerComponent } from '../../../shared/components/alert-banner/alert-banner.component';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
+import { CorreccionPanelComponent } from '../../correccion/components/correccion-panel/correccion-panel.component';
+import { VisorArchivoComponent } from '../../../shared/components/visor-archivo/visor-archivo.component';
 
 /**
  * DetalleSolicitudComponent — Detalle_Solicitud del Seguimiento (Req 34).
@@ -50,25 +53,54 @@ import { IconComponent } from '../../../shared/components/icon/icon.component';
   selector: 'app-detalle-solicitud',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BitacoraComponent, ModalDialogComponent, FichaComponent, BadgeEstadoComponent, AlertBannerComponent, IconComponent, TimelineComponent, BotonComponent],
+  imports: [CorreccionPanelComponent, VisorArchivoComponent, BitacoraComponent, ModalDialogComponent, FichaComponent, BadgeEstadoComponent, AlertBannerComponent, IconComponent, TimelineComponent, BotonComponent],
   templateUrl: './detalle-solicitud.component.html',
   styleUrl: './detalle-solicitud.component.scss',
 })
 export class DetalleSolicitudComponent implements OnChanges {
   private readonly dashboardService = inject(DashboardService);
   private readonly catalogo = inject(CatalogoService);
-  private readonly router = inject(Router);
   private readonly radicacion = inject(RadicacionService);
 
   /** Procedimiento real del área (Warehouse): estado, qué corregir, póliza y bitácora. */
   protected readonly procedimiento = signal<ProcedimientoResponse | null>(null);
   protected readonly bitacora = signal<readonly EventoBitacora[]>([]);
 
+  /** Documentos de la radicación (cotización, contrato, CTL y cargados) y el que se está viendo. */
+  protected readonly documentos = signal<readonly DocumentoSolicitud[]>([]);
+  protected readonly documentoActivo = signal<DocumentoSolicitud | null>(null);
+  protected readonly archivoActivo = signal<Blob | null>(null);
+  protected readonly cargandoArchivo = signal(false);
+
+  /** Los generados por el portal (cotización y contrato) van aparte de lo que cargó el broker (CTL y demás). */
+  protected readonly gruposDocumentos = computed(() => {
+    const docs = this.documentos();
+    const esGenerado = (d: DocumentoSolicitud) => d.tipo === 'cotizacion' || d.tipo === 'contrato' || d.tipo === 'cuenta_cobro';
+    const generados = docs.filter(esGenerado);
+    const cargados = docs.filter((d) => !esGenerado(d));
+    return [
+      { titulo: 'Generados', items: generados },
+      { titulo: 'Cargados', items: cargados },
+    ].filter((g) => g.items.length > 0);
+  });
+
+  protected iconoDocumento(d: DocumentoSolicitud): string {
+    return d.tipo === 'cotizacion' ? 'request_quote' : d.tipo === 'contrato' ? 'description' : d.tipo === 'cuenta_cobro' ? 'receipt_long' : d.tipo === 'ctl' ? 'verified_user' : 'attach_file';
+  }
+  protected readonly errorArchivo = signal(false);
+
   /** Referencia de la solicitud seleccionada; `null` mantiene el drawer cerrado. */
   @Input() referencia: string | null = null;
 
   /** Emite cuando el usuario cierra el detalle y se regresa a la tabla (Req 34.3). */
   @Output() cerrar = new EventEmitter<void>();
+
+  /** La solicitud cambió de estado desde el detalle (p. ej. se envió la corrección): la tabla debe recargarse. */
+  @Output() actualizado = new EventEmitter<void>();
+
+  /** La corrección se gestiona dentro del modal: este indicador alterna entre la gestión y el detalle. */
+  protected readonly modoCorreccion = signal(false);
+  private correccionOfrecida = false;
 
   /** Controla la visibilidad del drawer (Req 34.1, 34.3). */
   protected readonly abierto = signal(false);
@@ -140,6 +172,10 @@ export class DetalleSolicitudComponent implements OnChanges {
       .procedimiento(referencia)
       .pipe(catchError(() => of(null)))
       .subscribe((p) => this.aplicarProcedimiento(p));
+    this.dashboardService
+      .obtenerDocumentosSolicitud(referencia)
+      .pipe(catchError(() => of([] as readonly DocumentoSolicitud[])))
+      .subscribe((docs) => this.documentos.set(docs));
     this.cargando.set(true);
     this.error.set(null);
     this.dashboardService
@@ -148,7 +184,7 @@ export class DetalleSolicitudComponent implements OnChanges {
       .subscribe({
         next: (detalle) => this.aplicarDetalle(detalle),
         error: () =>
-          this.error.set('No fue posible cargar el detalle de la solicitud.'),
+          this.error.set('No pudimos cargar el detalle de la solicitud.'),
       });
   }
 
@@ -171,22 +207,40 @@ export class DetalleSolicitudComponent implements OnChanges {
     if (this.procedimiento()) this.aplicarProcedimiento(this.procedimiento());
   }
 
-  /**
-   * Inicia la gestión de corrección de documentos del trámite observado (Req 32). Navega al flujo
-   * de corrección pasando la referencia como query param para precargar el trámite; el backend
-   * revalida la propiedad del trámite (anti-BOLA) antes de registrar la corrección.
-   */
+  /** Abre la gestión de corrección dentro del mismo modal (el backend revalida la propiedad del trámite). */
   protected gestionarCorreccion(): void {
-    const referencia = this.referenciaCargada();
+    this.modoCorreccion.set(true);
+  }
+
+  /** Se enviaron los documentos: el estado del área cambió y la tabla de Seguimiento debe recargarse. */
+  protected onCorreccionEnviada(p: ProcedimientoResponse): void {
+    this.aplicarProcedimiento(p);
+    this.actualizado.emit();
+  }
+
+  /** Cierra el mensaje de éxito y deja el detalle ya actualizado. */
+  protected onCorreccionTerminada(): void {
+    this.modoCorreccion.set(false);
+  }
+  /** Muestra un documento de la radicación en la vista previa; un fallo no cierra el detalle. */
+  protected verDocumento(documento: DocumentoSolicitud): void {
+    const referencia = this.referenciaCargada() ?? this.referencia;
     if (!referencia) {
       return;
     }
-    void this.router.navigate(['/app/correccion'], {
-      queryParams: { referencia },
-    });
+    this.documentoActivo.set(documento);
+    this.archivoActivo.set(null);
+    this.errorArchivo.set(false);
+    this.cargandoArchivo.set(true);
+    this.dashboardService
+      .descargarDocumentoSolicitud(referencia, documento)
+      .pipe(finalize(() => this.cargandoArchivo.set(false)))
+      .subscribe({
+        next: (blob) => this.archivoActivo.set(blob),
+        error: () => this.errorArchivo.set(true),
+      });
   }
 
-  /** Restablece el estado interno al cerrar el detalle. */
   /** El estado del área manda: la corrección se habilita solo si el Warehouse la pidió. */
   private aplicarProcedimiento(p: ProcedimientoResponse | null): void {
     this.procedimiento.set(p);
@@ -203,9 +257,20 @@ export class DetalleSolicitudComponent implements OnChanges {
     // También la radicación creada que no alcanzó a enviarse: se completa desde la misma pantalla.
     this.puedeCorregir.set(['EN_CORRECCION', 'RADICADA'].includes(p.procedimiento.estadoPortal));
     this.pendienteEnvio.set(p.procedimiento.estadoPortal === 'RADICADA');
+    // «Gestionar» abre directo la corrección; si el broker prefiere ver el detalle, no se le vuelve a imponer.
+    if (this.puedeCorregir() && !this.correccionOfrecida) {
+      this.correccionOfrecida = true;
+      this.modoCorreccion.set(true);
+    }
   }
 
   private reiniciar(): void {
+    this.modoCorreccion.set(false);
+    this.correccionOfrecida = false;
+    this.documentos.set([]);
+    this.documentoActivo.set(null);
+    this.archivoActivo.set(null);
+    this.errorArchivo.set(false);
     this.procedimiento.set(null);
     this.bitacora.set([]);
     this.abierto.set(false);
@@ -224,7 +289,7 @@ export class DetalleSolicitudComponent implements OnChanges {
 /** Etiquetas de los campos del Detalle_Solicitud en el orden del prototipo (Req 34.1). */
 const ETIQUETAS_DETALLE = {
   referencia: 'Referencia',
-  cliente: 'Cliente',
+  cliente: 'Propietario',
   producto: 'Producto',
   estado: 'Estado',
   estadoPago: 'Canon / Pago',
@@ -293,7 +358,7 @@ export function construirSecciones(
     {
       titulo: 'Tomador del negocio',
       icono: 'person',
-      datos: [{ etiqueta: 'Cliente', valor: detalle.cliente, ancho: true }],
+      datos: [{ etiqueta: 'Propietario', valor: detalle.cliente, ancho: true }],
     },
     {
       titulo: 'Valores y comisión',

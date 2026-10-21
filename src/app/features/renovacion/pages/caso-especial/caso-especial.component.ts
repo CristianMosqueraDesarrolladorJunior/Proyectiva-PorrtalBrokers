@@ -235,7 +235,7 @@ export class CasoEspecialComponent {
       },
       error: () => {
         this.estadoEnvio.set('inactivo');
-        this.errorEnvio.set('No fue posible registrar el caso especial. Intenta nuevamente.');
+        this.errorEnvio.set('No pudimos registrar el caso especial. Intenta de nuevo.');
       },
     });
   }

@@ -26,4 +26,19 @@ describe('contratoDesdeLectura', () => {
     expect(contratoDesdeLectura({ ...completa, condiciones: { ...completa.condiciones, numeroCuenta: undefined } }, catalogos)).toBeNull();
     expect(contratoDesdeLectura({ ...completa, inmueble: { ...completa.inmueble, ciudad: 'Medellín' } }, catalogos)).toBeNull();
   });
+
+  it('suma los deudores del estudio y el del contrato escaneado, sin repetir, y con más de dos devuelve null', () => {
+    const persona = (doc: string) => ({
+      nombres: 'P', apellidos: doc, tipoIdentificacion: 'CC', numeroIdentificacion: doc, telefono: null, correo: null,
+      direccionNotificacion: null,
+    });
+    const leido = { nombres: 'Q', apellidos: 'Leído', tipoIdentificacion: 'CC' as const, numeroIdentificacion: '222' };
+    const conLeido = { ...completa, deudorSolidario: leido };
+    const req = contratoDesdeLectura(conLeido, catalogos, '', [persona('111')])!;
+    expect(req.deudores?.map((d) => d.numeroIdentificacion)).toEqual(['111', '222']);
+    expect(req.condiciones.incluyeDeudoresSolidarios).toBe(true);
+    expect(contratoDesdeLectura(conLeido, catalogos, '', [persona('222')])!.deudores).toHaveLength(1);
+    expect(contratoDesdeLectura(conLeido, catalogos, '', [persona('111'), persona('333')])).toBeNull();
+    expect(contratoDesdeLectura(completa, catalogos)!.deudores).toBeUndefined();
+  });
 });

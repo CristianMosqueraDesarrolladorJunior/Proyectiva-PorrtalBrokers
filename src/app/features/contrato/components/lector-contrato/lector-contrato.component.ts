@@ -24,6 +24,7 @@ import {
 } from '../../../../shared/components';
 import type { ArchivoSeleccionado, ReglaDocumentoUploader } from '../../../../shared/components';
 import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
+import { plural } from '../../../../core/util/plural';
 
 /** Tamaño máximo aceptado antes de enviar (el backend revalida tipo real y tamaño). */
 const TAMANO_MAXIMO_BYTES = 10 * 1024 * 1024;
@@ -72,11 +73,11 @@ const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png'];
       @if (lectura(); as l) {
         <app-alert-banner
           [variante]="l.falta.length ? 'warning' : 'success'"
-          [titulo]="l.falta.length ? 'Lo encontramos casi todo: revisa lo que falta' : 'Encontramos todos los datos'"
+          [titulo]="!l.falta.length ? 'Encontramos todos los datos' : encontrados() > l.falta.length ? 'Encontramos casi todo: revisa lo que falta' : 'Encontramos pocos datos: complétalos a mano'"
           icono="fact_check"
         >
           <span class="lc__resultado">
-            Precargamos {{ encontrados() }} datos en el formulario. Confírmalos antes de continuar.
+            Precargamos {{ plural(encontrados(), 'dato', 'datos') }} en el formulario. Confírmalos antes de continuar.
             @if (l.falta.length) {
               <span class="lc__faltan">
                 @for (campo of l.falta; track campo) {
@@ -117,6 +118,7 @@ const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png'];
   ],
 })
 export class LectorContratoComponent {
+  protected readonly plural = plural;
   private readonly feedback = inject(FeedbackService);
   private readonly contratos = inject(ContratoService);
   private readonly destroyRef = inject(DestroyRef);

@@ -18,6 +18,8 @@
           role="gridcell"
           [class.has-event]="celda.tieneEvento"
           [class.selected]="celda.fechaIso === diaSeleccionado"
+          [class.cal-day--pasado]="celda.fechaIso < hoyIso"
+          [class.cal-day--hoy]="celda.fechaIso === hoyIso"
           [attr.aria-pressed]="celda.fechaIso === diaSeleccionado"
           [attr.aria-label]="etiquetaDia(celda.dia, cantidadEventos(celda.fechaIso))"
           (click)="seleccionarDia(celda)"

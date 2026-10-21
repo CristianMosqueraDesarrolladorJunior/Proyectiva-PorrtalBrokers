@@ -21,7 +21,8 @@ export class PolizasService {
    * @returns lista de pólizas del cliente.
    */
   consultarPorDocumento(documento: string): Observable<readonly Poliza[]> {
-    const params = new HttpParams().set('documento', documento);
+    // Sin documento devuelve todo el portafolio de la cuenta (lista inicial de la consulta).
+    const params = documento ? new HttpParams().set('documento', documento) : new HttpParams();
     return this.http.get<readonly Poliza[]>(this.baseUrl, {
       params,
       withCredentials: true,

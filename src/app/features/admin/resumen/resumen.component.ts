@@ -23,7 +23,7 @@ const REFRESCO_MS = 30_000;
 
 /**
  * Resumen del comportamiento del negocio: dinero que entra (brokers vs prospectos), comisión cobrada,
- * pagada y pendiente, brokers top y los movimientos del sistema en vivo. Comercial: solo su cartera.
+ * brokers top y los movimientos del sistema en vivo. Comercial: solo su cartera.
  */
 @Component({
   selector: 'app-admin-resumen',
@@ -84,7 +84,8 @@ export class ResumenComponent {
   );
 
   protected readonly topBrokers = computed<readonly ItemRanking[]>(() =>
-    (this.resumen()?.topBrokers ?? []).map((b) => ({
+    // Solo quien ya tiene pólizas: un prospecto sin negocios no es un broker destacado (auditoría Z6).
+    (this.resumen()?.topBrokers ?? []).filter((b) => b.polizas > 0).map((b) => ({
       etiqueta: `${b.nombre}${b.estado === 'PROSPECTO' ? ' · prospecto' : ''}`,
       valor: b.primas,
       valorTexto: `${copCompacto(b.primas)} · ${b.polizas} pólizas`,
@@ -97,9 +98,7 @@ export class ResumenComponent {
     return [
       { etiqueta: 'Ingresos de brokers registrados', valor: r.ingresosBrokers, valorTexto: copCompacto(r.ingresosBrokers) },
       { etiqueta: 'Ingresos de prospectos', valor: r.ingresosProspectos, valorTexto: copCompacto(r.ingresosProspectos) },
-      { etiqueta: 'Comisión cobrada por brokers', valor: r.comisionCobrada, valorTexto: copCompacto(r.comisionCobrada) },
-      { etiqueta: 'Comisión ya pagada', valor: r.comisionPagada, valorTexto: copCompacto(r.comisionPagada) },
-      { etiqueta: 'Comisión pendiente de pago', valor: r.comisionPendiente, valorTexto: copCompacto(r.comisionPendiente) },
+      { etiqueta: 'Comisión en cuentas de cobro', valor: r.comisionCobrada, valorTexto: copCompacto(r.comisionCobrada) },
     ];
   });
 

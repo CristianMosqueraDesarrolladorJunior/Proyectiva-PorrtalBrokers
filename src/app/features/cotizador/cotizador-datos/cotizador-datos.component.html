@@ -78,7 +78,11 @@
           </app-form-field>
         </app-grid-layout>
 
-        @if (sinCobertura()) {
+        @if (departamentoNoHabilitado()) {
+          <app-alert-banner variante="error" titulo="Departamento no habilitado">
+            {{ mensajeDepartamentoBloqueado }}
+          </app-alert-banner>
+        } @else if (sinCobertura()) {
           <app-alert-banner variante="warning" titulo="Sin cobertura">
             {{ mensajeSinCobertura }}
           </app-alert-banner>
@@ -119,11 +123,13 @@
             label="Valor mensual de administración"
             ayuda="Se suma al canon para el valor asegurado mensual"
             controlId="cot-administracion"
+            [error]="errorAdministracion()"
           >
             <app-money-input
               inputId="cot-administracion"
               nombre="administracion"
               [valor]="administracion()"
+              [invalido]="!!errorAdministracion()"
               (valorChange)="administracion.set($event)"
             />
           </app-form-field>
@@ -189,19 +195,21 @@
               <li class="cob" [class.cob--activa]="cobertura.activa">
                 <div class="cob__fila">
                   <span class="cob__icono" aria-hidden="true">
-                    <span class="material-symbols-outlined">{{ iconoCobertura(cobertura.id) }}</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">{{ iconoCobertura(cobertura.id) }}</span>
                   </span>
                   <div class="cob__texto">
                     <span class="cob__nombre">{{ cobertura.nombre }}</span>
-                    <span class="cob__desc">
-                      @for (parte of partesDescripcion(cobertura.descripcion); track $index) {
-                        @if (parte.negrita) {
-                          <strong>{{ parte.texto }}</strong>
-                        } @else {
-                          {{ parte.texto }}
+                    @if (cobertura.descripcion && cobertura.descripcion.trim() !== cobertura.nombre.trim()) {
+                      <span class="cob__desc">
+                        @for (parte of partesDescripcion(cobertura.descripcion); track $index) {
+                          @if (parte.negrita) {
+                            <strong>{{ parte.texto }}</strong>
+                          } @else {
+                            {{ parte.texto }}
+                          }
                         }
-                      }
-                    </span>
+                      </span>
+                    }
                   </div>
                   <button
                     type="button"
@@ -255,12 +263,8 @@
       </app-form-section-card>
 
 
-      <app-sticky-actions [nota]="notaAcciones()">
-        <app-boton secundarias variante="ghost" (clicked)="pedirLimpiar()">Limpiar</app-boton>
-        <app-boton principal variante="accent" type="submit" [disabled]="calculando()">
-          {{ calculando() ? 'Calculando…' : 'Calcular cotización' }}
-        </app-boton>
-      </app-sticky-actions>
+      <!-- Enter dentro del formulario sigue calculando; los botones viven en el card de resultado. -->
+      <button type="submit" hidden aria-hidden="true" tabindex="-1"></button>
 
       @if (calculando()) {
         <app-skeleton [lineas]="4" ariaLabel="Calculando cotización" />
@@ -283,10 +287,12 @@
             </app-boton>
             <app-boton variante="ghost" (clicked)="onModificarDatos()">Modificar datos</app-boton>
           } @else {
-            <p class="cotizador-datos__panel-ayuda">
-              Completa el formulario y calcula para ver la prima y tu comisión.
-            </p>
+            <p class="cotizador-datos__panel-ayuda">{{ notaAcciones() }}</p>
+            <app-boton variante="accent" icono="calculate" [disabled]="calculando()" (clicked)="solicitarCalculo()">
+              {{ calculando() ? 'Calculando…' : 'Calcular cotización' }}
+            </app-boton>
           }
+          <app-boton variante="ghost" icono="restart_alt" (clicked)="pedirLimpiar()">Limpiar</app-boton>
         </div>
       </app-summary-card>
     </aside>

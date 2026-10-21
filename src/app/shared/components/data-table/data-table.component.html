@@ -16,6 +16,17 @@
   <table class="data-table" [attr.aria-label]="ariaLabel">
     <thead>
       <tr>
+        @if (seleccionable) {
+          <th scope="col" class="dt-sel">
+            <input
+              type="checkbox"
+              class="dt-sel__casilla"
+              aria-label="Elegir todas las filas de esta página"
+              [checked]="paginaCompletaElegida()"
+              (change)="alternarPaginaCompleta()"
+            />
+          </th>
+        }
         @for (columna of columnas; track trackColumna($index, columna)) {
           <th
             scope="col"
@@ -47,12 +58,26 @@
           (click)="onSeleccionarFila(fila)"
           (keydown.enter)="onSeleccionarFila(fila)"
           (keydown.space)="onSeleccionarFila(fila); $event.preventDefault()"
+          [class.dt-fila--elegida]="seleccionable && estaElegida(fila)"
         >
+          @if (seleccionable) {
+            <td class="dt-sel" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                class="dt-sel__casilla"
+                [attr.aria-label]="'Elegir la fila ' + idFila(fila)"
+                [checked]="estaElegida(fila)"
+                [disabled]="!puedeElegir(fila)"
+                (change)="alternarEleccion(fila)"
+              />
+            </td>
+          }
           @for (columna of columnas; track trackColumna($index, columna)) {
             <td
               [attr.data-label]="columna.header || null"
               [class.dt-td--centro]="columna.alinear === 'centro'"
               [class.dt-td--derecha]="columna.alinear === 'derecha'"
+              [class.dt-td--nowrap]="columna.nowrap"
               [class.dt-fija]="columna.tipo === 'accion' || columna.tipo === 'acciones'"
             >
               @switch (columna.tipo) {
@@ -104,7 +129,7 @@
         </tr>
       } @empty {
         <tr>
-          <td class="data-table__empty" [attr.colspan]="columnas.length">
+          <td class="data-table__empty" [attr.colspan]="columnas.length + (seleccionable ? 1 : 0)">
             {{ mensajeVacio }}
           </td>
         </tr>

@@ -1,3 +1,4 @@
+import { RecorridoPlataformaComponent } from './recorrido/recorrido-plataforma.component';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
@@ -14,7 +15,7 @@ import { SidebarComponent } from './sidebar/sidebar.component';
   selector: 'app-shell',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, SidebarComponent, TopbarComponent],
+  imports: [RouterOutlet, SidebarComponent, TopbarComponent, RecorridoPlataformaComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })

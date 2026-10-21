@@ -20,6 +20,15 @@
   } @else if (error()) {
     <p class="detalle-solicitud__estado detalle-solicitud__estado--error" role="alert">{{ error() }}</p>
   } @else {
+    @if (modoCorreccion() && procedimiento(); as p) {
+      <app-correccion-panel
+        [referencia]="referenciaVista() || referencia || ''"
+        [procedimiento]="p"
+        (enviada)="onCorreccionEnviada($event)"
+        (terminar)="onCorreccionTerminada()"
+        (cancelar)="modoCorreccion.set(false)"
+      />
+    } @else {
     @if (puedeCorregir()) {
       <app-alert-banner variante="warning" titulo="Tienes una corrección pendiente" icono="rule">
         Actualiza los documentos observados; al enviarlos la solicitud vuelve a revisión.
@@ -46,6 +55,56 @@
       }
     }
     <app-ficha [secciones]="secciones()" />
+    @if (documentos().length) {
+      <section class="docs" aria-labelledby="docs-titulo">
+        <header class="docs__cab">
+          <h4 id="docs-titulo" class="detalle-solicitud__timeline-titulo">
+            <app-icon nombre="folder_open" [tamano]="18" /> Documentos de la radicación
+          </h4>
+          <app-badge-estado variante="info">{{ documentos().length }} documentos</app-badge-estado>
+        </header>
+        <div class="docs__cuerpo">
+          <nav class="docs__lista" aria-label="Documentos de la radicación">
+            @for (grupo of gruposDocumentos(); track grupo.titulo) {
+              <p class="docs__grupo">{{ grupo.titulo }}</p>
+              @for (d of grupo.items; track d.clave) {
+                <button
+                  type="button"
+                  class="docs__item"
+                  [class.docs__item--activo]="documentoActivo()?.clave === d.clave"
+                  [attr.aria-pressed]="documentoActivo()?.clave === d.clave"
+                  (click)="verDocumento(d)"
+                >
+                  <span class="docs__icono" aria-hidden="true">
+                    <app-icon [nombre]="iconoDocumento(d)" [tamano]="20" />
+                  </span>
+                  <span class="docs__texto">
+                    <b>{{ d.titulo }}</b>
+                    <small>{{ d.referencia ?? 'Documento cargado' }}</small>
+                  </span>
+                  <app-icon class="docs__ir" nombre="chevron_right" [tamano]="18" />
+                </button>
+              }
+            }
+          </nav>
+
+          <div class="docs__vista" aria-live="polite">
+            @if (!documentoActivo()) {
+              <div class="docs__vacio">
+                <app-icon nombre="visibility" [tamano]="28" />
+                <p>Elige un documento de la lista para verlo aquí.</p>
+              </div>
+            } @else if (errorArchivo()) {
+              <p class="detalle-solicitud__estado detalle-solicitud__estado--error" role="alert">
+                No pudimos cargar este documento. Intenta de nuevo en unos minutos.
+              </p>
+            } @else {
+              <app-visor-archivo [archivo]="archivoActivo()" [cargando]="cargandoArchivo()" [nombre]="documentoActivo()!.titulo + '.pdf'" />
+            }
+          </div>
+        </div>
+      </section>
+    }
     <section class="detalle-solicitud__timeline" aria-label="Avance del trámite">
       <h4 class="detalle-solicitud__timeline-titulo">
         <app-icon nombre="timeline" [tamano]="18" /> Avance del trámite
@@ -55,13 +114,14 @@
     @if (bitacora().length) {
       <section class="detalle-solicitud__timeline" aria-label="Procedimiento de mi póliza">
         <h4 class="detalle-solicitud__timeline-titulo"><app-icon nombre="history" [tamano]="18" /> Procedimiento de mi póliza</h4>
-        <app-bitacora [eventos]="bitacora()" mensajeVacio="Sin movimientos del área todavía" />
+        <app-bitacora [eventos]="bitacora()" mensajeVacio="Aún no hay movimientos" />
       </section>
+    }
     }
   }
   <div acciones>
     <app-boton variante="ghost" (clicked)="onCerrar()">Cerrar</app-boton>
-    @if (puedeCorregir()) {
+    @if (puedeCorregir() && !modoCorreccion()) {
       <app-boton icono="upload_file" variante="accent" ariaLabel="Actualizar documentos de la solicitud" (clicked)="gestionarCorreccion()">
         {{ pendienteEnvio() ? 'Completar y enviar' : 'Actualizar documentos' }}
       </app-boton>

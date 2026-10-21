@@ -72,7 +72,6 @@ export class BrokersComponent {
     { key: 'acuerdo', header: 'Acuerdo', alinear: 'derecha' },
     { key: 'negocios', header: 'Negocios', alinear: 'derecha', ordenable: true },
     { key: 'ingreso', header: 'Ingreso', alinear: 'derecha', ordenable: true },
-    { key: 'comision', header: 'Comisión pagada / cobrada', alinear: 'derecha' },
     ...COLUMNAS_FECHAS,
     COLUMNA_GESTIONAR,
   ];
@@ -89,16 +88,12 @@ export class BrokersComponent {
       negociosOrden: b.negocios,
       ingreso: cop(b.primas),
       ingresoOrden: b.primas,
-      comision: `${cop(b.comisionPagada)} / ${cop(b.comisionCobrada)}`,
       ...celdasFechas(b.creado, b.ultimoMovimiento),
       gestionar: '',
     })),
   );
 
   protected readonly totalIngreso = computed(() => this.brokers().reduce((t, b) => t + b.primas, 0));
-  protected readonly totalPendiente = computed(() =>
-    this.brokers().reduce((t, b) => t + Math.max(0, b.comisionCobrada - b.comisionPagada), 0),
-  );
 
   // --- Modal de operación ---
   protected readonly seleccionado = signal<BrokerConsola | null>(null);
@@ -141,9 +136,7 @@ export class BrokersComponent {
           { etiqueta: 'Negocios radicados', valor: b.negocios },
           { etiqueta: 'Pólizas expedidas', valor: b.polizas },
           { etiqueta: 'Ingreso al negocio', valor: cop(b.primas) },
-          { etiqueta: 'Comisión cobrada', valor: cop(b.comisionCobrada), destacado: true },
-          { etiqueta: 'Comisión pagada', valor: cop(b.comisionPagada) },
-          { etiqueta: 'Pendiente de pago', valor: cop(Math.max(0, b.comisionCobrada - b.comisionPagada)) },
+          { etiqueta: 'Comisión de sus cuentas de cobro', valor: cop(b.comisionCobrada), destacado: true },
         ],
       },
       {

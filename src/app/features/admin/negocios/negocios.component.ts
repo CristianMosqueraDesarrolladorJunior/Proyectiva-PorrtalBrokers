@@ -33,6 +33,7 @@ import type {
   VarianteBadge,
 } from '../../../shared/components';
 import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
+import { GestionNegocioComponent } from './gestion-negocio/gestion-negocio.component';
 
 function varianteEstado(estado: string): VarianteBadge {
   if (estado === 'EXPEDIDA' || estado === 'APROBADA') return 'success';
@@ -64,6 +65,7 @@ function varianteEstado(estado: string): VarianteBadge {
     ModalDialogComponent,
     PageHeaderComponent,
     SegmentedControlComponent,
+    GestionNegocioComponent,
   ],
   templateUrl: './negocios.component.html',
   styleUrls: ['../admin-comun.scss'],
@@ -100,9 +102,9 @@ export class NegociosComponent {
     { key: 'inquilino', header: 'Inquilino', tipo: 'principal' },
     { key: 'inmueble', header: 'Inmueble', tipo: 'principal' },
     { key: 'broker', header: 'Broker', tipo: 'principal', ordenable: true },
-    { key: 'comercial', header: 'Comercial', ordenable: true },
-    { key: 'canon', header: 'Canon', alinear: 'derecha', ordenable: true },
-    { key: 'prima', header: 'Prima', alinear: 'derecha', ordenable: true },
+    ...(this.admin.esAdmin() ? [{ key: 'comercial', header: 'Comercial', ordenable: true }] : []),
+    { key: 'canon', header: 'Canon', alinear: 'derecha', ordenable: true, nowrap: true },
+    { key: 'prima', header: 'Prima', alinear: 'derecha', ordenable: true, nowrap: true },
     { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
     ...COLUMNAS_FECHAS,
     COLUMNA_GESTIONAR,
@@ -153,13 +155,9 @@ export class NegociosComponent {
   protected readonly pestana = signal('negocio');
   protected readonly pestanas = computed<readonly Tab[]>(() => [
     { id: 'negocio', etiqueta: 'Negocio' },
-    ...(this.esAdmin ? [{ id: 'gestion', etiqueta: 'Gestión' }] : []),
+    { id: 'gestionar', etiqueta: 'Gestionar' },
     { id: 'historial', etiqueta: 'Historial' },
   ]);
-  /** Estados destino permitidos: los calcula el backend al abrir el negocio. */
-  protected readonly opcionesEstado = signal<readonly string[]>([]);
-  protected readonly estadoDestino = signal('');
-  protected readonly observacion = signal('');
   protected readonly guardando = signal(false);
 
   protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
@@ -267,50 +265,24 @@ export class NegociosComponent {
 
   private abrir(radicado: string): void {
     this.pestana.set('negocio');
-    this.estadoDestino.set('');
-    this.observacion.set('');
-    this.opcionesEstado.set([]);
     this.consola
       .negocio(radicado)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({ next: (d) => this.detalle.set(d), error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }) });
-    if (this.esAdmin) {
-      this.admin
-        .siguientesEstados(radicado)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({ next: (estados) => this.opcionesEstado.set(estados), error: () => this.opcionesEstado.set([]) });
-    }
+      .subscribe({ next: (d) => {
+        this.detalle.set(d);
+        // En corrección se abre directo en «Gestionar»: es lo que el comercial viene a hacer.
+        if (d.negocio.estado === 'EN_CORRECCION') this.pestana.set('gestionar');
+      }, error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }) });
+  }
+
+  /** Tras gestionar (nota, documento o reenvío) se recarga el negocio y la tabla. */
+  protected recargar(radicado: string): void {
+    this.cargar();
+    this.abrir(radicado);
+    this.pestana.set('gestionar');
   }
 
   protected v(evento: Event): string {
     return (evento.target as HTMLSelectElement | HTMLTextAreaElement).value;
-  }
-
-  protected aplicarEstado(): void {
-    const d = this.detalle();
-    const destino = this.estadoDestino();
-    if (!d || !destino) return;
-    this.guardando.set(true);
-    this.admin
-      .cambiarEstadoNegocio(d.negocio.radicado, destino, this.observacion())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (r) => {
-          this.guardando.set(false);
-          this.feedback.toast({
-            variante: 'exito',
-            mensaje:
-              r.numeroPoliza
-                ? `Negocio ${r.radicado} expedido con la póliza ${r.numeroPoliza}: el negocio terminó.`
-                : `Negocio ${r.radicado} quedó ${this.etiquetaEstado[destino] ?? destino}.`,
-          });
-          this.cargar();
-          this.abrir(r.radicado);
-        },
-        error: (err: unknown) => {
-          this.guardando.set(false);
-          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
-        },
-      });
   }
 }

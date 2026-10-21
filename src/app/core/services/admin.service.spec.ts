@@ -28,14 +28,6 @@ describe('AdminService (acciones de la consola)', () => {
     req.flush({});
   });
 
-  it('cambia el estado del negocio y omite la observación vacía', () => {
-    service.cambiarEstadoNegocio('BR-1', 'EXPEDIDA', '  ').subscribe();
-    const req = httpMock.expectOne('/api/v1/admin/negocios/BR-1/estado');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ estado: 'EXPEDIDA', observacion: undefined });
-    req.flush({});
-  });
-
   it('cambia el acuerdo de comisión del broker', () => {
     service.cambiarComision('b-1', 25).subscribe();
     const req = httpMock.expectOne('/api/v1/admin/brokers/b-1/comision');

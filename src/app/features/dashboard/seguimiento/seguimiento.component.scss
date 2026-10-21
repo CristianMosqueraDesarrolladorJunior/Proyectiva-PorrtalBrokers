@@ -120,14 +120,25 @@
 
 // --- Responsivo: apila el grid en pantallas pequeñas (Req 36.5) ---
 
-@media (max-width: 1023px) {
+@media (width <= 1023px) {
   .dash-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 560px) {
+@media (width <= 560px) {
   .dash-kpis-grid {
     grid-template-columns: 1fr;
   }
+}
+
+// Resumen que cuadra las cifras: radicadas = expedidas + en trámite + bloqueadas.
+.dash-cuadre {
+  margin: var(--space-0);
+  font-size: var(--text-caption);
+  color: var(--color-muted);
+}
+
+.dash-grid--sin-comision {
+  grid-template-columns: 1fr;
 }

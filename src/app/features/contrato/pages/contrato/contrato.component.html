@@ -8,13 +8,21 @@
       textoVolver="Volver a Seguimiento"
       (volver)="volverASeguimiento()"
     >
-      <div accionesExito>
-        <app-boton variante="accent" icono="post_add" (clicked)="radicarSolicitud()">
+      <div accionesExito class="exito-acciones">
+        <app-boton class="exito-acciones__principal" variante="accent" icono="post_add" (clicked)="radicarSolicitud()">
           Radicar solicitud para emisión de póliza
         </app-boton>
-        <app-boton variante="outline" icono="download" [disabled]="descargando()" (clicked)="descargarContrato()">
-          {{ descargando() ? 'Generando contrato…' : 'Descargar contrato (Word)' }}
-        </app-boton>
+        <div class="exito-descarga" role="group" aria-labelledby="exito-descarga-titulo">
+          <p id="exito-descarga-titulo" class="exito-descarga__titulo">Descarga tu contrato</p>
+          <div class="exito-descarga__botones">
+            <app-boton variante="outline" icono="picture_as_pdf" [disabled]="descargando() !== null" (clicked)="descargarContrato('pdf')">
+              {{ descargando() === 'pdf' ? 'Generando PDF…' : 'PDF' }}
+            </app-boton>
+            <app-boton variante="outline" icono="description" [disabled]="descargando() !== null" (clicked)="descargarContrato('docx')">
+              {{ descargando() === 'docx' ? 'Generando Word…' : 'Word' }}
+            </app-boton>
+          </div>
+        </div>
       </div>
     </app-success-screen>
   } @else {
@@ -437,6 +445,10 @@
           }
 
         </div>
+
+        <!-- Validación del CTL: antigüedad ≤ 90 días y dirección igual a la del contrato -->
+        <h3 class="contrato-subtitulo">Certificado de Tradición y Libertad (CTL)</h3>
+        <app-ctl-validacion [direccionContrato]="inmDireccion()" />
       </div>
     }
 
@@ -657,42 +669,31 @@
           </fieldset>
         </div>
 
-        <!-- Panel destacado de deudores solidarios (fiel al prototipo) -->
-        <div class="contrato-deudores">
-          <label class="contrato-check">
-            <input
-              type="checkbox"
-              [ngModel]="conDeudoresSolidarios()"
-              (ngModelChange)="alternarDeudores($event)"
-            />
-            <span class="contrato-check__texto">
-              <strong>Incluir deudores solidarios (codeudores)</strong>
-              <small>
-                Los deudores solidarios respaldan el cumplimiento de las obligaciones
-                del contrato. Se precargan del estudio digital; puedes ajustarlos.
-              </small>
-            </span>
-          </label>
-          @if (conDeudoresSolidarios()) {
+        <!-- Deudores solidarios: solo los que devuelve el estudio digital (sin alta manual) -->
+        @if (deudores().length > 0) {
+          <div class="contrato-deudores">
+            <p class="contrato-deudores__nota">
+              <strong>Deudores solidarios del estudio digital y del contrato leído.</strong>
+              El tipo y número de identificación no se pueden modificar; quita los que no apliquen.
+            </p>
+            @if (deudoresExceden()) {
+              <p role="alert">El contrato admite máximo dos deudores solidarios: quita los que sobren para continuar.</p>
+            }
             @for (deudor of deudores(); track $index; let i = $index) {
               <fieldset class="contrato-deudor">
                 <legend>Deudor solidario {{ i + 1 }}</legend>
                 <div class="contrato-grid">
-                  <app-form-field label="Nombres" [requerido]="true" controlId="deu-nombres-{{ i }}">
+                  <app-form-field label="Nombres" controlId="deu-nombres-{{ i }}">
                     <input id="deu-nombres-{{ i }}" type="text" [ngModel]="deudor.nombres" (ngModelChange)="editarDeudor(i, 'nombres', $event)" />
                   </app-form-field>
-                  <app-form-field label="Apellidos" [requerido]="true" controlId="deu-apellidos-{{ i }}">
+                  <app-form-field label="Apellidos" controlId="deu-apellidos-{{ i }}">
                     <input id="deu-apellidos-{{ i }}" type="text" [ngModel]="deudor.apellidos" (ngModelChange)="editarDeudor(i, 'apellidos', $event)" />
                   </app-form-field>
                   <app-form-field label="Tipo de identificación" controlId="deu-tipo-{{ i }}">
-                    <select id="deu-tipo-{{ i }}" [ngModel]="deudor.tipoIdentificacion" (ngModelChange)="editarDeudor(i, 'tipoIdentificacion', $event)">
-                      @for (tipo of tiposIdentificacion; track tipo.valor) {
-                        <option [value]="tipo.valor">{{ tipo.etiqueta }}</option>
-                      }
-                    </select>
+                    <input id="deu-tipo-{{ i }}" type="text" [value]="deudor.tipoIdentificacion" readonly aria-readonly="true" />
                   </app-form-field>
-                  <app-form-field label="Número de identificación" [requerido]="true" controlId="deu-numero-{{ i }}">
-                    <input [appSoloDigitos]="deudor.tipoIdentificacion !== 'PA'" id="deu-numero-{{ i }}" type="text" inputmode="numeric" [ngModel]="deudor.numeroIdentificacion" (ngModelChange)="editarDeudor(i, 'numeroIdentificacion', $event)" />
+                  <app-form-field label="Número de identificación" controlId="deu-numero-{{ i }}">
+                    <input id="deu-numero-{{ i }}" type="text" [value]="deudor.numeroIdentificacion" readonly aria-readonly="true" />
                   </app-form-field>
                   <app-form-field label="Teléfono" controlId="deu-telefono-{{ i }}">
                     <input id="deu-telefono-{{ i }}" type="tel" [ngModel]="deudor.telefono" (ngModelChange)="editarDeudor(i, 'telefono', $event)" />
@@ -707,11 +708,8 @@
                 <app-boton variante="ghost" icono="delete" (clicked)="quitarDeudor(i)">Quitar deudor</app-boton>
               </fieldset>
             }
-            @if (deudores().length < 2) {
-              <app-boton variante="outline" icono="person_add" (clicked)="agregarDeudor()">Agregar deudor solidario</app-boton>
-            }
-          }
-        </div>
+          </div>
+        }
       </div>
     }
 

@@ -11,6 +11,7 @@
       [formGroup]="formulario"
       (ngSubmit)="iniciarSesion()"
       novalidate
+      autocomplete="off"
     >
       <app-form-field
         label="Cédula o correo"
@@ -24,7 +25,7 @@
           class="login-input"
           type="text"
           inputmode="email"
-          autocomplete="username"
+          autocomplete="off"
           autocapitalize="none"
           spellcheck="false"
           formControlName="usuario"
@@ -41,6 +42,7 @@
         [error]="errorPassword"
       >
         <input
+          appVerClave
           id="login-password"
           class="login-input"
           type="password"

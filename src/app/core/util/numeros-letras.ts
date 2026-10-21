@@ -74,11 +74,11 @@ export function conPuntos(valor: number): string {
   return String(Math.trunc(Math.abs(valor))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-/** Pesos con signo: «$ 324.769». */
+/** Pesos con signo: «$324.769». */
 export function pesos(valor: number): string {
-  if (!Number.isFinite(valor)) return '$ 0';
+  if (!Number.isFinite(valor)) return '$0';
   const entero = Math.round(valor);
-  return `${entero < 0 ? '-' : ''}$ ${conPuntos(entero)}`;
+  return `${entero < 0 ? '-' : ''}$${conPuntos(entero)}`;
 }
 
 /**

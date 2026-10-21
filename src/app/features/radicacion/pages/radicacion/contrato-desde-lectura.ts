@@ -1,4 +1,4 @@
-import type { ContratoArrendamientoRequest, LecturaContratoResponse } from '../../../../core/models/contrato.model';
+import type { ContratoArrendamientoRequest, LecturaContratoResponse, PersonaEstudio } from '../../../../core/models/contrato.model';
 import type { TipoDocumentoIdentidad } from '../../../../core/models/radicacion.model';
 
 /** Catálogos con los que se valida la lectura (los mismos que acepta el backend). */
@@ -21,6 +21,7 @@ export function contratoDesdeLectura(
   lectura: LecturaContratoResponse,
   catalogos: CatalogosContrato,
   tipoFirma = '',
+  deudoresEstudio: readonly PersonaEstudio[] = [],
 ): ContratoArrendamientoRequest | null {
   const { arrendador: arr, arrendatario: ate, inmueble: inm, condiciones: con } = lectura;
   const parteCompleta = (p: typeof arr) =>
@@ -31,8 +32,23 @@ export function contratoDesdeLectura(
     || !con.canonMensual || con.canonMensual <= 0 || !dia || !lleno(con.numeroCuenta)) {
     return null;
   }
-  const deudor = lectura.deudorSolidario;
-  const conDeudor = !!deudor && parteCompleta(deudor);
+  // Deudores: los del estudio digital más los que trae el contrato escaneado, sin repetir por documento. La plantilla
+  // admite dos; con más, el broker descarta los que sobren en Contratos.
+  const leido = lectura.deudorSolidario;
+  const deudores = [...deudoresEstudio.map((d) => ({
+    nombres: d.nombres ?? '', apellidos: d.apellidos ?? '', tipoIdentificacion: (d.tipoIdentificacion ?? 'CC') as TipoDocumentoIdentidad,
+    numeroIdentificacion: (d.numeroIdentificacion ?? '').trim(), telefono: d.telefono ?? '', correo: d.correo ?? '',
+    ciudadExpedicion: '', direccionNotificacion: d.direccionNotificacion ?? '',
+  })), ...(leido && parteCompleta(leido) ? [{
+    nombres: leido.nombres!.trim(), apellidos: leido.apellidos!.trim(),
+    tipoIdentificacion: leido.tipoIdentificacion as TipoDocumentoIdentidad,
+    numeroIdentificacion: leido.numeroIdentificacion!.trim(), telefono: leido.telefono ?? '', correo: leido.correo ?? '',
+    ciudadExpedicion: '', direccionNotificacion: leido.direccion ?? '',
+  }] : [])].filter((d, i, todos) => d.nombres && d.apellidos && d.numeroIdentificacion
+    && todos.findIndex((o) => o.numeroIdentificacion === d.numeroIdentificacion) === i);
+  if (deudores.length > 2) {
+    return null;
+  }
   const comercio = /comerc|local|oficina|bodega/i.test(`${inm.uso ?? ''} ${inm.tipoInmueble ?? ''}`);
   const parte = (p: typeof arr) => ({
     nombres: p.nombres!.trim(),
@@ -61,17 +77,13 @@ export function contratoDesdeLectura(
       fechaInicio: con.fechaInicio!,
       reajusteAnual: 'IPC',
       serviciosIncluidos: [],
-      incluyeDeudoresSolidarios: conDeudor,
+      incluyeDeudoresSolidarios: deudores.length > 0,
       metodoPago: 'transferencia',
       tipoCuenta: con.tipoCuenta ?? 'ahorros',
       numeroCuenta: con.numeroCuenta!.trim(),
       ...(lleno(con.banco) ? { banco: con.banco.trim() } : {}),
     },
-    ...(conDeudor ? {
-      deudores: [{
-        ...parte(deudor), ciudadExpedicion: '', direccionNotificacion: deudor.direccion ?? '',
-      }],
-    } : {}),
+    ...(deudores.length ? { deudores } : {}),
     adicionales: { leasing: false, arrendadorEsTitular: true, tieneClausulas: false, ...(tipoFirma ? { tipoFirma } : {}) },
   };
 }

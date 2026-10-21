@@ -41,10 +41,8 @@
           <app-kpi-card label="Casos especiales" [valor]="r.indicadores.casosEspeciales" icono="emergency" sub="Requieren decisión técnica" />
         </app-grid-layout>
 
-        <h2 class="resumen__grupo">Comisiones a intermediarios</h2>
+        <h2 class="resumen__grupo">Intermediarios</h2>
         <app-grid-layout tipo="kpi-grid">
-          <app-kpi-card label="Comisión pagada" [valor]="compacto(r.comisionPagada)" icono="paid" sub="Consignada a los brokers" />
-          <app-kpi-card label="Comisión por pagar" [valor]="compacto(r.comisionPendiente)" icono="schedule" [tono]="r.comisionPendiente > 0 ? 'danger' : 'none'" sub="Cuentas de cobro radicadas" />
           <app-kpi-card label="Brokers activos" [valor]="r.brokersActivos" icono="groups" [sub]="r.prospectos + ' prospectos en vinculación'" />
           <app-kpi-card label="Negocios en curso" [valor]="r.negociosEnCurso" icono="work_history" sub="Radicados aún sin póliza" />
         </app-grid-layout>

@@ -3,12 +3,12 @@
     eyebrow="Portafolio"
     tituloId="consulta-polizas-titulo"
     titulo="Consulta de pólizas"
-    subtitulo="Busca las pólizas de un cliente por su cédula y gestiona su cartera."
+    subtitulo="Busca las pólizas de un propietario por su cédula y gestiona su cartera."
   ></app-page-header>
 
   <form class="consulta-polizas__buscador" (ngSubmit)="buscar()">
     <app-form-field
-      label="Cédula del cliente"
+      label="Cédula del propietario"
       ayuda="Solo dígitos, entre 6 y 10 caracteres"
       [requerido]="true"
       [error]="errorCedula()"
@@ -38,7 +38,7 @@
     }
     @case ('error') {
       <app-alert-banner variante="error" titulo="No se pudieron consultar las pólizas">
-        Ocurrió un problema al consultar las pólizas. Intenta nuevamente.
+        Ocurrió un problema al consultar las pólizas. Intenta de nuevo.
       </app-alert-banner>
     }
     @case ('resultado') {
@@ -48,7 +48,7 @@
           [filas]="filas()"
           [total]="polizas().length"
           [tamanoPagina]="polizas().length || 1"
-          ariaLabel="Listado de pólizas del cliente"
+          ariaLabel="Listado de pólizas del propietario"
           (accion)="onAccionPoliza($event)"
         ></app-data-table>
       } @else {

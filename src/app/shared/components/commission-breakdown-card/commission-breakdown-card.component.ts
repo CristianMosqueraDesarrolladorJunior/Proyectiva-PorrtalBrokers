@@ -7,6 +7,8 @@ import {
 } from '@angular/core';
 
 import { formatearCop } from '../../util/moneda';
+import { BadgeEstadoComponent } from '../badge-estado/badge-estado.component';
+import { plural } from '../../../core/util/plural';
 /** Ítem de desglose de comisión por ramo/producto. */
 export interface DesgloseRamo {
   readonly producto: string;
@@ -41,16 +43,18 @@ const TOTAL_COLORES = 4;
  *   [desglose]="desglose" />
  * ```
  */
+
 @Component({
   selector: 'app-commission-breakdown-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [BadgeEstadoComponent],
   template: `
     <article class="comm">
       <header class="comm__cab">
         <span class="comm__label">Comisión pendiente por pagar</span>
         @if (periodo) {
-          <span class="comm__periodo-chip">{{ periodo }}</span>
+          <app-badge-estado variante="info">{{ periodo }}</app-badge-estado>
         }
       </header>
 
@@ -60,7 +64,8 @@ const TOTAL_COLORES = 4;
           <span class="comm__moneda">COP</span>
         </div>
         <p class="comm__sub">
-          {{ polizasPendientes }} de {{ polizasRadicadas }} pólizas radicadas con comisión pendiente
+          {{ polizasPendientes }} de {{ plural(polizasRadicadas, 'póliza expedida', 'pólizas expedidas') }} aún sin pagar:
+          por cobrar, en cuenta de cobro o con orden de pago.
         </p>
 
         <div
@@ -94,12 +99,12 @@ const TOTAL_COLORES = 4;
           }
         </div>
       } @else {
-        <p class="comm__sub">No tienes comisiones pendientes por pagar ({{ polizasRadicadas }} pólizas radicadas).</p>
+        <p class="comm__sub">No tienes comisiones pendientes por pagar ({{ plural(polizasRadicadas, 'póliza expedida', 'pólizas expedidas') }}).</p>
       }
       @if (plazoMeses > 0) {
         <p class="comm__nota">
-          Solo cuentan las pólizas expedidas en los últimos {{ plazoMeses }} meses y aún sin pagar. Las de más tiempo
-          no se cobran por el portal: gestiónalas con tu asesor comercial.
+          Cobra tus comisiones dentro de los {{ plazoMeses }} meses siguientes a la expedición de cada póliza
+          (regla del área). Si tienes dudas sobre una póliza antigua, consúltalo con tu asesor comercial.
         </p>
       }
     </article>
@@ -135,15 +140,6 @@ const TOTAL_COLORES = 4;
         text-transform: uppercase;
         letter-spacing: 0.06em;
         color: var(--sb-secondary);
-      }
-      .comm__periodo-chip {
-        padding: var(--space-1) var(--space-3);
-        border-radius: var(--radius-full);
-        background: var(--sb-surface-container);
-        color: var(--sb-on-surface);
-        font-family: var(--font-family-body);
-        font-size: var(--text-caption);
-        white-space: nowrap;
       }
       .comm__valor-fila {
         display: flex;
@@ -245,6 +241,7 @@ const TOTAL_COLORES = 4;
   ],
 })
 export class CommissionBreakdownCardComponent {
+  protected readonly plural = plural;
   /** Valor total de comisión estimada del periodo. */
   @Input({ required: true })
   set valorEstimado(valor: number) {
@@ -258,7 +255,7 @@ export class CommissionBreakdownCardComponent {
   /** Periodo de la comisión (p. ej. "Mayo 2026"). */
   @Input() periodo = '';
 
-  /** Total de pólizas radicadas por el broker. */
+  /** Total de pólizas expedidas del broker (denominador de «X con comisión pendiente»). */
   @Input() polizasRadicadas = 0;
 
   /** Pólizas que componen la comisión pendiente. */

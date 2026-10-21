@@ -11,7 +11,6 @@ import type {
   ExpedienteProspecto,
   Movimiento,
   NegocioConsola,
-  PagoRequest,
   PersonaRequest,
   PolizaConsola,
   ProspectoConsola,
@@ -19,6 +18,8 @@ import type {
   RenovacionConsola,
   ResumenConsola,
 } from '../models/consola.model';
+
+import type { ProcedimientoResponse } from './radicacion.service';
 
 /** Consola operable del área (`/api/v1/admin/consola/*`). */
 @Injectable({ providedIn: 'root' })
@@ -110,6 +111,43 @@ export class ConsolaService {
     return this.http.get(`${this.base}/polizas/${encodeURIComponent(numero)}/pdf`, { ...this.opciones, responseType: 'blob' });
   }
 
+  /** Procedimiento del negocio (estado del área, correcciones pedidas y documentos) para gestionarlo desde la consola. */
+  procedimientoNegocio(radicado: string): Observable<ProcedimientoResponse> {
+    return this.http.get<ProcedimientoResponse>(`${this.base}/negocios/${encodeURIComponent(radicado)}/procedimiento`, this.opciones);
+  }
+
+  /** El comercial reemplaza un documento del negocio (SARLAFT en validación; cualquiera en corrección). */
+  subirDocumentoNegocio(radicado: string, tipo: string, archivo: File): Observable<unknown> {
+    const datos = new FormData();
+    datos.append('tipo', tipo);
+    datos.append('archivo', archivo);
+    return this.http.post(`${this.base}/negocios/${encodeURIComponent(radicado)}/documentos`, datos, this.opciones);
+  }
+
+  /** Devuelve la radicación corregida a «Pendiente Validación Documental» con el comentario del comercial. */
+  reenviarCorreccionNegocio(radicado: string, comentario: string): Observable<unknown> {
+    return this.http.post(`${this.base}/negocios/${encodeURIComponent(radicado)}/correccion`,
+      { comentario: comentario.trim() || undefined }, this.opciones);
+  }
+
+  /** Corrige los documentos de una renovación en corrección (solo documentos). */
+  corregirRenovacion(poliza: string, documentos: readonly File[], comentario: string): Observable<unknown> {
+    const datos = new FormData();
+    documentos.forEach((d) => datos.append('documentos', d));
+    if (comentario.trim()) datos.append('comentario', comentario.trim());
+    return this.http.post(`${this.base}/renovaciones/${encodeURIComponent(poliza)}/correccion`, datos, this.opciones);
+  }
+
+  /** Desactiva un prospecto duplicado o de prueba (solo Administrador; borrado lógico). */
+  desactivarProspecto(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/prospectos/${encodeURIComponent(id)}`, this.opciones);
+  }
+
+  /** Nota del Administrador o del Comercial (de su cartera) en el historial del negocio. */
+  dejarNota(radicado: string, texto: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/negocios/${encodeURIComponent(radicado)}/notas`, { texto: texto.trim() }, this.opciones);
+  }
+
   referidos(): Observable<readonly ReferidoConsola[]> {
     return this.http.get<ReferidoConsola[]>(`${this.base}/referidos`, this.opciones);
   }
@@ -119,15 +157,16 @@ export class ConsolaService {
       { estado, nota: nota?.trim() || undefined }, this.opciones);
   }
 
+  /** Fecha ISO de la última sincronización de renovaciones con el Warehouse ('' si nunca). */
+  ultimaSincronizacionRenovaciones(): Observable<{ ultima: string }> {
+    return this.http.get<{ ultima: string }>(`${this.base}/renovaciones/sincronizacion`, this.opciones);
+  }
+
   renovaciones(): Observable<readonly RenovacionConsola[]> {
     return this.http.get<RenovacionConsola[]>(`${this.base}/renovaciones`, this.opciones);
   }
 
   ingerirRenovaciones(muestra = 200): Observable<{ renovaciones: number }> {
     return this.http.post<{ renovaciones: number }>(`${this.base}/renovaciones/ingesta?muestra=${muestra}`, {}, this.opciones);
-  }
-
-  registrarPago(cuentaId: string, pago: PagoRequest): Observable<CuentaCobroResponse> {
-    return this.http.patch<CuentaCobroResponse>(`/api/v1/admin/cuentasCobro/${encodeURIComponent(cuentaId)}/pago`, pago, this.opciones);
   }
 }

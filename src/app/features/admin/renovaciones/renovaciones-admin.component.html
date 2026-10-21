@@ -13,6 +13,9 @@
       </div>
     }
   </app-page-header>
+  @if (ultimaSincronizacion()) {
+    <p class="ren-sincronizacion">Última actualización desde el Warehouse: {{ ultimaSincronizacion() }}</p>
+  }
 
   <app-grid-layout tipo="kpi-grid">
     <app-kpi-card label="Por contactar" [valor]="conteo('pendiente')" icono="pending_actions" tono="accent" sub="Pólizas próximas a vencer" />
@@ -85,7 +88,7 @@
   [subtitulo]="(renovacion()?.asegurado ?? '') + ' · ' + (renovacion()?.broker ?? 'sin broker')"
   eyebrow="Renovación"
   tamano="lg"
-  [pestanas]="pestanasRenovacion"
+  [pestanas]="pestanasRenovacion()"
   [pestana]="pestana()"
   (pestanaChange)="pestana.set($event)"
   (cerrar)="renovacion.set(null)"
@@ -106,9 +109,24 @@
   @if (renovacion()) {
     @if (pestana() === 'detalle') {
       <app-ficha [secciones]="fichaRenovacion()" />
+    } @else if (pestana() === 'corregir') {
+      <app-doc-uploader [reglas]="reglasCorreccion" [cargados]="elegidosCorreccion()" [disabled]="enviandoCorreccion()"
+        (archivoSeleccionado)="onArchivoCorreccion($event)" />
+      <app-form-field label="Comentario para el área y el broker" controlId="ren-corr-comentario"
+        ayuda="Solo se corrigen documentos; los datos de la póliza no cambian.">
+        <textarea id="ren-corr-comentario" rows="3" maxlength="500" [value]="comentarioCorreccion()"
+          (input)="comentarioCorreccion.set(valorTexto($event))"></textarea>
+      </app-form-field>
     } @else {
       <app-bitacora [eventos]="historial()" mensajeVacio="Sin historial de gestión en el Warehouse" />
     }
+  }
+  @if (renovacion() && pestana() === 'corregir') {
+    <div acciones>
+      <app-boton variante="accent" icono="send" [disabled]="enviandoCorreccion() || !elegidosCorreccion()['doc1']" (clicked)="enviarCorreccion()">
+        {{ enviandoCorreccion() ? 'Enviando…' : 'Enviar a Validación Documental' }}
+      </app-boton>
+    </div>
   }
 </app-modal-dialog>
 

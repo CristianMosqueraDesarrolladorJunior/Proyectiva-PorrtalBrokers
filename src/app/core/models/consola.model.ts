@@ -240,15 +240,6 @@ export interface PersonaRequest {
   readonly telefono: string;
 }
 
-/** Seguimiento del pago de una cuenta de cobro (solo Administrador). */
-export interface PagoRequest {
-  readonly estado: 'pendiente' | 'pagada' | 'rechazada';
-  readonly valorPagado?: number;
-  readonly fecha?: string;
-  readonly referencia?: string;
-  readonly motivo?: string;
-}
-
 export interface ReferidoConsola {
   readonly radicado: string;
   readonly nombre: string;

@@ -1247,11 +1247,11 @@ export const CATALOGOS_PRUEBA = {
   },
   "seguimiento": [
     {
-      "descripcion": "Radicada · por enviar al área",
+      "descripcion": "Radicada · por enviar",
       "codigo": "radicada"
     },
     {
-      "descripcion": "En revisión del área",
+      "descripcion": "En revisión",
       "codigo": "en_revision"
     },
     {

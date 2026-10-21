@@ -143,7 +143,7 @@ export class EstadoReferidosComponent {
       },
       error: () => {
         this.cargando.set(false);
-        this.errorCarga.set('No fue posible cargar los referidos. Intenta nuevamente.');
+        this.errorCarga.set('No pudimos cargar los referidos. Intenta de nuevo.');
       },
     });
   }

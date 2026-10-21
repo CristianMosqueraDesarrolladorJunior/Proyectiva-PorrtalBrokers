@@ -235,6 +235,7 @@ export function pasoActivoRadicacion(
 
 /** Datos de pantalla necesarios para armar el envío de la radicación. */
 export interface EntradaPayloadRadicacion {
+  readonly canonDe?: 'contrato' | 'cotizacion';
   readonly contratoReferencia: string | null | undefined;
   readonly numeroEstudioArrendamiento: string;
   readonly tipoDocumentoInquilino: TipoDocumentoIdentidad;
@@ -277,6 +278,7 @@ export function construirPayloadRadicacion(e: EntradaPayloadRadicacion): Radicac
         }
       : {}),
     ...(e.observaciones?.trim() ? { observaciones: e.observaciones.trim() } : {}),
+    ...(e.canonDe ? { canonDe: e.canonDe } : {}),
   };
 }
 
@@ -285,12 +287,17 @@ const normalizarLugar = (t: string): string =>
 
 /**
  * El inmueble del estudio (texto libre del Estudio Digital, p. ej. "Apartamento · CR 1 2 3, SANTA ROSA DE CABAL")
- * no nombra ninguna ciudad con cobertura. Solo advierte: el área decide.
+ * nombra una ciudad de un departamento bloqueado (Antioquia). Solo informa: el bloqueo real lo hace el servidor.
+ *
+ * @param ciudadesBloqueadas ciudades del catálogo cuyo departamento está bloqueado
  */
-export function inmuebleSinCobertura(inmueble: string | null | undefined, ciudades: readonly string[]): boolean {
-  if (!inmueble?.trim() || ciudades.length === 0) {
+export function inmuebleEnDepartamentoBloqueado(
+  inmueble: string | null | undefined,
+  ciudadesBloqueadas: readonly string[],
+): boolean {
+  if (!inmueble?.trim() || ciudadesBloqueadas.length === 0) {
     return false;
   }
   const texto = normalizarLugar(inmueble);
-  return !ciudades.some((c) => normalizarLugar(c).trim() && texto.includes(normalizarLugar(c)));
+  return ciudadesBloqueadas.some((c) => normalizarLugar(c).trim() && texto.includes(normalizarLugar(c)));
 }

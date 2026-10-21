@@ -229,7 +229,7 @@ export class ReferirComponent {
       },
       error: () => {
         this.estadoEnvio.set('inactivo');
-        this.feedback.error({ titulo: 'No se pudo enviar', mensaje: 'No fue posible registrar el referido. Intenta nuevamente.' });
+        this.feedback.error({ titulo: 'No se pudo enviar', mensaje: 'No pudimos registrar el referido. Intenta de nuevo.' });
       },
     });
   }

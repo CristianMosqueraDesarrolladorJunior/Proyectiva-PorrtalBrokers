@@ -72,14 +72,9 @@ export const routes: Routes = [
             './features/dashboard/seguimiento/seguimiento.component'
           ).then((m) => m.SeguimientoComponent),
       },
-      {
-        path: 'agente',
-        title: 'Agente IA — Portal Brokers Proyectiva',
-        loadComponent: () =>
-          import('./features/agente/agente.component').then(
-            (m) => m.AgenteComponent,
-          ),
-      },
+      // Agente IA, Referir cliente y Estado de referidos están ocultos en esta versión: sus rutas no abren por URL
+      // (auditoría R1/R2/Q3); el código se conserva para reactivarlos.
+      { path: 'agente', redirectTo: 'seguimiento' },
       {
         path: 'radicacion',
         title: 'Nueva radicación — Portal Brokers Proyectiva',
@@ -104,22 +99,8 @@ export const routes: Routes = [
             (m) => m.CoberturasComponent,
           ),
       },
-      {
-        path: 'referidos',
-        title: 'Referir cliente — Portal Brokers Proyectiva',
-        loadComponent: () =>
-          import('./features/referidos/referir/referir.component').then(
-            (m) => m.ReferirComponent,
-          ),
-      },
-      {
-        path: 'estado-referidos',
-        title: 'Estado de referidos — Portal Brokers Proyectiva',
-        loadComponent: () =>
-          import(
-            './features/referidos/estado-referidos/estado-referidos.component'
-          ).then((m) => m.EstadoReferidosComponent),
-      },
+      { path: 'referidos', redirectTo: 'seguimiento' },
+      { path: 'estado-referidos', redirectTo: 'seguimiento' },
       {
         path: 'cotizador',
         title: 'Cotizador — Portal Brokers Proyectiva',
@@ -184,13 +165,14 @@ export const routes: Routes = [
       },
       // Un nuevo negocio es una radicación: la ruta vieja lleva al flujo real.
       { path: 'nuevo-negocio', pathMatch: 'full', redirectTo: 'radicacion' },
+      // La corrección se gestiona dentro del detalle de Seguimiento (modal): la ruta vieja lleva allí.
       {
         path: 'correccion',
-        title: 'Corrección de documentos — Portal Brokers Proyectiva',
-        loadComponent: () =>
-          import(
-            './features/correccion/pages/correccion/correccion.component'
-          ).then((m) => m.CorreccionComponent),
+        pathMatch: 'full',
+        redirectTo: ({ queryParams }) => {
+          const referencia = String(queryParams['referencia'] ?? '').trim();
+          return referencia ? `/app/seguimiento?gestionar=${encodeURIComponent(referencia)}` : '/app/seguimiento';
+        },
       },
       {
         path: 'calendario',
@@ -224,6 +206,8 @@ export const routes: Routes = [
             (m) => m.AyudaComponent,
           ),
       },
+      // Una dirección que no existe lleva al inicio del portal, no al login (la sesión sigue vigente).
+      { path: '**', redirectTo: 'seguimiento' },
     ],
   },
 
@@ -323,6 +307,7 @@ export const routes: Routes = [
             (m) => m.ComisionesAdminComponent,
           ),
       },
+      { path: '**', redirectTo: 'resumen' },
     ],
   },
 

@@ -126,7 +126,7 @@
   place-items: center;
   width: var(--control-height-sm);
   height: var(--control-height-sm);
-  padding: 0;
+  padding: var(--space-0);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: transparent;
@@ -346,4 +346,35 @@
   .data-table td.dt-fija {
     background: var(--sb-surface);
   }
+}
+
+// Casilla de selección de filas (columna opcional).
+.dt-sel {
+  width: var(--space-8);
+  text-align: center;
+}
+
+.dt-sel__casilla {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+.dt-fila--elegida {
+  background: var(--color-accent-light);
+}
+
+.dt-td--nowrap {
+  white-space: nowrap;
 }

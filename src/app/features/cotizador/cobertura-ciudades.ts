@@ -119,3 +119,20 @@ export function puedeCalcular(
   }
   return ciudadEnCobertura(ciudadSeleccionada, estado.ciudades);
 }
+
+/** Departamentos donde no se cotiza ni se radica (el servidor es quien decide; esto solo informa al usuario). */
+export const DEPARTAMENTOS_BLOQUEADOS: readonly string[] = ['ANTIOQUIA'];
+
+/** Mensaje mostrado cuando el departamento seleccionado no está habilitado. */
+export const MENSAJE_DEPARTAMENTO_BLOQUEADO = 'Antioquia no está habilitado para cotizar ni radicar.';
+
+const sinTildes = (texto: string): string =>
+  texto.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase();
+
+/**
+ * Indica si el departamento (sin importar mayúsculas ni tildes) es uno de los bloqueados.
+ * Función pura y total.
+ */
+export function departamentoBloqueado(departamento: string | null | undefined): boolean {
+  return !!departamento && DEPARTAMENTOS_BLOQUEADOS.includes(sinTildes(departamento));
+}

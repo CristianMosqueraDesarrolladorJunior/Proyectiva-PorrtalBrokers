@@ -56,6 +56,13 @@ export interface ProcedimientoResponse {
  * Registra la radicación con sus documentos en el API_Backend, que revalida tipo,
  * formato y presencia (Req 10.5, 13.5). Consumo vía `HttpClient` con `withCredentials`.
  */
+/** Lo que no coincide entre estudio, contrato y cotización, con los dos cánones para elegir cuál se radica. */
+export interface NovedadesRadicacion {
+  readonly novedades: readonly string[];
+  readonly canonContrato: number | null;
+  readonly canonCotizado: number | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RadicacionService {
   private readonly http = inject(HttpClient);
@@ -122,6 +129,19 @@ export class RadicacionService {
    * @param tipoDocumento tipo de documento del inquilino (por defecto CC).
    * @returns resultado del estudio con datos de inquilino e inmueble enmascarados.
    */
+  /** Diferencias entre el estudio y el contrato (inquilino, inmueble): avisan, no bloquean. */
+  novedades(
+    contratoReferencia: string,
+    numeroEstudio: string,
+    documentoInquilino: string,
+    tipoDocumentoInquilino: TipoDocumentoIdentidad = 'CC',
+  ): Observable<NovedadesRadicacion> {
+    return this.http.get<NovedadesRadicacion>(`${this.baseUrl}/novedades`, {
+      params: { contratoReferencia, numeroEstudio, documentoInquilino, tipoDocumentoInquilino },
+      withCredentials: true,
+    });
+  }
+
   consultarEstudio(
     consecutivo: string,
     documentoInquilino: string,

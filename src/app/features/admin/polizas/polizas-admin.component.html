@@ -3,21 +3,14 @@
     [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="polizas-titulo"
     titulo="Pólizas expedidas"
-    subtitulo="Cada póliza con su comisión: si ya se le pagó al broker y la cuenta de cobro con la que la cobró."
+    subtitulo="Cada póliza expedida con su prima, su comisión y la cuenta de cobro (documento) del broker."
   ></app-page-header>
 
   <app-grid-layout tipo="kpi-grid">
     <app-kpi-card label="Pólizas expedidas" [valor]="polizas().length" icono="workspace_premium" [sub]="compacto(primaTotal()) + ' en primas emitidas'" />
-    <app-kpi-card label="Comisión pagada" [valor]="pagadas()" icono="paid" sub="Pólizas con comisión consignada" />
-    <app-kpi-card label="Comisión por pagar" [valor]="pendientes()" icono="schedule" tono="accent" sub="Cobradas, falta consignar" />
-    <app-kpi-card label="Sin cuenta de cobro" [valor]="sinCobrar()" icono="receipt_long" sub="El broker aún no la radica" />
+    <app-kpi-card label="Comisión generada" [valor]="compacto(comisionTotal())" icono="payments" sub="Suma de las comisiones de estas pólizas" />
+    <app-kpi-card label="Con cuenta de cobro" [valor]="conCuenta()" icono="receipt_long" sub="El broker ya generó el documento" />
   </app-grid-layout>
-
-  <app-barra-acciones>
-    <div filtros>
-      <app-segmented-control [opciones]="filtros" [valor]="filtro()" ariaLabel="Filtrar por pago" (valorChange)="filtro.set($event)" />
-    </div>
-  </app-barra-acciones>
 
   <app-estado-vista
     [cargando]="cargando()"
@@ -53,13 +46,6 @@
   (pestanaChange)="cambiarPestana($event)"
   (cerrar)="seleccionada.set(null)"
 >
-  @if (seleccionada(); as p) {
-    <div cabecera>
-      <app-badge-estado [variante]="(pago[p.estadoPago] ?? { variante: 'info' }).variante" [conPunto]="true">
-        {{ (pago[p.estadoPago] ?? { etiqueta: p.estadoPago }).etiqueta }}
-      </app-badge-estado>
-    </div>
-  }
   @if (seleccionada()) {
     @if (pestana() === 'detalle') {
       <app-ficha [secciones]="ficha()" />

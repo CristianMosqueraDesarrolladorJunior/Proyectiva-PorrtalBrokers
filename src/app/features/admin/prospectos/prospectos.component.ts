@@ -57,11 +57,17 @@ function faltante(codigo: string, documentos: Readonly<Record<string, string>>):
   };
   return textos[codigo] ?? codigo;
 }
+import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
+
+/** Nombre comparable: sin tildes, minúsculas y espacios simples. */
+function claveNombre(nombre: string): string {
+  return nombre.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
 
 /**
  * Prospectos operando o en legalización (ningún broker registrado aparece aquí; sin prospectos, la
  * vista queda vacía). Alta con credenciales generadas, expediente con documentos, SARLAFT, estudios,
- * comisión en curso y actividad, y aprobación con validadores.
+ * comisión estimada y actividad, y aprobación con validadores.
  */
 @Component({
   selector: 'app-admin-prospectos',
@@ -98,6 +104,7 @@ export class ProspectosComponent {
   protected readonly comercialDestino = signal('');
   protected readonly compacto = copCompacto;
   private readonly catalogo = inject(CatalogoService);
+  private readonly feedback = inject(FeedbackService);
   private readonly documentos = this.catalogo.etiquetas('documento_legalizacion');
   private readonly fasesSarlaft = this.catalogo.etiquetas('fase_sarlaft');
   /** Fase SARLAFT con la descripción del catálogo (`cat_fase_sarlaft`). */
@@ -120,19 +127,30 @@ export class ProspectosComponent {
     { key: 'legalizacion', header: 'Legalización', tipo: 'badge', ordenable: true },
     { key: 'documentos', header: 'Documentos', alinear: 'derecha' },
     { key: 'sarlaft', header: 'SARLAFT', tipo: 'principal' },
-    { key: 'estudios', header: 'Estudios', alinear: 'derecha', ordenable: true },
+    { key: 'estudios', header: 'Estudios', alinear: 'derecha', ordenable: true, nowrap: true },
     { key: 'ingreso', header: 'Ingreso', alinear: 'derecha', ordenable: true },
-    { key: 'comision', header: 'Comisión en curso', alinear: 'derecha', ordenable: true },
+    { key: 'comision', header: 'Comisión estimada', alinear: 'derecha', ordenable: true, nowrap: true },
     ...COLUMNAS_FECHAS,
     COLUMNA_GESTIONAR,
   ];
+
+  /** Nombres que se repiten con otra cédula: posibles cuentas duplicadas o de prueba para depurar. */
+  private readonly nombresRepetidos = computed(() => {
+    const cuenta = new Map<string, number>();
+    this.prospectos().forEach((p) => cuenta.set(claveNombre(p.nombre), (cuenta.get(claveNombre(p.nombre)) ?? 0) + 1));
+    return new Set([...cuenta].filter(([, n]) => n > 1).map(([k]) => k));
+  });
+
+  private esDuplicado(nombre: string): boolean {
+    return this.nombresRepetidos().has(claveNombre(nombre));
+  }
 
   protected readonly filas = computed<readonly FilaTabla[]>(() =>
     this.prospectos().map((p) => {
       const leg = this.legalizacion[p.estadoLegalizacion] ?? { etiqueta: p.estadoLegalizacion, variante: 'info' as VarianteBadge };
       return {
         prospecto: p.nombre,
-        prospectoSub: p.documento ?? 'sin documento',
+        prospectoSub: (p.documento ?? 'sin documento') + (this.esDuplicado(p.nombre) ? ' · Posible duplicado' : ''),
         contacto: p.correo ?? '—',
         contactoSub: p.celular ?? '',
         comercial: p.comercialNombre ?? 'Sin asignar',
@@ -212,7 +230,7 @@ export class ProspectosComponent {
           { etiqueta: 'Estudios realizados', valor: p.estudios },
           { etiqueta: 'Negocios radicados', valor: p.negocios },
           { etiqueta: 'Ingreso por pólizas expedidas', valor: cop(p.primas) },
-          { etiqueta: 'Comisión en curso', valor: cop(p.comisionEnCurso), destacado: true },
+          { etiqueta: 'Comisión estimada', valor: cop(p.comisionEnCurso), destacado: true },
           { etiqueta: 'Documentos cargados', valor: `${p.documentosCargados} de 4` },
           { etiqueta: 'Creado', valor: fechaHora(p.creado) },
           { etiqueta: 'Último movimiento', valor: fechaHora(p.ultimoMovimiento ?? p.creado) },
@@ -334,6 +352,28 @@ export class ProspectosComponent {
           this.errorDecision.set(mensajeErrorIntegracion(err));
         },
       });
+  }
+
+  /** Prospecto duplicado o de prueba: se desactiva (sale de las listas y no puede ingresar), con confirmación. */
+  protected desactivar(): void {
+    const e = this.expediente();
+    if (!e) return;
+    this.feedback.info({
+      titulo: 'Desactivar prospecto',
+      mensaje: `${e.prospecto.nombre} dejará de aparecer en la consola y no podrá ingresar al portal. Su historial se conserva.`,
+      acciones: { confirmar: 'Desactivar', cancelar: 'Cancelar' },
+      alResolver: (r) => {
+        if (r !== 'confirmar') return;
+        this.consola.desactivarProspecto(e.prospecto.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+          next: () => {
+            this.feedback.toast({ variante: 'exito', mensaje: 'Prospecto desactivado.' });
+            this.expediente.set(null);
+            this.cargar();
+          },
+          error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
+        });
+      },
+    });
   }
 
   protected cerrarExpediente(): void {

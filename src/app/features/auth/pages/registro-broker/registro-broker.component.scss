@@ -91,13 +91,13 @@
 .registro-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .registro-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
+  gap: var(--space-3) var(--space-4);
 
   .registro-grid__ancho {
     grid-column: 1 / -1;
@@ -411,7 +411,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-1);
   min-width: 0;
   line-height: var(--line-height-tight);
 
@@ -455,9 +455,10 @@
     display: grid;
     grid-template-columns: var(--registro-lateral-width) 1fr;
     grid-template-rows: minmax(0, 1fr); // la fila no crece más que la tarjeta
-
     max-width: var(--registro-card-width-desktop);
-    height: min(var(--registro-card-height), calc(100vh - 2 * var(--space-5)));
+    // Crece con el contenido del paso hasta caber en la ventana; si no cabe, el cuerpo se desplaza.
+    min-height: min(var(--registro-card-height), calc(100vh - 2 * var(--space-5)));
+    max-height: calc(100vh - 2 * var(--space-5));
     padding: var(--space-0);
     overflow: hidden;
   }
@@ -523,7 +524,7 @@
     flex-direction: column;
     gap: var(--space-4);
     min-height: 0;
-    padding: var(--space-7) var(--space-8);
+    padding: var(--space-6) var(--space-8);
     // Contenido centrado en vertical; "safe" evita recortar arriba si no cabe (pantallas bajas).
     justify-content: safe center;
     // Respaldo para pantallas bajas; en escritorio normal no aparece.
@@ -657,3 +658,109 @@
   }
 }
 
+
+.registro-declaracion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.registro-declaracion input {
+  margin-top: var(--space-1);
+}
+
+.registro-declaracion__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-1) var(--space-0) var(--space-0);
+  color: var(--color-danger);
+}
+
+.registro-pregunta {
+  margin: var(--space-4) var(--space-0);
+}
+
+.registro-pregunta__texto {
+  margin: var(--space-0) var(--space-0) var(--space-2);
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.registro-ayuda {
+  margin: var(--space-2) var(--space-0);
+  color: var(--color-text);
+}
+
+// Confirmación del registro: una sola columna, centrada, sin la columna lateral del asistente.
+.registro-card.registro-card--confirmacion {
+  display: block;
+  max-width: var(--registro-confirmacion-width, 36rem);
+}
+
+// Encabezado de cada sección del asistente (paso 2 «Tus datos», paso 3 «Documentos»).
+.registro-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.registro-seccion__eyebrow {
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent);
+  text-transform: uppercase;
+}
+
+.registro-seccion__titulo {
+  margin: var(--space-0);
+  font-family: var(--font-family-heading);
+  font-size: var(--text-title);
+  color: var(--color-text);
+}
+
+.registro-seccion__texto {
+  margin: var(--space-0);
+  font-size: var(--text-body-sm);
+  color: var(--color-muted);
+}
+
+.registro-seccion__avance {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-1) var(--space-0) var(--space-0);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success);
+}
+
+// Subtítulo dentro del formulario: agrupa los campos («Quién eres», «Tu acceso»).
+.registro-subseccion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-0);
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+// Las dos casillas del paso «Tus datos» van lado a lado para que el paso no se desplace.
+.registro-checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+@media (width <= 767px) {
+  .registro-checks {
+    grid-template-columns: 1fr;
+  }
+}

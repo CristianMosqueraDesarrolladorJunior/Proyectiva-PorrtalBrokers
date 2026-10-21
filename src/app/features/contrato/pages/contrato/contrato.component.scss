@@ -116,7 +116,7 @@
 }
 
 // Responsivo: una sola columna en móvil (<640px), preservando toda la funcionalidad.
-@media (max-width: 639px) {
+@media (width <= 639px) {
   .contrato-grid {
     grid-template-columns: 1fr;
   }
@@ -135,30 +135,30 @@
 // Precarga desde el estudio digital y deudores solidarios
 .contrato-estudio {
   display: grid;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-  padding: 1rem;
-  border: 1px dashed var(--color-border, #d0d5dd);
-  border-radius: var(--radius-md, 12px);
-  background: var(--color-surface-muted, transparent);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--sb-surface-low);
 
   &__texto {
-    margin: 0;
-    color: var(--color-text-muted, inherit);
+    margin: var(--space-0);
+    color: var(--color-muted);
   }
 }
 
 .contrato-deudor {
   display: grid;
-  gap: 0.75rem;
-  margin: 1rem 0 0;
-  padding: 1rem;
-  border: 1px solid var(--color-border, #d0d5dd);
-  border-radius: var(--radius-md, 12px);
+  gap: var(--space-3);
+  margin: var(--space-4) var(--space-0) var(--space-0);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 
   legend {
-    padding: 0 0.5rem;
-    font-weight: 600;
+    padding: var(--space-0) var(--space-2);
+    font-weight: var(--font-weight-semibold);
   }
 }
 
@@ -167,4 +167,50 @@
   margin: var(--space-2) 0 var(--space-4);
   color: var(--color-muted);
   font-size: var(--text-caption);
+}
+
+// Pantalla de contrato generado: CTA principal arriba y descarga agrupada en una tarjeta (PDF y Word, mismo ancho).
+.exito-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex-basis: 100%;
+  width: 100%;
+}
+
+.exito-acciones__principal {
+  display: block;
+  width: 100%;
+
+  ::ng-deep button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.exito-descarga {
+  text-align: left;
+}
+
+.exito-descarga__titulo {
+  margin: var(--space-0) var(--space-0) var(--space-3);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.exito-descarga__botones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+
+  // El botón outline es de vidrio y se pierde sobre la página: aquí lleva borde y fondo visibles.
+  ::ng-deep button {
+    width: 100%;
+    justify-content: center;
+    padding: var(--space-3) var(--space-5);
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+  }
 }

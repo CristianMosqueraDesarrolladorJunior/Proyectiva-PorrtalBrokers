@@ -126,4 +126,44 @@ describe('DataTableComponent', () => {
     const textos = [...(fixture.nativeElement as HTMLElement).querySelectorAll('tbody button')].map((b) => b.textContent?.trim());
     expect(textos).toEqual(['Ver detalle', 'Gestionar']);
   });
+
+  describe('selección de filas', () => {
+    const preparar = (seleccionadas: string[] = []): string[][] => {
+      const emitidas: string[][] = [];
+      component.columnas = [{ key: 'poliza', header: 'Póliza' }];
+      component.claveFila = 'id';
+      component.seleccionable = true;
+      component.seleccionadas = seleccionadas;
+      component.filas = [
+        { id: 'P1', poliza: 'P1', seleccionable: 1 },
+        { id: 'P2', poliza: 'P2', seleccionable: 0 },
+        { id: 'P3', poliza: 'P3', seleccionable: 1 },
+      ];
+      component.total = 3;
+      component.seleccionadasChange.subscribe((v) => emitidas.push([...v]));
+      fixture.componentRef.changeDetectorRef.markForCheck();
+      fixture.detectChanges();
+      return emitidas;
+    };
+    const casillas = (): HTMLInputElement[] => [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLInputElement>('tbody .dt-sel__casilla')];
+
+    it('muestra una casilla por fila y deshabilita las que no se pueden elegir', () => {
+      preparar();
+      expect(casillas().map((c) => c.disabled)).toEqual([false, true, false]);
+    });
+
+    it('elige y quita una fila sin disparar la fila ni mezclar las demás', () => {
+      const emitidas = preparar(['P3']);
+      casillas()[0].click();
+      expect(emitidas.at(-1)).toEqual(['P3', 'P1']);
+      casillas()[2].click();
+      expect(emitidas.at(-1)).toEqual([]);
+    });
+
+    it('la casilla del encabezado elige solo las filas elegibles de la página', () => {
+      const emitidas = preparar();
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('thead .dt-sel__casilla')!.click();
+      expect(emitidas.at(-1)).toEqual(['P1', 'P3']);
+    });
+  });
 });

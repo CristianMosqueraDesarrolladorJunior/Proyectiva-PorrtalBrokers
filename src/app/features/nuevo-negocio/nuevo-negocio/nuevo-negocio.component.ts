@@ -221,7 +221,7 @@ export class NuevoNegocioComponent {
       },
       error: () => {
         this.calculando.set(false);
-        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: 'No fue posible calcular el resumen. Intenta nuevamente.' });
+        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: 'No pudimos calcular el resumen. Intenta de nuevo.' });
       },
     });
   }
@@ -245,7 +245,7 @@ export class NuevoNegocioComponent {
       },
       error: () => {
         this.estadoEnvio.set('inactivo');
-        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: 'No fue posible registrar el nuevo negocio. Intenta nuevamente.' });
+        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: 'No pudimos registrar el nuevo negocio. Intenta de nuevo.' });
       },
     });
   }

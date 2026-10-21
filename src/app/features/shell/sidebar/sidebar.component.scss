@@ -413,3 +413,8 @@
     }
   }
 }
+
+// «Ver recorrido»: mismo botón de contorno que «Cerrar sesión», con espacio entre ambos.
+.sidebar__recorrido {
+  margin-bottom: var(--space-2);
+}

@@ -1,3 +1,5 @@
+import { CtlValidacionComponent } from '../../../contrato/components/ctl-validacion/ctl-validacion.component';
+import { huellaArchivo, tipoConMismaHuella } from '../../../../shared/util/huella-archivo';
 import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
 import { concat, of, switchMap, toArray, type Observable } from 'rxjs';
 import {
@@ -22,11 +24,12 @@ import {
 import { RadicacionService } from '../../../../core/services/radicacion.service';
 import { BorradorRadicacionService } from '../../../../core/services/borrador-radicacion.service';
 import { formatearCop } from '../../../../shared/util/moneda';
+import { departamentoBloqueado } from '../../../cotizador/cobertura-ciudades';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
 import { reglaDesdeCatalogo, validarDocumento } from '../../../../shared/validation/documento-validacion';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
-import { ContratoService } from '../../../../core/services/contrato.service';
-import type { LecturaContratoResponse } from '../../../../core/models/contrato.model';
+import { ContratoService, type ContratoPendiente } from '../../../../core/services/contrato.service';
+import type { LecturaContratoResponse, PersonaEstudio } from '../../../../core/models/contrato.model';
 import { LectorContratoComponent } from '../../../contrato/components/lector-contrato/lector-contrato.component';
 import { contratoDesdeLectura } from './contrato-desde-lectura';
 import {
@@ -42,7 +45,6 @@ import {
   FormSectionCardComponent,
   StepTabsComponent,
   SummaryCardComponent,
-  StickyActionsComponent,
   ModalDialogComponent,
   InfoTipComponent,
 } from '../../../../shared/components';
@@ -59,7 +61,7 @@ import {
   documentosObligatoriosFaltantes,
   esNumeroDocumentoPropietarioValido,
   etiquetasDocumentos,
-  inmuebleSinCobertura,
+  inmuebleEnDepartamentoBloqueado,
   PASOS_RADICACION,
   pasoActivoRadicacion,
   permiteCargarDocumentos,
@@ -116,10 +118,10 @@ const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmad
     FormSectionCardComponent,
     StepTabsComponent,
     SummaryCardComponent,
-    StickyActionsComponent,
     ModalDialogComponent,
     InfoTipComponent,
     LectorContratoComponent,
+    CtlValidacionComponent,
   ],
   templateUrl: './radicacion.component.html',
   styleUrl: './radicacion.component.scss',
@@ -180,6 +182,20 @@ export class RadicacionComponent {
   protected readonly consultandoEstudio = signal(false);
   /** Resultado del estudio consultado (autollena el contrato). */
   protected readonly resultadoEstudio = signal<ResultadoEstudioArrendamiento | null>(null);
+  /** Diferencias estudio↔contrato que el servidor avisa (no bloquean; van al analista). */
+  protected readonly novedadesEstudio = signal<readonly string[]>([]);
+  /** Personas del estudio aprobado (inquilino y codeudores) con su contacto, tal como las entrega el estudio. */
+  protected readonly personasEstudio = signal<{ inquilino: PersonaEstudio | null; codeudores: readonly PersonaEstudio[] } | null>(null);
+  /** Cánones del contrato y de la cotización: si difieren, el broker elige cuál radica. */
+  protected readonly canones = signal<{ contrato: number; cotizado: number } | null>(null);
+  protected readonly canonDe = signal<'contrato' | 'cotizacion'>('contrato');
+  protected readonly opcionesCanon = computed(() => {
+    const c = this.canones();
+    return c ? [
+      { valor: 'contrato', etiqueta: `Canon del contrato · ${formatearCop(c.contrato)}` },
+      { valor: 'cotizacion', etiqueta: `Canon cotizado · ${formatearCop(c.cotizado)}` },
+    ] : [];
+  });
   /** Error técnico de la consulta de estudio. */
   protected readonly errorEstudio = signal<string | null>(null);
 
@@ -223,6 +239,8 @@ export class RadicacionComponent {
 
   /** Archivos elegidos (en memoria): se suben al radicar; el borrador solo guarda sus nombres. */
   private readonly archivos = new Map<TipoDocumentoRadicacion, File>();
+  /** Huella del contenido por documento: avisa antes de subir el mismo archivo en dos documentos. */
+  private readonly huellas = new Map<string, string>();
   private readonly tiposValidos = signal<ReadonlySet<TipoDocumentoRadicacion>>(new Set());
 
   /** Radicado devuelto por el backend tras un envío exitoso (Req 10, 11). */
@@ -372,6 +390,16 @@ export class RadicacionComponent {
       .map((tipo) => this.reglaUploader(tipo, true)),
   );
 
+  /** El CTL se carga con su propio componente (valida antigüedad y dirección); el resto, en la lista. */
+  protected readonly pideCtl = computed(() => this.obligatorios().includes('certificadoTradicion' as TipoDocumentoRadicacion));
+  protected readonly reglasSinCtl = computed(() => this.reglasObligatorias().filter((r) => r.id !== 'certificadoTradicion'));
+  /** Dirección del contrato leído, para detectar discrepancias con el CTL. */
+  protected readonly direccionContrato = signal('');
+
+  protected onCtlArchivo(archivo: File): void {
+    this.onArchivo({ id: 'certificadoTradicion', archivo });
+  }
+
   /** Regla del uploader para el contrato de arrendamiento firmado (opcional) (Req 11.3). */
   protected readonly reglaOpcional: ReglaDocumentoUploader = this.reglaUploader(
     DOCUMENTO_OPCIONAL,
@@ -461,7 +489,10 @@ export class RadicacionComponent {
     },
     {
       label: 'Estudio de arrendamiento',
-      valor: this.numeroEstudioArrendamiento().trim().length > 0 ? 'Ingresado' : 'Pendiente',
+      valor: this.estudioAprobado() ? 'Aprobado'
+        : this.resultadoEstudio()?.estado === 'NO_APROBADO' ? 'No aprobado'
+        : this.resultadoEstudio()?.estado === 'PENDIENTE' ? 'En proceso'
+        : this.numeroEstudioArrendamiento().trim().length > 0 ? 'Sin consultar' : 'Pendiente',
     },
     { label: 'Firmante', valor: this.firmaApoderado() ? 'Apoderado' : 'Propietario' },
     {
@@ -487,9 +518,25 @@ export class RadicacionComponent {
 
   protected readonly confirmarCancelar = signal(false);
 
+  /** Contratos generados en Contratación que aún no se radican: se eligen aquí en vez de volver a empezar. */
+  protected readonly contratosPendientes = signal<readonly ContratoPendiente[]>([]);
+
+  protected usarContrato(referencia: string): void {
+    const c = this.contratosPendientes().find((x) => x.referencia === referencia);
+    if (!c) return;
+    this.borrador.contrato.set({
+      referencia: c.referencia,
+      leasing: c.leasing,
+      propietario: { tipoDocumento: c.tipoDocumentoPropietario, numeroDocumento: c.documentoPropietario },
+      inquilino: { tipoDocumento: c.tipoDocumentoInquilino, numeroDocumento: c.documentoInquilino },
+    });
+    this.precargarDesdeContrato();
+  }
+
   constructor() {
     this.restaurarBorrador(this.borrador.formulario() as Record<string, never> | null);
     this.precargarDesdeContrato();
+    this.contratoService.pendientes().subscribe({ next: (c) => this.contratosPendientes.set(c), error: () => this.contratosPendientes.set([]) });
     // Contrato firmado cargado en Contratación: se adjunta aquí como documento de la radicación.
     const firmado = this.borrador.archivoContratoFirmado();
     if (firmado) {
@@ -547,6 +594,7 @@ export class RadicacionComponent {
     // Sin los archivos no hay documentos válidos: se marcan para adjuntar de nuevo (antes se mostraban como
     // cargados y el envío creaba la radicación sin documentos → 422 documentos_incompletos en el Warehouse).
     this.archivos.clear();
+    this.huellas.clear();
     this.archivosCargados.set({});
     this.tiposValidos.set(new Set());
     this.readjuntarDocumentos.set(Boolean(f['habiaDocumentos']) || Object.keys(f['archivosCargados'] ?? {}).length > 0);
@@ -623,13 +671,43 @@ export class RadicacionComponent {
         next: (resultado) => {
           this.resultadoEstudio.set(resultado);
           this.consultandoEstudio.set(false);
+          this.cargarNovedades(resultado);
         },
         error: () => {
           this.errorEstudio.set(
-            'No fue posible consultar el estudio en este momento. Verifica el número y la cédula del inquilino e intenta nuevamente.',
+            'No pudimos consultar el estudio en este momento. Verifica el número y la cédula del inquilino e intenta de nuevo.',
           );
           this.consultandoEstudio.set(false);
         },
+      });
+  }
+
+  private cargarNovedades(resultado: ResultadoEstudioArrendamiento): void {
+    const contrato = this.contratoReferencia();
+    this.novedadesEstudio.set([]);
+    this.personasEstudio.set(null);
+    this.canones.set(null);
+    this.canonDe.set('contrato');
+    if (resultado.estado !== 'APROBADO') {
+      return;
+    }
+    this.contratoService.prellenado(this.numeroEstudioArrendamiento().trim(), this.documentoInquilino().replace(/\D/g, ''),
+      this.tipoDocumentoInquilino()).subscribe({
+      next: (p) => this.personasEstudio.set({ inquilino: p.arrendatario, codeudores: p.deudores }),
+      error: () => this.personasEstudio.set(null),
+    });
+    if (!contrato) {
+      return;
+    }
+    this.radicacionService
+      .novedades(contrato, this.numeroEstudioArrendamiento().trim(), this.documentoInquilino().trim(), this.tipoDocumentoInquilino())
+      .subscribe({
+        next: (n) => {
+          this.novedadesEstudio.set(n.novedades);
+          this.canones.set(n.canonContrato != null && n.canonCotizado != null && n.canonContrato !== n.canonCotizado
+            ? { contrato: n.canonContrato, cotizado: n.canonCotizado } : null);
+        },
+        error: () => this.novedadesEstudio.set([]),
       });
   }
 
@@ -671,8 +749,8 @@ export class RadicacionComponent {
         },
         error: () => {
           this.errorSarlaft.set(
-            'No fue posible consultar Conocimiento de Cliente en este momento. Intenta nuevamente o continúa '
-              + 'cargando el SARLAFT físico diligenciado y firmado.',
+            'El servicio no respondió. Intenta de nuevo en unos minutos o sigue con el formulario SARLAFT '
+              + 'diligenciado y firmado: lo revisamos al validar los documentos.',
           );
           this.sarlaftNoDisponible.set(true);
           this.consultandoSarlaft.set(false);
@@ -709,6 +787,10 @@ export class RadicacionComponent {
   );
 
   /** Actualiza el estado de apoderado al elegir el firmante del contrato (Req 10.2). */
+  protected onCanonDe(valor: string): void {
+    this.canonDe.set(valor === 'cotizacion' ? 'cotizacion' : 'contrato');
+  }
+
   protected onCambioFirmante(valor: string): void {
     this.firmaApoderado.set(valor === 'apoderado');
   }
@@ -760,6 +842,33 @@ export class RadicacionComponent {
       siguiente.add(tipo);
       return siguiente;
     });
+    void this.avisarSiEsDuplicado(tipo, evento.archivo);
+  }
+
+  /** Si el archivo es idéntico al de otro documento, lo descarta e indica en cuál ya está (el servidor revalida). */
+  private async avisarSiEsDuplicado(tipo: TipoDocumentoRadicacion, archivo: File): Promise<void> {
+    const huella = await huellaArchivo(archivo);
+    if (huella === null) {
+      return;
+    }
+    const duplicado = tipoConMismaHuella(this.huellas, tipo, huella);
+    if (duplicado === undefined) {
+      this.huellas.set(tipo, huella);
+      return;
+    }
+    this.huellas.delete(tipo);
+    this.archivos.delete(tipo);
+    this.archivosCargados.update(({ [tipo]: _quitado, ...resto }) => resto);
+    this.tiposValidos.update((actual) => {
+      const siguiente = new Set(actual);
+      siguiente.delete(tipo);
+      return siguiente;
+    });
+    const nombre = (t: string): string => this.etiquetaDocumento[t] ?? t;
+    this.feedback.toast({
+      variante: 'error',
+      mensaje: `Ese archivo ya está cargado como "${nombre(duplicado)}". No puedes usar el mismo documento para "${nombre(tipo)}".`,
+    });
   }
 
   /** Envía la radicación al backend cuando el envío está habilitado (Req 11.4). */
@@ -782,6 +891,7 @@ export class RadicacionComponent {
       documentoApoderado: this.numeroDocumentoApoderado(),
       correoApoderado: this.firmaApoderado() ? this.correoApoderado().trim() : undefined,
       observaciones: this.observaciones(),
+      canonDe: this.canones() ? this.canonDe() : undefined,
       vocabulario: this.documentosCatalogo.filter((d) => d['aplica'] !== 'OPCIONAL').map((d) => d.codigo),
     });
 
@@ -822,7 +932,7 @@ export class RadicacionComponent {
         this.feedback.error({
           titulo: 'No se pudo continuar',
           mensaje:
-            (codigo ? `La solicitud ${codigo} quedó radicada pero no se pudo enviar al área: ` : '') +
+            (codigo ? `La solicitud ${codigo} quedó radicada pero aún no nos llegó: ` : '') +
               mensajeErrorIntegracion(err),
         });
         this.enviando.set(false);
@@ -855,24 +965,43 @@ export class RadicacionComponent {
   protected readonly tiposFirma = this.catalogo.opciones('tipo_firma');
   protected readonly firmaContratoCargado = signal('');
 
-  /** El inmueble del estudio está en una ciudad sin cobertura: se advierte y el área decide. */
+  /** El inmueble del estudio está en un departamento bloqueado (Antioquia): se avisa; el servidor decide. */
   protected readonly estudioSinCobertura = computed(() =>
-    inmuebleSinCobertura(this.resultadoEstudio()?.inmueble, this.catalogo.opciones('ciudad').map((c) => c.descripcion)),
+    inmuebleEnDepartamentoBloqueado(
+      this.resultadoEstudio()?.inmueble,
+      this.catalogo.opciones('ciudad').filter((c) => departamentoBloqueado(String(c['departamento'] ?? '')))
+        .map((c) => c.descripcion),
+    ),
   );
 
   protected onContratoLeido(lectura: LecturaContratoResponse): void {
+    this.direccionContrato.set(lectura.inmueble.direccionCompleta ?? '');
     if (!this.numeroDocumentoPropietario().trim() && lectura.arrendador.numeroIdentificacion) {
       this.numeroDocumentoPropietario.set(lectura.arrendador.numeroIdentificacion);
     }
     if (!this.documentoInquilino().trim() && lectura.arrendatario.numeroIdentificacion) {
       this.documentoInquilino.set(lectura.arrendatario.numeroIdentificacion);
     }
+    const estudio = this.numeroEstudioArrendamiento().trim();
+    const documento = this.documentoInquilino().replace(/\D/g, '');
+    if (!estudio || !documento) {
+      this.registrarContratoLeido(lectura, []);
+      return;
+    }
+    // Se traen todos los implicados del estudio digital; si no responde, se sigue con los del contrato escaneado.
+    this.contratoService.prellenado(estudio, documento, this.tipoDocumentoInquilino()).subscribe({
+      next: (p) => this.registrarContratoLeido(lectura, p.deudores),
+      error: () => this.registrarContratoLeido(lectura, []),
+    });
+  }
+
+  private registrarContratoLeido(lectura: LecturaContratoResponse, deudoresEstudio: readonly PersonaEstudio[]): void {
     const usos = this.catalogo.opciones('uso_inmueble');
     const request = contratoDesdeLectura(lectura, {
       ciudades: this.catalogo.opciones('ciudad').map((c) => c.descripcion),
       usoVivienda: usos.find((u) => u['plantilla'] !== 'COMERCIO')?.descripcion ?? 'Vivienda',
       usoComercio: usos.find((u) => u['plantilla'] === 'COMERCIO')?.descripcion ?? 'Comercial',
-    }, this.firmaContratoCargado());
+    }, this.firmaContratoCargado() || (this.tiposFirma[0]?.codigo ?? ''), deudoresEstudio);
     if (!request) {
       this.lecturaPorCompletar.set(lectura);
       this.avisarContratoLeido({
@@ -892,7 +1021,7 @@ export class RadicacionComponent {
           variante: lectura.firmado ? 'success' : 'warning',
           texto: lectura.firmado
             ? 'Contrato firmado leído y registrado con sus datos. Ya puedes radicar.'
-            : 'Contrato registrado con sus datos, pero no vimos las firmas: el área lo revisará.',
+            : 'Registramos el contrato con sus datos, pero no vimos las firmas: lo revisaremos.',
         });
       },
       error: (err: unknown) => {

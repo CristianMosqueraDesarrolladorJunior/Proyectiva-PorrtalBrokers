@@ -86,7 +86,7 @@ describe('CoberturasComponent (Req 14)', () => {
     // Then
     expect(componente.cargando()).toBe(false);
     expect(componente.error()).toBe(
-      'No fue posible cargar las coberturas. Intenta nuevamente.',
+      'No pudimos cargar las coberturas. Intenta de nuevo.',
     );
   });
 });

@@ -9,7 +9,6 @@
   <app-grid-layout tipo="kpi-grid">
     <app-kpi-card label="Brokers vinculados" [valor]="brokers().length" icono="verified_user" sub="Intermediarios registrados y activos" />
     <app-kpi-card label="Primas emitidas" [valor]="compacto(totalIngreso())" icono="account_balance" sub="Pólizas expedidas por sus brokers" />
-    <app-kpi-card label="Comisión por pagar" [valor]="compacto(totalPendiente())" icono="schedule" tono="accent" sub="Cuentas de cobro radicadas" />
   </app-grid-layout>
 
 

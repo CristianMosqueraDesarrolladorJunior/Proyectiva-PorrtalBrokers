@@ -122,6 +122,12 @@ export class CalendarioMensualComponent implements OnChanges {
     return agruparDia(this.eventosDelDia);
   }
 
+  /** Hoy en AAAA-MM-DD (hora local): los días anteriores se ven atenuados para no mezclar lo que ya pasó. */
+  protected readonly hoyIso = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+
   protected readonly indicadorDe = indicadorDe;
   protected readonly esGestionable = esGestionable;
   protected readonly etiquetaDia = etiquetaDia;

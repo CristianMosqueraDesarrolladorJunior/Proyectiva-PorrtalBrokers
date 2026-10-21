@@ -147,7 +147,7 @@ export class NoRenovacionComponent {
       },
       error: () => {
         this.estadoEnvio.set('inactivo');
-        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: 'No fue posible registrar la no renovación. Intenta nuevamente.' });
+        this.feedback.error({ titulo: 'No se pudo continuar', mensaje: 'No pudimos registrar la no renovación. Intenta de nuevo.' });
       },
     });
   }

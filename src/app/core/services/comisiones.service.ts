@@ -6,6 +6,7 @@ import {
   AcuerdoComision,
   CuentaCobroRequest,
   CuentaCobroResponse,
+  PolizaExpedida,
   RevisionCuenta,
 } from '../models/comisiones.model';
 
@@ -21,6 +22,11 @@ export class ComisionesService {
   /** Revisión previa de la cuenta de cobro (errores, avisos y comisión calculados en el servidor). */
   revisarCuenta(request: CuentaCobroRequest): Observable<RevisionCuenta> {
     return this.http.post<RevisionCuenta>(`${this.baseUrl}/cuentas/revision`, request, { withCredentials: true });
+  }
+
+  /** Pólizas expedidas de la cuenta de la sesión con su estado de pago y fecha de emisión (libro de comisiones). */
+  polizasExpedidas(): Observable<readonly PolizaExpedida[]> {
+    return this.http.get<readonly PolizaExpedida[]>(`${this.baseUrl}/hoja`, { withCredentials: true });
   }
 
   obtenerAcuerdo(): Observable<AcuerdoComision> {

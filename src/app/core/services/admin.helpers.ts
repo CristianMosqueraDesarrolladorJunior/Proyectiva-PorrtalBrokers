@@ -22,7 +22,7 @@ export function cop(valor: number): string {
 /** Formatea pesos en forma compacta: $1.234 M. */
 export function copCompacto(valor: number): string {
   if (valor >= 1_000_000_000) {
-    return `$${(valor / 1_000_000_000).toLocaleString('es-CO', { maximumFractionDigits: 2 })} mil M`;
+    return `$${(valor / 1_000_000_000).toLocaleString('es-CO', { maximumFractionDigits: 2 })} mil millones`;
   }
   if (valor >= 1_000_000) {
     return `$${(valor / 1_000_000).toLocaleString('es-CO', { maximumFractionDigits: 1 })} M`;

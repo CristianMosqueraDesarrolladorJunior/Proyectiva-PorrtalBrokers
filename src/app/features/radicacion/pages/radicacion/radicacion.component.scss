@@ -310,3 +310,9 @@
   background: var(--color-card);
   color: var(--color-text);
 }
+
+.rad-acciones-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

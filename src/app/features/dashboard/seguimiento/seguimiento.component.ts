@@ -39,6 +39,8 @@ import type { Solicitud } from '../../../core/models/solicitud.model';
 import { estadoABadge } from '../../../shared/pipes/estado-badge';
 
 import { formatearCop } from '../../../shared/util/moneda';
+import { plural } from '../../../core/util/plural';
+import { ACCESOS_SIDEBAR } from '../../shell/sidebar/sidebar.component';
 /** Tamaño de página del Seguimiento: 10 solicitudes por página (Req 6.5). */
 const TAMANO_PAGINA = 10;
 
@@ -65,6 +67,7 @@ const ESTADOS: readonly { readonly valor: string; readonly etiqueta: string }[] 
  * `DashboardService`/`HttpClient` (Req 5.6, 6.2). No hay cálculos autoritativos
  * en el cliente.
  */
+
 @Component({
   selector: 'app-seguimiento',
   standalone: true,
@@ -87,6 +90,7 @@ const ESTADOS: readonly { readonly valor: string; readonly etiqueta: string }[] 
   styleUrl: './seguimiento.component.scss',
 })
 export class SeguimientoComponent {
+  protected readonly plural = plural;
   private readonly dashboardService = inject(DashboardService);
   private readonly catalogo = inject(CatalogoService);
   private readonly session = inject(SessionService);
@@ -104,13 +108,13 @@ export class SeguimientoComponent {
 
   /** Columnas de la tabla de solicitudes con sort y acción "Gestionar" (Req 6.1). */
   protected readonly columnas: readonly ColumnaTabla[] = [
-    { key: 'referencia', header: 'Ref', ordenable: true },
-    { key: 'cliente', header: 'Cliente', ordenable: true },
+    { key: 'referencia', header: 'Ref', ordenable: true, nowrap: true },
+    { key: 'cliente', header: 'Propietario', ordenable: true },
     { key: 'producto', header: 'Producto', ordenable: true },
     { key: 'estadoLabel', header: 'Estado', tipo: 'badge', ordenable: true },
     { key: 'estadoPago', header: 'Pago de comisión' },
-    { key: 'fecha', header: 'Fecha', ordenable: true },
-    { key: 'comisionLabel', header: 'Comisión (área)', alinear: 'derecha' },
+    { key: 'fecha', header: 'Fecha', ordenable: true, nowrap: true },
+    { key: 'comisionLabel', header: 'Comisión', alinear: 'derecha', nowrap: true },
     { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Gestionar', alinear: 'derecha' },
   ];
 
@@ -138,6 +142,19 @@ export class SeguimientoComponent {
   /** Módulo al que se intentó entrar sin tenerlo habilitado (lo indica el guard de módulos). */
   protected readonly moduloBloqueado = signal<string | null>(null);
 
+  /** Lo que se le habilita al prospecto al aprobarse (catálogo de módulos restringidos). */
+  protected readonly modulosPorHabilitar = computed(() => {
+    const enMenu = new Set(ACCESOS_SIDEBAR.map((a) => a.ruta));
+    const nombres = this.catalogo.modulosRestringidos().filter((m) => enMenu.has(m.ruta))
+      .map((m) => ACCESOS_SIDEBAR.find((a) => a.ruta === m.ruta)?.etiqueta ?? m.etiqueta);
+    return nombres.length > 1 ? `${nombres.slice(0, -1).join(', ')} y ${nombres.at(-1)}` : (nombres[0] ?? 'más secciones');
+  });
+
+  /** Nombre de la sección bloqueada tal como aparece en el menú. */
+  protected etiquetaModulo(ruta: string): string {
+    return this.catalogo.modulosRestringidos().find((m) => m.ruta === ruta)?.etiqueta ?? 'Esta sección';
+  }
+
   /** Filas mapeadas para el DataTableComponent (con etiquetas legibles). */
   protected readonly filas = computed(() =>
     this.solicitudes().map((s) => ({
@@ -162,6 +179,11 @@ export class SeguimientoComponent {
       .queryParamMap.pipe(takeUntilDestroyed())
       .subscribe((params) => {
         this.moduloBloqueado.set(params.get('bloqueado'));
+        // Enlaces viejos a la corrección (/app/correccion) llegan aquí: se abre el detalle con la gestión dentro del modal.
+        const gestionar = params.get('gestionar')?.trim();
+        if (gestionar) {
+          this.referenciaSeleccionada.set(gestionar);
+        }
         const q = params.get('q');
         if (q !== null && q !== this.busqueda()) {
           this.busqueda.set(q);
@@ -217,11 +239,16 @@ export class SeguimientoComponent {
     this.referenciaSeleccionada.set(null);
   }
 
+  /** El prospecto no ve comisiones (módulo restringido): sin tarjeta de comisión en el tablero. */
+  protected readonly veComisiones = computed(() => {
+    const estado = this.session.perfil()?.estadoCuenta;
+    return !estado || !moduloBloqueado(estado, 'comisiones', this.catalogo.modulosRestringidos().map((m) => m.ruta));
+  });
+
   /** Obtiene comisiones y KPIs del backend (Req 5.2, 5.3, 5.6). */
   private cargarDashboard(): void {
     // Las comisiones son un módulo restringido para el prospecto (catálogo `modulo_portal`): no se piden.
-    const estado = this.session.perfil()?.estadoCuenta;
-    if (!estado || !moduloBloqueado(estado, 'comisiones', this.catalogo.modulosRestringidos().map((m) => m.ruta))) {
+    if (this.veComisiones()) {
       this.dashboardService.obtenerComisiones().subscribe({
         next: (c) => this.comisiones.set(c),
         error: () => this.comisiones.set(null),
@@ -234,7 +261,7 @@ export class SeguimientoComponent {
   }
 
   /** Obtiene el listado filtrado y paginado de solicitudes (Req 6.2, 6.5). */
-  private cargarSolicitudes(): void {
+  protected cargarSolicitudes(): void {
     this.cargandoTabla.set(true);
     this.errorTabla.set(null);
     const filtros: FiltrosSolicitudes = {
@@ -257,7 +284,7 @@ export class SeguimientoComponent {
           this.total.set(0);
           this.cargandoTabla.set(false);
           this.errorTabla.set(
-            'No fue posible cargar las solicitudes. Intenta nuevamente.',
+            'No pudimos cargar las solicitudes. Intenta de nuevo.',
           );
         },
       });

@@ -5,7 +5,7 @@
 
 /** Estado de una Solicitud en el Seguimiento (Req 5.4, 6.3). */
 export type EstadoSolicitud =
-  | 'radicada' | 'en_revision' | 'aprobada' | 'bloqueada' | 'observada';
+  | 'radicada' | 'en_revision' | 'aprobada' | 'expedida' | 'bloqueada' | 'observada';
 
 /** Fila del listado de solicitudes del Seguimiento (Req 6.1, 6.2). */
 export interface Solicitud {
@@ -40,4 +40,14 @@ export interface HitoTimeline {
  */
 export interface DetalleSolicitud extends Solicitud {
   readonly timeline: readonly HitoTimeline[];
+}
+
+/** Documento de una radicación que el broker puede ver desde Seguimiento (`GET /solicitudes/{ref}/documentos`). */
+export interface DocumentoSolicitud {
+  /** `cotizacion` y `contrato` se descargan por sus endpoints; `ctl` y `cargado`, del archivo de la solicitud. */
+  readonly tipo: 'cotizacion' | 'contrato' | 'cuenta_cobro' | 'ctl' | 'cargado';
+  readonly clave: string;
+  readonly titulo: string;
+  /** COT-… o CTR-… para la cotización y el contrato; `null` en los demás. */
+  readonly referencia: string | null;
 }

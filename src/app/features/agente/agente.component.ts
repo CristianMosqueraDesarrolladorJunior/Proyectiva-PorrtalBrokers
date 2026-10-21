@@ -513,7 +513,7 @@ export class AgenteComponent {
         this.consultandoEstudio.set(false);
         this.pensando.set(false);
         this.estadoBrok.set('Te escucho en pantalla');
-        this.errorEstudio.set('No fue posible consultar el estudio en este momento. Intenta nuevamente.');
+        this.errorEstudio.set('No pudimos consultar el estudio en este momento. Intenta de nuevo.');
         await this.decir('No pude consultar el estudio. Revisa el número e inténtalo de nuevo.');
         return;
       }
@@ -630,7 +630,7 @@ export class AgenteComponent {
       this.dock.set(null);
       this.escena.set('firma');
       this.paso.set(3);
-      await this.decir('No fue posible consultar Conocimiento de Cliente en este momento. Inténtalo de nuevo.');
+      await this.decir('No pudimos consultar Conocimiento de Cliente en este momento. Intenta de nuevo.');
       return;
     }
     const ultima = LISTAS_SARLAFT.length - 1;
@@ -805,7 +805,7 @@ export class AgenteComponent {
         }
         this.enviando.set(false);
         this.feedback.error({ titulo: 'No se pudo radicar', mensaje: mensajeErrorIntegracion(e) });
-        await this.decir('No pude registrar la radicación. Inténtalo de nuevo en unos minutos.');
+        await this.decir('No pude registrar la radicación. Intenta de nuevo en unos minutos.');
         return;
       }
       this.enviando.set(false);

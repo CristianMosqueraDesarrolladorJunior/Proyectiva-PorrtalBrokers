@@ -21,6 +21,10 @@ export interface RegistroProspectoRequest {
   readonly documento: string;
   /** Contraseña elegida por el prospecto (política fuerte; el backend revalida, Req 2.6). */
   readonly password: string;
+  /** Declaración de no haber trabajado para inmobiliarias en el último año (obligatoria). */
+  readonly declaracionInmobiliaria: boolean;
+  /** Aceptación del tratamiento de datos personales (obligatoria). */
+  readonly aceptaTratamientoDatos: boolean;
 }
 
 /**
@@ -37,6 +41,9 @@ export interface CrearProspectoPayload {
   readonly tipoDocumento: TipoDocumentoIdentidad;
   readonly codigoPais: string;
   readonly password: string;
+  readonly declaracionInmobiliaria: boolean;
+  /** Aceptación del tratamiento de datos personales (obligatoria). */
+  readonly aceptaTratamientoDatos: boolean;
 }
 
 // Identificador de cada documento obligatorio del registro de broker (Req 3.16).

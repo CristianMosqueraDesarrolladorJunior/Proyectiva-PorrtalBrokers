@@ -15,8 +15,10 @@ import {
   BitacoraComponent,
   BotonComponent,
   DataTableComponent,
+  DocUploaderComponent,
   EstadoVistaComponent,
   FichaComponent,
+  FormFieldComponent,
   GridLayoutComponent,
   KpiCardComponent,
   ModalDialogComponent,
@@ -26,6 +28,8 @@ import {
 } from '../../../shared/components';
 import type {
   AccionFila,
+  ArchivoSeleccionado,
+  ReglaDocumentoUploader,
   ColumnaTabla,
   EventoBitacora,
   FilaTabla,
@@ -35,6 +39,7 @@ import type {
   VarianteBadge,
 } from '../../../shared/components';
 import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
+import { plural } from '../../../core/util/plural';
 
 /** Color de la insignia por estado de renovación (presentación; etiqueta del catálogo `estado_renovacion`). */
 const VARIANTE_ESTADO: Readonly<Partial<Record<string, VarianteBadge>>> = {
@@ -73,8 +78,10 @@ export function pasosHistorial(historial: string | null): readonly EventoBitacor
     BitacoraComponent,
     BotonComponent,
     DataTableComponent,
+    DocUploaderComponent,
     EstadoVistaComponent,
     FichaComponent,
+    FormFieldComponent,
     GridLayoutComponent,
     KpiCardComponent,
     ModalDialogComponent,
@@ -111,6 +118,8 @@ export class RenovacionesAdminComponent {
   protected readonly estado = signal('');
 
   protected readonly renovaciones = signal<readonly RenovacionConsola[]>([]);
+  /** Fecha y hora legibles de la última sincronización (X4): las cifras se pueden contrastar con el Warehouse. */
+  protected readonly ultimaSincronizacion = signal('');
   protected readonly inducciones = signal<readonly InduccionAdminResponse[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal(false);
@@ -185,10 +194,59 @@ export class RenovacionesAdminComponent {
   // --- Modal de renovación ---
   protected readonly renovacion = signal<RenovacionConsola | null>(null);
   protected readonly pestana = signal('detalle');
-  protected readonly pestanasRenovacion: readonly Tab[] = [
+  /** Validación Documental la devolvió a corrección: el comercial puede corregir sus documentos (nunca datos). */
+  protected readonly enCorreccion = computed(() =>
+    (this.renovacion()?.estadoWarehouse ?? '').normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase() === 'correccion');
+  protected readonly pestanasRenovacion = computed<readonly Tab[]>(() => [
     { id: 'detalle', etiqueta: 'Detalle' },
+    ...(this.enCorreccion() ? [{ id: 'corregir', etiqueta: 'Gestionar corrección' }] : []),
     { id: 'historial', etiqueta: 'Historial de gestión' },
-  ];
+  ]);
+
+  /** Hasta 3 documentos corregidos por envío; el primero es obligatorio. */
+  protected readonly reglasCorreccion: readonly ReglaDocumentoUploader[] = [1, 2, 3].map((n) => ({
+    id: `doc${n}`,
+    etiqueta: `Documento corregido ${n}`,
+    descripcion: n === 1 ? 'El que pidió corregir el área' : 'Opcional',
+    icono: n === 1 ? 'rule' : 'description',
+    obligatorio: n === 1,
+  }));
+  private readonly archivosCorreccion = new Map<string, File>();
+  protected readonly elegidosCorreccion = signal<Readonly<Record<string, string>>>({});
+  protected readonly comentarioCorreccion = signal('');
+  protected readonly enviandoCorreccion = signal(false);
+
+  protected onArchivoCorreccion(e: ArchivoSeleccionado): void {
+    this.archivosCorreccion.set(e.id, e.archivo);
+    this.elegidosCorreccion.update((c) => ({ ...c, [e.id]: e.archivo.name }));
+  }
+
+  protected enviarCorreccion(): void {
+    const r = this.renovacion();
+    if (!r || this.enviandoCorreccion() || this.archivosCorreccion.size === 0) return;
+    this.enviandoCorreccion.set(true);
+    this.consola.corregirRenovacion(r.poliza, [...this.archivosCorreccion.values()], this.comentarioCorreccion())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.enviandoCorreccion.set(false);
+          this.archivosCorreccion.clear();
+          this.elegidosCorreccion.set({});
+          this.comentarioCorreccion.set('');
+          this.feedback.toast({ variante: 'exito', mensaje: `Corrección de la póliza ${r.poliza} enviada a Validación Documental.` });
+          this.renovacion.set(null);
+          this.cargar();
+        },
+        error: (err: unknown) => {
+          this.enviandoCorreccion.set(false);
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
+        },
+      });
+  }
+
+  protected valorTexto(e: Event): string {
+    return (e.target as HTMLTextAreaElement).value;
+  }
   protected readonly historial = computed(() => pasosHistorial(this.renovacion()?.historial ?? null));
   protected readonly fichaRenovacion = computed<readonly SeccionFicha[]>(() => {
     const r = this.renovacion();
@@ -282,6 +340,16 @@ export class RenovacionesAdminComponent {
           this.error.set(true);
         },
       });
+    this.consola
+      .ultimaSincronizacionRenovaciones()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ ultima }) =>
+          this.ultimaSincronizacion.set(
+            ultima ? new Date(ultima).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }) : '',
+          ),
+        error: () => this.ultimaSincronizacion.set(''),
+      });
     this.admin
       .listarInducciones()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -292,7 +360,20 @@ export class RenovacionesAdminComponent {
     this.vista.set(v === 'inducciones' ? 'inducciones' : v === 'especiales' ? 'especiales' : 'warehouse');
   }
 
+  /** Pide confirmación: la actualización reemplaza lo que hoy se ve por lo que trae el Warehouse (auditoría L2). */
   protected ingerir(): void {
+    const actuales = this.renovaciones().length;
+    this.feedback.info({
+      titulo: 'Actualizar desde el Warehouse',
+      mensaje: `El listado actual (${plural(actuales, 'renovación', 'renovaciones')}) se reemplazará por lo que traiga el Warehouse. ¿Quieres continuar?`,
+      acciones: { confirmar: 'Actualizar', cancelar: 'Cancelar' },
+      alResolver: (r) => {
+        if (r === 'confirmar') this.ejecutarIngesta();
+      },
+    });
+  }
+
+  private ejecutarIngesta(): void {
     this.ingiriendo.set(true);
     this.consola
       .ingerirRenovaciones(200)

@@ -63,6 +63,8 @@ describe('DetalleSolicitudComponent', () => {
     httpMock
       .match((r) => r.url.endsWith('/procedimiento'))
       .forEach((r) => r.flush(null, { status: 404, statusText: 'Not Found' }));
+    // Los documentos de la radicación son opcionales para estas pruebas: sin respuesta se entregan vacíos.
+    httpMock.match((r) => r.url.endsWith('/documentos')).forEach((r) => r.flush([]));
     httpMock.verify();
   });
 
@@ -84,7 +86,16 @@ describe('DetalleSolicitudComponent', () => {
     expect(html).toContain('Qué debes corregir');
     expect(html).toContain('Debe tener menos de 30 días');
     expect(html).toContain('Corrección pendiente');
-    expect(html).toContain('Actualizar documentos');
+    // La gestión vive dentro del modal: se abre sola y no hay otra vista a la que ir.
+    expect(html).toContain('Enviar corrección');
+    expect(fixture.nativeElement.querySelector('app-correccion-panel')).not.toBeNull();
+
+    // Salida siempre disponible: «Ver detalle de la solicitud» vuelve a la ficha y deja reabrir la gestión.
+    Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('app-correccion-panel button'))
+      .find((b) => b.textContent?.includes('Ver detalle de la solicitud'))?.click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-correccion-panel')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Actualizar documentos');
   });
 
   it('ofrece completar y enviar la radicación que no alcanzó a enviarse al área', () => {
@@ -94,14 +105,40 @@ describe('DetalleSolicitudComponent', () => {
     httpMock.expectOne('/api/v1/radicaciones/REF-001/procedimiento').flush({
       procedimiento: {
         codigo: 'REF-001', estadoPortal: 'RADICADA', estadoWarehouse: null,
-        etiqueta: 'Radicada · por enviar al área', requiereAccion: false, correcciones: [],
+        etiqueta: 'Radicada · por enviar', requiereAccion: false, correcciones: [],
         observacion: null, numeroPoliza: null, asesor: null, enviada: false,
         documentosRequeridos: ['cedulaPropietario'], documentos: [],
       },
       eventos: [],
     });
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Completar y enviar');
+    expect(fixture.nativeElement.textContent).toContain('Enviar radicación');
+  });
+
+  it('lista cotización, contrato, CTL y cargados, y muestra el documento elegido en la vista previa', () => {
+    fixture.detectChanges();
+    seleccionar(componente, 'REF-001');
+    httpMock.expectOne('/api/v1/solicitudes/REF-001').flush(detalle);
+    httpMock.expectOne('/api/v1/solicitudes/REF-001/documentos').flush([
+      { tipo: 'cotizacion', clave: 'cotizacion', titulo: 'Cotización', referencia: 'COT-1' },
+      { tipo: 'contrato', clave: 'contrato', titulo: 'Contrato de arrendamiento', referencia: 'CTR-1' },
+      { tipo: 'ctl', clave: 'certificadoTradicion', titulo: 'Certificado de Tradición y Libertad', referencia: null },
+      { tipo: 'cargado', clave: 'cedulaPropietario', titulo: 'Cédula del propietario', referencia: null },
+    ]);
+    fixture.detectChanges();
+    const botones = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.docs__item'));
+    ['Cotización', 'Contrato de arrendamiento', 'Certificado de Tradición y Libertad', 'Cédula del propietario']
+      .forEach((titulo, i) => expect(botones[i].textContent).toContain(titulo));
+    expect(botones).toHaveLength(4);
+
+    botones[1].click();
+    httpMock.expectOne('/api/v1/contratos/CTR-1/documento?formato=pdf').flush(new Blob(['%PDF'], { type: 'application/pdf' }));
+    botones[2].click();
+    httpMock.expectOne('/api/v1/solicitudes/REF-001/documentos/certificadoTradicion').flush(new Blob(['%PDF']));
+    botones[0].click();
+    httpMock.expectOne('/api/v1/cotizaciones/COT-1/pdf').error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No pudimos cargar este documento');
   });
 
   it('no consulta ni abre el drawer sin referencia', () => {
@@ -176,14 +213,14 @@ describe('DetalleSolicitudComponent', () => {
       // Then
       expect(filas.map((f) => f.etiqueta)).toEqual([
         'Referencia',
-        'Cliente',
+        'Propietario',
         'Producto',
         'Estado',
         'Canon / Pago',
         'Fecha',
         'Comisión',
       ]);
-      expect(filas[3].valor).toBe('En revisión del área');
+      expect(filas[3].valor).toBe('En revisión');
       expect(filas[1].valor).toBe('M**** P****');
     });
   });

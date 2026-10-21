@@ -26,7 +26,6 @@ import {
   SegmentedControlComponent,
   MoneyInputComponent,
   SummaryCardComponent,
-  StickyActionsComponent,
   SkeletonComponent,
   ModalDialogComponent,
 } from '../../../shared/components';
@@ -46,7 +45,9 @@ import type {
 } from '../../../core/models/cotizacion.model';
 import { validarCanon } from '../canon-validacion';
 import {
+  departamentoBloqueado,
   estadoCobertura,
+  MENSAJE_DEPARTAMENTO_BLOQUEADO,
   MENSAJE_CIUDAD_SIN_COBERTURA,
 } from '../cobertura-ciudades';
 import {
@@ -136,7 +137,6 @@ interface CoberturaEstado {
     SegmentedControlComponent,
     MoneyInputComponent,
     SummaryCardComponent,
-    StickyActionsComponent,
     SkeletonComponent,
     ModalDialogComponent,
   ],
@@ -162,9 +162,9 @@ export class CotizadorDatosComponent implements OnInit {
   /** Verdadero mientras se genera el PDF (Req 9.1). */
   protected readonly descargandoPdf = signal(false);
 
-  /** Departamentos con ciudades en cobertura (catálogo `ciudad`). */
+  /** Departamentos con ciudades en cobertura (catálogo `ciudad`); los bloqueados (Antioquia) no se ofrecen. */
   protected readonly departamentos = computed(() => [
-    ...new Set(this.catalogo.opciones('ciudad').map((c) => String(c['departamento'] ?? '')).filter((d) => d)),
+    ...new Set(this.catalogo.opciones('ciudad').map((c) => String(c['departamento'] ?? '')).filter((d) => d && !departamentoBloqueado(d))),
   ]);
   /** Vigencias y montos del Motor_Tarifas (`parametro_negocio`). */
   protected readonly mesesMin = this.catalogo.parametro('VIGENCIA_MIN_MESES');
@@ -172,6 +172,7 @@ export class CotizadorDatosComponent implements OnInit {
   private readonly mesesDefecto = this.catalogo.parametro('VIGENCIA_DEFECTO_MESES');
   private readonly montoMaximoCobertura = this.catalogo.parametro('MONTO_MAX_COBERTURA');
   protected readonly mensajeSinCobertura = MENSAJE_CIUDAD_SIN_COBERTURA;
+  protected readonly mensajeDepartamentoBloqueado = MENSAJE_DEPARTAMENTO_BLOQUEADO;
 
   /** Destinos del inmueble (catálogo `destino_inmueble`: Vivienda / Comercio). */
   private readonly destinos = this.catalogo.opciones('destino_inmueble');
@@ -233,7 +234,7 @@ export class CotizadorDatosComponent implements OnInit {
       : {
           label: 'Tu comisión estimada',
           valor: formatearCop(comision),
-          nota: 'Estimación del sistema; la comisión que se paga es la que registra el área al expedir.',
+          nota: 'Es una estimación: la comisión final la confirmamos al expedir la póliza.',
         };
   });
 
@@ -263,6 +264,9 @@ export class CotizadorDatosComponent implements OnInit {
   protected readonly cobertura = computed(() => estadoCobertura(this.ciudadesCobertura()));
 
   /** Verdadero cuando el departamento seleccionado no tiene ciudades en cobertura (Req 7.3). */
+  /** El departamento seleccionado es uno de los bloqueados (Antioquia): se informa y no se permite calcular. */
+  protected readonly departamentoNoHabilitado = computed(() => departamentoBloqueado(this.departamento()));
+
   protected readonly sinCobertura = computed(
     () => this.departamento().trim().length > 0 && !this.cargandoCiudades() && !this.cobertura().tieneCobertura,
   );
@@ -299,6 +303,15 @@ export class CotizadorDatosComponent implements OnInit {
       : '',
   );
 
+  /** La administración no puede superar el canon (el servidor también lo rechaza). */
+  private readonly administracionMayorQueCanon = computed(() => {
+    const admin = validarCanon(this.tieneAdmin() === 'si' ? this.administracion() : '');
+    return admin.valido && this.validacionCanon().valido && (admin.valor ?? 0) > (this.validacionCanon().valor ?? 0);
+  });
+  protected readonly errorAdministracion = computed(() =>
+    this.intentoCalculo() && this.administracionMayorQueCanon() ? 'La administración no puede ser mayor que el canon.' : '',
+  );
+
   /** Hoy (yyyy-mm-dd, hora de Colombia): la vigencia no puede iniciar en el pasado. */
   protected readonly hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
 
@@ -310,7 +323,7 @@ export class CotizadorDatosComponent implements OnInit {
    * canon válido (> 0), cobertura de ciudad válida y demás campos obligatorios.
    */
   protected readonly puedeCalcular = computed(() => {
-    if (!this.validacionCanon().valido || this.canonBajoMinimo()) {
+    if (!this.validacionCanon().valido || this.canonBajoMinimo() || this.departamentoNoHabilitado() || this.administracionMayorQueCanon()) {
       return false;
     }
     // El botón solo exige canon válido y campos básicos; no se bloquea por
@@ -581,7 +594,7 @@ export class CotizadorDatosComponent implements OnInit {
         },
         error: () => {
           this.calculando.set(false);
-          this.feedback.toast({ variante: 'error', mensaje: 'No fue posible calcular la cotización. Intenta nuevamente.' });
+          this.feedback.toast({ variante: 'error', mensaje: 'No pudimos calcular la cotización. Intenta de nuevo.' });
         },
       });
   }

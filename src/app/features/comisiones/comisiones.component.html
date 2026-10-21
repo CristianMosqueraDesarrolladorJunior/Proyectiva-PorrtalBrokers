@@ -3,7 +3,7 @@
     eyebrow="Comisiones"
     tituloId="comisiones-titulo"
     titulo="Mis comisiones"
-    subtitulo="Genera tu cuenta de cobro y cárgala en la plataforma de proveedores de Seguros Bolívar para el pago."
+    subtitulo="Elige tus pólizas pendientes de pago, genera tu cuenta de cobro y cárgala en la plataforma de proveedores de Seguros Bolívar."
   >
     <div acciones>
       @if (proveedores; as p) {
@@ -25,6 +25,7 @@
       </div>
     </app-empty-state>
   } @else {
+    <!-- KPIs arriba -->
     <app-grid-layout tipo="dash-grid">
       <app-commission-breakdown-card
         [valorEstimado]="periodo()?.valorEstimado ?? 0"
@@ -39,26 +40,18 @@
           label="Tu acuerdo"
           [valor]="porcentaje() + ' %'"
           icono="handshake"
-          [sub]="porcentajeConfirmado() ? 'Sobre el valor sin IVA' : 'Estimado · lo confirma el área'"
+          [sub]="porcentajeConfirmado() ? 'Sobre el valor sin IVA' : 'Estimado · lo confirmamos al expedir'"
         />
+        <app-kpi-card label="Pólizas por cobrar" [valor]="pendientesCobro()" icono="pending_actions" sub="Pendientes de pago" />
+        <app-kpi-card label="Pólizas pagadas" [valor]="pagadas()" icono="task_alt" sub="Ya te las pagaron" />
         <app-kpi-card label="Cuentas generadas" [valor]="historial().length" icono="receipt_long" sub="Historial" />
       </div>
     </app-grid-layout>
 
-    @if (generada(); as cuenta) {
-      <app-alert-banner variante="success" titulo="Cuenta de cobro generada" icono="task_alt">
-        <span class="comisiones__exito">
-          {{ cuenta.polizas }} pólizas · {{ pesos(cuenta.totalComision) }} ({{ cuenta.enLetras }}).
-          {{ cuenta.enviada ? 'Ya la enviamos al área.' : 'Quedó lista; el envío al área está pendiente.' }}
-          <app-boton variante="ghost" icono="download" (clicked)="descargar(cuenta.id)">Descargar PDF</app-boton>
-          Descárgala y cárgala en la plataforma de proveedores para el pago.
-          @if (proveedores; as p) {
-          <a class="comisiones__proveedores" [href]="p['url']" target="_blank" rel="noopener noreferrer">
-            Ir a la plataforma de proveedores <span aria-hidden="true">↗</span>
-          </a>
-        }
-        </span>
-      </app-alert-banner>
+    @if (polizas().length > 0) {
+      <p class="comisiones__cuadre" role="note">
+        {{ plural(polizas().length, 'expedida', 'expedidas') }} = {{ pendientesCobro() }} por cobrar + {{ pagadas() }} pagadas + {{ otrasPolizas() }} en cuenta de cobro, con orden de pago o fuera de plazo.
+      </p>
     }
 
     <app-layout-resumen etiquetaLateral="Resumen de la cuenta de cobro">
@@ -67,54 +60,63 @@
           [numero]="1"
           icono="receipt_long"
           titulo="Pólizas a cobrar"
-          [subtitulo]="'Hasta ' + maximoFilas + ' pólizas por cuenta. El valor es el pagado por el propietario, con IVA.'"
+          [subtitulo]="'Elige las pendientes de pago (hasta ' + maximoFilas + ' por cuenta). Con «Ver detalle» ves los datos de la póliza y de su pago. Un pago recién registrado puede tardar unos minutos en verse aquí.'"
         >
-          <ol class="filas">
-            @for (fila of filasCrudas(); track $index; let i = $index) {
-              <li class="fila">
-                <span class="fila__numero" aria-hidden="true">{{ i + 1 }}</span>
-                <app-form-field label="Número de póliza" [controlId]="'cc-poliza-' + i" ayuda="13 dígitos · empieza por 5010">
-                  <input
-                    [id]="'cc-poliza-' + i"
-                    type="text"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    maxlength="17"
-                    placeholder="5010000123456"
-                    [value]="fila.poliza"
-                    (input)="actualizarFila(i, 'poliza', valorDe($event))"
-                  />
-                </app-form-field>
-                <app-form-field label="Valor pagado" [controlId]="'cc-valor-' + i">
-                  <app-money-input
-                    [inputId]="'cc-valor-' + i"
-                    [valor]="fila.valor"
-                    (valorChange)="actualizarFila(i, 'valor', $event)"
-                  />
-                </app-form-field>
-                <div class="fila__comision" aria-live="polite">
-                  <span class="fila__etiqueta">Comisión</span>
-                  <strong>{{ comisionFila(i) }}</strong>
-                </div>
-                <app-boton
-                  variante="ghost"
-                  icono="delete"
-                  [ariaLabel]="'Quitar la fila ' + (i + 1)"
-                  (clicked)="quitarFila(i)"
-                ></app-boton>
-              </li>
-            }
-          </ol>
-
-          <div class="filas__pie">
-            <app-boton
-              variante="ghost"
-              icono="add"
-              [disabled]="filasCrudas().length >= maximoFilas"
-              (clicked)="agregarFila()"
-            >Agregar póliza</app-boton>
+          <!-- Filtros -->
+          <div class="filtros" role="search" aria-label="Filtros de pólizas">
+            <app-form-field label="Estado de pago" controlId="f-estado">
+              <select id="f-estado" [value]="estadoFiltro()" (change)="estadoFiltro.set($any(valorDe($event)))">
+                <option value="">Todos</option>
+                @for (e of estadosCobro; track e.valor) {
+                  <option [value]="e.valor">{{ e.etiqueta }}</option>
+                }
+              </select>
+            </app-form-field>
+            <app-form-field label="Emitida desde" controlId="f-desde">
+              <input id="f-desde" type="date" [value]="desde()" [max]="hasta() || null" (change)="desde.set(valorDe($event))" />
+            </app-form-field>
+            <app-form-field label="Emitida hasta" controlId="f-hasta">
+              <input id="f-hasta" type="date" [value]="hasta()" [min]="desde() || null" (change)="hasta.set(valorDe($event))" />
+            </app-form-field>
+            <app-boton variante="ghost" icono="filter_alt_off" [disabled]="!hayFiltros()" (clicked)="limpiarFiltros()">Limpiar filtros</app-boton>
           </div>
 
+          <app-estado-vista
+            [cargando]="cargandoPolizas()"
+            [error]="errorPolizas()"
+            [vacio]="polizas().length === 0"
+            entidad="pólizas"
+            [lineas]="4"
+            iconoVacio="receipt_long"
+            tituloVacio="Aún no hay pólizas expedidas"
+            descripcionVacio="Cuando se expidan tus pólizas aparecerán aquí con su estado de pago."
+            mensajeError="No pudimos consultar tus pólizas. Intenta de nuevo en unos minutos."
+            (reintentar)="cargarPolizas()"
+          >
+            <div accionesVacio>
+              <app-boton variante="accent" icono="calculate" (clicked)="irACotizar()">Cotizar una póliza</app-boton>
+            </div>
+            <app-data-table
+              [columnas]="columnasPolizas"
+              [filas]="filasPolizas()"
+              [total]="filasPolizas().length"
+              [tamanoPagina]="10"
+              [conBusqueda]="true"
+              placeholderBusqueda="Buscar por número de póliza o estado…"
+              [seleccionable]="true"
+              [seleccionadas]="seleccionadas()"
+              (seleccionadasChange)="alElegir($event)"
+              (accion)="verDetalle($event)"
+              ariaLabel="Pólizas expedidas con su estado de pago"
+              mensajeVacio="Ninguna póliza coincide con los filtros."
+            />
+          </app-estado-vista>
+
+          @if (limiteSuperado()) {
+            <app-alert-banner variante="warning" titulo="Llegaste al máximo de la cuenta">
+              Una cuenta de cobro admite hasta {{ maximoFilas }} pólizas. Genera esta y luego otra con las restantes.
+            </app-alert-banner>
+          }
           @if (revision().avisos.length > 0) {
             <app-alert-banner variante="warning" titulo="Revisa antes de enviar">
               <ul class="lista">
@@ -139,16 +141,37 @@
       <div lateral>
         <app-summary-card titulo="Cuenta de cobro" [principal]="resumenPrincipal()" [filas]="resumenFilas()">
           <div acciones class="comisiones__acciones">
-            <p class="comisiones__letras">{{ enLetras() }}</p>
-            <app-boton variante="accent" icono="send" [disabled]="generando()" (clicked)="generar()">
-              {{ generando() ? 'Generando…' : 'Generar y enviar' }}
-            </app-boton>
+            @if (seleccionadas().length === 0 && generada(); as cuenta) {
+              <p class="comisiones__letras">
+                Cuenta de cobro N° {{ cuenta.consecutivo }} generada: {{ plural(cuenta.polizas, 'póliza', 'pólizas') }} por
+                {{ pesos(cuenta.totalComision) }}. Descárgala, fírmala y cárgala en la plataforma de proveedores.
+              </p>
+              <app-boton variante="accent" icono="download" (clicked)="descargar(cuenta.id)">Descargar cuenta de cobro</app-boton>
+              @if (proveedores; as p) {
+                <a class="comisiones__proveedores" [href]="p['url']" target="_blank" rel="noopener noreferrer">
+                  Ir a la plataforma de proveedores <span aria-hidden="true">↗</span>
+                </a>
+              }
+            } @else if (seleccionadas().length === 0) {
+              <p class="comisiones__letras">Elige en la tabla las pólizas pendientes de pago para armar tu cuenta.</p>
+            } @else {
+              <p class="comisiones__letras">{{ enLetras() }}</p>
+            }
+            @if (!(seleccionadas().length === 0 && generada())) {
+              <app-boton variante="accent" icono="send" [disabled]="generando() || seleccionadas().length === 0" (clicked)="generar()">
+                {{ generando() ? 'Generando…' : 'Generar cuenta de cobro' }}
+              </app-boton>
+            }
+            @if (seleccionadas().length > 0) {
+              <app-boton variante="ghost" icono="close" (clicked)="limpiarSeleccion()">Quitar selección</app-boton>
+            }
           </div>
         </app-summary-card>
       </div>
     </app-layout-resumen>
 
-    <app-form-section-card [numero]="2" icono="history" titulo="Cuentas generadas" subtitulo="Descarga el PDF de cualquier cuenta anterior.">
+    <!-- Paso 2: cuentas ya generadas -->
+    <app-form-section-card [numero]="2" icono="history" titulo="Cuentas de cobro generadas" subtitulo="Descarga cualquier cuenta, fírmala y cárgala en la plataforma de proveedores.">
       <app-estado-vista
         [cargando]="cargandoHistorial()"
         [error]="errorHistorial()"
@@ -164,11 +187,28 @@
           [columnas]="columnasHistorial"
           [filas]="filasHistorial()"
           [total]="filasHistorial().length"
-          [tamanoPagina]="filasHistorial().length || 1"
+          [tamanoPagina]="10"
+          [conBusqueda]="true"
+          placeholderBusqueda="Buscar cuenta…"
           ariaLabel="Cuentas de cobro generadas"
           (accion)="onAccionHistorial($event)"
         />
       </app-estado-vista>
     </app-form-section-card>
+
+    <!-- Detalle de una póliza y de su pago -->
+    <app-modal-dialog
+      [abierto]="detalle() !== null"
+      titulo="Detalle de la póliza"
+      [subtitulo]="detalle()?.numeroPoliza ?? ''"
+      eyebrow="Comisiones"
+      tamano="md"
+      (cerrar)="detalle.set(null)"
+    >
+      <app-ficha [secciones]="seccionesDetalle()" />
+      <div acciones>
+        <app-boton variante="ghost" (clicked)="detalle.set(null)">Cerrar</app-boton>
+      </div>
+    </app-modal-dialog>
   }
 </section>

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import {
   DetalleSolicitud,
+  DocumentoSolicitud,
   PaginaResultado,
   Solicitud,
 } from '../models/solicitud.model';
@@ -23,6 +24,7 @@ export interface DesgloseComisionProducto {
 export interface ComisionesResponse {
   readonly valorEstimado: number;
   readonly periodo: string;
+  /** Pólizas expedidas del broker (el total sobre el que se calcula «X con comisión pendiente»). */
   readonly polizasRadicadas: number;
   readonly desglose: readonly DesgloseComisionProducto[];
   /** Pólizas que componen la comisión pendiente. */
@@ -35,8 +37,11 @@ export interface ComisionesResponse {
 export interface KpisDashboard {
   readonly primasGeneradas: number;
   readonly totalRadicadas: number;
+  /** Todo lo que no está expedido ni cerrado: radicadas, en gestión, por corregir o aprobadas. */
   readonly enRevision: number;
   readonly bloqueadas: number;
+  /** Pólizas expedidas: `totalRadicadas = emitidas + enRevision + bloqueadas`. */
+  readonly emitidas: number;
 }
 
 /**
@@ -132,5 +137,27 @@ export class DashboardService {
       `${this.baseUrl}/solicitudes/${encodeURIComponent(referencia)}`,
       { withCredentials: true },
     );
+  }
+
+  /** Documentos de la radicación: cotización, contrato, CTL y los cargados. */
+  obtenerDocumentosSolicitud(referencia: string): Observable<readonly DocumentoSolicitud[]> {
+    return this.http.get<readonly DocumentoSolicitud[]>(
+      `${this.baseUrl}/solicitudes/${encodeURIComponent(referencia)}/documentos`,
+      { withCredentials: true },
+    );
+  }
+
+  /** Archivo de un documento de la radicación (PDF o imagen) para la vista previa; la cookie viaja con la petición. */
+  descargarDocumentoSolicitud(referencia: string, documento: DocumentoSolicitud): Observable<Blob> {
+    const ref = encodeURIComponent(referencia);
+    const url =
+      documento.tipo === 'cotizacion'
+        ? `${this.baseUrl}/cotizaciones/${encodeURIComponent(documento.referencia ?? '')}/pdf`
+        : documento.tipo === 'contrato'
+          ? `${this.baseUrl}/contratos/${encodeURIComponent(documento.referencia ?? '')}/documento?formato=pdf`
+          : documento.tipo === 'cuenta_cobro'
+            ? `${this.baseUrl}/comisiones/cuentas/${encodeURIComponent(documento.referencia ?? '')}/pdf`
+            : `${this.baseUrl}/solicitudes/${ref}/documentos/${encodeURIComponent(documento.clave)}`;
+    return this.http.get(url, { withCredentials: true, responseType: 'blob' });
   }
 }

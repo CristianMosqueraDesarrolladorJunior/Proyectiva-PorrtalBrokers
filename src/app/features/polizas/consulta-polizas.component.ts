@@ -131,7 +131,7 @@ export class ConsultaPolizasComponent {
   /** Columnas del DataTable de pólizas con sort, insignia de estado y acción (Req 16.2, 16.3). */
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'numero', header: 'Número', ordenable: true },
-    { key: 'cliente', header: 'Cliente', ordenable: true },
+    { key: 'cliente', header: 'Propietario', ordenable: true },
     { key: 'producto', header: 'Producto', ordenable: true },
     { key: 'fechaVencimiento', header: 'Vencimiento', ordenable: true },
     { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
@@ -142,7 +142,7 @@ export class ConsultaPolizasComponent {
   protected readonly filas = computed(() =>
     this.polizas().map((p) => ({
       numero: p.numero,
-      cliente: p.cliente,
+      cliente: p.cliente ?? '—',
       producto: p.producto,
       fechaVencimiento: p.fechaVencimiento,
       estado: p.estado,
@@ -164,15 +164,24 @@ export class ConsultaPolizasComponent {
    * Marca el intento para revelar errores de campo; si la cédula es inválida no
    * realiza la solicitud. Ante un fallo muestra un mensaje genérico.
    */
+  constructor() {
+    // Al entrar se ve todo el portafolio; la cédula del propietario solo filtra.
+    this.consultar('');
+  }
+
   protected buscar(): void {
     this.intentoBusqueda.set(true);
     if (!this.cedulaValida()) {
       return;
     }
+    this.consultar(this.cedula().trim());
+  }
+
+  private consultar(documento: string): void {
 
     this.estado.set('consultando');
     this.polizas.set([]);
-    this.polizasService.consultarPorDocumento(this.cedula().trim()).subscribe({
+    this.polizasService.consultarPorDocumento(documento).subscribe({
       next: (polizas) => {
         this.polizas.set(polizas);
         this.estado.set('resultado');

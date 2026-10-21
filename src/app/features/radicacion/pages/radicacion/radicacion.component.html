@@ -12,24 +12,29 @@
   ></app-page-header>
 
   @if (radicado(); as numeroRadicado) {
-    <p class="rad-radicado">Radicado <strong>{{ numeroRadicado }}</strong> · en revisión del área.</p>
-    <div class="rad-contrato-accion">
-      <app-boton variante="accent" icono="add" (clicked)="nuevaRadicacion()">Nueva radicación</app-boton>
-    </div>
+    <app-summary-card
+      titulo="Radicación enviada"
+      badge="En revisión"
+      [filas]="[{ label: 'Radicado', valor: numeroRadicado }]"
+    >
+      <div acciones class="rad-acciones-card">
+        <app-boton variante="accent" icono="add" (clicked)="nuevaRadicacion()">Nueva radicación</app-boton>
+      </div>
+    </app-summary-card>
   } @else if (casoConsultable()) {
     <!-- Salida 3 de SARLAFT: consultable -> el caso baja al Warehouse y termina aquí. -->
     <app-step-tabs [pasos]="pasos" [pasoActivo]="pasoActivo()" ariaLabel="Pasos de la radicación" />
     @if (casoConsultable(); as caso) {
     <div class="rad-sarlaft-fin">
-      <app-alert-banner variante="error" titulo="Conocimiento de Cliente consultable: el caso pasa a revisión" icono="policy">
+      <app-alert-banner variante="error" titulo="Este caso pasa a revisión de Cumplimiento" icono="policy">
         {{ caso.mensaje || 'El caso del ' + etiquetaSujetoSarlaft() + ' se deriva a revisión de Cumplimiento.' }}
         @if (caso.radicadoCumplimiento) {
           <span class="rad-sarlaft-fin__radicado">Radicado: <strong>{{ caso.radicadoCumplimiento }}</strong></span>
         }
       </app-alert-banner>
       <app-info-box icono="info">
-        La radicación no continúa en el portal. Cumplimiento revisará el caso y el
-        estado quedará visible en Seguimiento. La emisión, si procede, la realiza Operación.
+        La radicación se detiene aquí mientras Cumplimiento revisa el caso. Verás el resultado en Seguimiento; si
+        todo está en orden, el área continúa con la expedición.
       </app-info-box>
       <div class="rad-sarlaft-acciones">
         <app-boton variante="accent" (clicked)="salir()">Ir a Seguimiento</app-boton>
@@ -55,20 +60,37 @@
           [numero]="1"
           icono="description"
           titulo="Contrato de arrendamiento"
-          subtitulo="Empieza aquí: carga el contrato firmado o genéralo con nuestra plantilla."
+          subtitulo="Empieza aquí: carga el contrato firmado, aunque lo hayas generado con nuestra plantilla."
         >
           @if (contratoReferencia(); as referencia) {
             <app-alert-banner variante="success" titulo="Contrato listo">
               El contrato <strong>{{ referencia }}</strong> quedó guardado y se enlazará a esta radicación.
             </app-alert-banner>
           } @else {
+            @if (contratosPendientes().length) {
+              <app-form-field label="¿Ya generaste el contrato en Contratación? Elígelo" controlId="rad-contrato-generado"
+                ayuda="Usamos sus datos (propietario, inquilino, inmueble y canon) y no tienes que volver a escribirlos.">
+                <select id="rad-contrato-generado" (change)="usarContrato($any($event.target).value)">
+                  <option value="">Selecciona un contrato…</option>
+                  @for (c of contratosPendientes(); track c.referencia) {
+                    <option [value]="c.referencia">{{ c.referencia }} · {{ c.propietario }} · {{ c.inmueble }}</option>
+                  }
+                </select>
+              </app-form-field>
+            }
             <app-info-box icono="info">
-              Al cargar el contrato firmado leemos el propietario, el inquilino, el inmueble y el canon, lo registramos
+              Si no lo generaste aquí, carga el contrato firmado: leemos el propietario, el inquilino, el inmueble y el canon, lo registramos
               y precargamos esta radicación.
             </app-info-box>
           }
 
-          <app-form-field label="¿Cómo se firmó el contrato que vas a cargar?" [requerido]="true" controlId="rad-firma-contrato">
+          <!-- El contrato firmado se carga siempre primero: no depende de haber usado el Contratador. -->
+          <app-lector-contrato
+            titulo="Carga aquí el contrato firmado (PDF)"
+            (archivo)="onContratoFirmado($event)"
+            (leido)="onContratoLeido($event)"
+          />
+          <app-form-field label="¿Cómo se firmó el contrato?" controlId="rad-firma-contrato">
             <select
               id="rad-firma-contrato"
               [ngModel]="firmaContratoCargado()"
@@ -80,25 +102,18 @@
               }
             </select>
           </app-form-field>
-          @if (firmaContratoCargado()) {
-            <app-lector-contrato
-              titulo="¿Ya tienes el contrato firmado? Cárgalo aquí"
-              (archivo)="onContratoFirmado($event)"
-              (leido)="onContratoLeido($event)"
-            />
-          }
           @if (registrandoContratoLeido()) {
             <app-info-box icono="hourglass_top">Registrando el contrato con los datos leídos…</app-info-box>
           }
           @if (lecturaPorCompletar()) {
             <app-boton variante="outline" icono="edit_document" (clicked)="completarContratoLeido()">
-              Completar el contrato en Contratación
+              Completar los datos que faltan en Contratación
             </app-boton>
           }
 
           <div class="rad-contrato-accion">
             <app-boton variante="outline" icono="edit_document" (clicked)="crearContrato()">
-              {{ contratoReferencia() ? 'Generar otro contrato' : '¿Aún no lo tienes? Genera tu contrato' }}
+              {{ contratoReferencia() ? 'Generar otro contrato' : 'No tengo contrato: generarlo con la plantilla' }}
             </app-boton>
           </div>
         </app-form-section-card>
@@ -146,7 +161,7 @@
         </app-form-section-card>
 
         <app-form-section-card
-          [numero]="3"
+          [numero]="2"
           icono="task_alt"
           titulo="Estudio de arrendamiento"
           subtitulo="Consulta el estudio del inquilino en Estudio Digital del Libertador con su número de estudio y su cédula."
@@ -214,6 +229,21 @@
                 <app-alert-banner variante="success" titulo="Estudio aprobado">
                   El estudio del inquilino está aprobado. Usaremos estos datos para autollenar el contrato.
                 </app-alert-banner>
+                @if (novedadesEstudio().length) {
+                  <app-alert-banner variante="warning" titulo="El estudio y el contrato no coinciden en todo" icono="difference">
+                    <ul>
+                      @for (n of novedadesEstudio(); track n) {
+                        <li>{{ n }}</li>
+                      }
+                    </ul>
+                    Puedes continuar: se lo informamos al analista como observación para que lo revise.
+                  </app-alert-banner>
+                }
+                @if (canones()) {
+                  <app-form-field label="¿Con qué canon radicas?" controlId="rad-canon" ayuda="El del contrato y el cotizado no coinciden; elige el que debe quedar en la póliza.">
+                    <app-radio-group [opciones]="opcionesCanon()" [valor]="canonDe()" (valorChange)="onCanonDe($event)" ariaLabel="Canon con el que se radica" />
+                  </app-form-field>
+                }
                 <div class="rad-estudio-datos">
                   @if (estudio.inquilino) {
                     <div><span>Inquilino</span><strong>{{ estudio.inquilino }}</strong></div>
@@ -227,11 +257,27 @@
                   @if (estudio.vigenteHasta) {
                     <div><span>Vigente hasta</span><strong>{{ estudio.vigenteHasta }}</strong></div>
                   }
+                  @if (personasEstudio()?.inquilino; as i) {
+                    @if (i.telefono) {
+                      <div><span>Teléfono del inquilino</span><strong>{{ i.telefono }}</strong></div>
+                    }
+                    @if (i.correo) {
+                      <div><span>Correo del inquilino</span><strong>{{ i.correo }}</strong></div>
+                    }
+                  }
+                  @for (c of personasEstudio()?.codeudores ?? []; track $index) {
+                    <div>
+                      <span>Codeudor {{ $index + 1 }}</span>
+                      <strong>{{ c.nombres }} {{ c.apellidos }} · {{ c.tipoIdentificacion }} {{ c.numeroIdentificacion }}</strong>
+                      @if (c.telefono || c.correo) {
+                        <small>{{ c.telefono }}{{ c.telefono && c.correo ? ' · ' : '' }}{{ c.correo }}</small>
+                      }
+                    </div>
+                  }
                 </div>
                 @if (estudioSinCobertura()) {
-                  <app-alert-banner variante="warning" titulo="Inmueble fuera de cobertura">
-                    El inmueble del estudio no está en una ciudad con cobertura (Bogotá D.C., Cundinamarca y
-                    Villavicencio). Puedes radicar, pero el área revisará si procede.
+                  <app-alert-banner variante="error" titulo="Departamento no habilitado">
+                    El inmueble del estudio está en Antioquia, departamento no habilitado para radicación.
                   </app-alert-banner>
                 }
               }
@@ -254,12 +300,12 @@
           }
 
           @if (errorEstudio(); as error) {
-            <app-alert-banner variante="error" titulo="Consulta no disponible">{{ error }}</app-alert-banner>
+            <app-alert-banner variante="error" titulo="No pudimos consultar el estudio">{{ error }}</app-alert-banner>
           }
         </app-form-section-card>
 
         <app-form-section-card
-          [numero]="4"
+          [numero]="3"
           icono="draw"
           titulo="¿Quién firma el contrato?"
           subtitulo="Define la titularidad jurídica del suscriptor ante la póliza."
@@ -333,7 +379,7 @@
         </app-form-section-card>
 
         <app-form-section-card
-          [numero]="5"
+          [numero]="4"
           icono="verified_user"
           titulo="Validación de Conocimiento de Cliente"
           [subtitulo]="'Consulta en listas del ' + etiquetaSujetoSarlaft() + ' antes de cargar los documentos.'"
@@ -403,15 +449,14 @@
             <div class="rad-sarlaft-panel">
               <div class="rad-sarlaft-check">
                 <span class="rad-sarlaft-icono" aria-hidden="true">
-                  <span class="material-symbols-outlined">verified_user</span>
+                  <span class="material-symbols-outlined" aria-hidden="true">verified_user</span>
                 </span>
                 <div class="rad-sarlaft-texto">
                   <strong>Consulta de Conocimiento de Cliente del {{ etiquetaSujetoSarlaft() }} <app-info-tip texto="Conocimiento de Cliente: sistema que verifica la identidad del cliente y lo consulta en listas restrictivas para prevenir el lavado de activos." /></strong>
                   <span>
-                    Resultados posibles: <b>actualizado</b> (continúas con los documentos),
-                    <b>desactualizado</b> (se envía una URL al {{ etiquetaSujetoSarlaft() }} para
-                    actualizar y luego reconsultas) o <b>consultable</b> (el caso pasa a revisión
-                    y termina en el portal).
+                    Si está al día, sigues con los documentos. Si debe actualizar sus datos, le enviamos un enlace
+                    al {{ etiquetaSujetoSarlaft() }} y vuelves a consultar cuando termine. Si requiere revisión, el
+                    caso pasa a Cumplimiento.
                   </span>
                 </div>
               </div>
@@ -454,7 +499,7 @@
           }
 
           @if (errorSarlaft(); as error) {
-            <app-alert-banner variante="error" titulo="Consulta no disponible">{{ error }}</app-alert-banner>
+            <app-alert-banner variante="warning" titulo="No pudimos consultar Conocimiento de Cliente">{{ error }}</app-alert-banner>
             <app-info-box icono="support_agent">
               Comunícate con tu <b>asesor comercial</b> para que le genere o envíe el enlace de actualización al
               {{ etiquetaSujetoSarlaft() }}. Cuando tengas el formulario de Conocimiento de Cliente diligenciado y firmado,
@@ -465,7 +510,7 @@
         </app-form-section-card>
 
         <app-form-section-card
-          [numero]="6"
+          [numero]="5"
           icono="upload_file"
           titulo="Documentos requeridos"
           subtitulo="Validación por documento con verificación inmediata."
@@ -480,10 +525,14 @@
             <span class="rad-obligatorios">{{ reglasObligatorias().length }} obligatorios</span>
 
             <app-doc-uploader
-              [reglas]="reglasObligatorias()"
+              [reglas]="reglasSinCtl()"
               [cargados]="archivosCargados()"
               (archivoSeleccionado)="onArchivo($event)"
             ></app-doc-uploader>
+
+            @if (pideCtl()) {
+              <app-ctl-validacion [direccionContrato]="direccionContrato()" (archivo)="onCtlArchivo($event)" />
+            }
 
             @if (firmaApoderado()) {
               <h4 class="rad-subtitulo-docs">Documentos del apoderado</h4>
@@ -518,12 +567,12 @@
         </app-form-section-card>
 
 
-        <app-form-field label="Observaciones para el área (opcional)" controlId="rad-observaciones">
+        <app-form-field label="Observaciones (opcional)" controlId="rad-observaciones">
           <textarea
             id="rad-observaciones"
             rows="3"
             maxlength="2000"
-            placeholder="Información que el área debe tener en cuenta al revisar esta solicitud"
+            placeholder="Cuéntanos lo que debemos tener en cuenta al revisar esta solicitud"
             [ngModel]="observaciones()"
             (ngModelChange)="observaciones.set($event)"
           ></textarea>
@@ -553,29 +602,22 @@
         }
 
 
-        <app-sticky-actions
-          [fija]="true"
-          [nota]="'Documentos obligatorios verificados: ' + cargadosObligatorios() + ' de ' + totalObligatorios()"
-        >
-          <app-boton secundarias variante="ghost" (clicked)="cancelar()">Cancelar radicación</app-boton>
-          <app-boton
-            principal
-            variante="accent"
-            [disabled]="!envioHabilitado() || enviando()"
-            (clicked)="enviar()"
-          >
-            {{ enviando() ? 'Enviando, puede tardar unos segundos…' : 'Enviar radicación' }}
-          </app-boton>
-        </app-sticky-actions>
       </div>
 
       <aside class="radicacion__lateral" aria-label="Progreso de la radicación">
         <app-summary-card
           titulo="Progreso de radicación"
-          badge="En vivo"
+          badge="Al instante"
           [filas]="filasProgreso()"
           [total]="{ label: 'Documentos', valor: cargadosObligatorios() + ' / ' + totalObligatorios() }"
-        />
+        >
+          <div acciones class="rad-acciones-card">
+            <app-boton variante="accent" icono="send" [disabled]="!envioHabilitado() || enviando()" (clicked)="enviar()">
+              {{ enviando() ? 'Enviando, puede tardar unos segundos…' : 'Enviar radicación' }}
+            </app-boton>
+            <app-boton variante="ghost" (clicked)="cancelar()">Cancelar radicación</app-boton>
+          </div>
+        </app-summary-card>
       </aside>
     </div>
 

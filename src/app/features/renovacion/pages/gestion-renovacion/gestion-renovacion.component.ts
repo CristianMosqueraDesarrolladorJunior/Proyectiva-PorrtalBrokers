@@ -7,6 +7,8 @@ import {
   signal,
 } from '@angular/core';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
+import { GUIA_RENOVACION } from '../../../../core/onboarding/guion-tour';
+import { TourBienvenidaService } from '../../../../core/onboarding/tour-bienvenida.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import {
@@ -136,6 +138,7 @@ export class GestionRenovacionComponent {
   private readonly fb = inject(FormBuilder);
   private readonly renovacionService = inject(RenovacionService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly tour = inject(TourBienvenidaService);
 
   // --- Estado del wizard ---------------------------------------------------
 
@@ -244,7 +247,7 @@ export class GestionRenovacionComponent {
 
   /** Motivo que escribió el área al pedir la corrección (columna G del Warehouse). */
   protected readonly motivoCorreccion = computed(
-    () => this.condiciones()?.motivoCorreccion || 'Revisa y vuelve a cargar el documento que pidió el área.',
+    () => this.condiciones()?.motivoCorreccion || 'Revisa y vuelve a cargar el documento que te pedimos.',
   );
 
   /** Alertas de la cotización (las mismas que en Comercial renovaciones exigen proceso especial o corrección). */
@@ -316,6 +319,9 @@ export class GestionRenovacionComponent {
   });
 
   constructor() {
+    // Guía de esta vista: se abre sola la primera vez y «Ver recorrido» la reabre mientras se gestiona la póliza.
+    this.tour.registrarGuia('renovacion', GUIA_RENOVACION);
+    this.destroyRef.onDestroy(() => this.tour.limpiarGuia());
     this.recotizar$
       .pipe(debounceTime(350), switchMap((o) => this.cotizarNueva(o.conCanon)), takeUntilDestroyed())
       .subscribe((p) => {
@@ -581,16 +587,25 @@ export class GestionRenovacionComponent {
         this.enviando.set(false);
         this.etapa.set('exito');
       },
-      error: (err: { status?: number }) => {
+      error: (err: { status?: number; error?: { fields?: string[] } }) => {
         this.enviando.set(false);
+        const campos = err?.error?.fields ?? [];
         this.feedback.error({
           titulo: 'No se pudo enviar',
           mensaje:
-            err?.status === 422 && this.flujo() === 'correccion'
-              ? 'Esta póliza no tiene una corrección pendiente del área de renovaciones.'
+            err?.status === 422 && campos.includes('ipcAplicado')
+              ? 'Ese IPC supera el tope permitido: la renovación va por Otro Sí. Radícala como caso especial.'
+              : err?.status === 422 && campos.includes('fechaInicio')
+                ? 'Con esa vigencia la renovación va por Otro Sí. Radícala como caso especial.'
+                : campos.includes('fechaFin')
+                  ? 'La fecha de fin debe ser posterior a la de inicio.'
+                  : campos.includes('valorAseguradoDyF')
+                    ? 'El valor asegurado de daños y faltantes está por debajo del mínimo.'
+                    : err?.status === 422 && this.flujo() === 'correccion'
+              ? 'Esta póliza no tiene una corrección pendiente.'
               : err?.status === 422 || err?.status === 400
-                ? 'Revisa los datos y documentos de la gestión: el área no los pudo recibir así.'
-                : 'No se pudo registrar la gestión. Intenta nuevamente en unos minutos.',
+                ? 'Revisa los datos y documentos de la gestión: no los pudimos recibir así.'
+                : 'No se pudo registrar la gestión. Intenta de nuevo en unos minutos.',
         });
       },
     });

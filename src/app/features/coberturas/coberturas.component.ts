@@ -89,7 +89,7 @@ export class CoberturasComponent {
         this.cargando.set(false);
       },
       error: () => {
-        this.error.set('No fue posible cargar las coberturas. Intenta nuevamente.');
+        this.error.set('No pudimos cargar las coberturas. Intenta de nuevo.');
         this.cargando.set(false);
       },
     });

@@ -8,12 +8,20 @@
   <app-grid-layout tipo="kpi-grid">
     <app-kpi-card label="Pólizas en portafolio" [valor]="portafolio()?.total ?? '—'" icono="folder_open" sub="Total de pólizas activas" />
     <app-kpi-card label="Renovadas" [valor]="portafolio()?.renovadas ?? '—'" icono="task_alt" variante="exito" sub="Al día con renovaciones" />
-    <app-kpi-card label="Próximas a renovar" [valor]="portafolio()?.proximasARenovar ?? '—'" icono="event_upcoming" sub="En los próximos 30 días" />
-    <app-kpi-card label="A punto de vencer" [valor]="portafolio()?.aPuntoDeVencer ?? '—'" icono="warning" variante="alerta" sub="Requieren atención inmediata" />
+    <app-kpi-card label="Próximas a renovar" [valor]="portafolio()?.proximasARenovar ?? '—'" icono="event_upcoming" sub="Vencen entre 31 y 60 días" />
+    <app-kpi-card label="A punto de vencer" [valor]="portafolio()?.aPuntoDeVencer ?? '—'" icono="warning" variante="alerta" sub="Vencen en 30 días o ya vencieron" />
   </app-grid-layout>
 
   <app-barra-acciones>
     <div filtros>
+      <app-form-field label="Vigencia" controlId="renov-estado">
+        <select id="renov-estado" [value]="estadoFiltro()" (change)="estadoFiltro.set($any($event.target).value)">
+          <option value="">Todas</option>
+          @for (e of estados; track e.codigo) {
+            <option [value]="e.codigo">{{ e.descripcion }}</option>
+          }
+        </select>
+      </app-form-field>
       <app-form-field label="Buscar póliza" controlId="renov-busqueda">
         <input
           id="renov-busqueda"
@@ -24,8 +32,13 @@
           (input)="busqueda.set($any($event.target).value)"
         />
       </app-form-field>
+      @if (hayFiltros()) {
+        <app-boton variante="ghost" icono="filter_alt_off" (clicked)="limpiarFiltros()">Limpiar filtros</app-boton>
+      }
     </div>
   </app-barra-acciones>
+
+  <p class="renovaciones__orden" role="note">Ordenadas por urgencia: primero las que vencen pronto.</p>
 
   <app-estado-vista
     [cargando]="cargando()"
@@ -33,15 +46,20 @@
     [vacio]="filas().length === 0"
     entidad="pólizas"
     iconoVacio="autorenew"
-    [tituloVacio]="busqueda() ? 'Ninguna póliza coincide con la búsqueda' : 'No tienes pólizas por renovar'"
+    [tituloVacio]="hayFiltros() ? 'Ninguna póliza coincide con los filtros' : 'No tienes pólizas por renovar'"
     descripcionVacio="Cuando tus pólizas se acerquen al vencimiento aparecerán aquí."
     (reintentar)="cargar()"
   >
+    <div accionesVacio>
+      @if (!hayFiltros()) {
+        <app-boton variante="accent" icono="calculate" (clicked)="irACotizar()">Cotizar una póliza</app-boton>
+      }
+    </div>
     <app-data-table
       [columnas]="columnas"
       [filas]="filas()"
       [total]="filas().length"
-      [tamanoPagina]="filas().length || 1"
+      [tamanoPagina]="10"
       ariaLabel="Listado de pólizas para renovación"
       (seleccionFila)="onSeleccionFila($event)"
       (accion)="onGestionar($event)"

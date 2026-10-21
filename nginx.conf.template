@@ -33,10 +33,16 @@ server {
     server_tokens off;
     # Contrato y documentos del broker: mismo límite que el backend (25 MB por petición).
     client_max_body_size 25m;
+    # Una petición más grande responde con el mismo JSON de error del portal, no con la página de nginx (F10).
+    error_page 413 = @demasiado_grande;
+    location @demasiado_grande {
+        default_type application/json;
+        return 413 '{"status":413,"error":"PAYLOAD_TOO_LARGE","code":"archivo_demasiado_grande","message":"El archivo pesa más de lo permitido."}';
+    }
 
     # Reverse-proxy del API_Backend. Preserva la cookie HttpOnly de sesión
     # (withCredentials en el front) y propaga la IP real del cliente.
-    location /api/ {
+    location ^~ /api/ {
         proxy_pass         ${BACKEND_URL};
         proxy_http_version 1.1;
         # Cloud Run enruta por Host y exige SNI: se envía el host del backend, no el del front.
@@ -47,6 +53,14 @@ server {
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
         proxy_set_header   Connection        "";
+        # Las cabeceras de seguridad las pone nginx (arriba); las del backend se ocultan para no duplicarlas
+        # (dos Content-Security-Policy distintas en la misma respuesta).
+        proxy_hide_header  Content-Security-Policy;
+        proxy_hide_header  X-Frame-Options;
+        proxy_hide_header  X-Content-Type-Options;
+        proxy_hide_header  Strict-Transport-Security;
+        proxy_hide_header  Referrer-Policy;
+        proxy_hide_header  Permissions-Policy;
         # Timeouts alineados con el backend.
         proxy_connect_timeout 15s;
         # La lectura de contratos con Gemini puede tardar hasta 60 s.
@@ -66,7 +80,7 @@ server {
     }
 
     # Cache agresivo de los assets con hash de contenido.
-    location /assets/ {
+    location ^~ /assets/ {
         add_header Cache-Control "public, max-age=31536000, immutable";
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "DENY" always;
@@ -74,6 +88,18 @@ server {
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    }
+
+    # Rutas que nunca son del SPA: archivos ocultos, rutas internas del backend y extensiones de servidor.
+    # Responden 404 real en vez del index.html (antes /.env o /actuator/env devolvían 200).
+    location ~ /\. {
+        return 404;
+    }
+    location ~* ^/(actuator|v3/api-docs|swagger-ui|swagger)(/|$) {
+        return 404;
+    }
+    location ~* \.(php|asp|aspx|jsp|cgi|env|ini|sql|bak|log|yml|yaml|xml)$ {
+        return 404;
     }
 
     # SPA fallback: cualquier ruta desconocida sirve index.html (Angular Router).

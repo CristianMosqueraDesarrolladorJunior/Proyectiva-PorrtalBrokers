@@ -11,9 +11,10 @@
   gap: var(--space-6);
 }
 
+// KPIs en una cuadrícula de 2 columnas (4 tarjetas) para que queden arriba y no alarguen la página.
 .comisiones__kpis {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
 }
 
@@ -33,7 +34,7 @@
 }
 
 .comisiones__letras {
-  margin: 0;
+  margin: var(--space-0);
   font-size: var(--text-caption);
   line-height: var(--line-height-normal);
   color: var(--sb-on-slate);
@@ -45,8 +46,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin: 0;
-  padding: 0;
+  margin: var(--space-0);
+  padding: var(--space-0);
   list-style: none;
 }
 
@@ -66,8 +67,8 @@
 
     .fila__numero,
     .fila__comision {
-      margin-top: 0;
-      padding-top: 0;
+      margin-top: var(--space-0);
+      padding-top: var(--space-0);
     }
   }
 }
@@ -109,7 +110,7 @@
 }
 
 .lista {
-  margin: 0;
+  margin: var(--space-0);
   padding-left: var(--space-5);
 }
 
@@ -121,11 +122,27 @@
   border-radius: var(--radius-pill, 999px);
   background: var(--color-accent);
   color: var(--color-on-accent, #fff);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
 }
 
 .comisiones__proveedores:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+// Filtros de la tabla de pólizas a cobrar.
+.filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  margin-bottom: var(--space-3);
+}
+
+// Resumen que cuadra las cifras: expedidas = por cobrar + pagadas + otras.
+.comisiones__cuadre {
+  margin: var(--space-0);
+  font-size: var(--text-caption);
+  color: var(--color-muted);
 }

@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 
 import { BotonComponent, FormFieldComponent } from '../../../../shared/components';
 import { AuthService } from '../../../../core/services/auth.service';
+import { VerClaveDirective } from '../../../../shared/directives/ver-clave.directive';
 import { rutaInicio } from '../../../../core/guards/rol.guard';
 import { LoginRequest } from '../../../../core/models/broker.model';
 import {
@@ -29,6 +30,10 @@ const RUTA_REGISTRO_BROKER = '/registro-broker';
  */
 const MENSAJE_CREDENCIALES_INVALIDAS =
   'Usuario o contraseña incorrectos. Verifica tus datos e intenta de nuevo. Tras 5 intentos fallidos el acceso se bloquea 15 minutos.';
+
+/** Tras varios intentos fallidos el ingreso se bloquea 15 minutos (también para usuarios que no existen). */
+const MENSAJE_BLOQUEO_TEMPORAL =
+  'Por seguridad bloqueamos el ingreso con este usuario durante 15 minutos por varios intentos fallidos. Intenta más tarde o restablece tu clave.';
 
 /** Mensaje cuando el servicio de ingreso no responde (no es un error de credenciales). */
 const MENSAJE_SERVICIO_NO_DISPONIBLE =
@@ -68,7 +73,7 @@ interface FormularioLogin {
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, FormFieldComponent, BotonComponent],
+  imports: [ReactiveFormsModule, FormFieldComponent, BotonComponent, VerClaveDirective],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -180,7 +185,8 @@ export class LoginComponent {
         },
         error: (error: { status?: number }) => {
           this.enviando.set(false);
-          this.feedback.toast({ variante: 'error', mensaje: error?.status === 503 ? MENSAJE_SERVICIO_NO_DISPONIBLE : MENSAJE_CREDENCIALES_INVALIDAS });
+          this.feedback.toast({ variante: 'error', mensaje: error?.status === 503 ? MENSAJE_SERVICIO_NO_DISPONIBLE
+            : error?.status === 429 ? MENSAJE_BLOQUEO_TEMPORAL : MENSAJE_CREDENCIALES_INVALIDAS });
         },
       });
   }

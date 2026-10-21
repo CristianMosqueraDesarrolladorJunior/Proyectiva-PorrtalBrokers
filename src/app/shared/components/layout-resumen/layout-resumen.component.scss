@@ -9,6 +9,7 @@
   @include mx.respond-to('tablet') {
     grid-template-columns: minmax(0, 1fr);
   }
+
   @include mx.respond-to('mobile') {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -32,6 +33,7 @@
     position: static;
     order: -1;
   }
+
   @include mx.respond-to('mobile') {
     position: static;
     order: -1;

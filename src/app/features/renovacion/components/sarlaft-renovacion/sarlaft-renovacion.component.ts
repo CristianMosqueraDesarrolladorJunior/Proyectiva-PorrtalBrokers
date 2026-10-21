@@ -110,7 +110,7 @@ export class SarlaftRenovacionComponent implements OnInit {
       },
       error: () => {
         this.enviandoEnlace.set(false);
-        this.feedback.toast({ variante: 'error', mensaje: 'No fue posible enviar el enlace. Comunícate con tu asesor comercial para que se lo genere o envíe al asegurado.' });
+        this.feedback.toast({ variante: 'error', mensaje: 'No pudimos enviar el enlace. Comunícate con tu asesor comercial para que se lo genere o envíe al asegurado.' });
       },
     });
   }
@@ -152,7 +152,7 @@ export class SarlaftRenovacionComponent implements OnInit {
           this.validando.set(false);
         },
         error: () => {
-          this.error.set('No fue posible validar Conocimiento de Cliente en este momento. Intenta nuevamente.');
+          this.error.set('No pudimos validar Conocimiento de Cliente en este momento. Intenta de nuevo.');
           this.validando.set(false);
         },
       });

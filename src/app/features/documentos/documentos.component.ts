@@ -108,7 +108,7 @@ export class DocumentosComponent implements OnInit {
           this.descargandoId.set(null);
         },
         error: () => {
-          this.feedback.toast({ variante: 'error', mensaje: 'No fue posible descargar el documento. Intenta nuevamente.' });
+          this.feedback.toast({ variante: 'error', mensaje: 'No pudimos descargar el documento. Intenta de nuevo.' });
           this.descargandoId.set(null);
         },
       });

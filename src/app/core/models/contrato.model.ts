@@ -68,8 +68,27 @@ export interface CondicionesEconomicas {
   readonly banco?: string;
 }
 
+/** Resultado de validar un Certificado de Tradición y Libertad (CTL) en el servidor. */
+export interface ValidacionCtl {
+  readonly vigente: boolean;
+  /** Días desde la impresión del certificado; `null` si no se pudo determinar. */
+  readonly antiguedadDias: number | null;
+  readonly fechaImpresion: string | null;
+  readonly motivo: 'vigente' | 'supera_antiguedad' | 'fecha_no_determinada';
+  readonly departamento: string | null;
+  readonly municipio: string | null;
+  readonly direccion: string | null;
+  readonly matricula: string | null;
+  /** `null` cuando no hay dirección del contrato con la que comparar. */
+  readonly direccionCoincide: boolean | null;
+  readonly departamentoBloqueado: boolean;
+}
+
+/** Formatos de descarga del contrato (siempre un archivo individual, nunca .zip). */
+export type FormatoContrato = 'pdf' | 'docx';
+
 /** Métodos de pago del canon (la cuenta bancaria es obligatoria salvo efectivo). */
-export type MetodoPagoContrato = 'transferencia' | 'consignacion' | 'debito_automatico' | 'efectivo';
+export type MetodoPagoContrato = 'transferencia' | 'efectivo';
 
 /** Solicitud completa de generación del Contrato_Arrendamiento (Req 30.7). */
 export interface ContratoArrendamientoRequest {

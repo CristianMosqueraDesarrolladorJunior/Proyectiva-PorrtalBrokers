@@ -132,6 +132,10 @@
     }
 
     @if (conSalir) {
+      <button type="button" class="sidebar__salir sidebar__recorrido" [attr.title]="colapsado() ? 'Ver recorrido' : null" (click)="tour.abrir()">
+        <app-icon nombre="tour" [tamano]="18" />
+        <span>Ver recorrido</span>
+      </button>
       <button type="button" class="sidebar__salir" [attr.title]="colapsado() ? 'Cerrar sesión' : null" (click)="salir.emit()">
         <app-icon nombre="logout" [tamano]="18" />
         <span>Cerrar sesión</span>

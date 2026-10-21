@@ -54,7 +54,8 @@ const VARIANTE_POR_DEFECTO: VarianteBadge = 'badge-info';
  */
 const MAPA_ESTADO_BADGE: Readonly<Record<string, VarianteBadge>> = {
   // --- Solicitud (Req 5.4, 6.3) ---
-  aprobada: 'badge-success',
+  aprobada: 'badge-info',
+  expedida: 'badge-success',
   radicada: 'badge-info',
   en_revision: 'badge-info',
   observada: 'badge-warning',

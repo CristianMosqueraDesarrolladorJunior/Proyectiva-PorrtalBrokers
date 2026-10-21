@@ -2,22 +2,15 @@
   <app-page-header
     [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="comisiones-admin-titulo"
-    titulo="Comisiones"
-    subtitulo="Cuentas de cobro de los brokers y el control de pago: qué se pagó y qué está pendiente."
+    titulo="Cuentas de cobro"
+    subtitulo="Documentos que generan los brokers. El cobro lo hace cada broker en la plataforma de proveedores de Seguros Bolívar: aquí no se manejan pagos."
   ></app-page-header>
 
   <app-grid-layout tipo="kpi-grid">
-    <app-kpi-card label="Comisión por pagar" [valor]="compacto(totalPendiente())" icono="schedule" tono="accent" [sub]="pendientes() + ' cuentas de cobro pendientes'" />
-    <app-kpi-card label="Comisión pagada" [valor]="compacto(totalPagado())" icono="paid" sub="Consignada a los brokers" />
-    <app-kpi-card label="Cuentas de cobro" [valor]="cuentas().length" icono="receipt_long" sub="Radicadas por los brokers" />
+    <app-kpi-card label="Cuentas de cobro" [valor]="cuentas().length" icono="receipt_long" sub="Generadas por los brokers" />
+    <app-kpi-card label="Pólizas incluidas" [valor]="totalPolizas()" icono="policy" sub="En esas cuentas" />
+    <app-kpi-card label="Comisión en cuentas de cobro" [valor]="compacto(totalDocumentos())" icono="description" sub="Suma de las cuentas vigentes" />
   </app-grid-layout>
-
-  <app-barra-acciones>
-    <div filtros>
-      <app-segmented-control [opciones]="filtros" [valor]="filtro()" ariaLabel="Filtrar por estado de pago" (valorChange)="filtro.set($event)" />
-    </div>
-  </app-barra-acciones>
-
 
   <app-estado-vista
     [cargando]="cargando()"
@@ -25,8 +18,8 @@
     [vacio]="filas().length === 0"
     entidad="cuentas de cobro"
     iconoVacio="receipt_long"
-    tituloVacio="No hay cuentas de cobro en este filtro"
-    descripcionVacio="Aparecen cuando un broker registrado cobra sus pólizas expedidas."
+    tituloVacio="Aún no hay cuentas de cobro"
+    descripcionVacio="Aparecen cuando un broker registrado genera su cuenta de cobro."
     (reintentar)="cargar()"
   >
     <app-data-table
@@ -37,7 +30,7 @@
       [conBusqueda]="true"
       placeholderBusqueda="Buscar por broker o comercial…"
       ariaLabel="Cuentas de cobro"
-      (accion)="gestionar($event)"
+      (accion)="abrir($event)"
     />
   </app-estado-vista>
 </section>
@@ -45,21 +38,14 @@
 <app-modal-dialog
   [abierto]="seleccionada() !== null"
   [titulo]="'Cuenta de cobro de ' + (seleccionada()?.broker ?? '')"
-  [subtitulo]="(seleccionada()?.polizas ?? 0) + ' pólizas · ' + compacto(seleccionada()?.totalComision ?? 0) + ' a cobrar'"
-  eyebrow="Comisiones"
+  [subtitulo]="plural(seleccionada()?.polizas ?? 0, 'póliza', 'pólizas') + ' · ' + compacto(seleccionada()?.totalComision ?? 0)"
+  eyebrow="Cuentas de cobro"
   tamano="xl"
-  [pestanas]="pestanas()"
+  [pestanas]="pestanas"
   [pestana]="pestana()"
   (pestanaChange)="cambiarPestana($event)"
   (cerrar)="seleccionada.set(null)"
 >
-  @if (seleccionada(); as c) {
-    <div cabecera>
-      <app-badge-estado [variante]="(pago[c.estadoPago ?? 'pendiente'] ?? { variante: 'info' }).variante" [conPunto]="true">
-        {{ (pago[c.estadoPago ?? 'pendiente'] ?? { etiqueta: c.estadoPago }).etiqueta }}
-      </app-badge-estado>
-    </div>
-  }
   @if (seleccionada(); as c) {
     @switch (pestana()) {
       @case ('detalle') {
@@ -68,38 +54,6 @@
       @case ('documento') {
         <app-visor-archivo [archivo]="archivo()" [cargando]="cargandoArchivo()" [nombre]="'cuenta-de-cobro-' + c.id + '.pdf'" />
       }
-      @case ('pago') {
-        <div class="form-modal">
-          <app-form-field label="Resultado" controlId="pago-estado">
-            <app-segmented-control [opciones]="opcionesPago" [valor]="estadoPago()" ariaLabel="Resultado del pago" (valorChange)="estadoPago.set($event)" />
-          </app-form-field>
-          @if (estadoPago() === 'pagada') {
-            <div class="form-modal__fila">
-              <app-form-field label="Valor pagado" controlId="pago-valor" [ayuda]="'Máximo ' + compacto(c.totalComision)">
-                <app-money-input inputId="pago-valor" [valor]="valorPagado()" (valorChange)="valorPagado.set($event)" />
-              </app-form-field>
-              <app-form-field label="Fecha de pago" controlId="pago-fecha">
-                <input id="pago-fecha" type="date" [max]="hoy" [value]="fechaPago()" (input)="fechaPago.set(v($event))" />
-              </app-form-field>
-            </div>
-            <app-form-field label="Referencia de la transferencia (opcional)" controlId="pago-ref">
-              <input id="pago-ref" type="text" maxlength="80" [value]="referencia()" (input)="referencia.set(v($event))" />
-            </app-form-field>
-          }
-          @if (estadoPago() === 'rechazada') {
-            <app-form-field label="Motivo del rechazo" controlId="pago-motivo" [requerido]="true" ayuda="El broker podrá volver a cobrar esas pólizas.">
-              <textarea id="pago-motivo" rows="3" maxlength="300" [value]="motivo()" (input)="motivo.set(v($event))"></textarea>
-            </app-form-field>
-          }
-        </div>
-      }
     }
-  }
-  @if (seleccionada() && pestana() === 'pago') {
-    <div acciones>
-      <app-boton variante="accent" icono="save" [disabled]="guardando() || (estadoPago() === 'rechazada' && !motivo().trim())" (clicked)="registrarPago()">
-        {{ guardando() ? 'Guardando…' : 'Registrar' }}
-      </app-boton>
-    </div>
   }
 </app-modal-dialog>

@@ -156,16 +156,14 @@
           [error]="esTelefonoInvalido() ? 'Entre 7 y 10 dígitos.' : ''">
           <input id="perfil-telefono" type="tel" inputmode="numeric" autocomplete="tel-national" [ngModel]="telefono()" (ngModelChange)="telefono.set(soloDigitos($event))" />
         </app-form-field>
-        <app-form-field label="Ciudad" controlId="perfil-ciudad" [requerido]="true">
-          <select id="perfil-ciudad" [ngModel]="ciudad()" (ngModelChange)="ciudad.set($event)">
-            @if (ciudad() && !ciudades.includes(ciudad())) {
-              <option [value]="ciudad()">{{ ciudad() }}</option>
-            }
-            <option value="" disabled>Selecciona tu ciudad</option>
-            @for (c of ciudades; track c) {
-              <option [value]="c">{{ c }}</option>
-            }
-          </select>
+        <app-form-field label="Ciudad" controlId="perfil-ciudad" [requerido]="true"
+          [error]="esCiudadInvalida() ? 'Elige una ciudad de la lista.' : ''">
+          <!-- Escribe para filtrar las ciudades (son cerca de 190), igual que en el registro. -->
+          <input id="perfil-ciudad" list="perfil-ciudades" autocomplete="off" placeholder="Escribe tu ciudad y elígela"
+            [ngModel]="ciudad()" (ngModelChange)="ciudad.set($event)" [attr.aria-invalid]="esCiudadInvalida()" />
+          <datalist id="perfil-ciudades">
+            @for (c of ciudades; track c) { <option [value]="c"></option> }
+          </datalist>
         </app-form-field>
       </div>
 
@@ -246,6 +244,7 @@
           <span class="perfil-docs__info">
             <b>{{ etiquetaDocumento(d.tipo) }}</b>
             <small>{{ d.archivo || 'Sin archivo' }} · {{ fecha(d.fechaCarga) }}</small>
+            <small>¿Cargaste un archivo equivocado? Avísale a tu asesor comercial para que te habilite una nueva carga.</small>
           </span>
           <app-badge-estado [variante]="varianteDoc[d.estado]">{{ etiquetaDoc[d.estado] }}</app-badge-estado>
           <span class="perfil-docs__candado" title="No se puede modificar desde el perfil"><app-icon nombre="lock" [tamano]="16" /> No modificable</span>
@@ -272,7 +271,7 @@
 
 <!-- Confirmación de la Transición de registro (modal central) -->
 <app-modal-dialog [abierto]="confirmarRegistro()" titulo="Solicitar registro de broker" (cerrar)="confirmarRegistro.set(false)">
-  <p>Consultaremos tu SARLAFT y enviaremos tus documentos al área. Al aprobarlos, tu misma cuenta pasará de <b>Prospecto</b> a <b>Broker registrado</b> y conservas tu historial.</p>
+  <p>Consultaremos tu SARLAFT y revisaremos tus documentos. Al aprobarlos, tu misma cuenta pasará de <b>Prospecto</b> a <b>Broker registrado</b> y conservas tu historial.</p>
   <ul class="perfil-modal-lista">
     <li><app-icon nombre="lock_open" [tamano]="16" /> Se desbloquean {{ modulosRestringidos.length }} módulos.</li>
     <li><app-icon nombre="payments" [tamano]="16" /> Se acreditan {{ perfil().comisiones.solicitudes }} comisiones retroactivas por {{ cop(perfil().comisiones.monto) }}.</li>

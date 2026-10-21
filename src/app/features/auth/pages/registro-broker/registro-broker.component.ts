@@ -1,3 +1,5 @@
+import { MENSAJE_CLAVE } from '../../../../core/util/clave-segura';
+import { InfoTipComponent } from '../../../../shared/components/info-tip/info-tip.component';
 import { SessionService } from '../../../../core/services/session.service';
 import type { ErrorPortal } from '../../../../core/interceptors/error.interceptor';
 import {
@@ -19,20 +21,19 @@ import { Router } from '@angular/router';
 
 import {
   BotonComponent,
+  CheckDeclaracionComponent,
   DocUploaderComponent,
   EscaleritaLoaderComponent,
   FormFieldComponent,
   IconComponent,
   ModalDialogComponent,
+  SuccessScreenComponent,
 } from '../../../../shared/components';
 import type { ArchivoSeleccionado, ReglaDocumentoUploader } from '../../../../shared/components/doc-uploader/doc-uploader.component';
-import { SOLICITUD_REGISTRO_ENVIADA, documentosRegistroBroker, type TipoDocumentoRegistro } from '../../../../core/models/registro-broker.model';
+import { documentosRegistroBroker, type TipoDocumentoRegistro } from '../../../../core/models/registro-broker.model';
 import type { TipoMimePermitido } from '../../../../core/models/documento.model';
 import { PerfilService } from '../../../../core/services/perfil.service';
-import { DocumentosService } from '../../../../core/services/documentos.service';
-import { descargarArchivo } from '../../../../core/util/descargar-archivo';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
-import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
 import { reglaDeDocumentoRegistro, validarDocumento } from '../../../../shared/validation/documento-validacion';
 import { AuthService } from '../../../../core/services/auth.service';
 import { rutaInicio } from '../../../../core/guards/rol.guard';
@@ -54,14 +55,14 @@ import {
   esPasswordValida,
   esTelefonoValido,
 } from './registro-validacion';
+import { PasoComoFuncionaComponent, REQUISITOS_REGISTRO } from './paso-como-funciona/paso-como-funciona.component';
 import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
+import { VerClaveDirective } from '../../../../shared/directives/ver-clave.directive';
 import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
+import type { IdFeedback } from '../../../../shared/components/feedback/feedback.types';
 
 /** Ruta de la pantalla de login (acceso "Ya tengo cuenta") (Req 2.3). */
 const RUTA_LOGIN = '/login';
-
-/** Perfil del broker: ahí, ya con sesión, se verifica SARLAFT y se cargan los documentos. */
-const RUTA_PERFIL = '/app/perfil';
 
 /**
  * Mensaje del alta según el error normalizado por el interceptor ({@link ErrorPortal}): en 409 el
@@ -82,7 +83,7 @@ export function mensajeErrorRegistro(error: unknown): string {
   if (status === 503) {
     return 'El servicio de registro no está disponible en este momento. Intenta de nuevo en unos minutos.';
   }
-  return 'No fue posible crear tu cuenta. Intenta de nuevo.';
+  return 'No pudimos crear tu cuenta. Intenta de nuevo.';
 }
 
 /** Tipado del formulario reactivo (datos personales + documento). */
@@ -96,6 +97,10 @@ interface FormularioRegistro {
   readonly documento: FormControl<string>;
   readonly password: FormControl<string>;
   readonly passwordConfirmacion: FormControl<string>;
+  /** Declara no haber trabajado para inmobiliarias en los últimos 12 meses (sin marcar por defecto). */
+  readonly declaracionInmobiliaria: FormControl<boolean>;
+  /** Autoriza el tratamiento de datos personales (sin marcar por defecto). */
+  readonly aceptaTratamientoDatos: FormControl<boolean>;
 }
 
 /** Credenciales iniciales que se informan si el ingreso automático falla. */
@@ -109,17 +114,17 @@ interface Credenciales {
 /**
  * Registro (`/registro-broker`): comparte la UI del login (mismo fondo y tarjeta).
  *
- * Con los datos personales y el documento se crea la cuenta (PROSPECTO) y se abre la
- * sesión. "Crear cuenta y calificarme después" lleva al inicio; "Continuar como broker" lleva
- * al perfil, donde con la sesión ya abierta se verifica SARLAFT y se cargan los 4
- * documentos (los endpoints de SARLAFT y legalización exigen sesión). El backend
- * revalida SIEMPRE (Req 3.23).
+ * Asistente de tres pasos: 1) «Bienvenida» (de qué se trata y qué necesitas, con «Aceptar»), 2) «Tus datos» (crea la cuenta PROSPECTO y
+ * abre la sesión) y 3) «Documentos» (los cuatro obligatorios). Al enviar se muestra la confirmación. El backend
+ * revalida siempre (Req 3.23).
  */
 @Component({
   selector: 'app-registro-broker',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SoloDigitosDirective, 
+  imports: [SoloDigitosDirective,
+    VerClaveDirective,
+    CheckDeclaracionComponent,
     ReactiveFormsModule,
     FormFieldComponent,
     IconComponent,
@@ -127,6 +132,9 @@ interface Credenciales {
     ModalDialogComponent,
     DocUploaderComponent,
     EscaleritaLoaderComponent,
+      SuccessScreenComponent,
+    PasoComoFuncionaComponent,
+    InfoTipComponent,
   ],
   templateUrl: './registro-broker.component.html',
   styleUrl: './registro-broker.component.scss',
@@ -136,71 +144,33 @@ export class RegistroBrokerComponent {
   private readonly sesion = inject(SessionService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
-  /** Pasos 2 y 3 usan los mismos servicios de Mi perfil (la sesión ya está abierta tras el paso 1). */
+  /** El paso 3 usa los mismos servicios de Mi perfil (la sesión ya está abierta tras el paso 2). */
   private readonly perfilServicio = inject(PerfilService);
-  private readonly documentos = inject(DocumentosService);
   private readonly feedback = inject(FeedbackService);
-  protected readonly perfil = this.perfilServicio.perfil;
-  protected readonly abrirFormularioSarlaft = abrirFormularioSarlaft;
 
-  /** Paso del asistente: 1 datos (crea la cuenta), 2 documentos, 3 Conocimiento de Cliente (opcional). */
+  /** Paso del asistente: 1 «Bienvenida», 2 «Tus datos» (crea la cuenta), 3 «Documentos». */
   protected readonly paso = signal<1 | 2 | 3>(1);
+  /** Solicitud enviada: se muestra la confirmación en lugar del asistente. */
+  protected readonly registroEnviado = signal(false);
+  protected readonly requisitos = REQUISITOS_REGISTRO;
 
-  // --- Paso 3 · Conocimiento de Cliente (opcional en el onboarding) ---
-  protected readonly consultandoSarlaft = signal(false);
-  protected readonly sarlaftConsultado = signal(false);
-  protected readonly errorSarlaft = signal(false);
-  protected readonly puedeConsultarSarlaft = computed(() => !this.consultandoSarlaft());
-  /** Formulario físico: si la consulta falló (error de red o sin respuesta) o quedó desactualizado. */
-  protected readonly puedeCargarFisico = computed(() => {
-    if (this.consultandoSarlaft()) {
-      return false;
-    }
-    const estado = this.perfil().sarlaft.estado;
-    return !!this.errorSarlaft() || (this.sarlaftConsultado() && estado !== 'vigente' && estado !== 'en_cumplimiento');
-  });
-  /** Celular registrado (últimos 4 dígitos) al que SARLAFT envía el enlace; nulo si no es celular. */
-  protected readonly celularEnlace = computed(() => {
-    const d = (this.perfil().telefono ?? '').replace(/\D/g, '');
-    return /^3\d{9}$/.test(d) ? '··· ' + d.slice(-4) : null;
-  });
-  protected readonly reglaSarlaftFisico: readonly ReglaDocumentoUploader[] = [
-    { id: 'formularioSarlaft', etiqueta: 'Cargar formulario físico', descripcion: 'Formulario de Conocimiento de Cliente diligenciado y firmado (PDF, JPG o PNG)', icono: 'upload_file', obligatorio: false },
-  ];
-  /** Formato físico a descargar según el tipo de documento: NIT → persona jurídica; CC/CE → persona natural. */
-  protected readonly formatoSarlaft = computed(() =>
-    (this.perfil().tipoDocumento || this.formulario.controls.tipoDocumento.value) === 'NIT' ? 'juridica' : 'natural',
-  );
-  protected readonly descargandoFormato = signal(false);
-  protected readonly cargadoSarlaftFisico = computed<Readonly<Record<string, string>>>(() =>
-    this.perfil().sarlaft.fisico ? { formularioSarlaft: this.perfil().sarlaft.fisico as string } : ({} as Record<string, string>),
-  );
-  /** Conocimiento de Cliente resuelto (vigente o formulario cargado): el paso 3 queda listo. */
-  protected readonly sarlaftListo = computed(() => ['vigente', 'fisico'].includes(this.perfil().sarlaft.estado));
-
-  // --- Paso 2 · Documentos ---
+  // --- Paso 3 · Documentos (los cuatro obligatorios) ---
   private readonly documentosRegistro = documentosRegistroBroker(inject(CatalogoService).opciones('documento_legalizacion'));
-  /** Obligatorios + el formulario de Conocimiento de Cliente opcional: si se carga aquí, el paso 3 queda listo. */
-  protected readonly reglasUploader: readonly ReglaDocumentoUploader[] = [
-    ...this.documentosRegistro.map((r) => ({
-      id: r.tipo, etiqueta: r.etiqueta, descripcion: r.descripcion, icono: 'upload_file', obligatorio: true,
-    })),
-    {
-      ...this.reglaSarlaftFisico[0],
-      etiqueta: 'Formulario de Conocimiento de Cliente',
-      descripcion: 'Opcional: si ya lo tienes diligenciado y firmado (PDF, JPG o PNG)',
-    },
-  ];
-  protected readonly cargados = computed<Readonly<Record<string, string>>>(() => ({
-    ...Object.fromEntries(this.perfil().documentos.filter((d) => d.archivo).map((d) => [d.tipo, d.archivo])),
-    ...this.cargadoSarlaftFisico(),
+  protected readonly reglasUploader: readonly ReglaDocumentoUploader[] = this.documentosRegistro.map((r) => ({
+    id: r.tipo, etiqueta: r.etiqueta, descripcion: r.descripcion, icono: 'upload_file', obligatorio: true,
   }));
+  protected readonly cargados = computed<Readonly<Record<string, string>>>(() =>
+    Object.fromEntries(this.perfilServicio.perfil().documentos.filter((d) => d.archivo).map((d) => [d.tipo, d.archivo])),
+  );
+  protected readonly documentosCargados = computed(() => Object.keys(this.cargados()).length);
   protected readonly enviandoSolicitud = signal(false);
-  protected readonly puedeCompletarRegistro = this.perfilServicio.puedeCompletarRegistro;
+  /** «Enviar solicitud» solo se habilita con los documentos obligatorios completos. */
+  protected readonly puedeEnviarSolicitud = this.perfilServicio.puedeCompletarRegistro;
 
   /** Constantes expuestas al template. */
   protected readonly nombreLongitudMin = NOMBRE_LONGITUD_MIN;
   protected readonly passwordLongitudMin = PASSWORD_LONGITUD_MIN;
+  protected readonly mensajeClave = MENSAJE_CLAVE;
   protected readonly telefonoLongitudMin = TELEFONO_LONGITUD_MIN;
   protected readonly telefonoLongitudMax = TELEFONO_LONGITUD_MAX;
   protected readonly documentoLongitudMin = DOCUMENTO_LONGITUD_MIN;
@@ -211,12 +181,12 @@ export class RegistroBrokerComponent {
   protected readonly ciudades = this.catalogo.opciones('ciudad').map((c) => c.descripcion);
   protected readonly tiposDocumento = this.catalogo.opciones('tipo_documento').filter((t) => t['registro_broker'] === true);
   protected readonly modulosRestringidos = this.catalogo.modulosRestringidos();
-  /** Etapas del registro de broker (las dos últimas se completan en el perfil). */
-  protected readonly etapas = ['Tus datos', 'Documentos', 'Conocimiento de Cliente'];
+  /** Etapas del registro de broker. */
+  protected readonly etapas = ['Bienvenida', 'Tus datos', 'Documentos'];
 
-  /** Etapa completada: las anteriores a la actual, y el Conocimiento de Cliente apenas queda resuelto. */
+  /** Etapa completada: las anteriores a la actual. */
   protected etapaHecha(indice: number): boolean {
-    return indice + 1 < this.paso() || (indice === 2 && this.sarlaftListo());
+    return indice + 1 < this.paso();
   }
 
   /** Formulario reactivo. */
@@ -233,6 +203,8 @@ export class RegistroBrokerComponent {
       nonNullable: true,
       validators: [Validators.required],
     }),
+    declaracionInmobiliaria: new FormControl(false, { nonNullable: true, validators: [Validators.requiredTrue] }),
+    aceptaTratamientoDatos: new FormControl(false, { nonNullable: true, validators: [Validators.requiredTrue] }),
   });
 
   /** Signal que refleja los valores del formulario para recomputar validaciones. */
@@ -240,7 +212,7 @@ export class RegistroBrokerComponent {
 
   // --- Envío ---
   /** Destino elegido mientras se crea la cuenta (`null` = no hay creación en curso). */
-  protected readonly creandoHacia = signal<'inicio' | 'perfil' | null>(null);
+  protected readonly creandoHacia = signal<'inicio' | 'documentos' | null>(null);
   protected readonly credenciales = signal<Credenciales | null>(null);
 
   constructor() {
@@ -303,10 +275,23 @@ export class RegistroBrokerComponent {
       esCiudadValida(v.ciudad, this.ciudades) &&
       this.tiposDocumento.some((t) => t.codigo === v.tipoDocumento) &&
       esDocumentoValido(v.documento) &&
-      esPasswordValida(v.password) &&
-      v.password === v.passwordConfirmacion
+      esPasswordValida(v.password, v.documento) &&
+      v.password === v.passwordConfirmacion &&
+      v.declaracionInmobiliaria &&
+      v.aceptaTratamientoDatos
     );
   });
+
+  /** Mensaje cuando intenta avanzar sin otorgar la declaración (conserva los demás datos del paso). */
+  protected get errorDeclaracion(): string {
+    const control = this.formulario.controls.declaracionInmobiliaria;
+    return control.touched && !control.value ? 'Debes confirmar esta declaración para continuar.' : '';
+  }
+
+  protected get errorTratamientoDatos(): string {
+    const control = this.formulario.controls.aceptaTratamientoDatos;
+    return control.touched && !control.value ? 'Debes autorizar el tratamiento de tus datos para continuar.' : '';
+  }
 
   // --- Mensajes de error por campo (solo tras interacción) ---
   protected get errorNombre(): string {
@@ -333,8 +318,7 @@ export class RegistroBrokerComponent {
   }
 
   protected get errorPassword(): string {
-    return this.mensajeError('password', esPasswordValida(this.valores().password),
-      `La contraseña debe tener al menos ${PASSWORD_LONGITUD_MIN} caracteres.`);
+    return this.mensajeError('password', esPasswordValida(this.valores().password, this.valores().documento), MENSAJE_CLAVE);
   }
 
   protected get errorPasswordConfirmacion(): string {
@@ -344,11 +328,16 @@ export class RegistroBrokerComponent {
     return this.mensajeError('passwordConfirmacion', coincide, 'Las contraseñas no coinciden.');
   }
 
+  /** Paso 1: el prospecto aceptó la bienvenida y pasa a «Tus datos». */
+  protected aceptarComoFunciona(): void {
+    this.paso.set(2);
+  }
+
   /**
-   * Crea la cuenta (PROSPECTO), abre la sesión y navega: al inicio si se queda como
-   * prospecto, o al perfil para seguir con SARLAFT y documentos si continúa como broker.
+   * Crea la cuenta (PROSPECTO), abre la sesión y sigue: a «Documentos» si continúa el registro, o al portal si prefiere
+   * completar después.
    */
-  protected crearCuenta(destino: 'inicio' | 'perfil'): void {
+  protected crearCuenta(destino: 'inicio' | 'documentos'): void {
     if (!this.datosValidos() || this.creandoHacia()) {
       this.formulario.markAllAsTouched();
       return;
@@ -365,6 +354,8 @@ export class RegistroBrokerComponent {
         tipoDocumento: v.tipoDocumento,
         documento: v.documento,
         password: v.password,
+        declaracionInmobiliaria: v.declaracionInmobiliaria,
+        aceptaTratamientoDatos: v.aceptaTratamientoDatos,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -387,9 +378,9 @@ export class RegistroBrokerComponent {
                   void this.router.navigate([rutaInicio(perfil.rol)]);
                   return;
                 }
-                // Continúa como broker: la sesión ya está abierta; sigue en el asistente (paso 2).
+                // Continúa el registro: la sesión ya está abierta; sigue en el asistente (paso 3).
                 this.perfilServicio.cargar().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ error: () => undefined });
-                this.paso.set(2);
+                this.paso.set(3);
               },
               error: () => {
                 this.creandoHacia.set(null);
@@ -409,79 +400,8 @@ export class RegistroBrokerComponent {
       });
   }
 
-  /** Paso 3: consulta el Conocimiento de Cliente con el documento (sin fecha); desactualizado → SMS al celular. */
-  protected verificarSarlaft(): void {
-    if (!this.puedeConsultarSarlaft()) {
-      return;
-    }
-    this.consultandoSarlaft.set(true);
-    this.errorSarlaft.set(false);
-    this.perfilServicio
-      .actualizarSarlaft()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (perfil) => {
-          this.consultandoSarlaft.set(false);
-          this.sarlaftConsultado.set(true);
-          if (perfil.sarlaft.estado === 'vigente' || perfil.sarlaft.estado === 'en_cumplimiento') {
-            this.feedback.toast({ variante: 'exito', titulo: '¡Verificado!', mensaje: 'Tu Conocimiento de Cliente está vigente.' });
-          }
-        },
-        error: () => {
-          this.consultandoSarlaft.set(false);
-          this.errorSarlaft.set(true);
-          this.feedback.error({
-            titulo: 'No pudimos consultar',
-            mensaje: 'Tu Conocimiento de Cliente no respondió en este momento. Intenta de nuevo, carga el formulario físico o termina después desde Mi perfil.',
-            acciones: { cancelar: 'Cargar formulario físico', reintentar: 'Reintentar' },
-            alResolver: (r) => {
-              if (r === 'reintentar') this.verificarSarlaft();
-            },
-          });
-        },
-      });
-  }
-
-  /** Paso 3: descarga el formato de Conocimiento de Cliente del bucket (persona natural o jurídica). */
-  protected descargarFormatoSarlaft(): void {
-    const tipo = this.formatoSarlaft();
-    this.descargandoFormato.set(true);
-    this.documentos
-      .descargarRecurso(`sarlaft-persona-${tipo}`)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (pdf) => {
-          this.descargandoFormato.set(false);
-          descargarArchivo(pdf, `conocimiento-de-cliente-persona-${tipo}.pdf`);
-        },
-        error: () => {
-          this.descargandoFormato.set(false);
-          this.feedback.toast({ variante: 'error', mensaje: 'No pudimos descargar el formato en este momento. Intenta de nuevo.' });
-        },
-      });
-  }
-
-  /** Formulario físico (paso 2 o 3): queda en revisión del área y deja el paso 3 listo. */
-  protected onSarlaftFisico(evento: ArchivoSeleccionado): void {
-    this.errorSarlaft.set(false);
-    this.perfilServicio
-      .cargarSarlaftFisico(evento.archivo)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.sarlaftConsultado.set(true);
-          this.feedback.toast({ variante: 'exito', mensaje: 'Formulario cargado. Queda en revisión del área.' });
-        },
-        error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
-      });
-  }
-
-  /** Paso 2: valida el archivo con la lógica compartida y lo carga (el backend revalida siempre). */
+  /** Paso 3: valida el archivo con la lógica compartida y lo carga (el backend revalida siempre). */
   protected onDocumento(evento: ArchivoSeleccionado): void {
-    if (evento.id === 'formularioSarlaft') {
-      this.onSarlaftFisico(evento);
-      return;
-    }
     const tipo = evento.id as TipoDocumentoRegistro;
     const regla = this.documentosRegistro.find((r) => r.tipo === tipo);
     if (!regla) {
@@ -513,14 +433,20 @@ export class RegistroBrokerComponent {
       .reemplazarDocumento(tipo, evento.archivo)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => this.feedback.toast({ variante: 'exito', mensaje: `${regla.etiqueta} cargado.` }),
+        next: () => {
+          // Un solo aviso a la vez: el de la carga anterior se reemplaza en vez de apilarse.
+          if (this.toastCarga) this.feedback.cerrar(this.toastCarga);
+          this.toastCarga = this.feedback.toast({ variante: 'exito', mensaje: `${regla.etiqueta} cargado.` });
+        },
         error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
       });
   }
 
-  /** Paso 3: envía la solicitud de registro y lleva a Mi perfil, donde se ve "en revisión". */
+  private toastCarga: IdFeedback | null = null;
+
+  /** Paso 3: envía la solicitud de registro y muestra la confirmación. */
   protected enviarSolicitud(): void {
-    if (!this.puedeCompletarRegistro() || this.enviandoSolicitud()) {
+    if (!this.puedeEnviarSolicitud() || this.enviandoSolicitud()) {
       return;
     }
     this.enviandoSolicitud.set(true);
@@ -529,8 +455,8 @@ export class RegistroBrokerComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          void this.router.navigate([RUTA_PERFIL], { queryParams: { registro: 1 } });
-          this.feedback.exito(SOLICITUD_REGISTRO_ENVIADA);
+          this.enviandoSolicitud.set(false);
+          this.registroEnviado.set(true);
         },
         error: (err: unknown) => {
           this.enviandoSolicitud.set(false);
@@ -539,12 +465,12 @@ export class RegistroBrokerComponent {
       });
   }
 
-  /** "Completar después": entra al portal como prospecto; SARLAFT y documentos siguen en Mi perfil. */
+  /** «Completar después»: entra al portal como prospecto; los documentos siguen en Mi perfil. */
   protected irAlPortal(): void {
     void this.router.navigate([rutaInicio('BROKER')]);
   }
 
-  /** "Aceptar" del aviso de credenciales: vuelve al login. */
+  /** «Aceptar» del aviso de credenciales: vuelve al login. */
   protected aceptarCredenciales(): void {
     this.credenciales.set(null);
     this.irALogin();

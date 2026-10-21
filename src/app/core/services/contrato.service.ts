@@ -6,6 +6,8 @@ import {
   ContratoArrendamientoRequest,
   LecturaContratoResponse,
   PrellenadoContrato,
+  FormatoContrato,
+  ValidacionCtl,
 } from '../models/contrato.model';
 
 /**
@@ -22,6 +24,20 @@ export interface ContratoArrendamientoResponse {
  * Envía los datos del contrato multipaso al API_Backend, que revalida y genera el
  * Contrato_Arrendamiento (Req 30.9). Consumo vía `HttpClient` con `withCredentials`.
  */
+/** Contrato generado sin radicar (`GET /contratos/pendientes`). */
+export interface ContratoPendiente {
+  readonly referencia: string;
+  readonly fecha: string;
+  readonly propietario: string;
+  readonly tipoDocumentoPropietario: string;
+  readonly documentoPropietario: string;
+  readonly inquilino: string;
+  readonly tipoDocumentoInquilino: string;
+  readonly documentoInquilino: string;
+  readonly inmueble: string;
+  readonly leasing: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ContratoService {
   private readonly http = inject(HttpClient);
@@ -32,18 +48,34 @@ export class ContratoService {
    * @param request datos de arrendador, arrendatario, inmueble y condiciones.
    * @returns confirmación con radicado y estado.
    */
+  /** Valida un CTL (PDF): antigüedad máxima de 90 días y coincidencia de la dirección con la del contrato. */
+  validarCtl(archivo: File, direccionContrato: string): Observable<ValidacionCtl> {
+    const cuerpo = new FormData();
+    cuerpo.append('archivo', archivo);
+    if (direccionContrato.trim()) {
+      cuerpo.append('direccionContrato', direccionContrato.trim());
+    }
+    return this.http.post<ValidacionCtl>('/api/v1/contratos/ctl/validacion', cuerpo, { withCredentials: true });
+  }
+
   /** Datos del estudio digital (arrendatario, codeudores, propietario e inmueble) para precargar el contrato. */
   prellenado(consecutivo: string, documento: string, tipoDocumento: string): Observable<PrellenadoContrato> {
     const params = new HttpParams().set('consecutivo', consecutivo).set('documento', documento).set('tipoDocumento', tipoDocumento);
     return this.http.get<PrellenadoContrato>('/api/v1/contratos/prellenado', { params, withCredentials: true });
   }
 
-  /** Word del contrato con la plantilla de vivienda o comercio según el uso del inmueble (la elige el backend). */
-  descargarDocumento(referencia: string): Observable<Blob> {
+  /** Contrato como archivo individual (PDF o Word) con la plantilla de vivienda o comercio que elige el backend. */
+  descargarDocumento(referencia: string, formato: FormatoContrato = 'docx'): Observable<Blob> {
     return this.http.get(`/api/v1/contratos/${encodeURIComponent(referencia)}/documento`, {
+      params: { formato },
       withCredentials: true,
       responseType: 'blob',
     });
+  }
+
+  /** Contratos que generó la cuenta y aún no radicó (la radicación los ofrece para no volver a empezar). */
+  pendientes(): Observable<readonly ContratoPendiente[]> {
+    return this.http.get<ContratoPendiente[]>('/api/v1/contratos/pendientes', { withCredentials: true });
   }
 
   generar(

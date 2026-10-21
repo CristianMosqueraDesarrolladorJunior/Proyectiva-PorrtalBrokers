@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { BotonComponent } from '../boton/boton.component';
 import { FormFieldComponent } from '../form-field/form-field.component';
+import { VerClaveDirective } from '../../directives/ver-clave.directive';
+import { MENSAJE_CLAVE, esClaveSegura } from '../../../core/util/clave-segura';
 
-/** Misma política que el backend: entre 8 y 128 caracteres. */
+/** Misma política que el backend: entre 8 y 128 caracteres (además, no trivial: `esClaveSegura`). */
 export const CLAVE_FUERTE = /^.{8,128}$/s;
 
 export interface CambioClave {
@@ -18,19 +20,19 @@ export interface CambioClave {
   selector: 'app-form-clave',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BotonComponent, FormFieldComponent],
+  imports: [BotonComponent, FormFieldComponent, VerClaveDirective],
   template: `
     <form class="fc" (submit)="$event.preventDefault(); enviar()" novalidate>
       <app-form-field [label]="etiquetaActual" [controlId]="id + '-actual'" [requerido]="true">
-        <input [id]="id + '-actual'" type="password" autocomplete="current-password" [value]="actual()" (input)="actual.set(v($event))" />
+        <input appVerClave [id]="id + '-actual'" type="password" autocomplete="current-password" [value]="actual()" (input)="actual.set(v($event))" />
       </app-form-field>
       <app-form-field label="Nueva contraseña" [controlId]="id + '-nueva'" [requerido]="true"
-        ayuda="Mínimo 8 caracteres." [error]="intento() && !fuerte() ? 'Debe tener mínimo 8 caracteres y ser distinta a la actual.' : ''">
-        <input [id]="id + '-nueva'" type="password" autocomplete="new-password" [value]="nueva()" (input)="nueva.set(v($event))" />
+        [ayuda]="mensajeClave" [error]="intento() && !fuerte() ? mensajeClave + ' Debe ser distinta a la actual.' : ''">
+        <input appVerClave [id]="id + '-nueva'" type="password" autocomplete="new-password" [value]="nueva()" (input)="nueva.set(v($event))" />
       </app-form-field>
       <app-form-field label="Confirma la nueva contraseña" [controlId]="id + '-confirmar'" [requerido]="true"
         [error]="intento() && !coincide() ? 'No coincide con la nueva contraseña.' : ''">
-        <input [id]="id + '-confirmar'" type="password" autocomplete="new-password" [value]="confirmar()" (input)="confirmar.set(v($event))" />
+        <input appVerClave [id]="id + '-confirmar'" type="password" autocomplete="new-password" [value]="confirmar()" (input)="confirmar.set(v($event))" />
       </app-form-field>
       <div class="fc__acciones">
         <app-boton variante="accent" type="submit" icono="lock_reset" [disabled]="enviando">
@@ -64,7 +66,8 @@ export class FormClaveComponent {
   protected readonly nueva = signal('');
   protected readonly confirmar = signal('');
   protected readonly intento = signal(false);
-  protected readonly fuerte = computed(() => CLAVE_FUERTE.test(this.nueva()) && this.nueva() !== this.actual());
+  protected readonly mensajeClave = MENSAJE_CLAVE;
+  protected readonly fuerte = computed(() => esClaveSegura(this.nueva()) && this.nueva() !== this.actual());
   protected readonly coincide = computed(() => this.nueva() === this.confirmar());
 
   protected v(evento: Event): string {

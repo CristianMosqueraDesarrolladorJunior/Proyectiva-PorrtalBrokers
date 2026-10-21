@@ -67,9 +67,9 @@ const MENSAJE_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, string>> = {
   vigente: 'Conocimiento de Cliente actualizado: está vigente.',
   por_vencer: 'Tu Conocimiento de Cliente está próximo a vencer. Actualízalo para completar tu registro.',
   vencido: 'Tu Conocimiento de Cliente está desactualizado. Diligencia el formulario de actualización y vuelve a consultar.',
-  en_cumplimiento: 'Tu caso pasó a revisión del área de Cumplimiento. Te contactaremos por correo.',
-  fisico: 'Cargaste tu SARLAFT físico: queda en revisión del área.',
-  sin_consultar: 'No fue posible consultar tu Conocimiento de Cliente. Intenta de nuevo.',
+  en_cumplimiento: 'Tu caso pasó a revisión de Cumplimiento. Te contactaremos por correo.',
+  fisico: 'Recibimos tu SARLAFT físico y lo estamos revisando.',
+  sin_consultar: 'No pudimos consultar tu Conocimiento de Cliente. Intenta de nuevo.',
 };
 const VARIANTE_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, VarianteBadge>> = {
   vigente: 'success',
@@ -241,7 +241,12 @@ export class PerfilComponent implements OnInit {
     () =>
       esNombreValido(this.nombre()) &&
       esCorreoValido(this.correo()) &&
-      esTelefonoValido(this.telefono()),
+      esTelefonoValido(this.telefono()) &&
+      !this.esCiudadInvalida(),
+  );
+  /** Solo una ciudad del catálogo; la que ya tenía guardada se respeta aunque no esté en la lista. */
+  protected readonly esCiudadInvalida = computed(
+    () => !this.ciudades.includes(this.ciudad()) && this.ciudad() !== this.perfil().ciudad,
   );
   protected readonly esNombreInvalido = computed(() => !esNombreValido(this.nombre()));
   protected readonly esCorreoInvalido = computed(() => !esCorreoValido(this.correo()));
@@ -443,7 +448,7 @@ export class PerfilComponent implements OnInit {
       .reemplazarDocumento(tipo, evento.archivo)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => this.feedback.toast({ variante: 'exito', mensaje: `${regla.etiqueta} cargado. Queda en revisión del área.` }),
+        next: () => this.feedback.toast({ variante: 'exito', mensaje: `${regla.etiqueta} cargado. Lo estamos revisando.` }),
         error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
       });
   }

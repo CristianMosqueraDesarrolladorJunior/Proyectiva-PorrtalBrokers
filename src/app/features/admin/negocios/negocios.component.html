@@ -67,37 +67,12 @@
       @case ('negocio') {
         <app-ficha [secciones]="ficha()" />
       }
-      @case ('gestion') {
-        @if (opcionesEstado().length) {
-          <div class="form-modal">
-            <app-form-field label="Nuevo estado" controlId="neg-estado" ayuda="Solo se expide lo aprobado; al expedir se emite la póliza y el negocio termina.">
-              <select id="neg-estado" [value]="estadoDestino()" (change)="estadoDestino.set(v($event))">
-                <option value="">Selecciona…</option>
-                @for (e of opcionesEstado(); track e) {
-                  <option [value]="e">{{ etiquetaEstado[e] }}</option>
-                }
-              </select>
-            </app-form-field>
-            <app-form-field label="Observación (queda en el historial)" controlId="neg-obs">
-              <textarea id="neg-obs" rows="3" maxlength="300" [value]="observacion()" (input)="observacion.set(v($event))"></textarea>
-            </app-form-field>
-          </div>
-        } @else {
-          <app-alert-banner variante="success" titulo="Negocio terminado" icono="task_alt">
-            Está en un estado final: ya no admite cambios.
-          </app-alert-banner>
-        }
+      @case ('gestionar') {
+        <app-gestion-negocio [radicado]="d.negocio.radicado" (actualizado)="recargar(d.negocio.radicado)" />
       }
       @case ('historial') {
         <app-bitacora [eventos]="d.historial" mensajeVacio="Sin gestiones registradas" />
       }
     }
-  }
-  @if (detalle() && pestana() === 'gestion' && opcionesEstado().length) {
-    <div acciones>
-      <app-boton variante="accent" icono="task_alt" [disabled]="guardando() || !estadoDestino()" (clicked)="aplicarEstado()">
-        {{ guardando() ? 'Guardando…' : 'Aplicar estado' }}
-      </app-boton>
-    </div>
   }
 </app-modal-dialog>
