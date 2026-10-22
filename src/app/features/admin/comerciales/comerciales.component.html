@@ -112,8 +112,20 @@
               <app-boton variante="outline" icono="key" [disabled]="guardando()" (clicked)="restablecerAcceso()">Generar nueva credencial</app-boton>
             </div>
           }
+          @if (c.activo) {
+            <app-alert-banner variante="warning" [titulo]="c.enVacaciones ? 'De vacaciones' : 'Vacaciones'" icono="beach_access">
+              {{ c.enVacaciones
+                ? 'Su cartera está repartida entre los demás comerciales. Al terminar las vacaciones vuelve a él.'
+                : 'Su cartera se reparte por turnos entre los demás comerciales activos y vuelve a él cuando regrese.' }}
+            </app-alert-banner>
+            <div class="acciones-modal">
+              <app-boton variante="outline" icono="beach_access" [disabled]="guardando()" (clicked)="cambiarVacaciones()">
+                {{ c.enVacaciones ? 'Terminar vacaciones' : 'Marcar vacaciones' }}
+              </app-boton>
+            </div>
+          }
           <app-alert-banner [variante]="c.activo ? 'error' : 'success'" [titulo]="c.activo ? 'Desactivar comercial' : 'Activar comercial'" icono="power_settings_new">
-            {{ c.activo ? 'Sale de la rotación de prospectos y pierde el acceso a la consola. Su cartera se conserva.' : 'Vuelve a la rotación y recupera el acceso.' }}
+            {{ c.activo ? 'Sale de la rotación y pierde el acceso a la consola. Su cartera pasa de forma definitiva a los demás comerciales activos.' : 'Vuelve a la rotación y recupera el acceso.' }}
           </app-alert-banner>
           <div class="acciones-modal">
             <app-boton [variante]="c.activo ? 'ghost' : 'accent'" icono="power_settings_new" [disabled]="guardando()" (clicked)="cambiarActivo()">

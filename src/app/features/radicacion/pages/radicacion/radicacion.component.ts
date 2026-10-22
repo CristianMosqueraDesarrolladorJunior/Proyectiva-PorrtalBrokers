@@ -1,3 +1,4 @@
+import { consultaSarlaftHabilitada } from '../../../../core/util/sarlaft';
 import { CtlValidacionComponent } from '../../../contrato/components/ctl-validacion/ctl-validacion.component';
 import { huellaArchivo, tipoConMismaHuella } from '../../../../shared/util/huella-archivo';
 import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
@@ -47,6 +48,7 @@ import {
   SummaryCardComponent,
   ModalDialogComponent,
   InfoTipComponent,
+  AvisoSarlaftComponent,
 } from '../../../../shared/components';
 import type { FilaResumen } from '../../../../shared/components';
 import type { OpcionRadio } from '../../../../shared/components/radio-group/radio-group.component';
@@ -122,6 +124,7 @@ const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmad
     InfoTipComponent,
     LectorContratoComponent,
     CtlValidacionComponent,
+    AvisoSarlaftComponent,
   ],
   templateUrl: './radicacion.component.html',
   styleUrl: './radicacion.component.scss',
@@ -222,6 +225,12 @@ export class RadicacionComponent {
   /** Correo del apoderado: va a la columna "Correo Apoderado" del Consolidado. */
   protected readonly correoApoderado = signal('');
   protected readonly sarlaftRequiereFormulario = signal(false);
+  /** La consulta SARLAFT no está habilitada (V86): el formulario de Conocimiento de Cliente es obligatorio desde el inicio. */
+  protected readonly consultaSarlaftActiva = consultaSarlaftHabilitada(inject(CatalogoService));
+  /** El formulario SARLAFT es obligatorio: sin consulta, o porque el broker lo eligió ante un resultado desactualizado. */
+  protected readonly formularioSarlaftObligatorio = computed(
+    () => !this.consultaSarlaftActiva || this.sarlaftRequiereFormulario(),
+  );
   /** La consulta SARLAFT falló (servicio caído): se permite seguir con el SARLAFT físico. */
   protected readonly sarlaftNoDisponible = signal(false);
 
@@ -321,12 +330,15 @@ export class RadicacionComponent {
 
   /** Se puede ofrecer el SARLAFT físico: firmante desactualizado o consulta no disponible. */
   protected readonly ofreceSarlaftFisico = computed(
-    () => this.estadoSarlaft() === 'DESACTUALIZADO' || (this.estadoSarlaft() === null && this.sarlaftNoDisponible()),
+    () =>
+      !this.consultaSarlaftActiva ||
+      this.estadoSarlaft() === 'DESACTUALIZADO' ||
+      (this.estadoSarlaft() === null && this.sarlaftNoDisponible()),
   );
 
   /** El broker eligió cargar el SARLAFT físico (desactualizado o SARLAFT caído). */
   protected readonly conSarlaftFisico = computed(
-    () => this.ofreceSarlaftFisico() && this.sarlaftRequiereFormulario(),
+    () => this.ofreceSarlaftFisico() && this.formularioSarlaftObligatorio(),
   );
 
   /** "Cargar SARLAFT físico": habilita los documentos con el formulario SARLAFT obligatorio. */
@@ -362,7 +374,7 @@ export class RadicacionComponent {
     documentosRequeridosRadicacion({
       tipoPersona: this.tipoPersona(),
       firmaApoderado: this.firmaApoderado(),
-      sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+      sarlaftRequiereFormulario: this.formularioSarlaftObligatorio(),
       requierePermisoSubarriendo: this.contratoConLeasing(),
       documentos: this.documentosCatalogo,
     }),
@@ -427,7 +439,7 @@ export class RadicacionComponent {
       {
         tipoPersona: this.tipoPersona(),
         firmaApoderado: this.firmaApoderado(),
-        sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+        sarlaftRequiereFormulario: this.formularioSarlaftObligatorio(),
         requierePermisoSubarriendo: this.contratoConLeasing(),
         documentos: this.documentosCatalogo,
       },
@@ -454,7 +466,7 @@ export class RadicacionComponent {
       {
         tipoPersona: this.tipoPersona(),
         firmaApoderado: this.firmaApoderado(),
-        sarlaftRequiereFormulario: this.sarlaftRequiereFormulario(),
+        sarlaftRequiereFormulario: this.formularioSarlaftObligatorio(),
         requierePermisoSubarriendo: this.contratoConLeasing(),
         documentos: this.documentosCatalogo,
       },
@@ -497,9 +509,11 @@ export class RadicacionComponent {
     { label: 'Firmante', valor: this.firmaApoderado() ? 'Apoderado' : 'Propietario' },
     {
       label: this.firmaApoderado() ? 'Conocimiento de Cliente (apoderado)' : 'Conocimiento de Cliente',
-      valor: this.estadoSarlaft()
-        ? this.catalogo.etiqueta('sarlaft_resultado', this.estadoSarlaft()!.toLowerCase())
-        : 'Sin consultar',
+      valor: !this.consultaSarlaftActiva
+        ? this.archivosCargados()['formularioSarlaft'] ? 'Formulario cargado' : 'Falta el formulario'
+        : this.estadoSarlaft()
+          ? this.catalogo.etiqueta('sarlaft_resultado', this.estadoSarlaft()!.toLowerCase())
+          : 'Sin consultar',
     },
     {
       label: 'Tipo de persona',
@@ -827,6 +841,10 @@ export class RadicacionComponent {
       hoyIso,
     );
 
+    if (evento.archivo.size === 0) {
+      this.feedback.toast({ variante: 'error', mensaje: `El archivo de "${this.etiquetaDocumento[tipo] ?? tipo}" está vacío. Elige otro.` });
+      return;
+    }
     if (!resultado.valido) {
       this.feedback.toast({ variante: 'error', mensaje: `El archivo de "${this.etiquetaDocumento[tipo] ?? tipo}" no cumple los requisitos de carga.` });
       return;

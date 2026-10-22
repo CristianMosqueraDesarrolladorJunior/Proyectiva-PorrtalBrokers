@@ -1,3 +1,4 @@
+import { fechaCorta } from '../../../core/services/admin.helpers';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,6 +17,7 @@ import {
   SkeletonComponent,
   AlertBannerComponent,
   BotonComponent,
+  InfoBoxComponent,
   DataTableComponent,
   FiltradoInteligenteComponent,
   QuickToolBannerComponent,
@@ -76,6 +78,7 @@ const ESTADOS: readonly { readonly valor: string; readonly etiqueta: string }[] 
     SkeletonComponent,
     AlertBannerComponent,
     BotonComponent,
+    InfoBoxComponent,
     FormsModule,
     QuickToolBannerComponent,
     FiltradoInteligenteComponent,
@@ -164,7 +167,8 @@ export class SeguimientoComponent {
       estadoLabel: this.catalogo.etiquetaSeguimiento(s.estado),
       estadoLabelVariante: estadoABadge(s.estado).replace('badge-', ''),
       estadoPago: s.estadoPago,
-      fecha: s.fecha,
+      fecha: fechaCorta(s.fecha),
+      fechaOrden: s.fecha,
       comisionLabel: s.comision > 0 ? this.formatearCop(s.comision) : '—',
       gestionar: '',
       // "Gestionar" solo cuando el broker debe corregir; el resto solo se consulta.
@@ -191,6 +195,21 @@ export class SeguimientoComponent {
         }
         this.cargarSolicitudes();
       });
+  }
+
+  protected irAPerfil(): void {
+    void this.router.navigate(['/app/perfil']);
+  }
+
+  /** Cierra el aviso de módulo bloqueado y limpia la dirección (auditoría de producción PB14). */
+  protected cerrarAvisoBloqueo(): void {
+    void this.router.navigate([], { queryParams: { bloqueado: null }, queryParamsHandling: 'merge' });
+  }
+
+  protected quitarBusqueda(): void {
+    void this.router.navigate([], { queryParams: { q: null }, queryParamsHandling: 'merge' });
+    this.busqueda.set('');
+    this.cargarSolicitudes();
   }
 
   /** Navega al Cotizador desde el banner "Herramienta Rápida" (Req 5.5). */

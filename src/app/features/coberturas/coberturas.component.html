@@ -24,7 +24,7 @@
                   <h2 class="cobertura__nombre">{{ nombreCobertura(cobertura) }}</h2>
                 </div>
               </div>
-              <button type="button" class="cobertura__detalle" (click)="consultarDetalle(cobertura)">
+              <button type="button" class="cobertura__detalle" [attr.aria-label]="'Consultar detalle de ' + nombreCobertura(cobertura)" (click)="consultarDetalle(cobertura)">
                 Consultar detalle
               </button>
             </div>

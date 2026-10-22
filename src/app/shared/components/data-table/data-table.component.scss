@@ -47,6 +47,9 @@
   border: 1px solid var(--sb-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--sb-shadow-1);
+  // Barra visible: con muchas columnas se ve que hay más a la derecha (QA AD1).
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb-surface-highest) transparent;
 }
 
 .data-table {
@@ -100,6 +103,8 @@
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
+  // Un subtítulo largo (correo, dirección) no ensancha la columna ni saca las demás de la vista (QA AD2).
+  max-width: calc(var(--space-7) * 8);
 }
 
 .dt-principal__valor {

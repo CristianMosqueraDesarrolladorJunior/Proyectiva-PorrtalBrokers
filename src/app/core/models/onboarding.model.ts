@@ -9,6 +9,8 @@ export interface PasoTour {
   /** Paso que abre una vista que depende de los datos del usuario (p. ej. su primera renovación). */
   readonly abrir?: 'primeraRenovacion';
   readonly icono?: string;
+  /** Elementos de la vista que se resaltan, en orden de preferencia (selectores CSS); sin ellos, la tarjeta va al centro. */
+  readonly objetivo?: readonly string[];
 }
 
 /** Guion_Tour de un perfil. Invariante: al menos un paso. */

@@ -1,3 +1,4 @@
+import { huellaArchivo, tipoConMismaHuella } from '../../shared/util/huella-archivo';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,6 +32,7 @@ import {
   FormFieldComponent,
   IconComponent,
   InfoBoxComponent,
+  AvisoSarlaftComponent,
   ModalDialogComponent,
   PageHeaderComponent,
   type VarianteBadge,
@@ -42,6 +44,7 @@ import type {
 import { formatearCop } from '../../shared/util/moneda';
 import { mensajeErrorIntegracion } from '../../core/util/errores-integracion';
 import { abrirFormularioSarlaft } from '../../core/util/sarlaft-enlace';
+import { consultaSarlaftHabilitada } from '../../core/util/sarlaft';
 import { reglaDeDocumentoRegistro, validarDocumento } from '../../shared/validation/documento-validacion';
 import {
   esCorreoValido,
@@ -59,8 +62,8 @@ const ETIQUETA_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, string>> = {
   por_vencer: 'Por vencer',
   vencido: 'Desactualizado',
   en_cumplimiento: 'En revisión de Cumplimiento',
-  fisico: 'Físico en revisión',
-  sin_consultar: 'Sin consultar',
+  fisico: 'Formulario en revisión',
+  sin_consultar: 'Pendiente',
 };
 /** Mensaje tras consultar SARLAFT desde el perfil, según lo que decidió el backend. */
 const MENSAJE_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, string>> = {
@@ -103,6 +106,7 @@ const VARIANTE_SARLAFT: Readonly<Record<EstadoSarlaftPerfil, VarianteBadge>> = {
     DocUploaderComponent,
     AlertBannerComponent,
     InfoBoxComponent,
+    AvisoSarlaftComponent,
     ModalDialogComponent,
   ],
   templateUrl: './perfil.component.html',
@@ -205,6 +209,8 @@ export class PerfilComponent implements OnInit {
   );
   protected readonly varianteDoc = VARIANTE_DOC;
   protected readonly etiquetaSarlaft = ETIQUETA_SARLAFT;
+  /** La consulta SARLAFT no está habilitada: se pide el formulario y no se muestra «Consultar» ni la fecha de consulta. */
+  protected readonly consultaSarlaft = consultaSarlaftHabilitada(this.catalogo);
   protected readonly abrirFormularioSarlaft = abrirFormularioSarlaft;
   protected readonly varianteSarlaft = VARIANTE_SARLAFT;
   protected readonly cop = formatearCop;
@@ -239,7 +245,7 @@ export class PerfilComponent implements OnInit {
 
   protected readonly datosValidos = computed(
     () =>
-      esNombreValido(this.nombre()) &&
+      (esNombreValido(this.nombre()) || this.nombre() === this.perfil().nombreCompleto) &&
       esCorreoValido(this.correo()) &&
       esTelefonoValido(this.telefono()) &&
       !this.esCiudadInvalida(),
@@ -248,7 +254,10 @@ export class PerfilComponent implements OnInit {
   protected readonly esCiudadInvalida = computed(
     () => !this.ciudades.includes(this.ciudad()) && this.ciudad() !== this.perfil().ciudad,
   );
-  protected readonly esNombreInvalido = computed(() => !esNombreValido(this.nombre()));
+  // Un nombre que ya estaba guardado no se marca en rojo al abrir la pantalla; solo si el usuario lo cambia (LG2).
+  protected readonly esNombreInvalido = computed(
+    () => !esNombreValido(this.nombre()) && this.nombre() !== this.perfil().nombreCompleto,
+  );
   protected readonly esCorreoInvalido = computed(() => !esCorreoValido(this.correo()));
   protected readonly esTelefonoInvalido = computed(() => !esTelefonoValido(this.telefono()));
   protected readonly datosCambiados = computed(() => {
@@ -444,13 +453,46 @@ export class PerfilComponent implements OnInit {
       });
       return;
     }
-    this.servicio
-      .reemplazarDocumento(tipo, evento.archivo)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => this.feedback.toast({ variante: 'exito', mensaje: `${regla.etiqueta} cargado. Lo estamos revisando.` }),
-        error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
+    void this.cargarSiNoEsRepetido(tipo, regla.etiqueta, evento.archivo);
+  }
+
+  /** Huella de cada documento cargado en esta visita: el mismo archivo no sirve para dos documentos (LG4). */
+  private readonly huellas = new Map<string, string>();
+
+  private async cargarSiNoEsRepetido(tipo: TipoDocumentoRegistro, etiqueta: string, archivo: File): Promise<void> {
+    const huella = await huellaArchivo(archivo);
+    const repetido = huella ? tipoConMismaHuella(this.huellas, tipo, huella) : undefined;
+    if (repetido) {
+      this.feedback.toast({
+        variante: 'error',
+        mensaje: `Ese archivo ya lo cargaste como ${this.etiquetaDocumento(repetido as TipoDocumentoRegistro)}. Carga el documento que corresponde a ${etiqueta}.`,
       });
+      return;
+    }
+    const subir = () => {
+      if (huella) this.huellas.set(tipo, huella);
+      this.servicio
+        .reemplazarDocumento(tipo, archivo)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => this.feedback.toast({ variante: 'exito', mensaje: `${etiqueta} cargado. Lo estamos revisando.` }),
+          error: (err: unknown) => this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) }),
+        });
+    };
+    // Reemplazar un documento ya aprobado lo devuelve a revisión: se avisa antes (auditoría de producción BP6).
+    const actual = this.perfil().documentos.find((d) => d.tipo === tipo);
+    if (actual?.estado === 'aprobado') {
+      this.feedback.info({
+        titulo: `Reemplazar ${etiqueta}`,
+        mensaje: 'Este documento ya está aprobado. Si lo reemplazas, volverá a revisión. ¿Quieres continuar?',
+        acciones: { confirmar: 'Reemplazar', cancelar: 'Cancelar' },
+        alResolver: (r) => {
+          if (r === 'confirmar') subir();
+        },
+      });
+      return;
+    }
+    subir();
   }
 
   protected completarRegistro(): void {

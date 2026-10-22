@@ -112,7 +112,7 @@
     } @else if (pestana() === 'corregir') {
       <app-doc-uploader [reglas]="reglasCorreccion" [cargados]="elegidosCorreccion()" [disabled]="enviandoCorreccion()"
         (archivoSeleccionado)="onArchivoCorreccion($event)" />
-      <app-form-field label="Comentario para el área y el broker" controlId="ren-corr-comentario"
+      <app-form-field label="Comentario para el analista y el broker" controlId="ren-corr-comentario"
         ayuda="Solo se corrigen documentos; los datos de la póliza no cambian.">
         <textarea id="ren-corr-comentario" rows="3" maxlength="500" [value]="comentarioCorreccion()"
           (input)="comentarioCorreccion.set(valorTexto($event))"></textarea>

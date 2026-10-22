@@ -15,8 +15,8 @@
 
   @if (registroCompletado() || perfil().legalizacion === 'EN_REVISION') {
     <app-alert-banner variante="success" titulo="Tu solicitud de registro está en revisión" icono="fact_check">
-      Consultamos tu Conocimiento de Cliente y el área está revisando tus documentos. Cuando la aprueben pasarás a Broker registrado
-      sin perder tu historial y se acreditarán tus comisiones.
+      Estamos revisando tus documentos y tu formulario de Conocimiento de Cliente. Cuando los aprobemos pasarás a Broker
+      registrado sin perder tu historial y se acreditarán tus comisiones.
     </app-alert-banner>
   } @else if (perfil().legalizacion === 'RECHAZADA') {
     <app-alert-banner variante="error" titulo="Tu solicitud de registro no fue aprobada" icono="report">
@@ -99,7 +99,8 @@
         <div>
           <p class="perfil-etiqueta">Comisiones de tus radicaciones como prospecto</p>
           <p class="perfil-comisiones__monto">{{ cop(perfil().comisiones.monto) }}</p>
-          <p class="perfil-comisiones__nota">{{ perfil().comisiones.solicitudes }} solicitudes · se acreditan al completar tu registro</p>
+          <!-- Cuenta pólizas expedidas (no radicaciones): así no contradice a Seguimiento (auditoría de producción PB3). -->
+          <p class="perfil-comisiones__nota">{{ perfil().comisiones.solicitudes }} {{ perfil().comisiones.solicitudes === 1 ? 'póliza expedida' : 'pólizas expedidas' }} · se acreditan al completar tu registro</p>
         </div>
         <div class="perfil-comisiones__accion">
           <app-boton variante="accent" icono="how_to_reg" [disabled]="!puedeCompletarRegistro()" (clicked)="confirmarRegistro.set(true)">
@@ -115,10 +116,13 @@
         <small>Broker registrado desde</small>
         <b>{{ fecha(perfil().fechaRegistro) }}</b>
       </div>
-      <div class="perfil-resumen__dato">
-        <small>Comisiones acreditadas como prospecto</small>
-        <b>{{ cop(perfil().comisiones.monto) }} · {{ perfil().comisiones.solicitudes }} solicitudes</b>
-      </div>
+      @if (perfil().comisiones.monto > 0) {
+        <!-- Solo si hubo comisiones de la etapa de prospecto (auditoría de producción BP3). -->
+        <div class="perfil-resumen__dato">
+          <small>Comisiones acreditadas como prospecto</small>
+          <b>{{ cop(perfil().comisiones.monto) }} · {{ perfil().comisiones.solicitudes }} {{ perfil().comisiones.solicitudes === 1 ? 'póliza' : 'pólizas' }}</b>
+        </div>
+      }
       <div class="perfil-resumen__dato">
         <small>Documentación</small>
         <b>{{ documentosAportados() }} de {{ totalDocumentos() }} al día</b>
@@ -183,16 +187,23 @@
       <header class="perfil-tarjeta__cabecera">
         <div>
           <h3 id="perfil-sarlaft-titulo"><app-icon nombre="verified_user" [tamano]="20" /> Conocimiento de Cliente</h3>
-          <p>Debe estar vigente para ser broker registrado.</p>
+          <p>{{ esProspecto() ? 'Lo necesitas para ser broker registrado.' : 'Mantenlo al día para seguir operando.' }}</p>
         </div>
-        <app-badge-estado [variante]="varianteSarlaft[perfil().sarlaft.estado]" [conPunto]="true">
-          {{ etiquetaSarlaft[perfil().sarlaft.estado] }}
-        </app-badge-estado>
+        @if (!esProspecto() && perfil().sarlaft.estado === 'fisico') {
+          <!-- Ya aprobado: el formulario se revisó con la legalización (auditoría de producción BP1). -->
+          <app-badge-estado variante="success" [conPunto]="true">Formulario aprobado</app-badge-estado>
+        } @else {
+          <app-badge-estado [variante]="varianteSarlaft[perfil().sarlaft.estado]" [conPunto]="true">
+            {{ etiquetaSarlaft[perfil().sarlaft.estado] }}
+          </app-badge-estado>
+        }
       </header>
 
       <dl class="perfil-datos">
-        <div><dt>SARLAFT físico</dt><dd>{{ perfil().sarlaft.fisico || '—' }}</dd></div>
-        <div><dt>Última consulta</dt><dd>{{ fecha(perfil().sarlaft.ultimaConsulta) }}</dd></div>
+        <div><dt>Formulario cargado</dt><dd>{{ perfil().sarlaft.fisico || '—' }}</dd></div>
+        @if (consultaSarlaft) {
+          <div><dt>Última consulta</dt><dd>{{ fecha(perfil().sarlaft.ultimaConsulta) }}</dd></div>
+        }
       </dl>
 
       @if (perfil().sarlaft.estado === 'por_vencer') {
@@ -209,17 +220,21 @@
         }
       } @else if (perfil().sarlaft.estado === 'en_cumplimiento') {
         <app-info-box icono="policy">
-          Tu caso pasó a revisión del área de Cumplimiento@if (perfil().sarlaft.radicadoCumplimiento; as radicado) { (radicado <b>{{ radicado }}</b>)}. Te contactaremos por correo.
+          Tu caso pasó a revisión de Cumplimiento@if (perfil().sarlaft.radicadoCumplimiento; as radicado) { (radicado <b>{{ radicado }}</b>)}. Te contactaremos por correo.
         </app-info-box>
       }
 
-      <div class="perfil-sarlaft-form">
-        <app-boton variante="outline" icono="policy" [disabled]="!puedeActualizarSarlaft()" (clicked)="actualizarSarlaft()">
-          {{ consultandoSarlaft() ? 'Consultando…' : 'Actualizar Conocimiento de Cliente' }}
-        </app-boton>
-      </div>
+      @if (consultaSarlaft) {
+        <div class="perfil-sarlaft-form">
+          <app-boton variante="outline" icono="policy" [disabled]="!puedeActualizarSarlaft()" (clicked)="actualizarSarlaft()">
+            {{ consultandoSarlaft() ? 'Consultando…' : 'Actualizar Conocimiento de Cliente' }}
+          </app-boton>
+        </div>
+      } @else if (perfil().sarlaft.estado !== 'vigente') {
+        <app-aviso-sarlaft quien="tú" />
+      }
       @if (perfil().sarlaft.estado !== 'vigente') {
-        <!-- Alternativa al enlace: cargar el SARLAFT físico (queda en revisión del área). -->
+        <!-- Formulario diligenciado y firmado: queda en revisión con los documentos. -->
         <app-doc-uploader [reglas]="reglaSarlaftFisico" [cargados]="cargadoSarlaftFisico()" (archivoSeleccionado)="onSarlaftFisico($event)" />
       }
     </article>
@@ -232,7 +247,7 @@
     <header class="perfil-tarjeta__cabecera">
       <div>
         <h3 id="perfil-docs-titulo"><app-icon nombre="folder_open" [tamano]="20" /> Documentación</h3>
-        <p>Carga o actualiza tus documentos. Cada nuevo archivo queda en revisión.</p>
+        <p>Carga o actualiza tus documentos. Revisamos cada archivo nuevo y te avisamos cuando quede aprobado.</p>
       </div>
       <span class="perfil-contador">{{ documentosAportados() }}/{{ totalDocumentos() }} aportados</span>
     </header>
@@ -271,7 +286,7 @@
 
 <!-- Confirmación de la Transición de registro (modal central) -->
 <app-modal-dialog [abierto]="confirmarRegistro()" titulo="Solicitar registro de broker" (cerrar)="confirmarRegistro.set(false)">
-  <p>Consultaremos tu SARLAFT y revisaremos tus documentos. Al aprobarlos, tu misma cuenta pasará de <b>Prospecto</b> a <b>Broker registrado</b> y conservas tu historial.</p>
+  <p>Revisaremos tus documentos y tu formulario de Conocimiento de Cliente. Al aprobarlos, tu misma cuenta pasará de <b>Prospecto</b> a <b>Broker registrado</b> y conservas tu historial.</p>
   <ul class="perfil-modal-lista">
     <li><app-icon nombre="lock_open" [tamano]="16" /> Se desbloquean {{ modulosRestringidos.length }} módulos.</li>
     <li><app-icon nombre="payments" [tamano]="16" /> Se acreditan {{ perfil().comisiones.solicitudes }} comisiones retroactivas por {{ cop(perfil().comisiones.monto) }}.</li>

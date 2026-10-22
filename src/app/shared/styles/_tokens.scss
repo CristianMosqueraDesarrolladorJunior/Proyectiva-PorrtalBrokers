@@ -153,7 +153,7 @@
   --glass-neutral-bg: rgba(255, 255, 255, 0.14);     // vidrio neutro sobre fondos oscuros
   --glass-neutral-strong-bg: rgba(255, 255, 255, 0.24);
   --glass-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
-  --gradient-accent: linear-gradient(90deg, var(--color-accent), var(--color-accent-hover));
+  --gradient-accent: var(--color-accent); // sólido: el manual de imagen no usa degradados
   --gradient-orbe: conic-gradient(from 0deg, var(--color-accent), var(--sb-primary-fixed), var(--sb-tint-accent-bg), var(--color-accent));
   --radius-panel: 20px;                   // paneles y tarjetas grandes
   --radius-card: var(--radius-xl);        // tarjetas y controles grandes

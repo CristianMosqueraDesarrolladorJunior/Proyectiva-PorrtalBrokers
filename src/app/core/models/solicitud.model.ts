@@ -40,6 +40,10 @@ export interface HitoTimeline {
  */
 export interface DetalleSolicitud extends Solicitud {
   readonly timeline: readonly HitoTimeline[];
+  /** Canon radicado (el elegido por el broker, o el del contrato o la cotización). */
+  readonly canon?: number | null;
+  /** Comisión estimada de la cotización: la real se causa al expedir. */
+  readonly comisionEstimada?: number | null;
 }
 
 /** Documento de una radicación que el broker puede ver desde Seguimiento (`GET /solicitudes/{ref}/documentos`). */

@@ -162,7 +162,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--sb-tertiary), var(--sb-primary));
+  background: var(--sb-primary);
   transition: width 0.3s ease;
 }
 

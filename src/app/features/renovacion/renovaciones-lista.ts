@@ -26,6 +26,12 @@ export function ordenarPorUrgencia<T extends Pick<Poliza, 'estado' | 'fechaVenci
   );
 }
 
+/** Vencida, pero todavía dentro del plazo en que se renueva (no va a inducción): sigue con «Renovar». */
+export function yaVencio(p: Pick<Poliza, 'estado' | 'fechaVencimiento'>, hoy = new Date()): boolean {
+  const hoyIso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  return p.estado === 'A_PUNTO_DE_VENCER' && !!p.fechaVencimiento && p.fechaVencimiento.slice(0, 10) < hoyIso;
+}
+
 /** Texto del botón según lo que hay que hacer con la póliza (no todas se «gestionan» igual). */
 export function accionRenovacion(p: Pick<Poliza, 'estado' | 'gestion'>): string {
   if (p.estado === 'RENOVADA' || p.estado === 'NO_RENOVADA') return 'Ver detalle';

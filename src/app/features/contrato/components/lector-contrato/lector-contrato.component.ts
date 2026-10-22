@@ -67,7 +67,17 @@ const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png'];
       ></app-doc-uploader>
 
       @if (leyendo()) {
-        <app-escalerita-loader texto="Leyendo el contrato… puede tardar unos segundos"></app-escalerita-loader>
+        <app-escalerita-loader texto="Leyendo tu contrato… puede tardar hasta 30 segundos. No cierres esta pantalla."></app-escalerita-loader>
+      }
+
+      @if (errorLectura(); as error) {
+        <app-alert-banner variante="error" titulo="No pudimos leer tu contrato" icono="error">
+          {{ error }} Puedes intentarlo de nuevo o escribir los datos a mano en el formulario de abajo.
+        </app-alert-banner>
+        <div class="lc__acciones">
+          <app-boton variante="ghost" icono="edit" (clicked)="reiniciar()">Lo escribo a mano</app-boton>
+          <app-boton variante="accent" icono="refresh" (clicked)="reintentar()">Reintentar</app-boton>
+        </div>
       }
 
       @if (lectura(); as l) {
@@ -112,7 +122,9 @@ const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png'];
       }
       .lc__acciones {
         display: flex;
+        flex-wrap: wrap;
         justify-content: flex-end;
+        gap: var(--space-2);
       }
     `,
   ],
@@ -143,6 +155,9 @@ export class LectorContratoComponent {
   protected readonly cargados = signal<Readonly<Record<string, string>>>({});
   protected readonly leyendo = signal(false);
   protected readonly lectura = signal<LecturaContratoResponse | null>(null);
+  /** Motivo de la última lectura fallida; queda en pantalla hasta reintentar o reiniciar (auditoría LI2). */
+  protected readonly errorLectura = signal<string | null>(null);
+  private ultimo: File | null = null;
 
   /** Cuántos campos llegaron con valor (para el mensaje de confirmación). */
   protected readonly encontrados = computed(() => {
@@ -165,8 +180,20 @@ export class LectorContratoComponent {
     }
     this.cargados.set({ contrato: archivo.name });
     this.archivo.emit(archivo);
+    this.ultimo = archivo;
+    this.enviarALectura(archivo);
+  }
+
+  protected reintentar(): void {
+    if (this.ultimo) {
+      this.enviarALectura(this.ultimo);
+    }
+  }
+
+  private enviarALectura(archivo: File): void {
     this.leyendo.set(true);
     this.lectura.set(null);
+    this.errorLectura.set(null);
     this.contratos
       .leer(archivo)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -178,13 +205,16 @@ export class LectorContratoComponent {
         },
         error: (err: unknown) => {
           this.leyendo.set(false);
-          this.feedback.toast({ variante: 'error', mensaje: `${mensajeErrorIntegracion(err)} Si persiste, escribe los datos a mano.` });
+          this.errorLectura.set(mensajeErrorIntegracion(err));
+          this.feedback.toast({ variante: 'error', mensaje: 'No pudimos leer tu contrato. Reintenta o escribe los datos a mano.' });
         },
       });
   }
 
   protected reiniciar(): void {
     this.lectura.set(null);
+    this.errorLectura.set(null);
+    this.ultimo = null;
     this.cargados.set({});
   }
 }

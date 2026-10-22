@@ -56,6 +56,7 @@ import {
   normalizarMonto,
 } from '../../../shared/util/monto-escalonado';
 import { CatalogoService } from '../../../core/services/catalogo.service';
+import { SessionService } from '../../../core/services/session.service';
 import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /** Código del destino que habilita asegurar el IVA del canon (catálogo `destino_inmueble`). */
@@ -151,6 +152,7 @@ export class CotizadorDatosComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly borrador = inject(BorradorRadicacionService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly session = inject(SessionService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Resultado de la Cotizacion recibido del backend; `null` mientras no exista (Req 8.1, 9.4). */
@@ -234,7 +236,11 @@ export class CotizadorDatosComponent implements OnInit {
       : {
           label: 'Tu comisión estimada',
           valor: formatearCop(comision),
-          nota: 'Es una estimación: la comisión final la confirmamos al expedir la póliza.',
+          // Auditoría de producción CZ1: el prospecto aún no puede cobrarla.
+          nota:
+            this.session.perfil()?.estadoCuenta === 'PROSPECTO'
+              ? 'Es una estimación: la podrás cobrar cuando seas broker registrado.'
+              : 'Es una estimación: la comisión final la confirmamos al expedir la póliza.',
         };
   });
 

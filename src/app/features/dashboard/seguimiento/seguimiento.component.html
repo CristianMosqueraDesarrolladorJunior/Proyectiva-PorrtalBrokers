@@ -3,7 +3,9 @@
     eyebrow="Resumen de Operaciones"
     tituloId="seg-titulo"
     titulo="Seguimiento y Rendimiento"
-    subtitulo="Monitorea tus comisiones acumuladas, KPIs del mes y el estado de radicación en tiempo real."
+    [subtitulo]="veComisiones()
+      ? 'Monitorea tus comisiones acumuladas, KPIs del mes y el estado de radicación en tiempo real.'
+      : 'Monitorea el estado de tus radicaciones en tiempo real.'"
   >
     <div acciones>
       <app-guarantee-badge icono="verified" variante="tertiary">Tarifas 2026 Vigentes</app-guarantee-badge>
@@ -14,7 +16,19 @@
   @if (moduloBloqueado(); as modulo) {
     <app-alert-banner variante="warning" titulo="Esta sección se habilita cuando seas broker registrado">
       {{ etiquetaModulo(modulo) }} estará disponible apenas aprobemos tu registro. Completa tu legalización desde Mi perfil.
+      <div class="seg-aviso-acciones">
+        <app-boton variante="accent" icono="person" (clicked)="irAPerfil()">Ir a Mi perfil</app-boton>
+        <app-boton variante="ghost" (clicked)="cerrarAvisoBloqueo()">Entendido</app-boton>
+      </div>
     </app-alert-banner>
+  }
+
+  @if (busqueda()) {
+    <!-- La búsqueda de la barra superior queda visible y se puede quitar (auditoría de producción BS1). -->
+    <app-info-box icono="search">
+      Mostrando las radicaciones que coinciden con «{{ busqueda() }}» ({{ total() }}).
+      <app-boton variante="ghost" icono="close" (clicked)="quitarBusqueda()">Quitar búsqueda</app-boton>
+    </app-info-box>
   }
 
   @if (!veComisiones() && !moduloBloqueado()) {

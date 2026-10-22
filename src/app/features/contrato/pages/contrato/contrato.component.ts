@@ -58,6 +58,7 @@ import {
 
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
+import { plural } from '../../../../core/util/plural';
 import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
 import { LectorContratoComponent } from '../../components/lector-contrato/lector-contrato.component';
 
@@ -482,7 +483,7 @@ export class ContratoComponent {
         this.avisarEstudio({
           tipo: 'success',
           titulo: 'Datos del estudio cargados',
-          texto: `Arrendatario${this.deudores().length ? ` y ${this.deudores().length} deudor(es) solidario(s)` : ''} precargados. Revísalos antes de continuar.`,
+          texto: `Arrendatario${this.deudores().length ? ` y ${plural(this.deudores().length, 'deudor solidario', 'deudores solidarios')}` : ''} precargados. Revísalos antes de continuar.`,
         });
       },
       error: (err: { status?: number }) => {
@@ -561,7 +562,7 @@ export class ContratoComponent {
       return [];
     }
     return [
-      { etiqueta: 'RADICADO', valor: respuesta.radicado },
+      { etiqueta: 'CONTRATO', valor: respuesta.radicado },
       { etiqueta: 'ESTADO', valor: respuesta.estado },
     ];
   });

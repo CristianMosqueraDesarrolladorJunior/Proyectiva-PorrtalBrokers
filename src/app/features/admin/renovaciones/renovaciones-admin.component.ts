@@ -169,7 +169,7 @@ export class RenovacionesAdminComponent {
   protected readonly columnasInducciones: readonly ColumnaTabla[] = [
     { key: 'radicado', header: 'Radicado', tipo: 'principal', ordenable: true },
     { key: 'broker', header: 'Broker', tipo: 'principal', ordenable: true },
-    { key: 'envio', header: 'Aviso al área', tipo: 'badge' },
+    { key: 'envio', header: 'Aviso al analista', tipo: 'badge' },
     ...COLUMNAS_FECHAS,
     COLUMNA_GESTIONAR,
   ];
@@ -207,7 +207,7 @@ export class RenovacionesAdminComponent {
   protected readonly reglasCorreccion: readonly ReglaDocumentoUploader[] = [1, 2, 3].map((n) => ({
     id: `doc${n}`,
     etiqueta: `Documento corregido ${n}`,
-    descripcion: n === 1 ? 'El que pidió corregir el área' : 'Opcional',
+    descripcion: n === 1 ? 'El que pidió corregir el analista' : 'Opcional',
     icono: n === 1 ? 'rule' : 'description',
     obligatorio: n === 1,
   }));
@@ -313,7 +313,7 @@ export class RenovacionesAdminComponent {
           { etiqueta: 'Broker', valor: i.broker },
           { etiqueta: 'Comercial', valor: i.comercial },
           { etiqueta: 'Estado', valor: i.estado },
-          { etiqueta: 'Aviso al área', valor: i.enviada ? 'Correo enviado' : 'Pendiente de correo' },
+          { etiqueta: 'Aviso al analista', valor: i.enviada ? 'Correo enviado' : 'Pendiente de correo' },
           { etiqueta: 'Enviada', valor: fechaHora(i.fecha) },
         ],
       },
@@ -396,6 +396,18 @@ export class RenovacionesAdminComponent {
     if (!r) return;
     this.renovacion.set(r);
     this.pestana.set('detalle');
+    // El historial no viaja en la lista (pesaba megas): se pide al abrir la renovación (auditoría PR4).
+    if (!r.historial) {
+      this.consola
+        .historialRenovacion(r.poliza)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: ({ historial }) => {
+            if (this.renovacion()?.poliza === r.poliza) this.renovacion.set({ ...r, historial });
+          },
+          error: () => undefined,
+        });
+    }
   }
 
   protected gestionarInduccion(evento: AccionFila): void {

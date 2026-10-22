@@ -59,6 +59,7 @@ export function filaPoliza(p: PolizaExpedida): FilaTabla {
     comisionOrden: p.comision,
     ver: '',
     verTexto: 'Ver detalle',
-    seleccionable: esCobrable(p) ? 1 : 0,
+    // Fuera de plazo también se cobra, en una cuenta aparte (el servidor no deja mezclarlas con las del plazo).
+    seleccionable: esCobrable(p) || p.estadoPago === 'FUERA_PLAZO' ? 1 : 0,
   };
 }

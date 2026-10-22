@@ -31,6 +31,16 @@ const SARLAFT = 'formularioSarlaft';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [AlertBannerComponent, BotonComponent, DocUploaderComponent, FormFieldComponent, InfoBoxComponent],
   template: `
+    @if (cargando()) {
+      <p class="gn__estado" role="status">Cargando la gestión del negocio…</p>
+    } @else if (fallo()) {
+      <app-alert-banner variante="error" titulo="No pudimos cargar la gestión" icono="error">
+        Intenta de nuevo en unos segundos.
+      </app-alert-banner>
+      <div class="gn__acciones">
+        <app-boton variante="outline" icono="refresh" (clicked)="cargar(radicado())">Reintentar</app-boton>
+      </div>
+    }
     @if (procedimiento(); as p) {
       @switch (modo()) {
         @case ('correccion') {
@@ -47,7 +57,7 @@ const SARLAFT = 'formularioSarlaft';
         }
         @case ('validacion') {
           <app-info-box icono="hourglass_top">
-            <strong>En validación documental.</strong> Mientras el área no lo revise, puedes reemplazar solo el
+            <strong>En validación documental.</strong> Mientras el analista no lo revise, puedes reemplazar solo el
             formulario SARLAFT que cargó el broker.
           </app-info-box>
         }
@@ -62,7 +72,7 @@ const SARLAFT = 'formularioSarlaft';
         <app-doc-uploader [reglas]="reglas()" [cargados]="cargadosVista()" [disabled]="enviando()" (archivoSeleccionado)="onArchivo($event)" />
       }
 
-      <app-form-field [label]="modo() === 'correccion' ? 'Comentario para el área y el broker' : 'Nota para el historial'"
+      <app-form-field [label]="modo() === 'correccion' ? 'Comentario para el analista y el broker' : 'Nota para el broker'"
         controlId="gn-nota" ayuda="Queda en el historial del negocio y la ve el broker.">
         <textarea id="gn-nota" rows="3" maxlength="500" [value]="nota()" (input)="nota.set(valor($event))"></textarea>
       </app-form-field>
@@ -87,6 +97,7 @@ const SARLAFT = 'formularioSarlaft';
     `
       :host { display: flex; flex-direction: column; gap: var(--space-4); }
       .gn__lista { margin: 0 0 var(--space-2); padding-left: var(--space-5); }
+      .gn__estado { margin: 0; color: var(--color-muted); }
       .gn__acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
       textarea { width: 100%; }
     `,
@@ -105,16 +116,29 @@ export class GestionNegocioComponent {
   protected readonly procedimiento = signal<ProcedimientoResponse | null>(null);
   protected readonly nota = signal('');
   protected readonly enviando = signal(false);
+  protected readonly cargando = signal(false);
+  protected readonly fallo = signal(false);
   private readonly archivos = new Map<string, File>();
   private readonly elegidos = signal<Readonly<Record<string, string>>>({});
 
   constructor() {
-    effect(() => {
-      const codigo = this.radicado();
-      this.consola.procedimientoNegocio(codigo).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: (p) => this.procedimiento.set(p),
-        error: () => this.procedimiento.set(null),
-      });
+    effect(() => this.cargar(this.radicado()));
+  }
+
+  /** Auditoría de producción CM4: mientras llega, se dice que está cargando; si falla, se ofrece reintentar. */
+  protected cargar(codigo: string): void {
+    this.cargando.set(true);
+    this.fallo.set(false);
+    this.consola.procedimientoNegocio(codigo).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (p) => {
+        this.procedimiento.set(p);
+        this.cargando.set(false);
+      },
+      error: () => {
+        this.procedimiento.set(null);
+        this.cargando.set(false);
+        this.fallo.set(true);
+      },
     });
   }
 
@@ -134,7 +158,7 @@ export class GestionNegocioComponent {
     return tipos.map((tipo) => ({
       id: tipo,
       etiqueta: this.catalogo.etiqueta('documento_radicacion', tipo),
-      descripcion: pedidos.has(tipo) ? 'El área pidió corregir este documento' : 'Reemplázalo solo si cambió',
+      descripcion: pedidos.has(tipo) ? 'El analista pidió corregir este documento' : 'Reemplázalo solo si cambió',
       icono: pedidos.has(tipo) ? 'rule' : 'description',
       obligatorio: pedidos.has(tipo),
     }));
@@ -163,7 +187,7 @@ export class GestionNegocioComponent {
   }
 
   protected reemplazar(): void {
-    this.ejecutar(this.subirElegidos(), 'Documento reemplazado. El área lo verá en la revisión.');
+    this.ejecutar(this.subirElegidos(), 'Documento reemplazado. El analista lo verá en la revisión.');
   }
 
   protected enviarCorreccion(): void {
@@ -172,7 +196,7 @@ export class GestionNegocioComponent {
   }
 
   protected guardarNota(): void {
-    this.ejecutar(this.consola.dejarNota(this.radicado(), this.nota()), 'Nota guardada en el historial del negocio.');
+    this.ejecutar(this.consola.dejarNota(this.radicado(), this.nota()), 'Nota enviada: el broker la ve en el historial de su solicitud.');
   }
 
   private ejecutar(accion: Observable<unknown>, mensaje: string): void {

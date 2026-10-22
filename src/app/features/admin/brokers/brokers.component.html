@@ -60,7 +60,7 @@
       }
       @case ('acciones') {
         <div class="form-modal">
-          <app-form-field label="Acuerdo de comisión" controlId="broker-acuerdo" ayuda="Aplica a las cuentas de cobro que genere desde ahora.">
+          <app-form-field label="Acuerdo de comisión" controlId="broker-acuerdo" ayuda="Aplica a las pólizas que se expidan desde ahora; las ya expedidas conservan su porcentaje.">
             <app-segmented-control [opciones]="opcionesAcuerdo" [valor]="acuerdo()" ariaLabel="Acuerdo de comisión" (valorChange)="acuerdo.set($event)" />
           </app-form-field>
           <div class="acciones-modal">
@@ -82,6 +82,16 @@
           <div class="acciones-modal">
             <app-boton variante="accent" icono="swap_horiz" [disabled]="guardando() || !comercialDestino()" (clicked)="reasignar()">
               Reasignar broker y negocios
+            </app-boton>
+          </div>
+
+          <app-form-field label="Correo de acceso" controlId="broker-correo"
+            ayuda="Si el correo está mal escrito, corrígelo: le enviaremos el enlace para crear su contraseña.">
+            <input id="broker-correo" type="email" autocomplete="off" [value]="correoNuevo()" (input)="correoNuevo.set(valor($event))" />
+          </app-form-field>
+          <div class="acciones-modal">
+            <app-boton variante="outline" icono="mail" [disabled]="guardando() || !correoValido()" (clicked)="actualizarCorreo()">
+              Actualizar correo y enviar enlace
             </app-boton>
           </div>
 

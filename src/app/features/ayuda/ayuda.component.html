@@ -44,7 +44,7 @@
   <h3 class="ayuda__seccion-titulo">Preguntas frecuentes de comercialización</h3>
   <div class="faq-list">
     @for (faq of faqs; track faq.codigo) {
-      <details class="faq">
+      <details class="faq" name="faq">
         <summary>{{ faq.descripcion }}</summary>
         <p>{{ faq['respuesta'] }}</p>
       </details>

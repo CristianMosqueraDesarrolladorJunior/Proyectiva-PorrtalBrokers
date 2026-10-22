@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { concat, switchMap, toArray } from 'rxjs';
+import { concat, defer, switchMap, tap, toArray } from 'rxjs';
 
 import { RadicacionService, type ProcedimientoResponse } from '../../../../core/services/radicacion.service';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
+import { reglaDesdeCatalogo, validarDocumento } from '../../../../shared/validation/documento-validacion';
 import {
   AlertBannerComponent,
   BotonComponent,
@@ -29,7 +30,7 @@ import {
     <section class="cp" aria-label="Gestionar corrección de documentos">
       @if (listo()) {
         <app-alert-banner variante="success" titulo="¡Listo, enviamos tus documentos!" icono="check_circle">
-          Quedaron en revisión del área ({{ etiquetaEstado() }}). Te avisaremos cuando avance.
+          Ya estamos revisando tus documentos. Te avisaremos cuando avance.
         </app-alert-banner>
         <div class="cp__acciones">
           <app-boton variante="accent" (clicked)="terminar.emit()">Entendido</app-boton>
@@ -166,7 +167,9 @@ export class CorreccionPanelComponent {
       .map((tipo) => ({
         id: tipo,
         etiqueta: this.catalogo.etiqueta('documento_radicacion', tipo),
-        descripcion: this.faltantes().has(tipo) ? 'Falta cargar este documento'
+        // Auditoría de producción DOC3: lo recién elegido ya no dice que falta.
+        descripcion: this.cargados()[tipo] ? 'Listo para enviar'
+          : this.faltantes().has(tipo) ? 'Falta cargar este documento'
           : pedidos.has(tipo) ? 'Te pedimos corregir este documento' : 'Reemplázalo solo si también cambió',
         icono: pedidos.has(tipo) ? 'rule' : 'description',
         obligatorio: pedidos.has(tipo),
@@ -180,6 +183,21 @@ export class CorreccionPanelComponent {
   });
 
   protected onArchivo(evento: ArchivoSeleccionado): void {
+    // Auditoría de producción DOC1: se rechaza al elegirlo, con el nombre del documento (el servidor revalida).
+    const etiqueta = this.catalogo.etiqueta('documento_radicacion', evento.id);
+    const regla = { ...reglaDesdeCatalogo(this.catalogo.opciones('documento_radicacion').find((d) => d.codigo === evento.id)), vigenciaMaxDias: null };
+    const valido = validarDocumento(
+      { nombre: evento.archivo.name, tipoMime: evento.archivo.type as never, tamanoBytes: evento.archivo.size, fechaEmision: undefined },
+      regla,
+      new Date().toISOString(),
+    ).valido;
+    if (evento.archivo.size === 0 || !valido) {
+      this.errorEnvio.set(evento.archivo.size === 0
+        ? `El archivo de «${etiqueta}» está vacío. Elige otro.`
+        : `El archivo de «${etiqueta}» no es válido: carga un PDF, JPG o PNG dentro del peso permitido.`);
+      return;
+    }
+    this.errorEnvio.set(null);
     this.archivos.set(evento.id, evento.archivo);
     this.cargados.update((c) => ({ ...c, [evento.id]: evento.archivo.name }));
   }
@@ -189,9 +207,15 @@ export class CorreccionPanelComponent {
     this.enviando.set(true);
     this.errorEnvio.set(null);
     const codigo = this.referencia();
-    concat(...[...this.archivos].map(([tipo, archivo]) => this.radicacion.subirDocumento(codigo, tipo, archivo)))
+    // Auditoría de producción DOC2: el error dice qué archivo falló; los que subieron no se reenvían.
+    let subiendo: string | null = null;
+    concat(...[...this.archivos].map(([tipo, archivo]) => defer(() => {
+      subiendo = tipo;
+      return this.radicacion.subirDocumento(codigo, tipo, archivo).pipe(tap(() => this.archivos.delete(tipo)));
+    })))
       .pipe(
         toArray(),
+        tap(() => (subiendo = null)),
         switchMap(() => this.pendienteEnvio()
           ? this.radicacion.enviarAlArea(codigo)
           : this.radicacion.reenviarCorreccion(codigo)),
@@ -208,7 +232,8 @@ export class CorreccionPanelComponent {
         },
         error: (err: unknown) => {
           this.enviando.set(false);
-          this.errorEnvio.set(mensajeErrorIntegracion(err));
+          const fallo = subiendo === null ? '' : `No pudimos subir «${this.catalogo.etiqueta('documento_radicacion', subiendo)}». `;
+          this.errorEnvio.set(fallo + mensajeErrorIntegracion(err));
         },
       });
   }

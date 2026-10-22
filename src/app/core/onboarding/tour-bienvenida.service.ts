@@ -22,8 +22,11 @@ export class TourBienvenidaService {
   readonly abierto = this._abierto.asReadonly();
   readonly guia = this._guia.asReadonly();
 
+  /** «Ver recorrido»: abre el de la vista actual; si la vista no tiene, no hace nada (no queda «abierto» sin pasos). */
   abrir(): void {
-    this._abierto.set(true);
+    if (this._guia()) {
+      this._abierto.set(true);
+    }
   }
 
   cerrar(): void {

@@ -34,7 +34,7 @@
       </app-alert-banner>
       <app-info-box icono="info">
         La radicación se detiene aquí mientras Cumplimiento revisa el caso. Verás el resultado en Seguimiento; si
-        todo está en orden, el área continúa con la expedición.
+        todo está en orden, continuamos con la expedición.
       </app-info-box>
       <div class="rad-sarlaft-acciones">
         <app-boton variante="accent" (clicked)="salir()">Ir a Seguimiento</app-boton>
@@ -60,7 +60,7 @@
           [numero]="1"
           icono="description"
           titulo="Contrato de arrendamiento"
-          subtitulo="Empieza aquí: carga el contrato firmado, aunque lo hayas generado con nuestra plantilla."
+          subtitulo="Empieza aquí: elige el contrato que generaste en Contratación o carga el contrato firmado."
         >
           @if (contratoReferencia(); as referencia) {
             <app-alert-banner variante="success" titulo="Contrato listo">
@@ -79,8 +79,8 @@
               </app-form-field>
             }
             <app-info-box icono="info">
-              Si no lo generaste aquí, carga el contrato firmado: leemos el propietario, el inquilino, el inmueble y el canon, lo registramos
-              y precargamos esta radicación.
+              Si lo hiciste por fuera del portal, carga el contrato firmado: leemos el propietario, el inquilino, el inmueble y el canon
+              y precargamos esta radicación. No enviamos nada hasta que confirmes.
             </app-info-box>
           }
 
@@ -166,6 +166,10 @@
           titulo="Estudio de arrendamiento"
           subtitulo="Consulta el estudio del inquilino en Estudio Digital del Libertador con su número de estudio y su cédula."
         >
+          <app-info-box icono="help">
+            <strong>¿El inquilino aún no tiene su estudio?</strong> Solicítalo en El Libertador y vuelve con el número de estudio.
+            <a href="https://www.libertador.com/" target="_blank" rel="noopener noreferrer">Ir a El Libertador <span aria-hidden="true">↗</span></a>
+          </app-info-box>
           <div class="rad-form-grid">
             <app-form-field
               label="Número de estudio del inquilino"
@@ -230,7 +234,7 @@
                   El estudio del inquilino está aprobado. Usaremos estos datos para autollenar el contrato.
                 </app-alert-banner>
                 @if (novedadesEstudio().length) {
-                  <app-alert-banner variante="warning" titulo="El estudio y el contrato no coinciden en todo" icono="difference">
+                  <app-alert-banner variante="warning" titulo="Revisa antes de enviar" icono="difference">
                     <ul>
                       @for (n of novedadesEstudio(); track n) {
                         <li>{{ n }}</li>
@@ -382,8 +386,14 @@
           [numero]="4"
           icono="verified_user"
           titulo="Validación de Conocimiento de Cliente"
-          [subtitulo]="'Consulta en listas del ' + etiquetaSujetoSarlaft() + ' antes de cargar los documentos.'"
+          [subtitulo]="consultaSarlaftActiva
+            ? 'Consulta en listas del ' + etiquetaSujetoSarlaft() + ' antes de cargar los documentos.'
+            : 'Carga el formulario diligenciado y firmado por el ' + etiquetaSujetoSarlaft() + ' en los documentos.'"
         >
+          @if (!consultaSarlaftActiva) {
+            <!-- La consulta SARLAFT no está habilitada: formulario descargado, diligenciado y cargado. -->
+            <app-aviso-sarlaft [quien]="'el ' + etiquetaSujetoSarlaft()" />
+          } @else {
           @if (resultadoSarlaft(); as resultado) {
             @if (resultado.estado === 'ACTUALIZADO') {
               <!-- Salida 1: actualizado -> continúa a documentos. -->
@@ -506,6 +516,7 @@
               usa «Cargar formulario de Conocimiento de Cliente» en los documentos y continúa.
             </app-info-box>
           }
+          }
 
         </app-form-section-card>
 
@@ -531,7 +542,7 @@
             ></app-doc-uploader>
 
             @if (pideCtl()) {
-              <app-ctl-validacion [direccionContrato]="direccionContrato()" (archivo)="onCtlArchivo($event)" />
+              <app-ctl-validacion [direccionContrato]="direccionContrato()" [adjunto]="!!archivosCargados()['certificadoTradicion']" (archivo)="onCtlArchivo($event)" />
             }
 
             @if (firmaApoderado()) {
@@ -545,8 +556,8 @@
 
             @if (conSarlaftFisico()) {
               <app-info-box icono="upload_file">
-                Carga el formulario de Conocimiento de Cliente diligenciado y firmado en la lista. El área lo revisa con
-                la radicación.
+                Carga el formulario de Conocimiento de Cliente diligenciado y firmado en la lista. Lo revisamos con la
+                radicación.
               </app-info-box>
             }
             @if (tipoPersona() === 'juridica') {
@@ -607,7 +618,6 @@
       <aside class="radicacion__lateral" aria-label="Progreso de la radicación">
         <app-summary-card
           titulo="Progreso de radicación"
-          badge="Al instante"
           [filas]="filasProgreso()"
           [total]="{ label: 'Documentos', valor: cargadosObligatorios() + ' / ' + totalObligatorios() }"
         >

@@ -11,6 +11,15 @@ export function mensajeErrorIntegracion(error: unknown): string {
   const fields = Array.isArray(e?.error?.fields) ? (e?.error?.fields as unknown[]).map(String) : [];
   const campo = (nombre: string) => fields.includes(nombre);
 
+  if (status === 409 && campo('comercial')) {
+    return 'Es el último comercial activo: sus brokers quedarían sin comercial. Activa o crea otro antes de desactivarlo.';
+  }
+  if (status === 409 && campo('radicacionDuplicada')) {
+    const codigo = fields.find((f) => f !== 'radicacionDuplicada');
+    return codigo
+      ? `Este inmueble y este inquilino ya están radicados en ${codigo}. Revísala en Seguimiento en lugar de radicar de nuevo.`
+      : 'Este inmueble y este inquilino ya tienen una radicación activa. Si crees que es un error, escríbele a tu asesor comercial.';
+  }
   if (status === 409 && campo('documentoDuplicado')) {
     const tipo = fields.find((f) => f !== 'documentoDuplicado');
     return tipo

@@ -29,7 +29,8 @@ import {
 import type { Poliza } from '../../../../core/models/poliza.model';
 import { estadoABadge } from '../../../../shared/pipes/estado-badge';
 import { esPolizaVencida } from '../../induccion-habilitacion';
-import { accionRenovacion, ordenarPorUrgencia } from '../../renovaciones-lista';
+import { fechaCorta } from '../../../../core/services/admin.helpers';
+import { accionRenovacion, ordenarPorUrgencia, yaVencio } from '../../renovaciones-lista';
 
 
 /**
@@ -114,9 +115,11 @@ export class RenovacionesComponent {
     return polizas.map((p) => ({
       numero: p.numero,
       producto: p.producto,
-      fechaVencimiento: p.fechaVencimiento,
-      estado: this.catalogo.etiqueta('estado_poliza', p.estado),
-      estadoVariante: esPolizaVencida(p)
+      fechaVencimiento: fechaCorta(p.fechaVencimiento),
+      fechaVencimientoOrden: p.fechaVencimiento,
+      // Ya venció pero aún se puede renovar (plazo del área): se dice «Vencida», no «A punto de vencer» (QA PL2).
+      estado: yaVencio(p) ? 'Vencida' : this.catalogo.etiqueta('estado_poliza', p.estado),
+      estadoVariante: esPolizaVencida(p) || yaVencio(p)
         ? 'danger'
         : estadoABadge(this.catalogo.etiqueta('estado_poliza', p.estado)).replace('badge-', ''),
       gestion: p.gestion ?? 'Sin gestión aún',

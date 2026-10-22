@@ -23,7 +23,10 @@ import {
   DocUploaderComponent,
   EscaleritaLoaderComponent,
   InfoBoxComponent,
+  AvisoSarlaftComponent,
 } from '../../../../shared/components';
+import { CatalogoService } from '../../../../core/services/catalogo.service';
+import { consultaSarlaftHabilitada } from '../../../../core/util/sarlaft';
 import type {
   ArchivoSeleccionado,
   ReglaDocumentoUploader,
@@ -52,6 +55,7 @@ import { MESES_VIGENCIA_SARLAFT } from '../../gestion-renovacion-flujo';
     DocUploaderComponent,
     EscaleritaLoaderComponent,
     InfoBoxComponent,
+    AvisoSarlaftComponent,
   ],
   templateUrl: './sarlaft-renovacion.component.html',
   styleUrl: './sarlaft-renovacion.component.scss',
@@ -59,6 +63,8 @@ import { MESES_VIGENCIA_SARLAFT } from '../../gestion-renovacion-flujo';
 export class SarlaftRenovacionComponent implements OnInit {
   private readonly feedback = inject(FeedbackService);
   private readonly renovacionService = inject(RenovacionService);
+  /** Sin consulta SARLAFT (V86): no se ofrece el enlace por SMS; se descarga y carga el formulario. */
+  protected readonly consultaSarlaft = consultaSarlaftHabilitada(inject(CatalogoService));
 
   /** Póliza cuya gestión se valida. */
   @Input({ required: true }) numeroPoliza = '';

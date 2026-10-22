@@ -9,7 +9,7 @@
     <app-kpi-card label="Pólizas en portafolio" [valor]="portafolio()?.total ?? '—'" icono="folder_open" sub="Total de pólizas activas" />
     <app-kpi-card label="Renovadas" [valor]="portafolio()?.renovadas ?? '—'" icono="task_alt" variante="exito" sub="Al día con renovaciones" />
     <app-kpi-card label="Próximas a renovar" [valor]="portafolio()?.proximasARenovar ?? '—'" icono="event_upcoming" sub="Vencen entre 31 y 60 días" />
-    <app-kpi-card label="A punto de vencer" [valor]="portafolio()?.aPuntoDeVencer ?? '—'" icono="warning" variante="alerta" sub="Vencen en 30 días o ya vencieron" />
+    <app-kpi-card label="A punto de vencer" [valor]="portafolio()?.aPuntoDeVencer ?? '—'" icono="warning" [variante]="(portafolio()?.aPuntoDeVencer ?? 0) > 0 ? 'alerta' : 'default'" sub="Vencen en 30 días o ya vencieron" />
   </app-grid-layout>
 
   <app-barra-acciones>

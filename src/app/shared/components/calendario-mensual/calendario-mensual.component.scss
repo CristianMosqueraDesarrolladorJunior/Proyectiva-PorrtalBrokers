@@ -207,11 +207,25 @@
 }
 
 // Lo que ya pasó se atenúa; hoy se resalta.
+// Pasados atenuados pero legibles (auditoría de producción FV14: con 0.55 casi no se leían).
 .cal-day--pasado {
-  opacity: 0.55;
+  background: var(--sb-surface-low);
 }
 
+.cal-day--pasado .cal-day__num {
+  color: var(--color-muted);
+}
+
+// Hoy se encuentra de un vistazo: número en círculo de color de marca (FV15).
 .cal-day--hoy .cal-day__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-7);
+  height: var(--space-7);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  // Texto oscuro sobre naranja: el blanco no alcanza contraste AA.
+  color: var(--sb-on-primary-fixed);
   font-weight: var(--font-weight-bold);
-  text-decoration: underline;
 }

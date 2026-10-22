@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CatalogoService } from '../../../core/services/catalogo.service';
-import type { DetalleNegocioConsola, NegocioConsola } from '../../../core/models/consola.model';
+import type { ComercialConsola, DetalleNegocioConsola, NegocioConsola } from '../../../core/models/consola.model';
 import { AdminService } from '../../../core/services/admin.service';
 import { COLUMNA_GESTIONAR, COLUMNAS_FECHAS, celdasFechas, cop, copCompacto, fechaCorta, fechaHora } from '../../../core/services/admin.helpers';
 import { ConsolaService } from '../../../core/services/consola.service';
@@ -46,6 +46,15 @@ function varianteEstado(estado: string): VarianteBadge {
  * Negocios radicados: se muestra al PROPIETARIO del inmueble y todo lo que lleva el negocio. El negocio
  * termina al expedir la póliza. Gestión (cambio de estado / expedición) solo para el Administrador.
  */
+/** Resultado de Conocimiento de Cliente del negocio, en palabras (con formulario cargado no es un riesgo abierto: PR15). */
+const ETIQUETA_SARLAFT: Readonly<Record<string, string>> = {
+  actualizado: 'Actualizado',
+  desactualizado: 'Desactualizado',
+  formulario_cargado: 'Formulario cargado · por revisar',
+  consultable: 'En revisión de Cumplimiento',
+  rechazado: 'Rechazado',
+};
+
 @Component({
   selector: 'app-admin-negocios',
   standalone: true,
@@ -159,6 +168,8 @@ export class NegociosComponent {
     { id: 'historial', etiqueta: 'Historial' },
   ]);
   protected readonly guardando = signal(false);
+  protected readonly comerciales = signal<readonly ComercialConsola[]>([]);
+  protected readonly comercialDestino = signal('');
 
   protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
     const d = this.detalle();
@@ -222,7 +233,7 @@ export class NegociosComponent {
         datos: [
           { etiqueta: 'Número de estudio', valor: d.numeroEstudio },
           { etiqueta: 'Resultado del estudio', valor: d.estadoEstudio },
-          { etiqueta: 'SARLAFT', valor: d.sarlaft },
+          { etiqueta: 'Conocimiento de Cliente', valor: ETIQUETA_SARLAFT[d.sarlaft ?? ''] ?? d.sarlaft },
           { etiqueta: 'Estado del negocio', valor: this.etiquetaEstado[n.estado] ?? n.estado },
           { etiqueta: 'Póliza expedida', valor: n.numeroPoliza ?? 'Sin expedir' },
           { etiqueta: 'Broker', valor: `${n.broker} (${n.brokerEstado === 'PROSPECTO' ? 'prospecto' : 'registrado'})` },
@@ -236,6 +247,45 @@ export class NegociosComponent {
 
   constructor() {
     this.cargar();
+    if (this.esAdmin) {
+      this.consola
+        .comerciales()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: (c) => this.comerciales.set(c.filter((x) => x.activo)), error: () => this.comerciales.set([]) });
+    }
+  }
+
+  /** Reasigna solo este negocio, con confirmación (auditoría de producción PR25/PR35). */
+  protected reasignarNegocio(): void {
+    const n = this.detalle()?.negocio;
+    const codigo = this.comercialDestino();
+    if (!n || !codigo) return;
+    const nombre = this.comerciales().find((c) => c.codigo === codigo)?.nombre ?? codigo;
+    this.feedback.info({
+      titulo: 'Reasignar negocio',
+      mensaje: `El negocio ${n.radicado} pasará a ${nombre}. Los demás negocios de ${n.broker} siguen con su comercial y el cambio queda en la actividad del broker.`,
+      acciones: { confirmar: 'Reasignar', cancelar: 'Cancelar' },
+      alResolver: (r) => {
+        if (r !== 'confirmar') return;
+        this.guardando.set(true);
+        this.consola
+          .reasignarNegocio(n.radicado, codigo)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => {
+              this.guardando.set(false);
+              this.comercialDestino.set('');
+              this.feedback.toast({ variante: 'exito', mensaje: `El negocio ${n.radicado} pasó a ${nombre}.` });
+              this.cargar();
+              this.abrir(n.radicado);
+            },
+            error: (err: unknown) => {
+              this.guardando.set(false);
+              this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
+            },
+          });
+      },
+    });
   }
 
   protected cargar(): void {

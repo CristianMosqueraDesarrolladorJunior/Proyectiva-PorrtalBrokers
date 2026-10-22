@@ -199,9 +199,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  // El progreso va debajo del formulario: primero se digita, luego se envía.
   .radicacion__lateral {
     position: static;
-    order: -1;
   }
 }
 

@@ -1,3 +1,5 @@
+import { pesos } from '../../../core/util/numeros-letras';
+import { fechaCorta } from '../../../core/services/admin.helpers';
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import {
   ChangeDetectionStrategy,
@@ -314,7 +316,7 @@ export function construirFilasDetalle(
     { etiqueta: ETIQUETAS_DETALLE.producto, valor: detalle.producto },
     { etiqueta: ETIQUETAS_DETALLE.estado, valor: etiquetaEstado(detalle.estado) },
     { etiqueta: ETIQUETAS_DETALLE.estadoPago, valor: detalle.estadoPago },
-    { etiqueta: ETIQUETAS_DETALLE.fecha, valor: detalle.fecha },
+    { etiqueta: ETIQUETAS_DETALLE.fecha, valor: fechaCorta(detalle.fecha) },
     { etiqueta: ETIQUETAS_DETALLE.comision, valor: formatearComision(detalle.comision) },
   ];
 }
@@ -331,11 +333,13 @@ const VARIANTE_ESTADO: Readonly<Record<string, 'success' | 'warning' | 'danger' 
  * @returns cadena formateada en pesos colombianos.
  */
 function formatearComision(comision: number): string {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    maximumFractionDigits: 0,
-  }).format(comision);
+  return pesos(comision);
+}
+
+/** Comisión real si ya se causó; si no, la estimada con su condición (auditoría de producción PB5). */
+function comisionVisible(detalle: DetalleSolicitud): string {
+  if (detalle.comision > 0) return pesos(detalle.comision);
+  return detalle.comisionEstimada ? `Estimada ${pesos(detalle.comisionEstimada)} · se causa al expedir` : pesos(0);
 }
 
 /** Secciones de la ficha del negocio que ve el broker (lenguaje de póliza de arrendamiento). */
@@ -351,7 +355,7 @@ export function construirSecciones(
       datos: [
         { etiqueta: 'Referencia', valor: detalle.referencia },
         { etiqueta: 'Producto', valor: detalle.producto },
-        { etiqueta: 'Fecha de radicación', valor: detalle.fecha },
+        { etiqueta: 'Fecha de radicación', valor: fechaCorta(detalle.fecha) },
         { etiqueta: 'Estado', valor: etiquetaEstado(detalle.estado) },
       ],
     },
@@ -365,8 +369,10 @@ export function construirSecciones(
       icono: 'payments',
       descripcion: 'Tu comisión se causa cuando se expide la póliza',
       datos: [
-        { etiqueta: 'Canon / pago de la póliza', valor: detalle.estadoPago },
-        { etiqueta: 'Tu comisión', valor: formatearComision(detalle.comision), destacado: true },
+        // Canon y pago son dos datos distintos (auditoría de producción PB4).
+        { etiqueta: 'Canon mensual', valor: detalle.canon ? pesos(detalle.canon) : '—' },
+        { etiqueta: 'Pago de la póliza', valor: detalle.estadoPago },
+        { etiqueta: 'Tu comisión', valor: comisionVisible(detalle), destacado: true },
       ],
     },
   ];

@@ -237,6 +237,10 @@
           <app-boton variante="outline" icono="cloud_download" [disabled]="cargandoEstudio()" (clicked)="precargarDeEstudio()">
             {{ cargandoEstudio() ? 'Consultando estudio…' : 'Traer datos del estudio' }}
           </app-boton>
+          <app-info-box icono="help">
+            <strong>¿El inquilino aún no tiene su estudio?</strong> Solicítalo en El Libertador y vuelve con el número de estudio.
+            <a href="https://www.libertador.com/" target="_blank" rel="noopener noreferrer">Ir a El Libertador <span aria-hidden="true">↗</span></a>
+          </app-info-box>
         </div>
         <div class="contrato-grid">
           <app-form-field label="Nombres" [requerido]="true" controlId="ate-nombres">

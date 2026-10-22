@@ -5,13 +5,6 @@
     titulo="Mis comisiones"
     subtitulo="Elige tus pólizas pendientes de pago, genera tu cuenta de cobro y cárgala en la plataforma de proveedores de Seguros Bolívar."
   >
-    <div acciones>
-      @if (proveedores; as p) {
-        <a class="comisiones__proveedores" [href]="p['url']" target="_blank" rel="noopener noreferrer">
-          Ir a la plataforma de proveedores <span aria-hidden="true">↗</span>
-        </a>
-      }
-    </div>
   </app-page-header>
 
   @if (bloqueado()) {
@@ -44,7 +37,7 @@
         />
         <app-kpi-card label="Pólizas por cobrar" [valor]="pendientesCobro()" icono="pending_actions" sub="Pendientes de pago" />
         <app-kpi-card label="Pólizas pagadas" [valor]="pagadas()" icono="task_alt" sub="Ya te las pagaron" />
-        <app-kpi-card label="Cuentas generadas" [valor]="historial().length" icono="receipt_long" sub="Historial" />
+        <app-kpi-card label="Cuentas generadas" [valor]="historial().length" icono="receipt_long" sub="En total" />
       </div>
     </app-grid-layout>
 
@@ -144,14 +137,9 @@
             @if (seleccionadas().length === 0 && generada(); as cuenta) {
               <p class="comisiones__letras">
                 Cuenta de cobro N° {{ cuenta.consecutivo }} generada: {{ plural(cuenta.polizas, 'póliza', 'pólizas') }} por
-                {{ pesos(cuenta.totalComision) }}. Descárgala, fírmala y cárgala en la plataforma de proveedores.
+                {{ pesos(cuenta.totalComision) }}. Descárgala, fírmala y cárgala en la plataforma de proveedores del 1 al 10 de cada mes.
               </p>
               <app-boton variante="accent" icono="download" (clicked)="descargar(cuenta.id)">Descargar cuenta de cobro</app-boton>
-              @if (proveedores; as p) {
-                <a class="comisiones__proveedores" [href]="p['url']" target="_blank" rel="noopener noreferrer">
-                  Ir a la plataforma de proveedores <span aria-hidden="true">↗</span>
-                </a>
-              }
             } @else if (seleccionadas().length === 0) {
               <p class="comisiones__letras">Elige en la tabla las pólizas pendientes de pago para armar tu cuenta.</p>
             } @else {
@@ -162,6 +150,11 @@
                 {{ generando() ? 'Generando…' : 'Generar cuenta de cobro' }}
               </app-boton>
             }
+            @if (proveedores; as p) {
+              <a class="comisiones__proveedores" [href]="p['url']" target="_blank" rel="noopener noreferrer">
+                Ir a la plataforma de proveedores <span aria-hidden="true">↗</span>
+              </a>
+            }
             @if (seleccionadas().length > 0) {
               <app-boton variante="ghost" icono="close" (clicked)="limpiarSeleccion()">Quitar selección</app-boton>
             }
@@ -171,7 +164,7 @@
     </app-layout-resumen>
 
     <!-- Paso 2: cuentas ya generadas -->
-    <app-form-section-card [numero]="2" icono="history" titulo="Cuentas de cobro generadas" subtitulo="Descarga cualquier cuenta, fírmala y cárgala en la plataforma de proveedores.">
+    <app-form-section-card [numero]="2" icono="history" titulo="Cuentas de cobro generadas" subtitulo="Descarga cualquier cuenta, fírmala y cárgala en la plataforma de proveedores del 1 al 10 de cada mes; si te piden corregirla, tienes hasta el 15.">
       <app-estado-vista
         [cargando]="cargandoHistorial()"
         [error]="errorHistorial()"

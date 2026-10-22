@@ -47,15 +47,22 @@ export const ANTIGUEDAD_MAXIMA_CTL_DIAS = 90;
       }
 
       @if (errorMensaje(); as mensaje) {
-        <app-alert-banner variante="error" titulo="No pudimos validar el certificado" icono="error">
+        <app-alert-banner variante="error" titulo="Revisa el certificado" icono="error">
           {{ mensaje }}
+        </app-alert-banner>
+      }
+
+      @if (sinLectura() && adjunto()) {
+        <app-alert-banner variante="warning" titulo="Certificado adjunto sin validar" icono="schedule">
+          No pudimos leer el certificado automáticamente en este momento. Ya quedó adjunto: lo revisaremos con la
+          radicación, puedes continuar.
         </app-alert-banner>
       }
 
       @if (resultado(); as r) {
         @if (r.motivo === 'fecha_no_determinada') {
           <app-alert-banner variante="warning" titulo="No pudimos validar la antigüedad" icono="help">
-            No encontramos la fecha de impresión del certificado. El área lo revisará.
+            No encontramos la fecha de impresión del certificado. Lo revisaremos con la radicación.
           </app-alert-banner>
         } @else if (!r.vigente) {
           <app-alert-banner variante="error" titulo="Certificado vencido" icono="event_busy">
@@ -99,6 +106,8 @@ export class CtlValidacionComponent {
 
   /** Dirección del contrato con la que se compara la del certificado (vacía = sin comparar). */
   readonly direccionContrato = input('');
+  /** El contenedor confirma que el archivo quedó cargado (Radicación lo descarta si está repetido). */
+  readonly adjunto = input(true);
 
   /** Resultado del servidor, para que el anfitrión conserve el estado y decida el flujo. */
   readonly validado = output<ValidacionCtl>();
@@ -110,6 +119,8 @@ export class CtlValidacionComponent {
   protected readonly validando = signal(false);
   protected readonly resultado = signal<ValidacionCtl | null>(null);
   protected readonly errorMensaje = signal('');
+  /** El servicio de lectura no respondió: el archivo queda adjunto y la revisión es manual (no bloquea). */
+  protected readonly sinLectura = signal(false);
   private readonly nombreArchivo = signal('');
   protected readonly cargados = computed<Readonly<Record<string, string>>>(() => {
     const nombre = this.nombreArchivo();
@@ -135,6 +146,7 @@ export class CtlValidacionComponent {
       return;
     }
     this.errorMensaje.set('');
+    this.sinLectura.set(false);
     this.resultado.set(null);
     this.validando.set(true);
     this.contratos
@@ -150,7 +162,20 @@ export class CtlValidacionComponent {
         },
         error: (err: unknown) => {
           this.validando.set(false);
-          this.errorMensaje.set(mensajeErrorIntegracion(err));
+          const status = (err as { status?: number })?.status ?? 0;
+          if (status === 400 || status === 422 || status === 413) {
+            // El archivo no sirve (no es PDF, está vacío o ilegible): no se adjunta.
+            this.errorMensaje.set(
+              status === 422
+                ? 'No pudimos leer este archivo como certificado. Verifica que sea el CTL completo, legible y sin contraseña.'
+                : mensajeErrorIntegracion(err),
+            );
+            return;
+          }
+          // El servicio de lectura está caído o tardó demasiado: el certificado se adjunta igual (auditoría RD6).
+          this.nombreArchivo.set(archivo.name);
+          this.sinLectura.set(true);
+          this.archivo.emit(archivo);
         },
       });
   }

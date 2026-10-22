@@ -48,8 +48,7 @@ export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
   // "Agente IA", "Referir cliente" y "Estado referidos" se ocultan del sidebar (sus rutas siguen existiendo).
   { ruta: 'renovaciones', icono: 'update', etiqueta: 'Renovaciones' },
   { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
-  { ruta: 'polizas', icono: 'policy', etiqueta: 'Pólizas' },
-  { ruta: 'coberturas', icono: 'shield', etiqueta: 'Coberturas' },
+  // «Pólizas» se oculta del sidebar: las pólizas se ven en Seguimiento y Renovaciones.
   { ruta: 'calendario', icono: 'calendar_today', etiqueta: 'Calendario' },
   { ruta: 'documentos', icono: 'folder_open', etiqueta: 'Documentos' },
   { ruta: 'ayuda', icono: 'help_outline', etiqueta: 'Ayuda' },

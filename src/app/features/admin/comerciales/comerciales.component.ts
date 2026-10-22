@@ -90,8 +90,8 @@ export class ComercialesComponent {
       ingresoOrden: c.primas,
       comision: cop(c.comision),
       comisionOrden: c.comision,
-      estado: c.activo ? 'Activo' : 'Inactivo',
-      estadoVariante: c.activo ? 'success' : 'danger',
+      estado: !c.activo ? 'Inactivo' : c.enVacaciones ? 'En vacaciones' : 'Activo',
+      estadoVariante: !c.activo ? 'danger' : c.enVacaciones ? 'warning' : 'success',
       ...celdasFechas(c.creado, c.ultimoMovimiento),
       gestionar: '',
     })),
@@ -246,8 +246,44 @@ export class ComercialesComponent {
   protected cambiarActivo(): void {
     const c = this.seleccionado();
     if (!c) return;
+    const cartera = c.brokers + c.prospectos;
+    if (c.activo && cartera > 0) {
+      this.feedback.info({
+        titulo: 'Desactivar comercial con cartera',
+        mensaje: `${c.nombre} tiene ${c.brokers} ${c.brokers === 1 ? 'broker' : 'brokers'}, ${c.prospectos} ${c.prospectos === 1 ? 'prospecto' : 'prospectos'} y ${c.negocios} ${c.negocios === 1 ? 'negocio' : 'negocios'}. Al desactivarlo pasan a los demás comerciales activos, por turnos: ningún broker queda sin comercial. ¿Lo desactivamos?`,
+        acciones: { confirmar: 'Desactivar', cancelar: 'Cancelar' },
+        alResolver: (r) => {
+          if (r === 'confirmar') this.ejecutarCambioActivo(c);
+        },
+      });
+      return;
+    }
+    this.ejecutarCambioActivo(c);
+  }
+
+  /** Vacaciones: su cartera se presta por turnos a los demás comerciales y vuelve a él al regresar. */
+  protected cambiarVacaciones(): void {
+    const c = this.seleccionado();
+    if (!c) return;
+    const sale = !c.enVacaciones;
+    const cuantos = sale ? c.brokers + c.prospectos : (c.prestados ?? 0);
+    this.feedback.info({
+      titulo: sale ? 'Marcar vacaciones' : 'Terminar vacaciones',
+      mensaje: sale
+        ? `Los ${cuantos} brokers y prospectos de ${c.nombre}, con sus negocios, pasan por turnos a los demás comerciales activos. Mientras tanto no recibe asignaciones nuevas. Al regresar, todo vuelve a él.`
+        : `${c.nombre} regresa: sus ${cuantos} brokers y prospectos, con sus negocios, vuelven a él.`,
+      acciones: { confirmar: sale ? 'Marcar vacaciones' : 'Terminar vacaciones', cancelar: 'Cancelar' },
+      alResolver: (r) => {
+        if (r !== 'confirmar') return;
+        this.ejecutar(this.consola.vacacionesComercial(c.codigo, sale),
+          sale ? `${c.nombre} está de vacaciones: su cartera quedó repartida.` : `${c.nombre} regresó: su cartera volvió a él.`);
+      },
+    });
+  }
+
+  private ejecutarCambioActivo(c: ComercialConsola): void {
     this.ejecutar(this.consola.activarComercial(c.codigo, !c.activo),
-      c.activo ? `${c.nombre} quedó inactivo: sale de la rotación y pierde el acceso.` : `${c.nombre} quedó activo.`);
+      c.activo ? `${c.nombre} quedó inactivo: su cartera pasó a los demás comerciales y él perdió el acceso.` : `${c.nombre} quedó activo.`);
   }
 
   protected restablecerAcceso(): void {

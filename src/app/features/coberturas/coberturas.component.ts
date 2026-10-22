@@ -44,6 +44,19 @@ export class CoberturasComponent {
     return String(item?.['detalle'] ?? '').trim();
   }
 
+  /** Solo la básica y las adicionales que ofrece el cotizador (auditoría de producción CB1). */
+  private cotizables(catalogo: readonly CoberturaCatalogo[]): readonly CoberturaCatalogo[] {
+    // Se ocultan las que el catálogo marca como no adicionales (salvo la básica); las desconocidas se muestran.
+    const items = this.catalogoBd.opciones('cobertura');
+    if (!items.some((c) => c['adicional'] === true)) {
+      return catalogo;
+    }
+    const noCotizables = new Set(
+      items.filter((c) => c['adicional'] !== true && c.codigo !== 'ARRENDAMIENTO').map((c) => c.codigo),
+    );
+    return catalogo.filter((c) => !noCotizables.has(c.nombre) && !noCotizables.has(c.id));
+  }
+
   protected readonly coberturas = signal<readonly CoberturaCatalogo[]>([]);
   protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -85,7 +98,7 @@ export class CoberturasComponent {
     this.error.set(null);
     this.coberturasService.listar().subscribe({
       next: (catalogo) => {
-        this.coberturas.set(catalogo);
+        this.coberturas.set(this.cotizables(catalogo));
         this.cargando.set(false);
       },
       error: () => {

@@ -5,6 +5,7 @@ import { DocumentosService, type RecursoDescargable } from '../../core/services/
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { descargarArchivo } from '../../core/util/descargar-archivo';
 import { FeedbackService } from '../../shared/services/feedback/feedback.service';
+import { SessionService } from '../../core/services/session.service';
 
 /** Recurso descargable de la Seccion_Documentos (Req 33.3, 33.4). */
 interface RecursoDoc {
@@ -13,6 +14,7 @@ interface RecursoDoc {
   readonly descripcion: string;
   readonly id: string;
   readonly categoria: string;
+  readonly formato?: string;
 }
 
 /** Sección de documentos agrupada por categoría (Req 33.3). */
@@ -41,6 +43,7 @@ export class DocumentosComponent implements OnInit {
   private readonly feedback = inject(FeedbackService);
   private readonly documentosService = inject(DocumentosService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly session = inject(SessionService);
   private readonly recursos = signal<readonly RecursoDescargable[]>([]);
   protected readonly cargando = signal(true);
   protected readonly errorCarga = signal(false);
@@ -54,11 +57,15 @@ export class DocumentosComponent implements OnInit {
       { id: 'condiciones', titulo: 'Condiciones y comisiones' },
       { id: 'instructivos', titulo: 'Instructivos y guías' },
     ];
+    // Auditoría de producción DC6: lo de Renovaciones y Comisiones se habilita al ser broker registrado.
+    const prospecto = this.session.perfil()?.estadoCuenta === 'PROSPECTO';
+    const visible = (r: RecursoDescargable) =>
+      !prospecto || (r.categoria !== 'formatos-renovacion' && r.id !== 'instructivo-comisiones');
     return categorias
       .map((categoria) => ({
         ...categoria,
         recursos: this.recursos()
-          .filter((recurso) => recurso.categoria === categoria.id)
+          .filter((recurso) => recurso.categoria === categoria.id && visible(recurso))
           .map((recurso) => this.aRecursoDoc(recurso)),
       }))
       .filter((seccion) => seccion.recursos.length > 0);
@@ -87,12 +94,16 @@ export class DocumentosComponent implements OnInit {
       descripcion: recurso.descripcion,
       icono: recurso.icono,
       categoria: recurso.categoria,
+      formato: recurso.formato,
     };
   }
 
   /** Etiqueta del botón según la acción del recurso (↓ PDF / ↗ Abrir). */
   protected etiquetaAccion(recurso: RecursoDoc): string {
-    return recurso.categoria === 'instructivos' ? '↗ Abrir' : '↓ PDF';
+    if (recurso.formato === 'docx') {
+      return '↓ Word';
+    }
+    return recurso.categoria === 'instructivos' ? '↗ Ver PDF' : '↓ PDF';
   }
 
   /** Descarga el PDF a través del API autenticado del portal (Req 33.4). */

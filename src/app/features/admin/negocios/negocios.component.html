@@ -66,6 +66,24 @@
     @switch (pestana()) {
       @case ('negocio') {
         <app-ficha [secciones]="ficha()" />
+        @if (esAdmin) {
+          <app-form-field label="Reasignar solo este negocio" controlId="negocio-comercial"
+            ayuda="Los demás negocios del broker siguen con su comercial. La comisión del broker no cambia.">
+            <select id="negocio-comercial" [value]="comercialDestino()" (change)="comercialDestino.set(v($event))">
+              <option value="">Selecciona…</option>
+              @for (c of comerciales(); track c.codigo) {
+                @if (c.nombre !== d.negocio.comercial) {
+                  <option [value]="c.codigo">{{ c.nombre }}</option>
+                }
+              }
+            </select>
+          </app-form-field>
+          <div class="acciones-modal">
+            <app-boton variante="accent" icono="swap_horiz" [disabled]="guardando() || !comercialDestino()" (clicked)="reasignarNegocio()">
+              Reasignar negocio
+            </app-boton>
+          </div>
+        }
       }
       @case ('gestionar') {
         <app-gestion-negocio [radicado]="d.negocio.radicado" (actualizado)="recargar(d.negocio.radicado)" />

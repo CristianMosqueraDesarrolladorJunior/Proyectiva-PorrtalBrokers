@@ -29,6 +29,7 @@ import {
   ModalDialogComponent,
   PageHeaderComponent,
   VisorArchivoComponent,
+  InfoBoxComponent,
 } from '../../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaTabla, SeccionFicha, Tab, VarianteBadge } from '../../../shared/components';
 import { FormPersonaComponent } from '../componentes/form-persona.component';
@@ -46,10 +47,12 @@ function faltante(codigo: string, documentos: Readonly<Record<string, string>>):
     const tipo = codigo.slice('documento:'.length);
     return `Falta el documento: ${documentos[tipo] ?? tipo}`;
   }
-  if (codigo === 'sarlaft:no_disponible') return 'SARLAFT no respondió: vuelve a consultarlo';
+  if (codigo === 'sarlaft:no_disponible' || codigo === 'sarlaft:no_consultado') {
+    return 'Falta el formulario de Conocimiento de Cliente (SARLAFT) diligenciado y firmado';
+  }
   if (codigo.startsWith('sarlaft:')) return `SARLAFT no permite continuar (${codigo.slice(8)})`;
   const textos: Record<string, string> = {
-    resultadoSarlaft: 'Falta la consulta SARLAFT (el prospecto debe solicitar la legalización)',
+    resultadoSarlaft: 'Falta el formulario de Conocimiento de Cliente (SARLAFT) diligenciado y firmado',
     correo: 'Falta el correo',
     telefono: 'Falta el teléfono',
     nombre: 'Falta el nombre',
@@ -58,6 +61,7 @@ function faltante(codigo: string, documentos: Readonly<Record<string, string>>):
   return textos[codigo] ?? codigo;
 }
 import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
+import { consultaSarlaftHabilitada } from '../../../core/util/sarlaft';
 
 /** Nombre comparable: sin tildes, minúsculas y espacios simples. */
 function claveNombre(nombre: string): string {
@@ -89,6 +93,7 @@ function claveNombre(nombre: string): string {
     ModalDialogComponent,
     PageHeaderComponent,
     VisorArchivoComponent,
+    InfoBoxComponent,
   ],
   templateUrl: './prospectos.component.html',
   styleUrls: ['../admin-comun.scss'],
@@ -107,6 +112,8 @@ export class ProspectosComponent {
   private readonly feedback = inject(FeedbackService);
   private readonly documentos = this.catalogo.etiquetas('documento_legalizacion');
   private readonly fasesSarlaft = this.catalogo.etiquetas('fase_sarlaft');
+  /** La consulta SARLAFT está apagada: el botón «Consultar SARLAFT ahora» no se ofrece. */
+  protected readonly consultaSarlaft = consultaSarlaftHabilitada(this.catalogo);
   /** Fase SARLAFT con la descripción del catálogo (`cat_fase_sarlaft`). */
   protected sarlaft(fase: string | null): string {
     return fase ? this.fasesSarlaft[fase] ?? fase : 'Sin consulta';
@@ -188,7 +195,8 @@ export class ProspectosComponent {
     { id: 'expediente', etiqueta: 'Expediente' },
     { id: 'documentos', etiqueta: `Documentos (${this.expediente()?.documentos.length ?? 0})` },
     { id: 'actividad', etiqueta: 'Actividad' },
-    ...(this.esAdmin ? [{ id: 'decision', etiqueta: 'Aprobación' }] : []),
+    // El comercial ve qué le falta al prospecto para ayudarle (auditoría de producción PR41); aprobar es del administrador.
+    ...(this.esAdmin ? [{ id: 'decision', etiqueta: 'Aprobación' }] : [{ id: 'pendiente', etiqueta: 'Qué le falta' }]),
   ]);
   protected readonly documentoAbierto = signal<DocumentoExpediente | null>(null);
   protected readonly archivo = signal<Blob | null>(null);
@@ -254,6 +262,17 @@ export class ProspectosComponent {
     const p = this.expediente()?.prospecto;
     const destino = this.comerciales().find((c) => c.codigo === this.comercialDestino());
     if (!p || !destino) return;
+    this.feedback.info({
+      titulo: 'Reasignar comercial',
+      mensaje: `${p.nombre} y sus negocios pasarán a ${destino.nombre}. El cambio queda registrado en su actividad y en el historial de cada negocio.`,
+      acciones: { confirmar: 'Reasignar', cancelar: 'Cancelar' },
+      alResolver: (r) => {
+        if (r === 'confirmar') this.ejecutarReasignacion(p, destino);
+      },
+    });
+  }
+
+  private ejecutarReasignacion(p: { id: string; nombre: string }, destino: { codigo: string; nombre: string }): void {
     this.decidiendo.set(true);
     this.errorDecision.set('');
     this.admin

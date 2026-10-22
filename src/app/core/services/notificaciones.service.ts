@@ -52,17 +52,18 @@ export class NotificacionesService {
       if (kpis && kpis.bloqueadas > 0) {
         items.push({
           id: `bloqueadas-${kpis.bloqueadas}`,
-          titulo: `${kpis.bloqueadas} ${kpis.bloqueadas === 1 ? 'solicitud bloqueada' : 'solicitudes bloqueadas'}`,
-          detalle: 'Falta documentación SARLAFT. Súbela para continuar con la emisión.',
-          tono: 'alerta',
+          titulo: `${kpis.bloqueadas} ${kpis.bloqueadas === 1 ? 'solicitud desistida o anulada' : 'solicitudes desistidas o anuladas'}`,
+          detalle: 'No continúan. Revisa el detalle en Seguimiento.',
+          tono: 'info',
           ruta: '/app/seguimiento',
         });
       }
       if (kpis && kpis.enRevision > 0) {
         items.push({
           id: `revision-${kpis.enRevision}`,
-          titulo: `${kpis.enRevision} ${kpis.enRevision === 1 ? 'solicitud en revisión' : 'solicitudes en revisión'}`,
-          detalle: 'En mesa de suscripción. Te avisaremos cuando haya novedades.',
+          // Mismo concepto que la tarjeta «En trámite» de Seguimiento: por enviar, en revisión o por corregir (NT1/NT5).
+          titulo: `${kpis.enRevision} ${kpis.enRevision === 1 ? 'solicitud en trámite' : 'solicitudes en trámite'}`,
+          detalle: 'Por enviar, en revisión o por corregir. Entra a Seguimiento para ver si alguna espera algo de ti.',
           tono: 'info',
           ruta: '/app/seguimiento',
         });

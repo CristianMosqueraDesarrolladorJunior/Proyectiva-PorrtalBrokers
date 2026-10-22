@@ -90,15 +90,6 @@ export type TamanoModal = 'sm' | 'md' | 'lg' | 'xl';
         animation: md-entrada 160ms ease-out;
         position: relative;
       }
-      /* Franja corporativa superior: identifica la consola sin recargar la cabecera. */
-      .md::before {
-        content: '';
-        position: absolute;
-        inset: 0 0 auto 0;
-        height: 4px;
-        background: linear-gradient(90deg, var(--sb-primary), var(--sb-tertiary));
-        z-index: 1;
-      }
       .md--sm {
         max-width: 480px;
       }

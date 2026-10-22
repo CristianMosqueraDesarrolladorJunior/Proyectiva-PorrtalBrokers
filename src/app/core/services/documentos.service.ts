@@ -23,6 +23,8 @@ export interface RecursoDescargable {
   /** Nombre del Material Symbol. */
   readonly icono: string;
   readonly url: string;
+  /** Formato del archivo: 'pdf' o 'docx'. */
+  readonly formato?: string;
 }
 
 /**

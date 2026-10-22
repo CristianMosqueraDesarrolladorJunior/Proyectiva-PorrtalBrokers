@@ -18,11 +18,15 @@
     <app-escalerita-loader texto="Validando Conocimiento de Cliente…" />
   } @else if (error()) {
     <app-alert-banner variante="error" titulo="Validación no disponible">{{ error() }}</app-alert-banner>
-    <app-info-box icono="support_agent">
+    @if (consultaSarlaft) {
+      <app-info-box icono="support_agent">
       Si el enlace no llega o no funciona, comunícate con tu <b>asesor comercial</b> para que le genere o envíe el
       enlace de actualización al asegurado. Cuando tengas el formulario de Conocimiento de Cliente diligenciado y
       firmado, cárgalo aquí y continúa con la gestión.
     </app-info-box>
+    } @else {
+      <app-aviso-sarlaft quien="el asegurado" />
+    }
     <app-doc-uploader
       [reglas]="reglaActualizacion"
       [cargados]="archivoActualizado()"
@@ -58,11 +62,15 @@
         <app-boton variante="accent" (clicked)="continuar()">{{ textoContinuar }}</app-boton>
       </div>
     } @else {
-      <app-alert-banner variante="error" titulo="Documento de Conocimiento de Cliente no vigente">
-        El Conocimiento de Cliente del asegurado está desactualizado. Envíale el enlace de actualización a su celular.
+      <app-alert-banner variante="error" [titulo]="consultaSarlaft ? 'Documento de Conocimiento de Cliente no vigente' : 'Falta el formulario de Conocimiento de Cliente'">
+        @if (consultaSarlaft) {
+          El Conocimiento de Cliente del asegurado está desactualizado. Envíale el enlace de actualización a su celular.
+        } @else {
+          Carga el formulario de Conocimiento de Cliente del asegurado, diligenciado y firmado, para continuar.
+        }
       </app-alert-banner>
 
-      @if (r.celularEnlace) {
+      @if (consultaSarlaft && r.celularEnlace) {
         <div class="sarlaft-renov__acciones">
           <app-boton variante="outline" icono="sms" [disabled]="enviandoEnlace()" (clicked)="enviarEnlace()">
             {{ enviandoEnlace() ? 'Enviando…' : 'Enviar enlace al celular ' + r.celularEnlace }}
@@ -70,11 +78,15 @@
         </div>
       }
 
+      @if (consultaSarlaft) {
       <app-info-box icono="support_agent">
         Si el enlace no llega o no funciona, comunícate con tu <b>asesor comercial</b> para que le genere o envíe el
         enlace de actualización al asegurado. Cuando tengas el formulario de Conocimiento de Cliente diligenciado y
         firmado, cárgalo aquí y continúa con la gestión.
       </app-info-box>
+    } @else {
+      <app-aviso-sarlaft quien="el asegurado" />
+    }
 
       <app-doc-uploader
         [reglas]="reglaActualizacion"

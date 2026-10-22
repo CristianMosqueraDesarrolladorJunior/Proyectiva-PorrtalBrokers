@@ -120,6 +120,28 @@
       @case ('actividad') {
         <app-bitacora [eventos]="e.actividad" mensajeVacio="Este prospecto aún no ha operado en el portal" />
       }
+      @case ('pendiente') {
+        <div class="form-modal">
+          @if (faltantes().length) {
+            <app-alert-banner variante="warning" titulo="Para aprobarlo le falta" icono="rule">
+              <ul class="lista-validadores">
+                @for (f of faltantes(); track f) {
+                  <li>{{ f }}</li>
+                }
+              </ul>
+            </app-alert-banner>
+            <app-info-box icono="support_agent">
+              Escríbele para ayudarle a completarlo. El formulario de Conocimiento de Cliente se descarga en Documentos del
+              portal; si lo prefiere, puedes hacer tú la consulta. Cuando esté completo, el administrador lo aprueba.
+            </app-info-box>
+          } @else {
+            <app-alert-banner variante="success" titulo="Listo para aprobar" icono="verified">
+              Tiene sus documentos, el formulario de Conocimiento de Cliente y sus datos de contacto. El administrador lo
+              aprobará.
+            </app-alert-banner>
+          }
+        </div>
+      }
       @case ('decision') {
         <div class="form-modal">
           @if (faltantes().length) {
@@ -132,7 +154,7 @@
             </app-alert-banner>
           } @else {
             <app-alert-banner variante="success" titulo="Cumple todos los validadores" icono="verified">
-              Documentos completos, SARLAFT que permite continuar y datos de contacto. Al aprobar pasa a broker registrado.
+              Documentos completos, formulario de Conocimiento de Cliente y datos de contacto. Al aprobar pasa a broker registrado.
             </app-alert-banner>
           }
           <app-form-field label="Reasignar comercial" controlId="prospecto-comercial"
@@ -150,6 +172,13 @@
           <app-boton variante="outline" icono="swap_horiz" [disabled]="decidiendo() || !comercialDestino()" (clicked)="reasignarComercial()">
             Reasignar comercial
           </app-boton>
+          @if (confirmando() === 'aprobar') {
+            <!-- El acceso se envía a este correo: si está mal escrito, el broker no podrá entrar (auditoría PR22). -->
+            <app-info-box icono="mail">
+              Le enviaremos el acceso a <b>{{ expediente()?.prospecto?.correo || 'sin correo registrado' }}</b>. Verifica
+              que esté bien escrito antes de confirmar.
+            </app-info-box>
+          }
           @if (errorDecision()) {
             <app-alert-banner variante="error" titulo="No se pudo completar">{{ errorDecision() }}</app-alert-banner>
           }
@@ -166,7 +195,9 @@
       <app-boton variante="ghost" icono="block" [disabled]="decidiendo()" (clicked)="decidir(false)">
         {{ confirmando() === 'rechazar' ? 'Confirmar rechazo' : 'Rechazar legalización' }}
       </app-boton>
-      <app-boton variante="outline" icono="policy" [disabled]="decidiendo()" (clicked)="consultarSarlaft()">Consultar SARLAFT ahora</app-boton>
+      @if (consultaSarlaft) {
+        <app-boton variante="outline" icono="policy" [disabled]="decidiendo()" (clicked)="consultarSarlaft()">Consultar SARLAFT ahora</app-boton>
+      }
       <app-boton variante="accent" icono="verified" [disabled]="decidiendo() || faltantes().length > 0" (clicked)="decidir(true)">
         {{ decidiendo() ? 'Procesando…' : confirmando() === 'aprobar' ? 'Confirmar aprobación' : 'Aprobar y pasar a broker' }}
       </app-boton>

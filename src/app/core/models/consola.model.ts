@@ -87,6 +87,10 @@ export interface ComercialConsola {
   readonly comision: number;
   readonly creado: string;
   readonly ultimoMovimiento: string | null;
+  /** De vacaciones: su cartera está prestada a los demás comerciales y vuelve a él al regresar. */
+  readonly enVacaciones?: boolean;
+  /** Cuentas suyas prestadas a otros comerciales mientras está de vacaciones. */
+  readonly prestados?: number;
 }
 
 export interface NegocioConsola {

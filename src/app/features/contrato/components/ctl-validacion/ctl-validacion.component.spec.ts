@@ -95,12 +95,26 @@ describe('CtlValidacionComponent', () => {
     expect(el.textContent).toContain('PDF de máximo 10 MB');
   });
 
-  it('Given que el servidor falla, When se valida, Then muestra un error genérico y deja la vista operable', () => {
+  it('Given que el servicio de lectura no responde, When se valida, Then adjunta el certificado y avisa sin bloquear', () => {
     const { fixture, cmp, el } = crear(jest.fn().mockReturnValue(throwError(() => ({ status: 503 }))));
+    const adjuntos: File[] = [];
+    cmp.archivo.subscribe((f: File) => adjuntos.push(f));
     cmp.validar({ id: 'certificadoTradicion', archivo: pdf() });
     fixture.detectChanges();
 
-    expect(el.textContent).toContain('No pudimos validar el certificado');
+    expect(adjuntos).toHaveLength(1);
+    expect(el.textContent).toContain('Certificado adjunto sin validar');
     expect(el.querySelector('app-doc-uploader')).not.toBeNull();
+  });
+
+  it('Given un archivo que no es un certificado legible, When se valida, Then lo rechaza y no lo adjunta', () => {
+    const { fixture, cmp, el } = crear(jest.fn().mockReturnValue(throwError(() => ({ status: 422 }))));
+    const adjuntos: File[] = [];
+    cmp.archivo.subscribe((f: File) => adjuntos.push(f));
+    cmp.validar({ id: 'certificadoTradicion', archivo: pdf() });
+    fixture.detectChanges();
+
+    expect(adjuntos).toHaveLength(0);
+    expect(el.textContent).toContain('Revisa el certificado');
   });
 });

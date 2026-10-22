@@ -33,15 +33,6 @@
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-modal);
   animation: de-entrada var(--duration-base) var(--ease-out);
-
-  // Franja superior en el color del estado, como la franja corporativa de app-modal-dialog.
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto;
-    height: 4px;
-    background: var(--de-color);
-  }
 }
 
 .de--exito {

@@ -24,6 +24,7 @@ import {
 } from '../../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaTabla, OpcionSegmentada, SeccionFicha, Tab } from '../../../shared/components';
 import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
+import { plural } from '../../../core/util/plural';
 
 /**
  * Brokers REGISTRADOS y activos (los prospectos viven en su propia vista). Un botón por fila abre el
@@ -106,6 +107,12 @@ export class BrokersComponent {
   protected readonly actividad = signal<readonly Movimiento[]>([]);
   protected readonly acuerdo = signal('20');
   protected readonly comercialDestino = signal('');
+  /** Correo de acceso a corregir (auditoría de producción BP2/PR22). */
+  protected readonly correoNuevo = signal('');
+  protected readonly correoValido = computed(() => {
+    const c = this.correoNuevo().trim();
+    return /^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(c) && c.toLowerCase() !== (this.seleccionado()?.correo ?? '').toLowerCase();
+  });
   protected readonly guardando = signal(false);
   /** Acuerdos de comisión (catálogo `acuerdo_comision`). */
   protected readonly opcionesAcuerdo: readonly OpcionSegmentada[] = inject(CatalogoService)
@@ -186,6 +193,7 @@ export class BrokersComponent {
     this.pestana.set('detalle');
     this.acuerdo.set(String(b.porcentajeComision));
     this.comercialDestino.set('');
+    this.correoNuevo.set(b.correo ?? '');
     this.actividad.set([]);
     this.consola
       .actividadBroker(b.id)
@@ -197,19 +205,53 @@ export class BrokersComponent {
     return (evento.target as HTMLSelectElement).value;
   }
 
+  /** Cambia el acuerdo con confirmación: es una acción de dinero y queda en la actividad (auditoría PR30, PR33). */
   protected guardarAcuerdo(): void {
     const b = this.seleccionado();
-    if (!b) return;
-    this.ejecutar(this.admin.cambiarComision(b.id, Number(this.acuerdo())),
-      `Acuerdo de ${b.nombre} actualizado al ${this.acuerdo()} %.`);
+    if (!b || Number(this.acuerdo()) === b.porcentajeComision) return;
+    this.feedback.info({
+      titulo: 'Cambiar acuerdo de comisión',
+      mensaje: `${b.nombre} pasará de ${b.porcentajeComision} % a ${this.acuerdo()} %. Aplica a las pólizas que se expidan desde ahora; las ya expedidas conservan su porcentaje. El cambio queda registrado en su actividad.`,
+      acciones: { confirmar: 'Cambiar acuerdo', cancelar: 'Cancelar' },
+      alResolver: (r) => {
+        if (r !== 'confirmar') return;
+        this.ejecutar(this.admin.cambiarComision(b.id, Number(this.acuerdo())),
+          `Acuerdo de ${b.nombre} actualizado al ${this.acuerdo()} %.`);
+      },
+    });
   }
 
+  /** Reasigna con confirmación y vista previa de lo que se mueve (auditoría PR26, PR27). */
   protected reasignar(): void {
     const b = this.seleccionado();
     if (!b || !this.comercialDestino()) return;
     const destino = this.comerciales().find((c) => c.codigo === this.comercialDestino());
-    this.ejecutar(this.admin.asignarComercial(b.id, this.comercialDestino()),
-      `${b.nombre} y todos sus negocios pasaron a ${destino?.nombre ?? this.comercialDestino()}.`);
+    const nombreDestino = destino?.nombre ?? this.comercialDestino();
+    this.feedback.info({
+      titulo: 'Reasignar broker',
+      mensaje: `${b.nombre} y sus ${plural(b.negocios, 'negocio', 'negocios')} (${plural(b.polizas, 'póliza', 'pólizas')}) pasarán a ${nombreDestino}. Cada negocio registra el cambio en su historial y queda en la actividad del broker.`,
+      acciones: { confirmar: 'Reasignar', cancelar: 'Cancelar' },
+      alResolver: (r) => {
+        if (r !== 'confirmar') return;
+        this.ejecutar(this.admin.asignarComercial(b.id, this.comercialDestino()),
+          `${b.nombre} y todos sus negocios pasaron a ${nombreDestino}.`);
+      },
+    });
+  }
+
+  protected actualizarCorreo(): void {
+    const b = this.seleccionado();
+    if (!b || !this.correoValido()) return;
+    const correo = this.correoNuevo().trim();
+    this.feedback.info({
+      titulo: 'Actualizar correo de acceso',
+      mensaje: `El correo de ${b.nombre} pasará a ${correo} y le enviaremos ahí el enlace para crear su contraseña.`,
+      acciones: { confirmar: 'Actualizar y enviar', cancelar: 'Cancelar' },
+      alResolver: (r) => {
+        if (r !== 'confirmar') return;
+        this.ejecutar(this.consola.actualizarCorreoBroker(b.id, correo), `Enviamos el enlace de acceso a ${correo}.`);
+      },
+    });
   }
 
   private ejecutar(accion: Observable<unknown>, exito: string): void {

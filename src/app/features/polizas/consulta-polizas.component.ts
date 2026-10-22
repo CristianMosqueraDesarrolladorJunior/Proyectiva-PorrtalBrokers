@@ -15,12 +15,14 @@ import {
   DataTableComponent,
   AlertBannerComponent,
   EscaleritaLoaderComponent,
+  InfoBoxComponent,
 } from '../../shared/components';
 import type { AccionFila, ColumnaTabla } from '../../shared/components';
 import { estadoABadge } from '../../shared/pipes/estado-badge';
 import { PolizasService } from '../../core/services/polizas.service';
 import { Poliza } from '../../core/models/poliza.model';
 import { esPolizaRenovable } from './poliza-renovable';
+import { fechaCorta } from '../../core/services/admin.helpers';
 import { computed } from '@angular/core';
 
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -32,7 +34,7 @@ type EstadoConsulta = 'inicial' | 'consultando' | 'resultado' | 'error';
 const CEDULA_MIN_DIGITOS = 6;
 
 /** Cantidad máxima de dígitos aceptada para la cédula del cliente. */
-const CEDULA_MAX_DIGITOS = 10;
+const CEDULA_MAX_DIGITOS = 12;
 
 /**
  * ConsultaPolizasComponent — Consulta de Pólizas por cédula (Req 16).
@@ -62,12 +64,14 @@ const CEDULA_MAX_DIGITOS = 10;
     DataTableComponent,
     AlertBannerComponent,
     EscaleritaLoaderComponent,
+    InfoBoxComponent,
   ],
   templateUrl: './consulta-polizas.component.html',
   styleUrl: './consulta-polizas.component.scss',
 })
 export class ConsultaPolizasComponent {
   private readonly polizasService = inject(PolizasService);
+  private readonly catalogo = inject(CatalogoService);
 
   /**
    * Emite la Poliza seleccionada para iniciar el flujo de Renovacion (Req 16.4).
@@ -104,7 +108,7 @@ export class ConsultaPolizasComponent {
   /** Mensaje de error del campo cédula cuando corresponde mostrarlo. */
   protected errorCedula(): string {
     return this.intentoBusqueda() && !this.cedulaValida()
-      ? 'Ingresa una cédula válida (solo dígitos, entre 6 y 10 caracteres)'
+      ? 'Ingresa una cédula válida (solo dígitos, entre 6 y 12 caracteres)'
       : '';
   }
 
@@ -144,9 +148,11 @@ export class ConsultaPolizasComponent {
       numero: p.numero,
       cliente: p.cliente ?? '—',
       producto: p.producto,
-      fechaVencimiento: p.fechaVencimiento,
-      estado: p.estado,
-      estadoVariante: estadoABadge(p.estado).replace('badge-', ''),
+      fechaVencimiento: fechaCorta(p.fechaVencimiento),
+      fechaVencimientoOrden: p.fechaVencimiento,
+      // Etiqueta del catálogo, nunca el código en bruto (QA PL3: «PROXIMA_A_RENOVAR»).
+      estado: this.catalogo.etiqueta('estado_poliza', p.estado),
+      estadoVariante: estadoABadge(this.catalogo.etiqueta('estado_poliza', p.estado)).replace('badge-', ''),
       renovar: this.esRenovable(p) ? 'Renovar' : '',
     })),
   );
@@ -177,7 +183,17 @@ export class ConsultaPolizasComponent {
     this.consultar(this.cedula().trim());
   }
 
+  /** Cédula con la que se filtró la última consulta ('' = todo el portafolio). */
+  protected readonly documentoConsultado = signal('');
+
+  protected verTodas(): void {
+    this.cedula.set('');
+    this.intentoBusqueda.set(false);
+    this.consultar('');
+  }
+
   private consultar(documento: string): void {
+    this.documentoConsultado.set(documento);
 
     this.estado.set('consultando');
     this.polizas.set([]);

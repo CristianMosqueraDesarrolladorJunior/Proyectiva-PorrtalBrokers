@@ -32,3 +32,17 @@
 .info-box-texto {
   flex: 1;
 }
+
+// Enlaces proyectados: color de texto con contraste AA (el acento naranja no lo alcanza en texto pequeño).
+:host ::ng-deep a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+
+:host ::ng-deep a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

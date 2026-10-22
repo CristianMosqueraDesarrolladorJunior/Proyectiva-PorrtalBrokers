@@ -44,7 +44,7 @@ const MENSAJE_SERVICIO_NO_DISPONIBLE =
  * cuenta, para no revelar qué usuarios están registrados.
  */
 const MENSAJE_RESTABLECIMIENTO =
-  'Si tu cédula o correo están registrados, te enviamos un correo con el enlace para crear o cambiar tu contraseña. Si eres parte del equipo comercial, pide al administrador que restablezca tu acceso.';
+  'Si tu cédula o correo están registrados, te enviamos el enlace para crear o cambiar tu contraseña al correo que tienes registrado con Proyectiva. Revisa también la carpeta de spam. Si ya no usas ese correo, escríbele a tu asesor comercial. Si eres parte del equipo comercial, pide al administrador que restablezca tu acceso.';
 
 /** Mensaje cuando se pide restablecer la contraseña sin haber escrito el usuario. */
 const MENSAJE_USUARIO_REQUERIDO =

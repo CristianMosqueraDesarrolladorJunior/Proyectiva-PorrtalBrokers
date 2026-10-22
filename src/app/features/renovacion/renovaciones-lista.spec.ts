@@ -1,4 +1,4 @@
-import { accionRenovacion, ordenarPorUrgencia, prioridadRenovacion } from './renovaciones-lista';
+import { accionRenovacion, ordenarPorUrgencia, prioridadRenovacion, yaVencio } from './renovaciones-lista';
 
 const p = (estado: string, fechaVencimiento: string, gestion: string | null = null) => ({ estado, fechaVencimiento, gestion });
 
@@ -40,5 +40,13 @@ describe('renovaciones-lista', () => {
     expect(accionRenovacion(p('RENOVADA', '2026-01-01'))).toBe('Ver detalle');
     expect(accionRenovacion(p('NO_RENOVADA', '2026-01-01'))).toBe('Ver detalle');
     expect(accionRenovacion(p('A_PUNTO_DE_VENCER', '2026-11-01', 'Corrección pendiente'))).toBe('Corregir');
+  });
+
+  it('QA PL2: ya vencida pero aún renovable se reconoce (sigue «Renovar»); la que vence después, no', () => {
+    const hoy = new Date(2026, 9, 22);
+    expect(yaVencio(p('A_PUNTO_DE_VENCER', '2026-07-12'), hoy)).toBe(true);
+    expect(yaVencio(p('A_PUNTO_DE_VENCER', '2026-11-01'), hoy)).toBe(false);
+    expect(yaVencio(p('VENCIDA', '2026-01-01'), hoy)).toBe(false);
+    expect(accionRenovacion(p('A_PUNTO_DE_VENCER', '2026-07-12'))).toBe('Renovar');
   });
 });

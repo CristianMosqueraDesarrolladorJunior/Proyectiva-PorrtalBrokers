@@ -3,13 +3,13 @@
     eyebrow="Portafolio"
     tituloId="consulta-polizas-titulo"
     titulo="Consulta de pólizas"
-    subtitulo="Busca las pólizas de un propietario por su cédula y gestiona su cartera."
+    subtitulo="Tu portafolio de pólizas. Si quieres, filtra por la cédula del propietario."
   ></app-page-header>
 
   <form class="consulta-polizas__buscador" (ngSubmit)="buscar()">
     <app-form-field
       label="Cédula del propietario"
-      ayuda="Solo dígitos, entre 6 y 10 caracteres"
+      ayuda="Solo dígitos, entre 6 y 12 caracteres"
       [requerido]="true"
       [error]="errorCedula()"
       controlId="consulta-polizas-cedula"
@@ -52,9 +52,17 @@
           (accion)="onAccionPoliza($event)"
         ></app-data-table>
       } @else {
-        <app-alert-banner variante="warning" titulo="Sin pólizas">
-          No se encontraron pólizas asociadas a la cédula consultada.
-        </app-alert-banner>
+        <!-- Sin búsqueda es un estado vacío, no una advertencia (auditoría de producción PO1/FV10). -->
+        @if (documentoConsultado()) {
+          <app-info-box icono="search_off">
+            No encontramos pólizas para la cédula {{ documentoConsultado() }}.
+            <app-boton variante="ghost" (clicked)="verTodas()">Ver todas mis pólizas</app-boton>
+          </app-info-box>
+        } @else {
+          <app-info-box icono="policy">
+            Aún no tienes pólizas expedidas. Cuando expidamos las pólizas que radicaste, aparecerán aquí.
+          </app-info-box>
+        }
       }
     }
   }

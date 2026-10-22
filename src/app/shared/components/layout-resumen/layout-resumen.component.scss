@@ -29,13 +29,12 @@
   flex-direction: column;
   gap: var(--space-4);
 
+  // En tableta y celular el resultado va debajo del formulario: primero se digita, luego se ejecuta.
   @include mx.respond-to('tablet') {
     position: static;
-    order: -1;
   }
 
   @include mx.respond-to('mobile') {
     position: static;
-    order: -1;
   }
 }

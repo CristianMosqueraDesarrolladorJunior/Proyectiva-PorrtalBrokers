@@ -83,6 +83,11 @@ export class ConsolaService {
     return this.http.put<void>(`${this.base}/comerciales/${encodeURIComponent(codigo)}`, datos, this.opciones);
   }
 
+  /** Vacaciones del comercial: su cartera se reparte por turnos y vuelve a él al regresar. */
+  vacacionesComercial(codigo: string, enVacaciones: boolean): Observable<void> {
+    return this.http.patch<void>(`${this.base}/comerciales/${encodeURIComponent(codigo)}/vacaciones`, { enVacaciones }, this.opciones);
+  }
+
   activarComercial(codigo: string, activo: boolean): Observable<void> {
     return this.http.patch<void>(`${this.base}/comerciales/${encodeURIComponent(codigo)}/activo`, { activo }, this.opciones);
   }
@@ -160,6 +165,21 @@ export class ConsolaService {
   /** Fecha ISO de la última sincronización de renovaciones con el Warehouse ('' si nunca). */
   ultimaSincronizacionRenovaciones(): Observable<{ ultima: string }> {
     return this.http.get<{ ultima: string }>(`${this.base}/renovaciones/sincronizacion`, this.opciones);
+  }
+
+  /** El administrador corrige el correo de acceso de un broker y se le envía el enlace para crear su contraseña. */
+  /** Pasa un solo negocio a otro comercial (solo administrador). */
+  reasignarNegocio(radicado: string, comercial: string): Observable<void> {
+    return this.http.put<void>(`${this.base}/negocios/${encodeURIComponent(radicado)}/comercial`, { comercial }, this.opciones);
+  }
+
+  actualizarCorreoBroker(id: string, correo: string): Observable<void> {
+    return this.http.put<void>(`${this.base}/brokers/${encodeURIComponent(id)}/correo`, { correo }, this.opciones);
+  }
+
+  /** Historial de gestión de una renovación (la lista no lo trae, para no descargar megas). */
+  historialRenovacion(poliza: string): Observable<{ historial: string }> {
+    return this.http.get<{ historial: string }>(`${this.base}/renovaciones/${encodeURIComponent(poliza)}/historial`, this.opciones);
   }
 
   renovaciones(): Observable<readonly RenovacionConsola[]> {

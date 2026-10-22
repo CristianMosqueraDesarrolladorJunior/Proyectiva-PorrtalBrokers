@@ -104,7 +104,7 @@ const TOTAL_COLORES = 4;
       @if (plazoMeses > 0) {
         <p class="comm__nota">
           Cobra tus comisiones dentro de los {{ plazoMeses }} meses siguientes a la expedición de cada póliza
-          (regla del área). Si tienes dudas sobre una póliza antigua, consúltalo con tu asesor comercial.
+          (regla de Proyectiva). Si tienes dudas sobre una póliza antigua, consúltalo con tu asesor comercial.
         </p>
       }
     </article>

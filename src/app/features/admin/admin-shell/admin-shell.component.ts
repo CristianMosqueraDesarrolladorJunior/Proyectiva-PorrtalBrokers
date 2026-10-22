@@ -14,7 +14,7 @@ const ACCESOS_ADMIN: readonly AccesoSidebar[] = [
   { ruta: 'negocios', icono: 'description', etiqueta: 'Negocios' },
   { ruta: 'comerciales', icono: 'badge', etiqueta: 'Comerciales' },
   { ruta: 'prospectos', icono: 'how_to_reg', etiqueta: 'Prospectos' },
-  { ruta: 'polizas', icono: 'policy', etiqueta: 'Pólizas' },
+  // «Pólizas» se oculta del menú (la ruta sigue existiendo).
   { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
   // "Referidos" queda oculto del menú (la ruta sigue existiendo).
   { ruta: 'comisiones', icono: 'receipt_long', etiqueta: 'Cuentas de cobro' },
@@ -25,7 +25,6 @@ const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
   { ruta: 'brokers', icono: 'groups', etiqueta: 'Mis brokers' },
   { ruta: 'prospectos', icono: 'how_to_reg', etiqueta: 'Mis prospectos' },
   { ruta: 'negocios', icono: 'description', etiqueta: 'Negocios' },
-  { ruta: 'polizas', icono: 'policy', etiqueta: 'Pólizas' },
   { ruta: 'comisiones', icono: 'receipt_long', etiqueta: 'Cuentas de cobro' },
   { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
 ];

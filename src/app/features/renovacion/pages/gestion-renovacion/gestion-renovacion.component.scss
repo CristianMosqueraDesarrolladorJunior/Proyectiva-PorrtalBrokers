@@ -404,10 +404,6 @@
 
   &__sidebar {
     position: relative;
-
-    @media (max-width: 639px) {
-      order: -1;
-    }
   }
 }
 

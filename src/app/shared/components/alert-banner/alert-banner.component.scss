@@ -17,22 +17,36 @@
   border: 1px solid var(--color-border);
 }
 
+// Fondo blanco y color sólido del estado en el borde y el ícono (manual de imagen de Proyectiva).
+.alert-banner {
+  background: var(--sb-surface);
+}
+
 // --- Variante success (verde) ---
 .alert-success {
-  background: var(--color-badge-success-bg);
   border-color: var(--color-success);
+
+  .alert-icon {
+    color: var(--color-success);
+  }
 }
 
 // --- Variante warning (naranja) ---
 .alert-warning {
-  background: var(--color-badge-warning-bg);
   border-color: var(--color-accent);
+
+  .alert-icon {
+    color: var(--color-accent);
+  }
 }
 
 // --- Variante error (rojo) ---
 .alert-error {
-  background: var(--color-badge-danger-bg);
   border-color: var(--color-danger);
+
+  .alert-icon {
+    color: var(--color-danger);
+  }
 }
 
 .alert-icon {
