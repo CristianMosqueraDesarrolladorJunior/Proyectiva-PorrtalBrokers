@@ -242,7 +242,7 @@ const NOMBRE_PROCESO: Record<string, string> = {
 
 const FUENTE_PROCESO: Record<string, string> = {
   consolidado: 'Consolidado · cada 5 min',
-  renovaciones: 'Warehouse de renovaciones (JSON) · cada 15 min',
+  renovaciones: 'Hoja de renovaciones (JSON) · cada 15 min',
   comisiones: 'Base Facturación · cada 10 min',
   negocios: 'Seguimiento Corretaje (Negocios) · cada 30 min',
   usuarios_brokers: 'Usuarios Brokers (columna EJECUTIVO) · cada 30 min',

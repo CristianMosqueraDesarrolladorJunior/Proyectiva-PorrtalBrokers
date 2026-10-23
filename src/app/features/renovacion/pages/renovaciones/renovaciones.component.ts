@@ -33,6 +33,7 @@ import {
 } from '../../../../core/services/renovacion.service';
 import type { Poliza } from '../../../../core/models/poliza.model';
 import { cop, fechaCorta } from '../../../../core/services/admin.helpers';
+import { seccionesDatosRenovacion, type DatosRenovacion } from '../../../../core/util/datos-renovacion';
 import { SITUACION, accionDe, accionRenovacion, ordenarPorUrgencia } from '../../renovaciones-lista';
 
 
@@ -239,8 +240,13 @@ export class RenovacionesComponent {
           { etiqueta: 'Corrección pedida por el área', valor: c?.motivoCorreccion ?? null, ancho: true },
         ],
       },
+      // Todo el registro de la póliza en el Warehouse (hoja JSON).
+      ...seccionesDatosRenovacion(this.datosWarehouse()),
     ];
   });
+
+  /** Registro completo de la póliza en el Warehouse; se pide al abrir la ficha. */
+  protected readonly datosWarehouse = signal<DatosRenovacion | null>(null);
 
   /** Abre la ficha de la póliza elegida (fila o botón «Ver detalle»). */
   protected onSeleccionFila(indice: number): void {
@@ -251,6 +257,11 @@ export class RenovacionesComponent {
     this.renovacionService.condiciones(poliza.numero).subscribe({
       next: (c) => this.condiciones.set(c),
       error: () => this.condiciones.set(null),
+    });
+    this.datosWarehouse.set(null);
+    this.renovacionService.datos(poliza.numero).subscribe({
+      next: (d) => this.datosWarehouse.set(d),
+      error: () => this.datosWarehouse.set(null),
     });
   }
 

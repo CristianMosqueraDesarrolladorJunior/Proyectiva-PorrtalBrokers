@@ -75,7 +75,7 @@
           <summary class="resumen__grupo">Renovaciones y retención</summary>
         <app-grid-layout tipo="kpi-grid">
           <app-kpi-card label="Retención de pólizas" [valor]="retencion(r) + '%'" icono="autorenew" [sub]="r.indicadores.renovadas + ' renovadas de ' + (r.indicadores.renovadas + r.indicadores.noRenovadas) + ' cerradas'" [variante]="retencion(r) >= 50 ? 'exito' : 'alerta'" />
-          <app-kpi-card label="Renovaciones en gestión" [valor]="r.indicadores.renovacionesEnGestion" icono="pending_actions" [sub]="r.indicadores.renovacionesTotal + ' pólizas en el Warehouse de renovaciones'" />
+          <app-kpi-card label="Renovaciones en gestión" [valor]="r.indicadores.renovacionesEnGestion" icono="pending_actions" [sub]="r.indicadores.renovacionesTotal + ' pólizas en la hoja de renovaciones'" />
           <app-kpi-card label="Desocupaciones" [valor]="r.indicadores.desocupaciones" icono="logout" [tono]="r.indicadores.desocupaciones > 0 ? 'danger' : 'none'" sub="Inmuebles que el arrendatario entrega" />
           <app-kpi-card label="Casos especiales" [valor]="r.indicadores.casosEspeciales" icono="emergency" sub="Requieren decisión técnica" />
         </app-grid-layout>
@@ -138,10 +138,10 @@
     />
   </app-form-section-card>
 
-  <!-- Sincronización con el Warehouse: al final de la vista, máximo 5 filas por página. -->
+  <!-- Sincronización con las hojas del área: al final de la vista, máximo 5 filas por página. -->
   @if (sincronizaciones().length) {
     <details class="resumen__seccion" open>
-      <summary class="resumen__grupo">Sincronización con el Warehouse</summary>
+      <summary class="resumen__grupo">Sincronización con las hojas del área</summary>
     <app-data-table
       [columnas]="columnasSincronizacion"
       [filas]="filasSincronizacion()"

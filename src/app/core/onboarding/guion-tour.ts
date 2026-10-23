@@ -125,7 +125,7 @@ function consola(perfil: 'ADMINISTRADOR' | 'COMERCIAL'): Readonly<Record<string,
       { icono: 'download', titulo: 'Ver documento', texto: 'Abre cualquier cuenta para revisarla.', objetivo: TABLA },
     ],
     '/admin/renovaciones': [
-      { icono: 'sync', titulo: 'Renovaciones del Warehouse', texto: 'Las renovaciones de la cartera y la fecha de la última actualización.', objetivo: ['.ren-sincronizacion', ...CIFRAS] },
+      { icono: 'sync', titulo: 'Renovaciones de la hoja del área', texto: 'Las renovaciones de la cartera y la fecha de la última actualización.', objetivo: ['.ren-sincronizacion', ...CIFRAS] },
       { icono: 'filter_alt', titulo: 'Filtra', texto: 'Por estado o casos especiales.', objetivo: FILTROS },
       { icono: 'autorenew', titulo: 'Gestionar', texto: admin ? 'Historial, cadena de gestión y documentos de cada renovación.' : 'Si una está en corrección, puedes reemplazar sus documentos.', objetivo: GESTIONAR },
     ],

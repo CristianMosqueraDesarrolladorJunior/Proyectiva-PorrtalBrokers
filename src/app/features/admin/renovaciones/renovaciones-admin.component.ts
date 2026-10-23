@@ -11,6 +11,7 @@ import { COLUMNA_GESTIONAR, COLUMNAS_FECHAS, celdasFechas, cop, fechaCorta, fech
 import { ConsolaService } from '../../../core/services/consola.service';
 import { RenovacionService } from '../../../core/services/renovacion.service';
 import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion';
+import { seccionesDatosRenovacion, type DatosRenovacion } from '../../../core/util/datos-renovacion';
 import {
   BadgeEstadoComponent,
   BarraAccionesComponent,
@@ -330,8 +331,12 @@ export class RenovacionesAdminComponent {
           { etiqueta: 'Último movimiento', valor: fechaHora(r.ultimoMovimiento ?? r.creado) },
         ],
       },
+      // Todo el registro de la póliza en el Warehouse (hoja JSON).
+      ...seccionesDatosRenovacion(this.datosWarehouse()),
     ];
   });
+
+  protected readonly datosWarehouse = signal<DatosRenovacion | null>(null);
 
   // --- Modal de inducción ---
   protected readonly induccion = signal<InduccionAdminResponse | null>(null);
@@ -417,8 +422,8 @@ export class RenovacionesAdminComponent {
   protected ingerir(): void {
     const actuales = this.renovaciones().length;
     this.feedback.info({
-      titulo: 'Actualizar desde el Warehouse',
-      mensaje: `El listado actual (${plural(actuales, 'renovación', 'renovaciones')}) se reemplazará por lo que traiga el Warehouse. ¿Quieres continuar?`,
+      titulo: 'Actualizar desde la hoja de renovaciones',
+      mensaje: `El listado actual (${plural(actuales, 'renovación', 'renovaciones')}) se reemplazará por lo que traiga la hoja de renovaciones. ¿Quieres continuar?`,
       acciones: { confirmar: 'Actualizar', cancelar: 'Cancelar' },
       alResolver: (r) => {
         if (r === 'confirmar') this.ejecutarIngesta();
@@ -434,7 +439,7 @@ export class RenovacionesAdminComponent {
       .subscribe({
         next: (r) => {
           this.ingiriendo.set(false);
-          this.feedback.toast({ variante: 'exito', mensaje: `Se actualizaron ${r.renovaciones} renovaciones desde el Warehouse.` });
+          this.feedback.toast({ variante: 'exito', mensaje: `Se actualizaron ${r.renovaciones} renovaciones desde la hoja de renovaciones.` });
           this.cargar();
         },
         error: (err: unknown) => {
@@ -449,6 +454,17 @@ export class RenovacionesAdminComponent {
     if (!r) return;
     this.renovacion.set(r);
     this.pestana.set('detalle');
+    // Todo el registro del Warehouse (hoja JSON) para la ficha.
+    this.datosWarehouse.set(null);
+    this.consola
+      .datosRenovacion(r.poliza)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (d) => {
+          if (this.renovacion()?.poliza === r.poliza) this.datosWarehouse.set(d);
+        },
+        error: () => this.datosWarehouse.set(null),
+      });
     // El historial no viaja en la lista (pesaba megas): se pide al abrir la renovación (auditoría PR4).
     if (!r.historial) {
       this.consola

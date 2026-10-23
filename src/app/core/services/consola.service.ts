@@ -210,6 +210,11 @@ export class ConsolaService {
     return this.http.put<void>(`${this.base}/brokers/${encodeURIComponent(id)}/correo`, { correo }, this.opciones);
   }
 
+  /** Registro completo de la póliza en el Warehouse (todos los campos del JSON). */
+  datosRenovacion(poliza: string): Observable<Readonly<Record<string, unknown>>> {
+    return this.http.get<Record<string, unknown>>(`${this.base}/renovaciones/${encodeURIComponent(poliza)}/datos`, this.opciones);
+  }
+
   /** Historial de gestión de una renovación (la lista no lo trae, para no descargar megas). */
   historialRenovacion(poliza: string): Observable<{ historial: string }> {
     return this.http.get<{ historial: string }>(`${this.base}/renovaciones/${encodeURIComponent(poliza)}/historial`, this.opciones);

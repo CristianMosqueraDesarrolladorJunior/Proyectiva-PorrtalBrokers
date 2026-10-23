@@ -3,18 +3,18 @@
     [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="renovaciones-admin-titulo"
     titulo="Renovaciones"
-    subtitulo="Renovaciones del Warehouse tal como las gestiona el equipo comercial, sus casos especiales y las inducciones de pólizas vencidas."
+    subtitulo="Renovaciones de la hoja del área tal como las gestiona el equipo comercial, sus casos especiales y las inducciones de pólizas vencidas."
   >
     @if (esAdmin) {
       <div acciones>
         <app-boton variante="outline" icono="sync" [disabled]="ingiriendo()" (clicked)="ingerir()">
-          {{ ingiriendo() ? 'Actualizando…' : 'Actualizar desde el Warehouse' }}
+          {{ ingiriendo() ? 'Actualizando…' : 'Actualizar desde la hoja de renovaciones' }}
         </app-boton>
       </div>
     }
   </app-page-header>
   @if (ultimaSincronizacion()) {
-    <p class="ren-sincronizacion">Última actualización desde el Warehouse: {{ ultimaSincronizacion() }}</p>
+    <p class="ren-sincronizacion">Última actualización desde la hoja de renovaciones: {{ ultimaSincronizacion() }}</p>
   }
 
   <app-grid-layout tipo="kpi-grid">
@@ -106,7 +106,7 @@
       entidad="renovaciones"
       iconoVacio="update"
       tituloVacio="No hay renovaciones en este filtro"
-      descripcionVacio="Actualiza desde el Warehouse para traer la muestra."
+      descripcionVacio="Actualiza desde la hoja de renovaciones para traer las pólizas."
       (reintentar)="cargar()"
     >
       <app-data-table
@@ -159,7 +159,7 @@
           (input)="comentarioCorreccion.set(valorTexto($event))"></textarea>
       </app-form-field>
     } @else {
-      <app-bitacora [eventos]="historial()" mensajeVacio="Sin historial de gestión en el Warehouse" />
+      <app-bitacora [eventos]="historial()" mensajeVacio="Sin historial de gestión en la hoja de renovaciones" />
     }
   }
   @if (renovacion() && pestana() === 'corregir') {

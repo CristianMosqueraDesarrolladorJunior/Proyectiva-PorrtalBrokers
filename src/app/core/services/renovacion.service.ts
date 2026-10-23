@@ -77,6 +77,11 @@ export class RenovacionService {
     });
   }
 
+  /** Registro completo de una póliza del broker en el Warehouse (todos los campos del JSON). */
+  datos(poliza: string): Observable<Readonly<Record<string, unknown>>> {
+    return this.http.get<Record<string, unknown>>(`${this.baseUrl}/${encodeURIComponent(poliza)}/datos`, { withCredentials: true });
+  }
+
   /**
    * Notifica una No Renovación con su motivo (Req 22).
    * @param request número de póliza, motivo y observaciones opcionales.
