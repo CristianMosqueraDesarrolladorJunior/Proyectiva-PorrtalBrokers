@@ -6,6 +6,7 @@ import type { CuentaCobroResponse } from '../models/comisiones.model';
 import type { ComisionDia } from '../../shared/components/comisiones-mes/comisiones-mes.component';
 import type {
   RendimientoConsola,
+  SincronizacionConsola,
   BrokerConsola,
   ComercialConsola,
   CredencialGenerada,
@@ -32,6 +33,11 @@ export class ConsolaService {
 
   resumen(): Observable<ResumenConsola> {
     return this.http.get<ResumenConsola>(`${this.base}/resumen`, this.opciones);
+  }
+
+  /** Bitácora: última corrida de cada sincronización con el Warehouse. */
+  sincronizaciones(): Observable<readonly SincronizacionConsola[]> {
+    return this.http.get<SincronizacionConsola[]>(`${this.base}/sincronizaciones`, this.opciones);
   }
 
   /** Rendimiento y conversión (cartera del comercial o todo). */

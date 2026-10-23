@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval, startWith, switchMap } from 'rxjs';
 
-import type { Movimiento, RendimientoConsola, ResumenConsola } from '../../../core/models/consola.model';
+import type { Movimiento, RendimientoConsola, ResumenConsola, SincronizacionConsola } from '../../../core/models/consola.model';
 import { ComisionesMesComponent, type ComisionDia } from '../../../shared/components/comisiones-mes/comisiones-mes.component';
 import { AdminService } from '../../../core/services/admin.service';
 import { celdasFechas, copCompacto } from '../../../core/services/admin.helpers';
@@ -57,6 +57,28 @@ export class ResumenComponent {
   protected readonly mesGrafica = signal(mesIso(new Date()));
   protected readonly comisionesMes = signal<readonly ComisionDia[] | null>(null);
 
+  /** Sincronizaciones con el Warehouse: cuándo corrió cada una y si falló (transacciones observables). */
+  protected readonly sincronizaciones = signal<readonly SincronizacionConsola[]>([]);
+  protected readonly columnasSincronizacion: readonly ColumnaTabla[] = [
+    { key: 'proceso', header: 'Proceso', tipo: 'principal' },
+    { key: 'ultima', header: 'Última corrida' },
+    { key: 'detalle', header: 'Resultado', tipo: 'principal' },
+    { key: 'estado', header: 'Estado', tipo: 'badge' },
+  ];
+  protected readonly filasSincronizacion = computed<readonly FilaTabla[]>(() =>
+    this.sincronizaciones().map((s) => ({
+      proceso: NOMBRE_PROCESO[s.proceso] ?? s.proceso,
+      procesoSub: FUENTE_PROCESO[s.proceso] ?? '',
+      ultima: new Date(s.ultimaCorrida).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }),
+      detalle: s.error ? 'No se pudo leer la hoja' : s.detalle ?? `${s.filas} filas`,
+      detalleSub: s.error
+        ? `${s.error}${s.ultimaExitosa ? ' · último dato bueno: ' + new Date(s.ultimaExitosa).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : ''}`
+        : '',
+      estado: s.error ? 'Con error' : 'Al día',
+      estadoVariante: s.error ? 'danger' : 'success',
+    })),
+  );
+
   /** Porcentaje entero de a sobre b (0 si b es 0). */
   protected pct(a: number, b: number): number {
     return b ? Math.round((a / b) * 100) : 0;
@@ -66,6 +88,10 @@ export class ResumenComponent {
     const [a, m] = this.mesGrafica().split('-').map(Number);
     this.mesGrafica.set(mesIso(new Date(a, m - 1 + delta, 1)));
     this.cargarComisionesMes();
+    this.consola
+      .sincronizaciones()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (s) => this.sincronizaciones.set(s), error: () => this.sincronizaciones.set([]) });
   }
 
   private cargarComisionesMes(): void {
@@ -173,3 +199,17 @@ export class ResumenComponent {
 function mesIso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
+
+const NOMBRE_PROCESO: Record<string, string> = {
+  consolidado: 'Estados de radicación',
+  renovaciones: 'Renovaciones',
+  comisiones: 'Pagos de comisión',
+  negocios: 'Histórico de negocios',
+};
+
+const FUENTE_PROCESO: Record<string, string> = {
+  consolidado: 'Consolidado · cada 5 min',
+  renovaciones: 'Warehouse de renovaciones (JSON) · cada 15 min',
+  comisiones: 'Base Facturación · cada 10 min',
+  negocios: 'Seguimiento Corretaje (Negocios) · cada 30 min',
+};

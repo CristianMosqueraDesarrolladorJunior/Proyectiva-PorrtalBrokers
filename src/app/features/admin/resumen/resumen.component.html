@@ -69,6 +69,17 @@
           </app-grid-layout>
         }
 
+        @if (sincronizaciones().length) {
+          <h2 class="resumen__grupo">Sincronización con el Warehouse</h2>
+          <app-data-table
+            [columnas]="columnasSincronizacion"
+            [filas]="filasSincronizacion()"
+            [total]="filasSincronizacion().length"
+            [tamanoPagina]="10"
+            ariaLabel="Última corrida de cada sincronización con las hojas del área"
+          />
+        }
+
         <div class="resumen__grafica">
           <div class="resumen__grafica-nav">
             <button type="button" class="resumen__grafica-btn" aria-label="Mes anterior" (click)="cambiarMesGrafica(-1)">‹</button>

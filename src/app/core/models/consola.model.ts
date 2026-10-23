@@ -180,6 +180,16 @@ export interface TopBroker {
   readonly comision: number;
 }
 
+/** Última corrida de una sincronización Sheet → portal (bitácora). */
+export interface SincronizacionConsola {
+  readonly proceso: string;
+  readonly ultimaCorrida: string;
+  readonly filas: number;
+  readonly detalle: string | null;
+  readonly error: string | null;
+  readonly ultimaExitosa: string | null;
+}
+
 /** Rendimiento y conversión de la cartera del comercial (o de todo, para el administrador). */
 export interface RendimientoConsola {
   readonly prospectosActivos: number;
