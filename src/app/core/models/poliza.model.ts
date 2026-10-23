@@ -17,4 +17,11 @@ export interface Poliza {
   readonly gestion?: string | null;
   /** Valor literal del Warehouse (p. ej. "Autogestionado", "Desocupación"). */
   readonly estadoWarehouse?: string | null;
+  /** Qué se puede hacer hoy (regla única del backend para broker, comercial y administrador). */
+  readonly accion?: AccionRenovacion;
+  /** Renovada y con recaudo de la nueva vigencia en el libro de comisiones. */
+  readonly pagada?: boolean;
 }
+
+/** Acción de una renovación: solo RENOVAR, CORREGIR e INDUCCION se gestionan. */
+export type AccionRenovacion = 'RENOVAR' | 'CORREGIR' | 'INDUCCION' | 'EN_PROCESO' | 'CERRADA';

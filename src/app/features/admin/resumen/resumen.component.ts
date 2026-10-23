@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval, startWith, switchMap } from 'rxjs';
 
-import type { Movimiento, ResumenConsola } from '../../../core/models/consola.model';
+import type { Movimiento, RendimientoConsola, ResumenConsola } from '../../../core/models/consola.model';
+import { ComisionesMesComponent, type ComisionDia } from '../../../shared/components/comisiones-mes/comisiones-mes.component';
 import { AdminService } from '../../../core/services/admin.service';
 import { celdasFechas, copCompacto } from '../../../core/services/admin.helpers';
 import { ConsolaService } from '../../../core/services/consola.service';
@@ -37,6 +38,7 @@ const REFRESCO_MS = 30_000;
     KpiCardComponent,
     PageHeaderComponent,
     RankingBarrasComponent,
+    ComisionesMesComponent,
   ],
   templateUrl: './resumen.component.html',
   styleUrls: ['../admin-comun.scss'],
@@ -49,6 +51,30 @@ export class ResumenComponent {
   protected readonly esAdmin = inject(AdminService).esAdmin();
   protected readonly perfil = this.session.perfil;
   protected readonly compacto = copCompacto;
+
+  /** Rendimiento y conversión; si no carga, el resumen sigue igual. */
+  protected readonly rendimiento = signal<RendimientoConsola | null>(null);
+  protected readonly mesGrafica = signal(mesIso(new Date()));
+  protected readonly comisionesMes = signal<readonly ComisionDia[] | null>(null);
+
+  /** Porcentaje entero de a sobre b (0 si b es 0). */
+  protected pct(a: number, b: number): number {
+    return b ? Math.round((a / b) * 100) : 0;
+  }
+
+  protected cambiarMesGrafica(delta: number): void {
+    const [a, m] = this.mesGrafica().split('-').map(Number);
+    this.mesGrafica.set(mesIso(new Date(a, m - 1 + delta, 1)));
+    this.cargarComisionesMes();
+  }
+
+  private cargarComisionesMes(): void {
+    this.comisionesMes.set(null);
+    this.consola
+      .comisionesPorDia(this.mesGrafica())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (d) => this.comisionesMes.set(d), error: () => this.comisionesMes.set([]) });
+  }
 
   /** Retención = renovadas / pólizas con decisión cerrada (renovadas + no renovadas). */
   protected retencion(r: ResumenConsola): number {
@@ -104,6 +130,11 @@ export class ResumenComponent {
 
   constructor() {
     this.cargarResumen();
+    this.consola
+      .rendimiento()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (r) => this.rendimiento.set(r), error: () => this.rendimiento.set(null) });
+    this.cargarComisionesMes();
     // Movimientos en vivo: primera carga inmediata y luego cada 30 s mientras la vista esté abierta.
     interval(REFRESCO_MS)
       .pipe(
@@ -137,4 +168,8 @@ export class ResumenComponent {
         },
       });
   }
+}
+
+function mesIso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }

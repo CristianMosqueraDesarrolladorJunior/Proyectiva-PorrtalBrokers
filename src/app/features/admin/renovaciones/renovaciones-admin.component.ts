@@ -1,3 +1,4 @@
+import { SITUACION } from '../../renovacion/renovaciones-lista';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -127,13 +128,14 @@ export class RenovacionesAdminComponent {
 
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'poliza', header: 'Póliza', tipo: 'principal', ordenable: true },
-    { key: 'asegurado', header: 'Asegurado', tipo: 'principal', ordenable: true },
+    { key: 'vence', header: 'Vence', ordenable: true },
+    { key: 'situacion', header: 'Situación', tipo: 'badge', ordenable: true },
+    { key: 'gestion', header: 'Estado del área', tipo: 'principal', ordenable: true },
+    { key: 'pago', header: 'Pago', ordenable: true },
     { key: 'broker', header: 'Broker', tipo: 'principal', ordenable: true },
+    { key: 'asegurado', header: 'Asegurado', tipo: 'principal', ordenable: true },
     { key: 'gestor', header: 'Gestor', ordenable: true },
     { key: 'canon', header: 'Canon', alinear: 'derecha', ordenable: true },
-    { key: 'vence', header: 'Vence', ordenable: true },
-    { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
-    { key: 'gestion', header: 'Gestión actual', tipo: 'principal' },
     ...COLUMNAS_FECHAS,
     COLUMNA_GESTIONAR,
   ];
@@ -157,12 +159,15 @@ export class RenovacionesAdminComponent {
       canonOrden: r.canon ?? 0,
       vence: r.vence ? fechaCorta(r.vence) : '—',
       venceOrden: r.vence ?? '',
-      estado: (this.estados[r.estado] ?? { etiqueta: r.estado }).etiqueta,
-      estadoVariante: (this.estados[r.estado] ?? { variante: 'info' as VarianteBadge }).variante,
-      gestion: r.estadoWarehouse ?? 'Sin gestión',
+      // Misma regla que el portafolio del broker: la situación sale de la acción del backend.
+      situacion: SITUACION[r.accion ?? 'RENOVAR'].texto,
+      situacionVariante: SITUACION[r.accion ?? 'RENOVAR'].variante,
+      gestion: r.estadoWarehouse || (this.estados[r.estado] ?? { etiqueta: 'Sin gestión' }).etiqueta,
       gestionSub: r.casoEspecial ? `Caso: ${r.casoEspecial}` : '',
+      pago: r.pagada ? 'Pagada' : r.estado === 'renovada' ? 'Sin recaudo aún' : '—',
       ...celdasFechas(r.creado, r.ultimoMovimiento),
       gestionar: '',
+      gestionarTexto: r.accion === 'CERRADA' || r.accion === 'EN_PROCESO' ? 'Ver detalle' : 'Gestionar',
     })),
   );
 

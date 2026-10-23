@@ -27,10 +27,8 @@ import {
   type PortafolioRenovaciones,
 } from '../../../../core/services/renovacion.service';
 import type { Poliza } from '../../../../core/models/poliza.model';
-import { estadoABadge } from '../../../../shared/pipes/estado-badge';
-import { esPolizaVencida } from '../../induccion-habilitacion';
 import { fechaCorta } from '../../../../core/services/admin.helpers';
-import { accionRenovacion, ordenarPorUrgencia, yaVencio } from '../../renovaciones-lista';
+import { SITUACION, accionDe, accionRenovacion, ordenarPorUrgencia } from '../../renovaciones-lista';
 
 
 /**
@@ -102,31 +100,31 @@ export class RenovacionesComponent {
   /** Columnas del DataTable de pólizas, con sort, insignia y acción (Req 16.2, 16.3). */
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'numero', header: 'Póliza', ordenable: true },
-    { key: 'producto', header: 'Producto', ordenable: true },
-    { key: 'fechaVencimiento', header: 'Vencimiento', ordenable: true },
-    { key: 'estado', header: 'Vigencia', tipo: 'badge', ordenable: true },
-    { key: 'gestion', header: 'Estado de la gestión', tipo: 'principal', ordenable: true },
+    { key: 'fechaVencimiento', header: 'Vence', ordenable: true },
+    { key: 'situacion', header: 'Situación', tipo: 'badge', ordenable: true },
+    { key: 'gestion', header: 'Estado del área', tipo: 'principal', ordenable: true },
+    { key: 'pago', header: 'Pago', ordenable: true },
     { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Renovar', alinear: 'derecha' },
   ];
 
-  /** Filas mapeadas para el DataTable, con la variante de insignia por estado. */
+  /** Filas: la situación sale de la acción del backend (regla única); el botón solo gestiona lo pendiente. */
   protected readonly filas = computed(() => {
     const polizas = this.polizasVisibles();
-    return polizas.map((p) => ({
-      numero: p.numero,
-      producto: p.producto,
-      fechaVencimiento: fechaCorta(p.fechaVencimiento),
-      fechaVencimientoOrden: p.fechaVencimiento,
-      // Ya venció pero aún se puede renovar (plazo del área): se dice «Vencida», no «A punto de vencer» (QA PL2).
-      estado: yaVencio(p) ? 'Vencida' : this.catalogo.etiqueta('estado_poliza', p.estado),
-      estadoVariante: esPolizaVencida(p) || yaVencio(p)
-        ? 'danger'
-        : estadoABadge(this.catalogo.etiqueta('estado_poliza', p.estado)).replace('badge-', ''),
-      gestion: p.gestion ?? 'Sin gestión aún',
-      gestionSub: p.estadoWarehouse ?? '',
-      gestionar: '',
-      gestionarTexto: accionRenovacion(p),
-    }));
+    return polizas.map((p) => {
+      const situacion = SITUACION[accionDe(p)];
+      return {
+        numero: p.numero,
+        fechaVencimiento: fechaCorta(p.fechaVencimiento),
+        fechaVencimientoOrden: p.fechaVencimiento,
+        situacion: situacion.texto,
+        situacionVariante: situacion.variante,
+        gestion: p.gestion ?? 'Sin gestión aún',
+        gestionSub: p.estadoWarehouse ?? '',
+        pago: p.pagada ? 'Pagada' : p.estado === 'RENOVADA' ? 'Sin recaudo aún' : '—',
+        gestionar: '',
+        gestionarTexto: accionRenovacion(p),
+      };
+    });
   });
 
   constructor() {
@@ -167,7 +165,7 @@ export class RenovacionesComponent {
    * ya no se renueva: va a la inducción.
    */
   private iniciarRenovacion(poliza: Poliza): void {
-    if (esPolizaVencida(poliza)) {
+    if (accionDe(poliza) === 'INDUCCION') {
       void this.router.navigate(['/app/renovaciones/induccion'], { queryParams: { poliza: poliza.numero } });
       return;
     }

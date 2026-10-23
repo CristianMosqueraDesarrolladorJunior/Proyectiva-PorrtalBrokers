@@ -47,6 +47,40 @@
           <app-kpi-card label="Negocios en curso" [valor]="r.negociosEnCurso" icono="work_history" sub="Radicados aún sin póliza" />
         </app-grid-layout>
 
+        @if (rendimiento(); as d) {
+          <h2 class="resumen__grupo">Rendimiento y conversión</h2>
+          <app-grid-layout tipo="kpi-grid">
+            <app-kpi-card label="Conversión de prospectos" [valor]="pct(d.prospectosConvertidos, d.prospectosConvertidos + d.prospectosActivos) + '%'" icono="how_to_reg"
+              [sub]="d.prospectosConvertidos + ' pasaron a broker · ' + d.prospectosActivos + ' siguen como prospecto'" />
+            <app-kpi-card label="Cotización → radicación" [valor]="pct(d.radicaciones, d.cotizaciones) + '%'" icono="trending_up"
+              [sub]="d.cotizaciones + ' cotizaciones · ' + d.radicaciones + ' radicadas'" />
+            <app-kpi-card label="Radicación → póliza" [valor]="pct(d.expedidas, d.radicaciones) + '%'" icono="task_alt"
+              [sub]="d.expedidas + ' pólizas expedidas por el portal'" />
+            <app-kpi-card label="Renovación efectiva" [valor]="pct(d.renovadas, d.renovacionesCerradas) + '%'" icono="autorenew"
+              [sub]="d.renovadas + ' renovadas de ' + d.renovacionesCerradas + ' con decisión del área'" />
+            <app-kpi-card label="Primas del mes" [valor]="compacto(d.primasMes)" icono="calendar_month"
+              [sub]="d.polizasMes + ' pólizas inician vigencia este mes'" />
+            <app-kpi-card label="Prima promedio por póliza" [valor]="compacto(d.polizasTotal ? d.primasTotal / d.polizasTotal : 0)" icono="receipt"
+              [sub]="d.polizasTotal + ' pólizas (portal + histórico del área)'" />
+            <app-kpi-card label="Comisión promedio del broker" [valor]="compacto(d.polizasTotal ? d.comisionBrokers / d.polizasTotal : 0)" icono="payments"
+              [sub]="compacto(d.comisionBrokers) + ' en comisiones de brokers'" />
+            <app-kpi-card label="Comisión del comercial" [valor]="compacto(d.comisionComercial)" icono="badge"
+              [sub]="d.porcentajeComercial !== null ? d.porcentajeComercial + ' % sobre la prima sin IVA de la cartera' : 'Según el % de cada comercial'" />
+          </app-grid-layout>
+        }
+
+        <div class="resumen__grafica">
+          <div class="resumen__grafica-nav">
+            <button type="button" class="resumen__grafica-btn" aria-label="Mes anterior" (click)="cambiarMesGrafica(-1)">‹</button>
+            <button type="button" class="resumen__grafica-btn" aria-label="Mes siguiente" (click)="cambiarMesGrafica(1)">›</button>
+          </div>
+          @if (comisionesMes(); as datos) {
+            <app-comisiones-mes [mes]="mesGrafica()" [datos]="datos" />
+          } @else {
+            <p class="resumen__grafica-estado" role="status">Cargando la plata del mes…</p>
+          }
+        </div>
+
         <app-grid-layout tipo="dash-grid">
           <app-ranking-barras
             etiqueta="Producción"

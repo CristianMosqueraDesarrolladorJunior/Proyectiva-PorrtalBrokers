@@ -1,3 +1,4 @@
+import type { AccionRenovacion } from './poliza.model';
 /**
  * Modelos de la consola del área (`/api/v1/admin/consola/*`). Datos completos, sin máscara: solo los
  * consumen roles internos y el servidor limita la cartera del comercial. Toda fila trae `creado` y
@@ -91,6 +92,8 @@ export interface ComercialConsola {
   readonly enVacaciones?: boolean;
   /** Cuentas suyas prestadas a otros comerciales mientras está de vacaciones. */
   readonly prestados?: number;
+  /** Comisión del comercial (%) sobre las primas de su cartera; la fija el administrador. */
+  readonly porcentajeComision?: number;
 }
 
 export interface NegocioConsola {
@@ -177,6 +180,25 @@ export interface TopBroker {
   readonly comision: number;
 }
 
+/** Rendimiento y conversión de la cartera del comercial (o de todo, para el administrador). */
+export interface RendimientoConsola {
+  readonly prospectosActivos: number;
+  readonly prospectosConvertidos: number;
+  readonly cotizaciones: number;
+  readonly radicaciones: number;
+  readonly expedidas: number;
+  readonly renovadas: number;
+  readonly renovacionesCerradas: number;
+  readonly polizasMes: number;
+  readonly primasMes: number;
+  readonly polizasTotal: number;
+  readonly primasTotal: number;
+  readonly comisionBrokers: number;
+  /** Solo para un comercial: su porcentaje. */
+  readonly porcentajeComercial: number | null;
+  readonly comisionComercial: number;
+}
+
 export interface ResumenConsola {
   readonly ingresos: number;
   readonly ingresosBrokers: number;
@@ -230,6 +252,10 @@ export interface RenovacionConsola {
   readonly historial: string | null;
   readonly creado: string;
   readonly ultimoMovimiento: string | null;
+  /** Qué se puede hacer hoy: la misma regla que ve el broker (RENOVAR, CORREGIR, INDUCCION, EN_PROCESO, CERRADA). */
+  readonly accion?: AccionRenovacion;
+  /** Renovada y con recaudo de la nueva vigencia en el libro de comisiones. */
+  readonly pagada?: boolean;
 }
 
 export interface CredencialGenerada {
@@ -242,6 +268,8 @@ export interface PersonaRequest {
   readonly documento: string;
   readonly correo: string;
   readonly telefono: string;
+  /** Solo en el alta de un comercial: su comisión (%), 0 a 100. */
+  readonly porcentajeComision?: number;
 }
 
 export interface ReferidoConsola {

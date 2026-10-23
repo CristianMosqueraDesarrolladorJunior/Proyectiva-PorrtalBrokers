@@ -60,7 +60,6 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
 import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
 import { plural } from '../../../../core/util/plural';
 import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
-import { LectorContratoComponent } from '../../components/lector-contrato/lector-contrato.component';
 
 /** Servicios públicos que puede tener el inmueble (los mismos del cotizador actual). */
 const SERVICIOS_PUBLICOS: readonly string[] = ['Acueducto', 'Energía', 'Gas', 'Caldera', 'Teléfono'];
@@ -109,7 +108,6 @@ const OTRA_CIUDAD = '__otra__';
     EscaleritaLoaderComponent,
     InfoBoxComponent,
     SuccessScreenComponent,
-    LectorContratoComponent,
     CtlValidacionComponent,
   ],
   templateUrl: './contrato.component.html',
@@ -643,24 +641,6 @@ export class ContratoComponent {
   /** Siguiente paso del flujo de emisión: radicar con el contrato ya registrado. */
   protected radicarSolicitud(): void {
     void this.router.navigate(['/app/radicacion']);
-  }
-
-  /** Lleva a Radicación, donde se carga el contrato ya firmado (sección 1). */
-  /** El contrato firmado se adjunta luego en Radicación (viaja en memoria). */
-  protected onContratoFirmado(archivo: File): void {
-    this.borrador.archivoContratoFirmado.set(archivo);
-  }
-
-  /** La lectura del contrato firmado llena el formulario: el broker solo revisa y genera. */
-  protected onContratoLeido(lectura: LecturaContratoResponse): void {
-    this.precargarDesdeLectura(lectura);
-    this.feedback.toast({
-      variante: 'exito',
-      titulo: 'Contrato leído',
-      mensaje: lectura.falta.length
-        ? 'Precargamos lo que encontramos. Completa lo que falta en cada paso.'
-        : 'Precargamos todos los datos. Revísalos en cada paso y genera el contrato.',
-    });
   }
 
   protected volverASeguimiento(): void {

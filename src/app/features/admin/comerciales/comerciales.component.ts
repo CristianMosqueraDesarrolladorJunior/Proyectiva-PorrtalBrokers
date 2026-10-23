@@ -21,7 +21,8 @@ import {
   PageHeaderComponent,
 } from '../../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaTabla, SeccionFicha, Tab } from '../../../shared/components';
-import { FormPersonaComponent } from '../componentes/form-persona.component';
+import { FormPersonaComponent, porcentajeValido } from '../componentes/form-persona.component';
+import { switchMap } from 'rxjs';
 import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
 /**
@@ -70,6 +71,7 @@ export class ComercialesComponent {
     { key: 'negocios', header: 'Negocios · pólizas', alinear: 'derecha', ordenable: true },
     { key: 'ingreso', header: 'Ingreso', alinear: 'derecha', ordenable: true },
     { key: 'comision', header: 'Comisión en cuentas de cobro', alinear: 'derecha', ordenable: true, nowrap: true },
+    { key: 'porcentaje', header: 'Comisión del comercial', alinear: 'derecha', ordenable: true },
     { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
     ...COLUMNAS_FECHAS,
     COLUMNA_GESTIONAR,
@@ -90,6 +92,8 @@ export class ComercialesComponent {
       ingresoOrden: c.primas,
       comision: cop(c.comision),
       comisionOrden: c.comision,
+      porcentaje: `${c.porcentajeComision ?? 0} %`,
+      porcentajeOrden: c.porcentajeComision ?? 0,
       estado: !c.activo ? 'Inactivo' : c.enVacaciones ? 'En vacaciones' : 'Activo',
       estadoVariante: !c.activo ? 'danger' : c.enVacaciones ? 'warning' : 'success',
       ...celdasFechas(c.creado, c.ultimoMovimiento),
@@ -117,6 +121,7 @@ export class ComercialesComponent {
   protected readonly nombre = signal('');
   protected readonly correo = signal('');
   protected readonly telefono = signal('');
+  protected readonly porcentaje = signal('0');
   protected readonly guardando = signal(false);
   protected readonly credencialNueva = signal<CredencialGenerada | null>(null);
 
@@ -158,7 +163,8 @@ export class ComercialesComponent {
     () =>
       this.nombre().trim().length >= 3 &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.correo().trim()) &&
-      /^\d{7,10}$/.test(this.telefono().trim()),
+      /^\d{7,10}$/.test(this.telefono().trim()) &&
+      porcentajeValido(this.porcentaje()),
   );
 
   constructor() {
@@ -227,18 +233,23 @@ export class ComercialesComponent {
     this.nombre.set(c.nombre);
     this.correo.set(c.correo ?? '');
     this.telefono.set(c.telefono ?? '');
+    this.porcentaje.set(String(c.porcentajeComision ?? 0));
     this.credencialNueva.set(null);
   }
 
   protected guardarDatos(): void {
     const c = this.seleccionado();
     if (!c || !this.datosValidos()) return;
+    const porcentaje = Number(this.porcentaje().trim().replace(',', '.'));
+    const datos = this.consola.actualizarComercial(c.codigo, {
+      nombre: this.nombre().trim(),
+      correo: this.correo().trim(),
+      telefono: this.telefono().trim(),
+    });
     this.ejecutar(
-      this.consola.actualizarComercial(c.codigo, {
-        nombre: this.nombre().trim(),
-        correo: this.correo().trim(),
-        telefono: this.telefono().trim(),
-      }),
+      porcentaje === (c.porcentajeComision ?? 0)
+        ? datos
+        : datos.pipe(switchMap(() => this.consola.comisionComercial(c.codigo, porcentaje))),
       `Datos de ${this.nombre().trim()} actualizados.`,
     );
   }

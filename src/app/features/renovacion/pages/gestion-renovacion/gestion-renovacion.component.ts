@@ -29,6 +29,7 @@ import type {
 } from '../../../../core/models/renovacion.model';
 import { RenovacionService } from '../../../../core/services/renovacion.service';
 import type { Poliza } from '../../../../core/models/poliza.model';
+import { accionDe } from '../../renovaciones-lista';
 import {
   AlertBannerComponent,
   ArchivoSeleccionado,
@@ -159,6 +160,21 @@ export class GestionRenovacionComponent {
 
   /** Póliza real del portafolio del backend que coincide con `numeroPoliza`. */
   private readonly polizaReal = signal<Poliza | null>(null);
+
+  /**
+   * Cerrada por el área (renovada, desistida, desocupación…) o en proceso con el área (en expedición, caso especial):
+   * solo se consulta, ya no se gestiona. Misma regla que la lista y que la consola.
+   */
+  protected readonly cierre = computed(() => {
+    const p = this.polizaReal();
+    if (!p) return null;
+    const accion = accionDe(p);
+    if (accion !== 'CERRADA' && accion !== 'EN_PROCESO') return null;
+    const titulo = accion === 'EN_PROCESO'
+      ? 'Esta renovación ya está en proceso con el área'
+      : p.estado === 'RENOVADA' ? 'Esta póliza ya está renovada' : 'El área ya cerró esta póliza sin renovar';
+    return { titulo, motivo: p.estadoWarehouse || p.gestion || '', pagada: !!p.pagada };
+  });
 
   /** Póliza que vence según el Warehouse (col B) y propuestas cotizadas por el backend. */
   protected readonly condiciones = signal<CondicionesRenovacion | null>(null);
@@ -360,6 +376,11 @@ export class GestionRenovacionComponent {
       .subscribe({
         next: (portafolio) => {
           const encontrada = portafolio.polizas.find((p) => p.numero === numero) ?? null;
+          // Una vencida solo sigue por la inducción.
+          if (encontrada && accionDe(encontrada) === 'INDUCCION') {
+            void this.router.navigate(['/app/renovaciones/induccion'], { queryParams: { poliza: numero } });
+            return;
+          }
           this.polizaReal.set(encontrada);
         },
         error: () => this.polizaReal.set(null),

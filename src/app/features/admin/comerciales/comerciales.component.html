@@ -51,7 +51,7 @@
   @if (credencial(); as c) {
     <app-credencial-unica [usuario]="c.usuario" [credencial]="c.credencial" />
   } @else {
-    <app-form-persona [enviando]="enviandoAlta()" ayudaCorreo="Será su usuario para entrar a la consola." (enviar)="crear($event)" />
+    <app-form-persona [enviando]="enviandoAlta()" [conComision]="true" ayudaCorreo="Será su usuario para entrar a la consola." (enviar)="crear($event)" />
   }
   @if (credencial()) {
     <div acciones>
@@ -95,6 +95,10 @@
               <input id="com-telefono" type="tel" maxlength="10" [value]="telefono()" (input)="telefono.set(v($event))" />
             </app-form-field>
           </div>
+          <app-form-field label="Comisión del comercial (%)" controlId="com-comision"
+            ayuda="Sobre la prima sin IVA de las pólizas de su cartera.">
+            <input id="com-comision" type="text" inputmode="decimal" maxlength="6" [value]="porcentaje()" (input)="porcentaje.set(v($event))" />
+          </app-form-field>
           <div class="acciones-modal">
             <app-boton variante="accent" icono="save" [disabled]="guardando() || !datosValidos()" (clicked)="guardarDatos()">Guardar cambios</app-boton>
           </div>

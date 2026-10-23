@@ -138,3 +138,27 @@
   color: var(--color-muted);
   font-size: 0.875rem;
 }
+
+// Resumen: plata por día del mes con su navegación de meses.
+.resumen__grafica {
+  margin: var(--space-4) 0;
+}
+.resumen__grafica-nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.resumen__grafica-btn {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--sb-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.resumen__grafica-estado {
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+}

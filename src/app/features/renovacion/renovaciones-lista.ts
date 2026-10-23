@@ -1,18 +1,36 @@
-import type { Poliza } from '../../core/models/poliza.model';
+import type { AccionRenovacion, Poliza } from '../../core/models/poliza.model';
 
 /**
- * Urgencia de una póliza para ordenar el portafolio: primero lo que vence pronto, luego lo que se acerca, lo vencido
- * (va a inducción), lo vigente y al final lo ya cerrado (renovada o no renovada).
+ * Acción de la póliza. La decide el backend con la regla única del área (la misma que ven comercial y administrador);
+ * sin ella (respuesta antigua) se deduce del estado: cerrada, vencida → inducción, corrección o renovar.
  */
-export function prioridadRenovacion(p: Pick<Poliza, 'estado'>): number {
-  switch (p.estado) {
-    case 'A_PUNTO_DE_VENCER':
+export function accionDe(p: Pick<Poliza, 'estado' | 'gestion' | 'accion'>): AccionRenovacion {
+  if (p.accion) return p.accion;
+  if (p.estado === 'RENOVADA' || p.estado === 'NO_RENOVADA') return 'CERRADA';
+  if (p.gestion === 'Corrección pendiente') return 'CORREGIR';
+  if (p.estado === 'VENCIDA') return 'INDUCCION';
+  return 'RENOVAR';
+}
+
+/** Lo que dice la columna «Situación» y su color (sólido, de marca). */
+export const SITUACION: Record<AccionRenovacion, { texto: string; variante: string }> = {
+  RENOVAR: { texto: 'Por renovar', variante: 'warning' },
+  CORREGIR: { texto: 'Corrección pendiente', variante: 'warning' },
+  INDUCCION: { texto: 'Vencida · inducción', variante: 'danger' },
+  EN_PROCESO: { texto: 'En proceso con el área', variante: 'info' },
+  CERRADA: { texto: 'Cerrada', variante: 'success' },
+};
+
+/** Primero lo que hay que hacer: renovar, corregir, inducción; al final lo que está en proceso y lo cerrado. */
+export function prioridadRenovacion(p: Pick<Poliza, 'estado' | 'gestion' | 'accion'>): number {
+  switch (accionDe(p)) {
+    case 'RENOVAR':
       return 0;
-    case 'PROXIMA_A_RENOVAR':
+    case 'CORREGIR':
       return 1;
-    case 'VENCIDA':
+    case 'INDUCCION':
       return 2;
-    case 'VIGENTE':
+    case 'EN_PROCESO':
       return 3;
     default:
       return 4;
@@ -20,22 +38,24 @@ export function prioridadRenovacion(p: Pick<Poliza, 'estado'>): number {
 }
 
 /** Más urgente primero; dentro de cada grupo, el vencimiento más cercano. */
-export function ordenarPorUrgencia<T extends Pick<Poliza, 'estado' | 'fechaVencimiento'>>(polizas: readonly T[]): T[] {
+export function ordenarPorUrgencia<T extends Pick<Poliza, 'estado' | 'fechaVencimiento' | 'gestion' | 'accion'>>(
+  polizas: readonly T[],
+): T[] {
   return [...polizas].sort(
     (a, b) => prioridadRenovacion(a) - prioridadRenovacion(b) || String(a.fechaVencimiento).localeCompare(String(b.fechaVencimiento)),
   );
 }
 
-/** Vencida, pero todavía dentro del plazo en que se renueva (no va a inducción): sigue con «Renovar». */
-export function yaVencio(p: Pick<Poliza, 'estado' | 'fechaVencimiento'>, hoy = new Date()): boolean {
-  const hoyIso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-  return p.estado === 'A_PUNTO_DE_VENCER' && !!p.fechaVencimiento && p.fechaVencimiento.slice(0, 10) < hoyIso;
-}
-
-/** Texto del botón según lo que hay que hacer con la póliza (no todas se «gestionan» igual). */
-export function accionRenovacion(p: Pick<Poliza, 'estado' | 'gestion'>): string {
-  if (p.estado === 'RENOVADA' || p.estado === 'NO_RENOVADA') return 'Ver detalle';
-  if (p.estado === 'VENCIDA') return 'Inducción';
-  if (p.gestion === 'Corrección pendiente') return 'Corregir';
-  return 'Renovar';
+/** Texto del botón: solo lo pendiente se gestiona; lo demás se consulta. */
+export function accionRenovacion(p: Pick<Poliza, 'estado' | 'gestion' | 'accion'>): string {
+  switch (accionDe(p)) {
+    case 'RENOVAR':
+      return 'Renovar';
+    case 'CORREGIR':
+      return 'Corregir';
+    case 'INDUCCION':
+      return 'Inducción';
+    default:
+      return 'Ver detalle';
+  }
 }

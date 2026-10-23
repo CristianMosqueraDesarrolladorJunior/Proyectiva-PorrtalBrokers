@@ -3,7 +3,9 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import type { CuentaCobroResponse } from '../models/comisiones.model';
+import type { ComisionDia } from '../../shared/components/comisiones-mes/comisiones-mes.component';
 import type {
+  RendimientoConsola,
   BrokerConsola,
   ComercialConsola,
   CredencialGenerada,
@@ -30,6 +32,16 @@ export class ConsolaService {
 
   resumen(): Observable<ResumenConsola> {
     return this.http.get<ResumenConsola>(`${this.base}/resumen`, this.opciones);
+  }
+
+  /** Rendimiento y conversión (cartera del comercial o todo). */
+  rendimiento(): Observable<RendimientoConsola> {
+    return this.http.get<RendimientoConsola>(`${this.base}/rendimiento`, this.opciones);
+  }
+
+  /** Plata por día del mes (`yyyy-MM`) por inicio de vigencia. */
+  comisionesPorDia(mes: string): Observable<readonly ComisionDia[]> {
+    return this.http.get<ComisionDia[]>(`${this.base}/comisiones-por-dia?mes=${encodeURIComponent(mes)}`, this.opciones);
   }
 
   movimientos(limite = 50): Observable<readonly Movimiento[]> {
@@ -81,6 +93,11 @@ export class ConsolaService {
 
   actualizarComercial(codigo: string, datos: Omit<PersonaRequest, 'documento'>): Observable<void> {
     return this.http.put<void>(`${this.base}/comerciales/${encodeURIComponent(codigo)}`, datos, this.opciones);
+  }
+
+  /** El administrador fija la comisión (%) del comercial; queda en la auditoría. */
+  comisionComercial(codigo: string, porcentaje: number): Observable<void> {
+    return this.http.patch<void>(`${this.base}/comerciales/${encodeURIComponent(codigo)}/comision`, { porcentaje }, this.opciones);
   }
 
   /** Vacaciones del comercial: su cartera se reparte por turnos y vuelve a él al regresar. */

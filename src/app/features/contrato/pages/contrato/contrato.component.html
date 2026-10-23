@@ -33,23 +33,13 @@
     subtitulo="Completa los datos en cada paso para generar automáticamente el contrato de arrendamiento."
   ></app-page-header>
 
-    <!-- Flujo de emisión: de dónde viene el contrato y atajo para quien ya lo tiene firmado. -->
+    <!-- Flujo de emisión: de dónde viene el contrato. -->
     @if (pasoActual() === 0) {
       @if (cotizacionOrigen(); as cot) {
         <app-info-box icono="route">
           Desde tu cotización <strong>{{ cot.referencia }}</strong>: canon, ciudad y vigencia ya van precargados.
         </app-info-box>
       }
-      <!-- Dos caminos: cargar el contrato ya firmado (lo leemos y llenamos el formulario) o diligenciarlo aquí. -->
-      <app-lector-contrato
-        titulo="¿Ya tienes el contrato firmado? Cárgalo aquí"
-        (archivo)="onContratoFirmado($event)"
-        (leido)="onContratoLeido($event)"
-      />
-      <p class="contrato-carga-nota">
-        Leemos las partes, el inmueble y el canon y llenamos los pasos por ti; el archivo firmado se adjunta a la
-        radicación. Si aún no lo tienes, diligencia el formulario y lo generamos con nuestra plantilla.
-      </p>
     }
 
     <!-- Indicador de pasos (Req 30.1) -->

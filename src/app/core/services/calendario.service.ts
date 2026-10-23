@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map, timeout } from 'rxjs';
 
 import { EventoTemporal, validarEvento } from '../models/evento-temporal.model';
+import type { ComisionDia } from '../../shared/components/comisiones-mes/comisiones-mes.component';
 
 /**
  * Cliente de `GET /api/v1/calendario/eventos?mes=yyyy-MM`. Envía solo el rango (la cuenta sale de la sesión
@@ -27,5 +28,15 @@ export class CalendarioService {
           return eventos.map(validarEvento);
         }),
       );
+  }
+
+  /** Plata por día del mes (inicio de vigencia) de las pólizas del broker: `GET /calendario/comisiones?mes=yyyy-MM`. */
+  comisionesDelMes(mes: string): Observable<readonly ComisionDia[]> {
+    return this.http
+      .get<ComisionDia[]>(`${this.baseUrl}/calendario/comisiones`, {
+        params: new HttpParams().set('mes', mes),
+        withCredentials: true,
+      })
+      .pipe(timeout(20_000));
   }
 }

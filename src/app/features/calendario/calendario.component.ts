@@ -1,3 +1,4 @@
+import { ComisionesMesComponent, type ComisionDia } from '../../shared/components/comisiones-mes/comisiones-mes.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
@@ -26,7 +27,7 @@ const PRESENTACION: Readonly<Record<EventoTemporal['tipoEvento'], Pick<EventoCal
 @Component({
   selector: 'app-calendario',
   standalone: true,
-  imports: [PageHeaderComponent, CalendarioMensualComponent],
+  imports: [PageHeaderComponent, CalendarioMensualComponent, ComisionesMesComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './calendario.component.html',
   styleUrl: './calendario.component.scss',
@@ -37,6 +38,9 @@ export class CalendarioComponent {
 
   protected readonly mes = signal(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   protected readonly eventos = signal<readonly EventoTemporal[]>([]);
+  /** Plata por día del mes (si falla, el calendario sigue: la gráfica no se muestra). */
+  protected readonly comisiones = signal<readonly ComisionDia[] | null>(null);
+  protected readonly mesIso = computed(() => `${this.mes().getFullYear()}-${String(this.mes().getMonth() + 1).padStart(2, '0')}`);
   protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
 
@@ -65,6 +69,8 @@ export class CalendarioComponent {
     const m = this.mes();
     this.cargando.set(true);
     this.error.set(null);
+    this.comisiones.set(null);
+    this.servicio.comisionesDelMes(this.mesIso()).subscribe({ next: (d) => this.comisiones.set(d), error: () => this.comisiones.set(null) });
     this.servicio.eventosDelMes(`${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`).subscribe({
       next: (eventos) => {
         this.eventos.set(eventos);

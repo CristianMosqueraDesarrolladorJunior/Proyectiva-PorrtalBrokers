@@ -2,7 +2,7 @@
   <!-- ══════════════════ PASO 1 — OPCIONES ══════════════════ -->
   @if (etapa() === 'opciones') {
     <div class="opciones">
-      <header class="opciones__header">
+      <header class="opciones__header" [hidden]="!!cierre()">
         <h1 class="opciones__titulo">
           Elige cómo <strong>renovar tu póliza de arrendamiento</strong>&nbsp;<strong>N.º {{ numeroPoliza() }}</strong>
         </h1>
@@ -12,7 +12,14 @@
         </p>
       </header>
 
-      <div class="opciones__grid" role="list">
+      @if (cierre(); as c) {
+        <app-alert-banner variante="success" [titulo]="c.titulo">
+          {{ c.motivo ? 'Estado: ' + c.motivo + '. ' : '' }}{{ c.pagada ? 'La nueva vigencia ya está pagada. ' : '' }}No necesita gestión. Si crees que hay un error, escríbele a tu asesor comercial.
+        </app-alert-banner>
+        <button type="button" class="btn btn--outline" (click)="cancelar()">Volver a renovaciones</button>
+      }
+
+      <div class="opciones__grid" role="list" [hidden]="!!cierre()">
         <!-- Card 1: Renovación Digital (recomendada: sin papel, valida el tope del canon por IPC y queda trazada) -->
         <article
           class="card card--recomendado"
@@ -144,7 +151,7 @@
         </article>
       </div>
 
-      <footer class="opciones__footer">
+      <footer class="opciones__footer" [hidden]="!!cierre()">
         <p class="opciones__footer-text">¿Necesitas asesoría personalizada para la renovación de tu póliza de arrendamiento?</p>
         <a class="opciones__footer-link" role="button" tabindex="0">Hablar con un consultor especializado en renovación →</a>
       </footer>

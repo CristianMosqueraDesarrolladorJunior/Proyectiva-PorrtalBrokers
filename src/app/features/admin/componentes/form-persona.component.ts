@@ -29,6 +29,12 @@ const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       <app-form-field class="fp__ancho" label="Correo" controlId="fp-correo" [requerido]="true" [ayuda]="ayudaCorreo" [error]="error('correo')">
         <input id="fp-correo" type="email" autocomplete="off" maxlength="254" [value]="correo()" (input)="correo.set(v($event))" />
       </app-form-field>
+      @if (conComision) {
+        <app-form-field label="Comisión del comercial (%)" controlId="fp-comision" [error]="error('comision')"
+          ayuda="Sobre la prima sin IVA de las pólizas de su cartera. Puedes cambiarla después.">
+          <input id="fp-comision" type="text" inputmode="decimal" autocomplete="off" maxlength="6" [value]="comision()" (input)="comision.set(v($event))" />
+        </app-form-field>
+      }
       <div class="fp__acciones">
         <app-boton variante="accent" type="submit" [icono]="icono" [disabled]="enviando">{{ enviando ? 'Creando…' : textoBoton }}</app-boton>
       </div>
@@ -62,12 +68,15 @@ export class FormPersonaComponent {
   @Input() icono = 'key';
   @Input() ayudaCorreo = '';
   @Input() enviando = false;
+  /** Alta de comercial: pide su porcentaje de comisión. */
+  @Input() conComision = false;
   @Output() readonly enviar = new EventEmitter<PersonaRequest>();
 
   protected readonly nombre = signal('');
   protected readonly documento = signal('');
   protected readonly correo = signal('');
   protected readonly telefono = signal('');
+  protected readonly comision = signal('0');
   private readonly intento = signal(false);
 
   private readonly errores = computed<Readonly<Record<string, string>>>(() => ({
@@ -75,6 +84,7 @@ export class FormPersonaComponent {
     documento: /^\d{6,12}$/.test(this.documento().trim()) ? '' : 'Cédula de 6 a 12 dígitos.',
     telefono: /^\d{7,10}$/.test(this.telefono().trim()) ? '' : 'Celular de 7 a 10 dígitos.',
     correo: CORREO.test(this.correo().trim()) ? '' : 'Correo no válido.',
+    comision: !this.conComision || porcentajeValido(this.comision()) ? '' : 'Escribe un porcentaje de 0 a 100.',
   }));
 
   protected error(campo: string): string {
@@ -93,6 +103,13 @@ export class FormPersonaComponent {
       documento: this.documento().trim(),
       correo: this.correo().trim().toLowerCase(),
       telefono: this.telefono().trim(),
+      ...(this.conComision ? { porcentajeComision: Number(this.comision().trim().replace(',', '.')) } : {}),
     });
   }
+}
+
+/** 0 a 100, con hasta dos decimales (coma o punto). */
+export function porcentajeValido(texto: string): boolean {
+  const t = texto.trim().replace(',', '.');
+  return /^\d{1,3}(\.\d{1,2})?$/.test(t) && Number(t) <= 100;
 }

@@ -11,6 +11,10 @@
     <button type="button" class="calendario__nav-btn" aria-label="Mes siguiente" (click)="cambiarMes(1)">›</button>
   </div>
 
+  @if (comisiones(); as datos) {
+    <app-comisiones-mes class="calendario__comisiones" [mes]="mesIso()" [datos]="datos" />
+  }
+
   @if (cargando()) {
     <p class="calendario__estado" role="status">Cargando tu calendario…</p>
   } @else if (error()) {
