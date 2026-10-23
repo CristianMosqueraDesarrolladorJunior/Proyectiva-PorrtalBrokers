@@ -1,3 +1,4 @@
+import { CheckDeclaracionComponent } from '../../../../shared/components/check-declaracion/check-declaracion.component';
 import { CtlValidacionComponent } from '../../components/ctl-validacion/ctl-validacion.component';
 import {
   ChangeDetectionStrategy,
@@ -99,7 +100,8 @@ const OTRA_CIUDAD = '__otra__';
   selector: 'app-contrato',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SoloDigitosDirective, PageHeaderComponent,
+  imports: [
+    CheckDeclaracionComponent,SoloDigitosDirective, PageHeaderComponent,
     FormsModule,
     StepTabsComponent,
     FormFieldComponent,

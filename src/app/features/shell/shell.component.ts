@@ -73,8 +73,4 @@ export class ShellComponent {
     });
   }
 
-  /** Búsqueda global: lleva el término al listado de Seguimiento. */
-  protected buscar(texto: string): void {
-    void this.router.navigate(['/app/seguimiento'], { queryParams: { q: texto } });
-  }
-}
+  /** Búsqueda global: lleva el término al listado de Seguimiento. */}

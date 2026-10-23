@@ -7,10 +7,49 @@
   ></app-page-header>
 
   <app-grid-layout tipo="kpi-grid">
-    <app-kpi-card label="Cuentas de cobro" [valor]="cuentas().length" icono="receipt_long" sub="Generadas por los brokers" />
+    <app-kpi-card label="Cuentas de cobro" [valor]="cuentasVisibles().length" icono="receipt_long" sub="Generadas por los brokers" />
     <app-kpi-card label="Pólizas incluidas" [valor]="totalPolizas()" icono="policy" sub="En esas cuentas" />
     <app-kpi-card label="Comisión en cuentas de cobro" [valor]="compacto(totalDocumentos())" icono="description" sub="Suma de las cuentas vigentes" />
   </app-grid-layout>
+
+  <app-filtrado-inteligente [totalFiltros]="5" idCuerpo="cuentas-filtros">
+    <div class="seg-filtros-grid">
+      <label class="seg-filtro">
+        <span>Comercial</span>
+        <select id="cuentas-comercial" [value]="fComercial()" (change)="fComercial.set($any($event.target).value)">
+          <option value="">Todos</option>
+          @for (c of comercialesFiltro(); track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+      </label>
+      <label class="seg-filtro">
+        <span>Broker o referencia</span>
+        <input id="cuentas-broker" type="search" autocomplete="off" placeholder="Nombre, NIT/CC o CDC-…"
+          [value]="fBroker()" (input)="fBroker.set($any($event.target).value)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Pago</span>
+        <select id="cuentas-estado" [value]="fEstado()" (change)="fEstado.set($any($event.target).value)">
+          <option value="">Todos</option>
+          <option value="tramite">En trámite</option>
+          <option value="orden">Con orden de pago</option>
+          <option value="pagada">Pagada</option>
+        </select>
+      </label>
+      <label class="seg-filtro">
+        <span>Desde</span>
+        <input id="cuentas-desde" type="date" [value]="fDesde()" [max]="fHasta() || null" (change)="fDesde.set($any($event.target).value)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Hasta</span>
+        <input id="cuentas-hasta" type="date" [value]="fHasta()" [min]="fDesde() || null" (change)="fHasta.set($any($event.target).value)" />
+      </label>
+    </div>
+    <div class="seg-filtros-acciones">
+      <button type="button" class="seg-btn-ghost" [disabled]="!hayFiltros()" (click)="limpiarFiltros()">Limpiar filtros</button>
+    </div>
+  </app-filtrado-inteligente>
 
   <app-estado-vista
     [cargando]="cargando()"
@@ -33,6 +72,23 @@
       (accion)="abrir($event)"
     />
   </app-estado-vista>
+
+  <h2 class="resumen__grupo">Facturación del área (libro de comisiones)</h2>
+  <p class="vista__nota">Lo que el área ya facturó y pagó según «Base Facturación», aunque el broker no haya generado su cuenta en el portal.</p>
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Facturas del área" [valor]="facturasVisibles().length" icono="receipt" [sub]="facturasPagadas() + ' ya pagadas'" />
+    <app-kpi-card label="Total facturado" [valor]="compacto(totalFacturado())" icono="payments" sub="Comisión con IVA facturada por los brokers" />
+  </app-grid-layout>
+  <app-data-table
+    [columnas]="columnasFacturas"
+    [filas]="filasFacturas()"
+    [total]="filasFacturas().length"
+    [tamanoPagina]="20"
+    [conBusqueda]="true"
+    placeholderBusqueda="Buscar por broker, NIT o factura…"
+    mensajeVacio="El libro de comisiones no tiene facturas para mostrar."
+    ariaLabel="Facturación del área"
+  />
 </section>
 
 <app-modal-dialog
@@ -40,7 +96,7 @@
   [titulo]="'Cuenta de cobro de ' + (seleccionada()?.broker ?? '')"
   [subtitulo]="plural(seleccionada()?.polizas ?? 0, 'póliza', 'pólizas') + ' · ' + compacto(seleccionada()?.totalComision ?? 0)"
   eyebrow="Cuentas de cobro"
-  tamano="xl"
+  tamano="lg"
   [pestanas]="pestanas"
   [pestana]="pestana()"
   (pestanaChange)="cambiarPestana($event)"
@@ -52,8 +108,11 @@
         <app-ficha [secciones]="ficha()" />
       }
       @case ('documento') {
-        <app-visor-archivo [archivo]="archivo()" [cargando]="cargandoArchivo()" [nombre]="'cuenta-de-cobro-' + c.id + '.pdf'" />
+        <app-visor-archivo [archivo]="archivo()" [cargando]="cargandoArchivo()" [nombre]="'Cuenta-de-cobro-' + c.referencia + '.pdf'" />
       }
     }
   }
+  <div acciones>
+    <app-boton variante="ghost" (clicked)="seleccionada.set(null)">Cerrar</app-boton>
+  </div>
 </app-modal-dialog>

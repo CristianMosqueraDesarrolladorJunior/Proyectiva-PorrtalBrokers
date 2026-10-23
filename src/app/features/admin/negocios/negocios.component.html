@@ -3,20 +3,59 @@
     [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="negocios-titulo"
     titulo="Negocios"
-    subtitulo="Cada negocio con su propietario, inquilino e inmueble. El negocio termina cuando se expide la póliza."
+    subtitulo="Cada radicación con su propietario, inquilino e inmueble. El negocio termina cuando se expide la póliza."
   ></app-page-header>
 
+  <app-filtrado-inteligente [totalFiltros]="esAdmin ? 6 : 5" idCuerpo="negocios-filtros">
+    <div class="seg-filtros-grid">
+      <label class="seg-filtro">
+        <span>Búsqueda</span>
+        <input id="negocios-busqueda" type="search" autocomplete="off" placeholder="Radicado, póliza, propietario, inquilino o dirección…"
+          [value]="fBusqueda()" (input)="fBusqueda.set($any($event.target).value)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Etapa</span>
+        <select id="negocios-etapa" [value]="filtro()" (change)="filtro.set($any($event.target).value)">
+          @for (f of filtros; track f.valor) {
+            <option [value]="f.valor">{{ f.etiqueta }}</option>
+          }
+        </select>
+      </label>
+      @if (esAdmin) {
+        <label class="seg-filtro">
+          <span>Comercial</span>
+          <select id="negocios-comercial" [value]="fComercial()" (change)="fComercial.set($any($event.target).value)">
+            <option value="">Todos</option>
+            @for (c of nombresComerciales(); track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </label>
+      }
+      <label class="seg-filtro">
+        <span>Broker</span>
+        <input id="negocios-broker" type="search" autocomplete="off" placeholder="Nombre del broker…"
+          [value]="fBroker()" (input)="fBroker.set($any($event.target).value)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Radicado desde</span>
+        <input id="negocios-desde" type="date" [value]="fDesde()" [max]="fHasta() || null" (change)="fDesde.set($any($event.target).value)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Radicado hasta</span>
+        <input id="negocios-hasta" type="date" [value]="fHasta()" [min]="fDesde() || null" (change)="fHasta.set($any($event.target).value)" />
+      </label>
+    </div>
+    <div class="seg-filtros-acciones">
+      <button type="button" class="seg-btn-ghost" [disabled]="!hayFiltros()" (click)="limpiarFiltros()">Limpiar filtros</button>
+    </div>
+  </app-filtrado-inteligente>
+
   <app-grid-layout tipo="kpi-grid">
-    <app-kpi-card label="Solicitudes en curso" [valor]="enCurso()" icono="work_history" tono="accent" sub="En estudio, corrección o por expedir" />
-    <app-kpi-card label="Pólizas expedidas" [valor]="expedidos()" icono="workspace_premium" sub="Negocios cerrados con póliza" />
+    <app-kpi-card label="Radicaciones en curso" [valor]="enCurso()" icono="work_history" tono="accent" sub="En estudio, corrección o por expedir" />
+    <app-kpi-card label="Pólizas expedidas" [valor]="expedidos()" icono="workspace_premium" sub="Radicaciones cerradas con póliza" />
     <app-kpi-card label="Primas emitidas" [valor]="compacto(primaExpedida())" icono="account_balance" sub="Valor total de las pólizas" />
   </app-grid-layout>
-
-  <app-barra-acciones>
-    <div filtros>
-      <app-segmented-control [opciones]="filtros" [valor]="filtro()" ariaLabel="Filtrar negocios" (valorChange)="filtro.set($event)" />
-    </div>
-  </app-barra-acciones>
 
 
   <app-estado-vista
@@ -34,8 +73,6 @@
       [filas]="filas()"
       [total]="filas().length"
       [tamanoPagina]="20"
-      [conBusqueda]="true"
-      placeholderBusqueda="Buscar por radicado, propietario, inquilino, dirección o broker…"
       ariaLabel="Negocios"
       (accion)="gestionar($event)"
     />

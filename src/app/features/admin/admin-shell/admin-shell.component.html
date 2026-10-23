@@ -1,16 +1,10 @@
 <div class="app-wrapper" [class.app-wrapper--sidebar-abierto]="sidebarAbierto()" [class.app-wrapper--colapsado]="layout.sidebarColapsado()">
-  <header class="topbar admin-topbar">
-    <button type="button" class="admin-topbar__menu" aria-label="Abrir menú" (click)="alternarSidebar()">
-      <app-icon nombre="menu" [tamano]="22" />
-    </button>
-    <div class="admin-topbar__titulo">
-      <app-icon nombre="admin_panel_settings" [tamano]="22" />
-      <strong>Portal Brokers Proyectiva</strong>
-    </div>
+  <!-- Misma barra que el portal del broker: buscador Ctrl+K sobre la cartera del perfil (sin campana). -->
+  <app-topbar class="topbar" [menuAbierto]="sidebarAbierto()" [conNotificaciones]="false" (menu)="alternarSidebar()">
     @if (perfil(); as p) {
       <span class="admin-topbar__rol" [class.admin-topbar__rol--comercial]="p.rol === 'COMERCIAL'">{{ p.rol }}</span>
     }
-  </header>
+  </app-topbar>
 
   <div id="sidebar-navegacion">
     <app-sidebar

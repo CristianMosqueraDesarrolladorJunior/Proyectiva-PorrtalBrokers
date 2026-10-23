@@ -22,6 +22,7 @@ import {
   DetalleSolicitud,
   DocumentoSolicitud,
   HitoTimeline,
+  PersonaNegocio,
 } from '../../../core/models/solicitud.model';
 import type { FilaDetalle } from '../../../shared/components/drawer-detalle/drawer-detalle.component';
 import { TimelineComponent } from '../../../shared/components/timeline/timeline.component';
@@ -121,6 +122,8 @@ export class DetalleSolicitudComponent implements OnChanges {
 
   /** Detalle presentado en secciones colapsables (mismo componente de ficha de la consola). */
   protected readonly secciones = signal<readonly SeccionFicha[]>([]);
+  /** La ficha ya trae la póliza expedida: el aviso verde sobraría. */
+  protected readonly polizaEnFicha = computed(() => this.secciones().some((s) => s.titulo === 'Póliza expedida'));
   protected readonly referenciaVista = signal('');
   protected readonly etiquetaEstado = signal('');
   protected readonly varianteEstado = signal<'success' | 'warning' | 'danger' | 'info'>('info');
@@ -336,10 +339,15 @@ function formatearComision(comision: number): string {
   return pesos(comision);
 }
 
-/** Comisión real si ya se causó; si no, la estimada con su condición (auditoría de producción PB5). */
-function comisionVisible(detalle: DetalleSolicitud): string {
-  if (detalle.comision > 0) return pesos(detalle.comision);
-  return detalle.comisionEstimada ? `Estimada ${pesos(detalle.comisionEstimada)} · se causa al expedir` : pesos(0);
+/**
+ * Comisión real si ya se causó; si no, la estimada (auditoría de producción PB5). La condición («se causa al expedir»)
+ * va en la descripción de la sección, no junto a la cifra.
+ */
+function comisionVisible(detalle: DetalleSolicitud): { etiqueta: string; valor: string } {
+  if (detalle.comision > 0) return { etiqueta: 'Tu comisión', valor: pesos(detalle.comision) };
+  return detalle.comisionEstimada
+    ? { etiqueta: 'Tu comisión estimada', valor: pesos(detalle.comisionEstimada) }
+    : { etiqueta: 'Tu comisión', valor: pesos(0) };
 }
 
 /** Secciones de la ficha del negocio que ve el broker (lenguaje de póliza de arrendamiento). */
@@ -347,7 +355,25 @@ export function construirSecciones(
   detalle: DetalleSolicitud,
   etiquetaEstado: (estado: string) => string = (estado) => estado,
 ): readonly SeccionFicha[] {
+  const p = detalle.partes;
+  const documento = (x: PersonaNegocio | null | undefined) =>
+    x?.documento ? [x.tipoDocumento, x.documento].filter(Boolean).join(' ') : null;
+  const propietario = p?.propietario;
+  const inquilino = p?.inquilino;
   return [
+    // La póliza expedida va primero: es lo que el broker viene a buscar.
+    ...(p?.numeroPoliza
+      ? [{
+          titulo: 'Póliza expedida',
+          icono: 'verified',
+          datos: [
+            { etiqueta: 'Número de póliza', valor: p.numeroPoliza, destacado: true },
+            { etiqueta: 'Prima total', valor: p.primaTotal ? pesos(p.primaTotal) : null },
+            { etiqueta: 'Inicio de vigencia', valor: p.inicioVigencia ? fechaCorta(p.inicioVigencia) : null },
+            { etiqueta: 'Fin de vigencia', valor: p.finVigencia ? fechaCorta(p.finVigencia) : null },
+          ],
+        }]
+      : []),
     {
       titulo: 'Solicitud de póliza',
       icono: 'description',
@@ -360,10 +386,38 @@ export function construirSecciones(
       ],
     },
     {
-      titulo: 'Tomador del negocio',
-      icono: 'person',
-      datos: [{ etiqueta: 'Propietario', valor: detalle.cliente, ancho: true }],
+      titulo: 'Propietario · tomador',
+      icono: 'home_work',
+      datos: [
+        { etiqueta: 'Nombre', valor: propietario?.nombre ?? detalle.cliente },
+        { etiqueta: 'Documento', valor: documento(propietario) },
+        { etiqueta: 'Teléfono', valor: propietario?.telefono ?? null },
+        { etiqueta: 'Correo', valor: propietario?.correo ?? null },
+        { etiqueta: 'Dirección de residencia', valor: propietario?.direccion ?? null, ancho: true },
+      ],
     },
+    ...(inquilino?.nombre
+      ? [{
+          titulo: 'Inquilino · arrendatario',
+          icono: 'person',
+          datos: [
+            { etiqueta: 'Nombre', valor: inquilino.nombre },
+            { etiqueta: 'Documento', valor: documento(inquilino) },
+            { etiqueta: 'Teléfono', valor: inquilino.telefono },
+            { etiqueta: 'Correo', valor: inquilino.correo },
+          ],
+        }]
+      : []),
+    ...(p?.inmueble
+      ? [{
+          titulo: 'Inmueble asegurado',
+          icono: 'apartment',
+          datos: [
+            { etiqueta: 'Dirección', valor: p.inmueble, ancho: true },
+            { etiqueta: 'Ciudad', valor: p.ciudad },
+          ],
+        }]
+      : []),
     {
       titulo: 'Valores y comisión',
       icono: 'payments',
@@ -372,7 +426,7 @@ export function construirSecciones(
         // Canon y pago son dos datos distintos (auditoría de producción PB4).
         { etiqueta: 'Canon mensual', valor: detalle.canon ? pesos(detalle.canon) : '—' },
         { etiqueta: 'Pago de la póliza', valor: detalle.estadoPago },
-        { etiqueta: 'Tu comisión', valor: comisionVisible(detalle), destacado: true },
+        { ...comisionVisible(detalle), destacado: true },
       ],
     },
   ];

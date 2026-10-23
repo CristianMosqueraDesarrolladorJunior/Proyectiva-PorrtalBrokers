@@ -1,4 +1,3 @@
-import { CatalogoService } from '../../../../core/services/catalogo.service';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -6,28 +5,34 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import {
-  BarraAccionesComponent,
+  AlertBannerComponent,
+  BadgeEstadoComponent,
   BotonComponent,
   DataTableComponent,
   EstadoVistaComponent,
-  FormFieldComponent,
+  FichaComponent,
+  FiltradoInteligenteComponent,
   GridLayoutComponent,
   KpiCardComponent,
+  ModalDialogComponent,
   PageHeaderComponent,
 } from '../../../../shared/components';
 import type {
   AccionFila,
   ColumnaTabla,
+  SeccionFicha,
 } from '../../../../shared/components';
+import type { CondicionesRenovacion } from '../../../../core/models/renovacion.model';
 import {
   RenovacionService,
   type PortafolioRenovaciones,
 } from '../../../../core/services/renovacion.service';
 import type { Poliza } from '../../../../core/models/poliza.model';
-import { fechaCorta } from '../../../../core/services/admin.helpers';
+import { cop, fechaCorta } from '../../../../core/services/admin.helpers';
 import { SITUACION, accionDe, accionRenovacion, ordenarPorUrgencia } from '../../renovaciones-lista';
 
 
@@ -47,20 +52,22 @@ import { SITUACION, accionDe, accionRenovacion, ordenarPorUrgencia } from '../..
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    BarraAccionesComponent,
+    AlertBannerComponent,
+    BadgeEstadoComponent,
     BotonComponent,
     DataTableComponent,
     EstadoVistaComponent,
-    FormFieldComponent,
+    FichaComponent,
+    FiltradoInteligenteComponent,
     GridLayoutComponent,
     KpiCardComponent,
+    ModalDialogComponent,
     PageHeaderComponent,
   ],
   templateUrl: './renovaciones.component.html',
   styleUrl: './renovaciones.component.scss',
 })
 export class RenovacionesComponent {
-  private readonly catalogo = inject(CatalogoService);
   private readonly renovacionService = inject(RenovacionService);
   private readonly router = inject(Router);
 
@@ -76,25 +83,39 @@ export class RenovacionesComponent {
   /** Texto del buscador: filtra por número de póliza en el portafolio cargado. */
   protected readonly busqueda = signal('');
 
-  /** Filtro por vigencia de la póliza (`estado_poliza` del catálogo); vacío = todas. */
+  /** Filtro por situación (la acción de la regla única); vacío = todas. */
   protected readonly estadoFiltro = signal('');
-  protected readonly estados = this.catalogo.opciones('estado_poliza');
+  protected readonly situaciones = Object.entries(SITUACION).map(([valor, s]) => ({ valor, etiqueta: s.texto }));
+  /** Rango de vencimiento (AAAA-MM-DD). */
+  protected readonly venceDesde = signal('');
+  protected readonly venceHasta = signal('');
 
-  /** Pólizas que coinciden con la búsqueda y el filtro, de la más urgente a la menos urgente. */
+  /** Pólizas que coinciden con la búsqueda y los filtros, de la más urgente a la menos urgente. */
   private readonly polizasVisibles = computed(() => {
     const polizas = this.portafolio()?.polizas ?? [];
     const q = this.busqueda().trim().toLowerCase();
-    const estado = this.estadoFiltro();
+    const situacion = this.estadoFiltro();
+    const desde = this.venceDesde();
+    const hasta = this.venceHasta();
     return ordenarPorUrgencia(
-      polizas.filter((p) => (!q || p.numero.toLowerCase().includes(q)) && (!estado || p.estado === estado)),
+      polizas.filter((p) => {
+        const vence = String(p.fechaVencimiento).slice(0, 10);
+        return (!q || p.numero.toLowerCase().includes(q) || (p.estadoWarehouse ?? '').toLowerCase().includes(q))
+          && (!situacion || accionDe(p) === situacion)
+          && (!desde || vence >= desde) && (!hasta || vence <= hasta);
+      }),
     );
   });
 
-  protected readonly hayFiltros = computed(() => !!this.busqueda().trim() || !!this.estadoFiltro());
+  protected readonly hayFiltros = computed(
+    () => !!this.busqueda().trim() || !!this.estadoFiltro() || !!this.venceDesde() || !!this.venceHasta(),
+  );
 
   protected limpiarFiltros(): void {
     this.busqueda.set('');
     this.estadoFiltro.set('');
+    this.venceDesde.set('');
+    this.venceHasta.set('');
   }
 
   /** Columnas del DataTable de pólizas, con sort, insignia y acción (Req 16.2, 16.3). */
@@ -122,13 +143,20 @@ export class RenovacionesComponent {
         gestionSub: p.estadoWarehouse ?? '',
         pago: p.pagada ? 'Pagada' : p.estado === 'RENOVADA' ? 'Sin recaudo aún' : '—',
         gestionar: '',
-        gestionarTexto: accionRenovacion(p),
+        gestionarTexto: 'Ver detalle',
       };
     });
   });
 
   constructor() {
     this.cargar();
+    // Llega desde el buscador de la barra superior con el número de póliza.
+    inject(ActivatedRoute)
+      .queryParamMap.pipe(takeUntilDestroyed())
+      .subscribe((p) => {
+        const q = p.get('q');
+        if (q) this.busqueda.set(q);
+      });
   }
 
   /** Carga el portafolio de renovaciones desde el backend (Req 17). */
@@ -147,11 +175,94 @@ export class RenovacionesComponent {
     });
   }
 
-  /** Inicia el flujo de Renovacion para la póliza seleccionada (Req 16.4). */
+  /** Ficha de la póliza: se abre al elegir la fila; desde ahí se renueva solo si aplica. */
+  protected readonly fechaCorta = fechaCorta;
+  protected readonly seleccionada = signal<Poliza | null>(null);
+  protected readonly condiciones = signal<CondicionesRenovacion | null>(null);
+  protected readonly situacion = computed(() => {
+    const p = this.seleccionada();
+    return p ? SITUACION[accionDe(p)] : null;
+  });
+  /** Texto del botón de la ficha; `null` cuando la póliza solo se consulta. */
+  protected readonly textoAccion = computed(() => {
+    const p = this.seleccionada();
+    if (!p) return null;
+    const accion = accionDe(p);
+    return accion === 'RENOVAR' ? 'Renovar póliza' : accion === 'CORREGIR' ? 'Corregir documentos'
+      : accion === 'INDUCCION' ? 'Iniciar inducción' : null;
+  });
+  protected readonly notaSinAccion = computed(() => {
+    const p = this.seleccionada();
+    if (!p) return '';
+    switch (accionDe(p)) {
+      case 'EN_PROCESO':
+        return 'El área ya está gestionando esta renovación. Te avisamos cuando cambie.';
+      case 'FUERA_PLAZO':
+        return 'Venció hace más de 11 meses: ya no se puede renovar ni hacer inducción. Para asegurarla de nuevo, cotiza una póliza nueva.';
+      case 'CERRADA':
+        return p.estado === 'RENOVADA'
+          ? (p.pagada ? 'Ya está renovada y la nueva vigencia está pagada.' : 'Ya está renovada; el pago de la nueva vigencia aún no aparece.')
+          : 'El área la cerró sin renovar. Si crees que hay un error, escríbele a tu asesor comercial.';
+      default:
+        return '';
+    }
+  });
+  protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
+    const p = this.seleccionada();
+    if (!p) return [];
+    const c = this.condiciones();
+    return [
+      {
+        titulo: 'Póliza de arrendamiento',
+        icono: 'policy',
+        datos: [
+          { etiqueta: 'Número', valor: p.numero },
+          { etiqueta: 'Producto', valor: c?.destino ? `${p.producto} · ${c.destino}` : p.producto },
+          { etiqueta: 'Inicio de vigencia', valor: c?.vigencia ? fechaCorta(c.vigencia) : null },
+          { etiqueta: 'Vencimiento', valor: fechaCorta(c?.vencimiento ?? p.fechaVencimiento) },
+          { etiqueta: 'Canon', valor: c ? cop(c.canon) : null, destacado: true },
+          { etiqueta: 'Administración', valor: c ? cop(c.administracion) : null },
+        ],
+      },
+      {
+        titulo: 'Asegurado',
+        icono: 'person',
+        datos: [{ etiqueta: 'Nombre', valor: c?.asegurado ?? p.cliente ?? null, ancho: true }],
+      },
+      {
+        titulo: 'Gestión',
+        icono: 'assignment',
+        datos: [
+          { etiqueta: 'Situación', valor: SITUACION[accionDe(p)].texto },
+          { etiqueta: 'Estado del área', valor: p.estadoWarehouse || p.gestion || 'Sin gestión aún' },
+          { etiqueta: 'Pago de la nueva vigencia', valor: p.pagada ? 'Pagada' : p.estado === 'RENOVADA' ? 'Sin recaudo aún' : null },
+          { etiqueta: 'Corrección pedida por el área', valor: c?.motivoCorreccion ?? null, ancho: true },
+        ],
+      },
+    ];
+  });
+
+  /** Abre la ficha de la póliza elegida (fila o botón «Ver detalle»). */
   protected onSeleccionFila(indice: number): void {
     const poliza = this.polizasVisibles()[indice];
-    if (poliza) {
-      this.iniciarRenovacion(poliza);
+    if (!poliza) return;
+    this.seleccionada.set(poliza);
+    this.condiciones.set(null);
+    this.renovacionService.condiciones(poliza.numero).subscribe({
+      next: (c) => this.condiciones.set(c),
+      error: () => this.condiciones.set(null),
+    });
+  }
+
+  protected cerrarFicha(): void {
+    this.seleccionada.set(null);
+  }
+
+  /** Botón de la ficha: renovar, corregir o inducción (solo si la regla lo permite). */
+  protected gestionarSeleccionada(): void {
+    const p = this.seleccionada();
+    if (p && this.textoAccion()) {
+      this.iniciarRenovacion(p);
     }
   }
 

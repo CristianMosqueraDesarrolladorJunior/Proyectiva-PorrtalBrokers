@@ -3,7 +3,6 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import type { CuentaCobroResponse } from '../models/comisiones.model';
-import type { ComisionDia } from '../../shared/components/comisiones-mes/comisiones-mes.component';
 import type {
   RendimientoConsola,
   SincronizacionConsola,
@@ -31,8 +30,16 @@ export class ConsolaService {
   private readonly base = '/api/v1/admin/consola';
   private readonly opciones = { withCredentials: true } as const;
 
-  resumen(): Observable<ResumenConsola> {
-    return this.http.get<ResumenConsola>(`${this.base}/resumen`, this.opciones);
+  /**
+   * `comercial` (código): el administrador filtra por la cartera de ese comercial. `desde`/`hasta` (AAAA-MM-DD) y
+   * `broker` (texto del nombre) cortan los indicadores; vacíos no se envían.
+   */
+  resumen(comercial = '', filtro: { desde?: string; hasta?: string; broker?: string } = {}): Observable<ResumenConsola> {
+    const params: Record<string, string> = {};
+    for (const [k, v] of Object.entries({ comercial, ...filtro })) {
+      if (v && v.trim()) params[k] = v.trim();
+    }
+    return this.http.get<ResumenConsola>(`${this.base}/resumen`, { ...this.opciones, params });
   }
 
   /** Bitácora: última corrida de cada sincronización con el Warehouse. */
@@ -40,18 +47,21 @@ export class ConsolaService {
     return this.http.get<SincronizacionConsola[]>(`${this.base}/sincronizaciones`, this.opciones);
   }
 
+  /** Rendimiento de la cartera de un comercial (modal del comercial; solo administrador). */
+  rendimientoComercial(codigo: string): Observable<RendimientoConsola> {
+    return this.http.get<RendimientoConsola>(`${this.base}/comerciales/${encodeURIComponent(codigo)}/rendimiento`, this.opciones);
+  }
+
   /** Rendimiento y conversión (cartera del comercial o todo). */
-  rendimiento(): Observable<RendimientoConsola> {
-    return this.http.get<RendimientoConsola>(`${this.base}/rendimiento`, this.opciones);
+  rendimiento(comercial = ''): Observable<RendimientoConsola> {
+    return this.http.get<RendimientoConsola>(`${this.base}/rendimiento`, { ...this.opciones, params: comercial ? { comercial } : {} });
   }
 
-  /** Plata por día del mes (`yyyy-MM`) por inicio de vigencia. */
-  comisionesPorDia(mes: string): Observable<readonly ComisionDia[]> {
-    return this.http.get<ComisionDia[]>(`${this.base}/comisiones-por-dia?mes=${encodeURIComponent(mes)}`, this.opciones);
-  }
-
-  movimientos(limite = 50): Observable<readonly Movimiento[]> {
-    return this.http.get<Movimiento[]>(`${this.base}/movimientos?limite=${limite}`, this.opciones);
+  movimientos(limite = 50, comercial = ''): Observable<readonly Movimiento[]> {
+    return this.http.get<Movimiento[]>(`${this.base}/movimientos`, {
+      ...this.opciones,
+      params: comercial ? { limite, comercial } : { limite },
+    });
   }
 
   brokers(): Observable<readonly BrokerConsola[]> {

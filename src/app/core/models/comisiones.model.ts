@@ -42,6 +42,8 @@ export interface AcuerdoComision {
 export interface CuentaCobroResponse {
   /** Número único de la cuenta de cobro («CUENTA DE COBRO N° …»), lo asigna el portal. */
   readonly consecutivo: number;
+  /** Referencia del sistema (CDC-…), como CTR- del contrato y COT- de la cotización. */
+  readonly referencia: string;
   readonly id: string;
   /** ISO-8601. */
   readonly fecha: string;

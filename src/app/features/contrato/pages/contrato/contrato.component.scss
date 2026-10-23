@@ -207,3 +207,24 @@
     background: var(--color-card);
   }
 }
+
+// Servicios públicos del inmueble: casillas compactas compartidas (app-check-declaracion) en rejilla.
+.contrato-servicios {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+
+  > legend {
+    margin-bottom: var(--space-2);
+    padding: 0;
+    font-size: var(--text-body-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+  }
+}
+.contrato-servicios__opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-2);
+}

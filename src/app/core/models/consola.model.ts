@@ -266,6 +266,8 @@ export interface RenovacionConsola {
   readonly accion?: AccionRenovacion;
   /** Renovada y con recaudo de la nueva vigencia en el libro de comisiones. */
   readonly pagada?: boolean;
+  /** Comercial del broker en el portal; `null` si el broker aún no tiene cuenta en el portal. */
+  readonly comercial?: string | null;
 }
 
 export interface CredencialGenerada {

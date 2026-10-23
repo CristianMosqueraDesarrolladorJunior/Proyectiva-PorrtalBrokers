@@ -3,8 +3,42 @@
     [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="resumen-titulo"
     [titulo]="esAdmin ? 'Comportamiento del negocio' : 'Hola, ' + (perfil()?.nombre ?? '')"
-    subtitulo="Primas emitidas, cartera asegurada, suscripción, retención de renovaciones y comisiones de intermediarios, con la actividad en vivo."
+    subtitulo="Primas emitidas, cartera asegurada, radicaciones, renovaciones y comisiones de los brokers, con la actividad en vivo."
   ></app-page-header>
+
+  <app-filtrado-inteligente [totalFiltros]="esAdmin ? 4 : 3" idCuerpo="resumen-filtros">
+    <div class="seg-filtros-grid">
+      @if (esAdmin) {
+        <label class="seg-filtro">
+          <span>Comercial</span>
+          <select id="resumen-comercial" [value]="fComercial()" (change)="cambiarComercial($any($event.target).value)">
+            <option value="">Todos</option>
+            @for (c of comerciales(); track c.codigo) {
+              <option [value]="c.codigo">{{ c.nombre }}{{ c.activo ? '' : ' (inactivo)' }}</option>
+            }
+          </select>
+        </label>
+      }
+      <label class="seg-filtro">
+        <span>Broker</span>
+        <!-- Mientras escribe filtra movimientos y rankings; al confirmar (Enter o salir del campo) recalcula los indicadores. -->
+        <input id="resumen-broker" type="search" autocomplete="off" placeholder="Nombre del broker…"
+          [value]="fBroker()" (input)="fBroker.set($any($event.target).value)"
+          (change)="cambiarFiltro('broker', $any($event.target).value)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Desde</span>
+        <input id="resumen-desde" type="date" [value]="fDesde()" [max]="fHasta() || null" (change)="cambiarFiltro('desde', $any($event.target).value)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Hasta</span>
+        <input id="resumen-hasta" type="date" [value]="fHasta()" [min]="fDesde() || null" (change)="cambiarFiltro('hasta', $any($event.target).value)" />
+      </label>
+    </div>
+    <div class="seg-filtros-acciones">
+      <button type="button" class="seg-btn-ghost" [disabled]="!hayFiltros()" (click)="limpiarFiltros()">Limpiar filtros</button>
+    </div>
+  </app-filtrado-inteligente>
 
   <app-estado-vista
     [cargando]="cargando()"
@@ -17,80 +51,54 @@
   >
     @if (resumen(); as r) {
       <div class="resumen">
-        <h2 class="resumen__grupo">Producción y primas</h2>
+        <details class="resumen__seccion" open>
+          <summary class="resumen__grupo">Producción y primas</summary>
         <app-grid-layout tipo="kpi-grid">
           <app-kpi-card label="Primas emitidas" [valor]="compacto(r.ingresos)" icono="account_balance" [sub]="r.polizasExpedidas + ' pólizas de arrendamiento expedidas'" variante="exito" />
           <app-kpi-card label="Canon mensual asegurado" [valor]="compacto(r.indicadores.canonAsegurado)" icono="home_work" sub="Amparo básico de las pólizas vigentes" />
           <app-kpi-card label="Valor asegurado" [valor]="compacto(r.indicadores.valorAsegurado)" icono="shield" sub="Suma asegurada total de la cartera" />
           <app-kpi-card label="Primas por canal" [valor]="compacto(r.ingresosBrokers)" icono="verified_user" [sub]="'Brokers · ' + compacto(r.ingresosProspectos) + ' de prospectos'" />
         </app-grid-layout>
+        </details>
 
-        <h2 class="resumen__grupo">Solicitudes en suscripción</h2>
+        <details class="resumen__seccion" open>
+          <summary class="resumen__grupo">Radicaciones</summary>
         <app-grid-layout tipo="kpi-grid">
-          <app-kpi-card label="En estudio de riesgo" [valor]="r.indicadores.enEstudio" icono="query_stats" sub="Radicadas y en análisis" />
-          <app-kpi-card label="Con corrección documental" [valor]="r.indicadores.enCorreccion" icono="rule" [tono]="r.indicadores.enCorreccion > 0 ? 'accent' : 'none'" sub="Esperan documentos del broker" />
-          <app-kpi-card label="Aprobadas por expedir" [valor]="r.indicadores.aprobadasSinExpedir" icono="task_alt" sub="Listas para emitir póliza" />
+          <app-kpi-card label="Radicaciones en estudio" [valor]="r.indicadores.enEstudio" icono="query_stats" sub="Radicadas y en análisis de riesgo" />
+          <app-kpi-card label="Radicaciones en corrección" [valor]="r.indicadores.enCorreccion" icono="rule" [tono]="r.indicadores.enCorreccion > 0 ? 'accent' : 'none'" sub="Esperan documentos del broker" />
+          <app-kpi-card label="Aprobadas por expedir" [valor]="r.indicadores.aprobadasSinExpedir" icono="task_alt" sub="Listas para expedir la póliza" />
           <app-kpi-card label="Documentos en el expediente" [valor]="r.indicadores.documentosCargados" icono="folder_open" [sub]="r.indicadores.legalizacionesEnRevision + ' legalizaciones de broker por revisar'" />
         </app-grid-layout>
+        </details>
 
-        <h2 class="resumen__grupo">Renovaciones y retención</h2>
+        <details class="resumen__seccion" open>
+          <summary class="resumen__grupo">Renovaciones y retención</summary>
         <app-grid-layout tipo="kpi-grid">
           <app-kpi-card label="Retención de pólizas" [valor]="retencion(r) + '%'" icono="autorenew" [sub]="r.indicadores.renovadas + ' renovadas de ' + (r.indicadores.renovadas + r.indicadores.noRenovadas) + ' cerradas'" [variante]="retencion(r) >= 50 ? 'exito' : 'alerta'" />
           <app-kpi-card label="Renovaciones en gestión" [valor]="r.indicadores.renovacionesEnGestion" icono="pending_actions" [sub]="r.indicadores.renovacionesTotal + ' pólizas en el Warehouse de renovaciones'" />
           <app-kpi-card label="Desocupaciones" [valor]="r.indicadores.desocupaciones" icono="logout" [tono]="r.indicadores.desocupaciones > 0 ? 'danger' : 'none'" sub="Inmuebles que el arrendatario entrega" />
           <app-kpi-card label="Casos especiales" [valor]="r.indicadores.casosEspeciales" icono="emergency" sub="Requieren decisión técnica" />
         </app-grid-layout>
+        </details>
 
-        <h2 class="resumen__grupo">Intermediarios</h2>
+        <details class="resumen__seccion" open>
+          <summary class="resumen__grupo">Brokers</summary>
         <app-grid-layout tipo="kpi-grid">
           <app-kpi-card label="Brokers activos" [valor]="r.brokersActivos" icono="groups" [sub]="r.prospectos + ' prospectos en vinculación'" />
-          <app-kpi-card label="Negocios en curso" [valor]="r.negociosEnCurso" icono="work_history" sub="Radicados aún sin póliza" />
-        </app-grid-layout>
-
-        @if (rendimiento(); as d) {
-          <h2 class="resumen__grupo">Rendimiento y conversión</h2>
-          <app-grid-layout tipo="kpi-grid">
+          <app-kpi-card label="Radicaciones en curso" [valor]="r.negociosEnCurso" icono="work_history" sub="Radicadas aún sin póliza" />
+          @if (rendimiento(); as d) {
+            @if (d.porcentajeComercial !== null) {
             <app-kpi-card label="Conversión de prospectos" [valor]="pct(d.prospectosConvertidos, d.prospectosConvertidos + d.prospectosActivos) + '%'" icono="how_to_reg"
-              [sub]="d.prospectosConvertidos + ' pasaron a broker · ' + d.prospectosActivos + ' siguen como prospecto'" />
-            <app-kpi-card label="Cotización → radicación" [valor]="pct(d.radicaciones, d.cotizaciones) + '%'" icono="trending_up"
-              [sub]="d.cotizaciones + ' cotizaciones · ' + d.radicaciones + ' radicadas'" />
-            <app-kpi-card label="Radicación → póliza" [valor]="pct(d.expedidas, d.radicaciones) + '%'" icono="task_alt"
-              [sub]="d.expedidas + ' pólizas expedidas por el portal'" />
-            <app-kpi-card label="Renovación efectiva" [valor]="pct(d.renovadas, d.renovacionesCerradas) + '%'" icono="autorenew"
-              [sub]="d.renovadas + ' renovadas de ' + d.renovacionesCerradas + ' con decisión del área'" />
-            <app-kpi-card label="Primas del mes" [valor]="compacto(d.primasMes)" icono="calendar_month"
-              [sub]="d.polizasMes + ' pólizas inician vigencia este mes'" />
-            <app-kpi-card label="Prima promedio por póliza" [valor]="compacto(d.polizasTotal ? d.primasTotal / d.polizasTotal : 0)" icono="receipt"
-              [sub]="d.polizasTotal + ' pólizas (portal + histórico del área)'" />
-            <app-kpi-card label="Comisión promedio del broker" [valor]="compacto(d.polizasTotal ? d.comisionBrokers / d.polizasTotal : 0)" icono="payments"
-              [sub]="compacto(d.comisionBrokers) + ' en comisiones de brokers'" />
-            <app-kpi-card label="Comisión del comercial" [valor]="compacto(d.comisionComercial)" icono="badge"
-              [sub]="d.porcentajeComercial !== null ? d.porcentajeComercial + ' % sobre la prima sin IVA de la cartera' : 'Según el % de cada comercial'" />
-          </app-grid-layout>
-        }
-
-        @if (sincronizaciones().length) {
-          <h2 class="resumen__grupo">Sincronización con el Warehouse</h2>
-          <app-data-table
-            [columnas]="columnasSincronizacion"
-            [filas]="filasSincronizacion()"
-            [total]="filasSincronizacion().length"
-            [tamanoPagina]="10"
-            ariaLabel="Última corrida de cada sincronización con las hojas del área"
-          />
-        }
-
-        <div class="resumen__grafica">
-          <div class="resumen__grafica-nav">
-            <button type="button" class="resumen__grafica-btn" aria-label="Mes anterior" (click)="cambiarMesGrafica(-1)">‹</button>
-            <button type="button" class="resumen__grafica-btn" aria-label="Mes siguiente" (click)="cambiarMesGrafica(1)">›</button>
-          </div>
-          @if (comisionesMes(); as datos) {
-            <app-comisiones-mes [mes]="mesGrafica()" [datos]="datos" />
-          } @else {
-            <p class="resumen__grafica-estado" role="status">Cargando la plata del mes…</p>
+              [sub]="d.prospectosConvertidos + ' pasaron a broker · ' + d.prospectosActivos + ' en vinculación'" />
+            <app-kpi-card label="Cotización → póliza" [valor]="pct(d.expedidas, d.cotizaciones) + '%'" icono="trending_up"
+              [sub]="d.cotizaciones + ' cotizaciones · ' + d.radicaciones + ' radicadas · ' + d.expedidas + ' pólizas'" />
+              <app-kpi-card label="Tu comisión estimada" [valor]="compacto(d.comisionComercial)" icono="badge"
+                [sub]="d.porcentajeComercial + ' % sobre la prima sin IVA de tu cartera'" />
+            }
           }
-        </div>
+        </app-grid-layout>
+        </details>
+
 
         <app-grid-layout tipo="dash-grid">
           <app-ranking-barras
@@ -129,4 +137,18 @@
       ariaLabel="Movimientos en vivo"
     />
   </app-form-section-card>
+
+  <!-- Sincronización con el Warehouse: al final de la vista, máximo 5 filas por página. -->
+  @if (sincronizaciones().length) {
+    <details class="resumen__seccion" open>
+      <summary class="resumen__grupo">Sincronización con el Warehouse</summary>
+    <app-data-table
+      [columnas]="columnasSincronizacion"
+      [filas]="filasSincronizacion()"
+      [total]="filasSincronizacion().length"
+      [tamanoPagina]="5"
+      ariaLabel="Última corrida de cada sincronización con las hojas del área"
+    />
+    </details>
+  }
 </section>

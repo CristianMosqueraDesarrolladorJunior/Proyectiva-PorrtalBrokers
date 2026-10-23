@@ -16,7 +16,7 @@ export const GUIA_RENOVACION: readonly PasoTour[] = [
 const MENU = ['app-sidebar nav', 'app-sidebar'];
 const CIFRAS = ['app-grid-layout', 'app-kpi-card'];
 const TABLA = ['app-data-table', 'app-estado-vista'];
-const FILTROS = ['app-barra-acciones', 'app-segmented-control'];
+const FILTROS = ['app-barra-acciones', 'app-segmented-control', 'app-filtrado-inteligente'];
 const GESTIONAR = ['app-data-table .dt-fija', 'app-data-table'];
 const VER_RECORRIDO = ['.sidebar__recorrido'];
 

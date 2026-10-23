@@ -79,6 +79,7 @@ interface DocumentoLegalizacion {
   readonly nombre: string;
   readonly estado: string;
   readonly fechaCarga: string;
+  readonly archivoId?: string;
 }
 
 /** Expediente de legalización del prospecto guardado en el servidor. */
@@ -225,6 +226,29 @@ export class PerfilService {
       );
   }
 
+  /** Imagen de la firma (PNG o JPG) que se estampa en cada cuenta de cobro; reemplaza la anterior. */
+  cargarFirma(archivo: File): Observable<PerfilCuenta> {
+    const cuerpo = new FormData();
+    cuerpo.append('tipo', 'firma');
+    cuerpo.append('archivo', archivo);
+    return this.http
+      .post<DocumentoLegalizacion>(`${this.baseUrl}/brokers/legalizacion/documentos`, cuerpo, { withCredentials: true })
+      .pipe(
+        map((doc) => {
+          this._perfil.update((p) => ({
+            ...p,
+            firma: doc.archivoId ? { archivoId: doc.archivoId, nombre: doc.nombre, fechaCarga: doc.fechaCarga } : p.firma,
+          }));
+          return this._perfil();
+        }),
+      );
+  }
+
+  /** Dirección de la imagen de la firma para la vista previa (la sirve el backend solo a su dueño). */
+  urlFirma(archivoId: string): string {
+    return `${this.baseUrl}/brokers/legalizacion/documentos/${encodeURIComponent(archivoId)}`;
+  }
+
   /**
    * Consulta el Conocimiento de Cliente del broker con su documento (`POST /sarlaft/consultas`); el backend decide.
    * Sin fecha de expedición. Si está desactualizado, SARLAFT envía el enlace por SMS al celular registrado.
@@ -303,8 +327,10 @@ export class PerfilService {
   private desdeExpediente(e: ExpedienteLegalizacion | null): Partial<PerfilCuenta> {
     if (!e) return {};
     const previo = this._perfil();
+    const firma = e.documentos.find((x) => (x.tipo as string) === 'firma');
     return {
       legalizacion: e.estado,
+      firma: firma?.archivoId ? { archivoId: firma.archivoId, nombre: firma.nombre, fechaCarga: firma.fechaCarga } : null,
       documentos: previo.documentos.map((d): DocumentoPerfil => {
         const servidor = e.documentos.find((x) => x.tipo === d.tipo);
         return servidor

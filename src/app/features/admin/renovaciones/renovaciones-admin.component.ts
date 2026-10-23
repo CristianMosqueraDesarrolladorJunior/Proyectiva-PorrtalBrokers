@@ -2,6 +2,7 @@ import { SITUACION } from '../../renovacion/renovaciones-lista';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 
 import type { RenovacionConsola } from '../../../core/models/consola.model';
 import type { InduccionAdminResponse } from '../../../core/models/renovacion.model';
@@ -18,6 +19,7 @@ import {
   DataTableComponent,
   DocUploaderComponent,
   EstadoVistaComponent,
+  FiltradoInteligenteComponent,
   FichaComponent,
   FormFieldComponent,
   GridLayoutComponent,
@@ -81,6 +83,7 @@ export function pasosHistorial(historial: string | null): readonly EventoBitacor
     DataTableComponent,
     DocUploaderComponent,
     EstadoVistaComponent,
+    FiltradoInteligenteComponent,
     FichaComponent,
     FormFieldComponent,
     GridLayoutComponent,
@@ -134,16 +137,49 @@ export class RenovacionesAdminComponent {
     { key: 'pago', header: 'Pago', ordenable: true },
     { key: 'broker', header: 'Broker', tipo: 'principal', ordenable: true },
     { key: 'asegurado', header: 'Asegurado', tipo: 'principal', ordenable: true },
-    { key: 'gestor', header: 'Gestor', ordenable: true },
+    { key: 'comercial', header: 'Comercial', tipo: 'principal', ordenable: true },
     { key: 'canon', header: 'Canon', alinear: 'derecha', ordenable: true },
     ...COLUMNAS_FECHAS,
     COLUMNA_GESTIONAR,
   ];
 
+  // Filtro inteligente (mismo componente que Seguimiento): búsqueda, situación, comercial y vencimiento.
+  protected readonly fBusqueda = signal('');
+  protected readonly fSituacion = signal('');
+  protected readonly fComercial = signal('');
+  protected readonly fDesde = signal('');
+  protected readonly fHasta = signal('');
+  protected readonly situaciones = Object.entries(SITUACION).map(([valor, s]) => ({ valor, etiqueta: s.texto }));
+  protected readonly comercialesFiltro = computed(() =>
+    [...new Set(this.renovaciones().map((r) => r.comercial).filter((x): x is string => !!x))].sort());
+  protected readonly hayFiltros = computed(() =>
+    !!(this.fBusqueda() || this.fSituacion() || this.fComercial() || this.fDesde() || this.fHasta()));
+  protected limpiarFiltros(): void {
+    this.fBusqueda.set('');
+    this.fSituacion.set('');
+    this.fComercial.set('');
+    this.fDesde.set('');
+    this.fHasta.set('');
+  }
+
   protected readonly visibles = computed(() => {
-    const todas = this.renovaciones();
-    if (this.vista() === 'especiales') return todas.filter((r) => r.estado === 'caso_especial');
-    return this.estado() ? todas.filter((r) => r.estado === this.estado()) : todas;
+    const base = this.vista() === 'especiales'
+      ? this.filtradas().filter((r) => r.estado === 'caso_especial')
+      : this.estado() ? this.filtradas().filter((r) => r.estado === this.estado()) : this.filtradas();
+    return base;
+  });
+
+  /** Renovaciones dentro del filtro inteligente: de aquí salen la tabla y las tarjetas. */
+  private readonly filtradas = computed(() => {
+    const q = this.fBusqueda().trim().toLowerCase();
+    return this.renovaciones().filter((r) => {
+      const vence = (r.vence ?? '').slice(0, 10);
+      return (!q || [r.poliza, r.asegurado, r.aseguradoDocumento, r.broker].join(' ').toLowerCase().includes(q))
+        && (!this.fSituacion() || (r.accion ?? 'RENOVAR') === this.fSituacion())
+        && (!this.fComercial() || r.comercial === this.fComercial())
+        && (!this.fDesde() || (!!vence && vence >= this.fDesde()))
+        && (!this.fHasta() || (!!vence && vence <= this.fHasta()));
+    });
   });
 
   protected readonly filas = computed<readonly FilaTabla[]>(() =>
@@ -154,7 +190,8 @@ export class RenovacionesAdminComponent {
       aseguradoSub: r.aseguradoDocumento ?? '',
       broker: r.broker ?? 'Sin broker',
       brokerSub: r.direccion ?? '',
-      gestor: r.gestor ?? 'Sin asignar',
+      comercial: r.comercial ?? 'Broker sin cuenta en el portal',
+      comercialSub: r.gestor ? `Gestor del área: ${r.gestor}` : '',
       canon: r.canon === null ? '—' : cop(r.canon),
       canonOrden: r.canon ?? 0,
       vence: r.vence ? fechaCorta(r.vence) : '—',
@@ -193,7 +230,7 @@ export class RenovacionesAdminComponent {
   );
 
   protected conteo(estado: string): number {
-    return this.renovaciones().filter((r) => r.estado === estado).length;
+    return this.filtradas().filter((r) => r.estado === estado).length;
   }
 
   // --- Modal de renovación ---
@@ -284,7 +321,8 @@ export class RenovacionesAdminComponent {
         icono: 'assignment',
         datos: [
           { etiqueta: 'Broker / inmobiliaria', valor: r.broker },
-          { etiqueta: 'Gestor asignado', valor: r.gestor },
+          { etiqueta: 'Comercial del broker', valor: r.comercial ?? 'Broker sin cuenta en el portal' },
+          { etiqueta: 'Gestor del área', valor: r.gestor },
           { etiqueta: 'Estado en el portal', valor: (this.estados[r.estado] ?? { etiqueta: r.estado }).etiqueta },
           { etiqueta: 'Estado de gestión', valor: r.estadoWarehouse },
           { etiqueta: 'Caso especial', valor: r.casoEspecial },
@@ -327,6 +365,16 @@ export class RenovacionesAdminComponent {
 
   constructor() {
     this.cargar();
+    // Llega desde el buscador de la barra superior con el número de póliza.
+    inject(ActivatedRoute)
+      .queryParamMap.pipe(takeUntilDestroyed())
+      .subscribe((p) => {
+        const q = p.get('q');
+        if (q) {
+          this.limpiarFiltros();
+          this.fBusqueda.set(q);
+        }
+      });
   }
 
   protected cargar(): void {

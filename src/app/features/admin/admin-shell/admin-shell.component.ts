@@ -4,7 +4,7 @@ import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LayoutService } from '../../../core/services/layout.service';
 import { SessionService } from '../../../core/services/session.service';
-import { IconComponent } from '../../../shared/components';
+import { TopbarComponent } from '../../../shared/components';
 import { RecorridoPlataformaComponent } from '../../shell/recorrido/recorrido-plataforma.component';
 import { AccesoSidebar, SidebarComponent } from '../../shell/sidebar/sidebar.component';
 
@@ -40,7 +40,7 @@ const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
   selector: 'app-admin-shell',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, SidebarComponent, IconComponent, RecorridoPlataformaComponent],
+  imports: [RouterOutlet, SidebarComponent, TopbarComponent, RecorridoPlataformaComponent],
   templateUrl: './admin-shell.component.html',
   styleUrls: ['../../shell/shell.component.scss', './admin-shell.component.scss'],
 })

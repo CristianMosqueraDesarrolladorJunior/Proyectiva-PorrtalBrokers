@@ -16,9 +16,10 @@ export function accionDe(p: Pick<Poliza, 'estado' | 'gestion' | 'accion'>): Acci
 export const SITUACION: Record<AccionRenovacion, { texto: string; variante: string }> = {
   RENOVAR: { texto: 'Por renovar', variante: 'warning' },
   CORREGIR: { texto: 'Corrección pendiente', variante: 'warning' },
-  INDUCCION: { texto: 'Vencida · inducción', variante: 'danger' },
+  INDUCCION: { texto: 'Vencida · requiere inducción', variante: 'danger' },
   EN_PROCESO: { texto: 'En proceso con el área', variante: 'info' },
   CERRADA: { texto: 'Cerrada', variante: 'success' },
+  FUERA_PLAZO: { texto: 'Fuera de plazo', variante: 'danger' },
 };
 
 /** Primero lo que hay que hacer: renovar, corregir, inducción; al final lo que está en proceso y lo cerrado. */
@@ -32,8 +33,10 @@ export function prioridadRenovacion(p: Pick<Poliza, 'estado' | 'gestion' | 'acci
       return 2;
     case 'EN_PROCESO':
       return 3;
-    default:
+    case 'CERRADA':
       return 4;
+    default:
+      return 5;
   }
 }
 

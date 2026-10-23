@@ -3,6 +3,36 @@
     <h3>{{ tituloMes }}</h3>
   </div>
 
+  @if (plata.length) {
+    <figure class="cal-plata" [attr.aria-label]="'Plata por día de ' + tituloMes">
+      <figcaption class="cal-plata__cabecera">
+        <span class="cal-plata__titulo">Plata por día · inicio de vigencia</span>
+        <span class="cal-plata__leyenda">
+          <span><i class="cal-plata__muestra cal-plata__muestra--total"></i>Pólizas {{ cop(totalesPlata.total) }}</span>
+          <span><i class="cal-plata__muestra cal-plata__muestra--renovadas"></i>Comisión renovaciones {{ cop(totalesPlata.renovadas) }}</span>
+          <span><i class="cal-plata__muestra cal-plata__muestra--nuevas"></i>Comisión nuevas {{ cop(totalesPlata.nuevas) }}</span>
+          <span><i class="cal-plata__muestra cal-plata__muestra--pendiente"></i>Pendiente por renovar {{ cop(totalesPlata.pendiente) }}</span>
+        </span>
+      </figcaption>
+      <div class="cal-plata__barras">
+        @for (b of barras; track b.dia) {
+          <button type="button" class="cal-plata__dia" [class.cal-plata__dia--sel]="b.fechaIso === diaSeleccionado"
+            [attr.aria-label]="b.etiqueta" [title]="b.etiqueta" (click)="seleccionarFecha(b.fechaIso)">
+            <span class="cal-plata__par">
+              <span class="cal-plata__barra cal-plata__barra--total" [style.height.%]="b.hTotal"></span>
+              <span class="cal-plata__pila">
+                <span class="cal-plata__seg cal-plata__seg--pendiente" [style.height.%]="b.hPendiente"></span>
+                <span class="cal-plata__seg cal-plata__seg--nuevas" [style.height.%]="b.hNuevas"></span>
+                <span class="cal-plata__seg cal-plata__seg--renovadas" [style.height.%]="b.hRenovadas"></span>
+              </span>
+            </span>
+            <span class="cal-plata__num">{{ b.dia }}</span>
+          </button>
+        }
+      </div>
+    </figure>
+  }
+
   <div class="cal-grid" role="grid" [attr.aria-label]="'Calendario de ' + tituloMes">
     @for (nombre of diasSemana; track nombre) {
       <div class="cal-day-header" role="columnheader">{{ nombre }}</div>

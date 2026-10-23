@@ -124,8 +124,12 @@
         </div>
       }
       <div class="perfil-resumen__dato">
-        <small>Documentación</small>
-        <b>{{ documentosAportados() }} de {{ totalDocumentos() }} al día</b>
+        <small>Cédula</small>
+        <b>{{ identidadCargada() ? 'Cargada' : 'Pendiente por cargar' }}</b>
+      </div>
+      <div class="perfil-resumen__dato">
+        <small>Firma de tus cuentas de cobro</small>
+        <b>{{ perfil().firma ? 'Cargada' : 'Pendiente por cargar' }}</b>
       </div>
     </article>
   }
@@ -247,9 +251,13 @@
     <header class="perfil-tarjeta__cabecera">
       <div>
         <h3 id="perfil-docs-titulo"><app-icon nombre="folder_open" [tamano]="20" /> Documentación</h3>
-        <p>Carga o actualiza tus documentos. Revisamos cada archivo nuevo y te avisamos cuando quede aprobado.</p>
+        <p>{{ esProspecto()
+          ? 'Carga o actualiza tus documentos. Revisamos cada archivo nuevo y te avisamos cuando quede aprobado.'
+          : 'Tu cédula acompaña tus cuentas de cobro en el aplicativo de proveedores.' }}</p>
       </div>
-      <span class="perfil-contador">{{ documentosAportados() }}/{{ totalDocumentos() }} aportados</span>
+      @if (esProspecto()) {
+        <span class="perfil-contador">{{ documentosAportados() }}/{{ totalDocumentos() }} aportados</span>
+      }
     </header>
 
     <ul class="perfil-docs">
@@ -277,9 +285,38 @@
       }
     </ul>
 
-    <p class="perfil-etiqueta">Cargar o reemplazar</p>
-    <app-doc-uploader [reglas]="reglasEditables()" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)" />
+    @if (reglasEditables().length) {
+      <p class="perfil-etiqueta">Cargar o reemplazar</p>
+      <app-doc-uploader [reglas]="reglasEditables()" [cargados]="cargados()" (archivoSeleccionado)="onDocumento($event)" />
+    }
 
+  </article>
+  }
+
+  <!-- ===================== Firma de las cuentas de cobro (broker registrado) ===================== -->
+  @if (!esProspecto()) {
+  <article class="perfil-tarjeta" id="perfil-firma" aria-labelledby="perfil-firma-titulo">
+    <header class="perfil-tarjeta__cabecera">
+      <div>
+        <h3 id="perfil-firma-titulo"><app-icon nombre="draw" [tamano]="20" /> Firma de tus cuentas de cobro</h3>
+        <p>La ponemos sobre la línea de firma de cada cuenta de cobro que generas, lista para el aplicativo de proveedores.</p>
+      </div>
+      <app-badge-estado [variante]="perfil().firma ? 'success' : 'warning'" [conPunto]="true">
+        {{ perfil().firma ? 'Firma cargada' : 'Sin firma' }}
+      </app-badge-estado>
+    </header>
+
+    @if (urlFirma(); as url) {
+      <figure class="perfil-firma">
+        <img [src]="url" alt="Tu firma tal como sale en las cuentas de cobro" />
+        <figcaption>{{ perfil().firma?.nombre }} · {{ fecha(perfil().firma?.fechaCarga ?? null) }}</figcaption>
+      </figure>
+    } @else {
+      <app-info-box icono="info">Mientras no cargues tu firma, tus cuentas de cobro salen con la línea en blanco para firmar a mano.</app-info-box>
+    }
+
+    <p class="perfil-etiqueta">{{ perfil().firma ? 'Reemplazar firma' : 'Cargar firma' }}</p>
+    <app-doc-uploader [reglas]="reglaFirma" [cargados]="cargadaFirma()" (archivoSeleccionado)="onFirma($event)" />
   </article>
   }
 </section>

@@ -37,6 +37,11 @@ export class AdminService {
     return this.http.get<CuentaCobroResponse[]>(`${this.baseUrl}/cuentasCobro`, { withCredentials: true });
   }
 
+  /** Lo que el área ya facturó en el libro («Base Facturación»): todo para el administrador, su cartera para el comercial. */
+  facturacionArea(): Observable<readonly FacturaArea[]> {
+    return this.http.get<FacturaArea[]>(`${this.baseUrl}/cuentasCobro/area`, { withCredentials: true });
+  }
+
   /** Inducciones de pólizas vencidas: todas (Administrador) o las de la cartera (Comercial). */
   listarInducciones(): Observable<readonly InduccionAdminResponse[]> {
     return this.http.get<InduccionAdminResponse[]>(`${this.baseUrl}/inducciones`, { withCredentials: true });
@@ -50,4 +55,19 @@ export class AdminService {
       { withCredentials: true },
     );
   }
+}
+
+/** Factura del libro de comisiones («Base Facturación»). */
+export interface FacturaArea {
+  readonly nit: string;
+  readonly broker: string;
+  readonly comercial: string | null;
+  readonly factura: string;
+  readonly fechaAprobacion: string | null;
+  readonly base: number;
+  readonly total: number;
+  readonly polizas: number;
+  readonly detallePolizas: string;
+  readonly ordenPago: string;
+  readonly fechaPago: string | null;
 }

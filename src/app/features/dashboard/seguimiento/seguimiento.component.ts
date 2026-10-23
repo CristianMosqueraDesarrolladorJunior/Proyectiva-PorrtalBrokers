@@ -273,11 +273,10 @@ export class SeguimientoComponent {
         error: () => this.comisiones.set(null),
       });
     }
-    this.dashboardService.obtenerKpis().subscribe({
-      next: (k) => this.kpis.set(k),
-      error: () => this.kpis.set(null),
-    });
   }
+
+  /** Filtros con que se calcularon las tarjetas (las carga {@link cargarSolicitudes} junto con la tabla). */
+  private filtrosKpis: string | null = null;
 
   /** Obtiene el listado filtrado y paginado de solicitudes (Req 6.2, 6.5). */
   protected cargarSolicitudes(): void {
@@ -290,6 +289,15 @@ export class SeguimientoComponent {
       ...(this.fechaDesde() ? { fechaDesde: this.fechaDesde() } : {}),
       ...(this.fechaHasta() ? { fechaHasta: this.fechaHasta() } : {}),
     };
+    // Las tarjetas siguen el mismo filtro que la tabla; cambiar de página no las recalcula.
+    const clave = JSON.stringify(filtros);
+    if (clave !== this.filtrosKpis) {
+      this.filtrosKpis = clave;
+      this.dashboardService.obtenerKpis(filtros).subscribe({
+        next: (k) => this.kpis.set(k),
+        error: () => this.kpis.set(null),
+      });
+    }
     this.dashboardService
       .listarSolicitudes(filtros, this.paginaActual() - 1, TAMANO_PAGINA)
       .subscribe({

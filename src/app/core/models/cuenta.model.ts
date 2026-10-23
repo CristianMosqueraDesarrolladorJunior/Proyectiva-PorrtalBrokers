@@ -85,6 +85,8 @@ export interface PerfilCuenta {
   readonly sarlaft: SarlaftPerfil;
   readonly documentos: readonly DocumentoPerfil[];
   readonly comisiones: ComisionesRetroactivas;
+  /** Firma que se estampa en las cuentas de cobro; `null` si aún no la carga. */
+  readonly firma?: { readonly archivoId: string; readonly nombre: string; readonly fechaCarga: string } | null;
 }
 
 /** Datos personales editables desde el perfil (el documento de identidad y la ciudad no se incluyen: la ciudad es dato compartido de Cien Cuadras y no es modificable desde el perfil). */

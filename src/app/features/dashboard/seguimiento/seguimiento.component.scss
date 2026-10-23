@@ -42,76 +42,7 @@
 
 // --- Filtros proyectados en el FiltradoInteligenteComponent (Req 6.2) ---
 
-.seg-filtros-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-}
-
-.seg-filtro {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: var(--text-caption);
-  color: var(--sb-secondary);
-
-  input,
-  select {
-    padding: var(--space-2) var(--space-3);
-    background: var(--sb-surface-low);
-    border: 1px solid var(--sb-border);
-    border-radius: var(--radius-md);
-    font-family: var(--font-family-body);
-    font-size: var(--text-body-sm);
-    color: var(--sb-on-surface);
-
-    &:focus-visible {
-      outline: none;
-      border-color: var(--sb-primary);
-      box-shadow: 0 0 0 3px var(--sb-primary-fixed);
-    }
-  }
-}
-
-.seg-filtros-acciones {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-}
-
-.seg-btn-ghost,
-.seg-btn-accent {
-  padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-lg);
-  font-family: var(--font-family-body);
-  font-size: var(--text-body-sm);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.seg-btn-ghost {
-  background: var(--sb-surface-low);
-  border-color: var(--sb-border);
-  color: var(--sb-on-surface);
-
-  &:hover {
-    background: var(--sb-surface-container);
-  }
-}
-
-.seg-btn-accent {
-  background: var(--sb-primary);
-  color: var(--sb-on-primary);
-
-  &:hover {
-    background: var(--sb-primary-hover);
-  }
-}
-
+// Los controles del filtro (.seg-filtros-grid, .seg-filtro, .seg-btn-*) viven en app-filtrado-inteligente.
 .seg-error {
   font-size: var(--text-body-sm);
   color: var(--sb-error);

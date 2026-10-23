@@ -49,7 +49,7 @@
           </ul>
         </section>
       }
-      @if (p.procedimiento.numeroPoliza) {
+      @if (p.procedimiento.numeroPoliza && !polizaEnFicha()) {
         <app-alert-banner variante="success" titulo="Póliza expedida" icono="verified">
           Número de póliza {{ p.procedimiento.numeroPoliza }}.
         </app-alert-banner>

@@ -37,6 +37,56 @@
     </app-alert-banner>
   }
 
+  <!-- Filtrado inteligente arriba: filtra la vista (Req 6.2) -->
+  <app-filtrado-inteligente [totalFiltros]="5">
+    <div class="seg-filtros-grid">
+      <label class="seg-filtro">
+        <span>Búsqueda</span>
+        <input
+          type="text"
+          placeholder="Nombre, ref o cédula..."
+          [ngModel]="busqueda()"
+          (ngModelChange)="busqueda.set($event)"
+          (keyup.enter)="aplicarFiltros()"
+        />
+      </label>
+      <label class="seg-filtro">
+        <span>Producto</span>
+        <select [ngModel]="producto()" (ngModelChange)="producto.set($event); aplicarFiltros()">
+          <option value="">Todos</option>
+          @for (p of productos; track p) {
+            <option [value]="p">{{ p }}</option>
+          }
+        </select>
+      </label>
+      <label class="seg-filtro">
+        <span>Estado</span>
+        <select [ngModel]="estado()" (ngModelChange)="estado.set($event); aplicarFiltros()">
+          <option value="">Todos</option>
+          @for (e of estados; track e.valor) {
+            <option [value]="e.valor">{{ e.etiqueta }}</option>
+          }
+        </select>
+      </label>
+      <label class="seg-filtro">
+        <span>Desde</span>
+        <input type="date" [ngModel]="fechaDesde()" [max]="fechaHasta() || null" (ngModelChange)="fechaDesde.set($event); aplicarFiltros()" />
+      </label>
+      <label class="seg-filtro">
+        <span>Hasta</span>
+        <input type="date" [ngModel]="fechaHasta()" [min]="fechaDesde() || null" (ngModelChange)="fechaHasta.set($event); aplicarFiltros()" />
+      </label>
+    </div>
+    <div class="seg-filtros-acciones">
+      <button type="button" class="seg-btn-ghost" (click)="limpiarFiltros()">
+        Limpiar filtros
+      </button>
+      <button type="button" class="seg-btn-accent" (click)="aplicarFiltros()">
+        Aplicar filtros
+      </button>
+    </div>
+  </app-filtrado-inteligente>
+
   <!-- Banner Herramienta Rápida (Req 5.1, 5.5) -->
   <app-quick-tool-banner
     titulo="Cotiza en segundos la póliza ideal para el propietario"
@@ -98,65 +148,16 @@
     </p>
   }
 
-  <!-- Filtrado inteligente colapsable (Req 6.2) -->
-  <app-filtrado-inteligente [totalFiltros]="5">
-    <div class="seg-filtros-grid">
-      <label class="seg-filtro">
-        <span>Búsqueda</span>
-        <input
-          type="text"
-          placeholder="Nombre, ref o cédula..."
-          [ngModel]="busqueda()"
-          (ngModelChange)="busqueda.set($event)"
-          (keyup.enter)="aplicarFiltros()"
-        />
-      </label>
-      <label class="seg-filtro">
-        <span>Producto</span>
-        <select [ngModel]="producto()" (ngModelChange)="producto.set($event); aplicarFiltros()">
-          <option value="">Todos</option>
-          @for (p of productos; track p) {
-            <option [value]="p">{{ p }}</option>
-          }
-        </select>
-      </label>
-      <label class="seg-filtro">
-        <span>Estado</span>
-        <select [ngModel]="estado()" (ngModelChange)="estado.set($event); aplicarFiltros()">
-          <option value="">Todos</option>
-          @for (e of estados; track e.valor) {
-            <option [value]="e.valor">{{ e.etiqueta }}</option>
-          }
-        </select>
-      </label>
-      <label class="seg-filtro">
-        <span>Desde</span>
-        <input type="date" [ngModel]="fechaDesde()" [max]="fechaHasta() || null" (ngModelChange)="fechaDesde.set($event); aplicarFiltros()" />
-      </label>
-      <label class="seg-filtro">
-        <span>Hasta</span>
-        <input type="date" [ngModel]="fechaHasta()" [min]="fechaDesde() || null" (ngModelChange)="fechaHasta.set($event); aplicarFiltros()" />
-      </label>
-    </div>
-    <div class="seg-filtros-acciones">
-      <button type="button" class="seg-btn-ghost" (click)="limpiarFiltros()">
-        Limpiar filtros
-      </button>
-      <button type="button" class="seg-btn-accent" (click)="aplicarFiltros()">
-        Aplicar filtros
-      </button>
-    </div>
-  </app-filtrado-inteligente>
 
-  <!-- Tabla de solicitudes con paginación (Req 6.1, 6.5) -->
+  <!-- Tabla de radicaciones con paginación (Req 6.1, 6.5) -->
   @if (errorTabla(); as error) {
-    <app-alert-banner variante="error" titulo="No se pudieron cargar las solicitudes">
+    <app-alert-banner variante="error" titulo="No se pudieron cargar las radicaciones">
       {{ error }}
       <app-boton variante="outline" (clicked)="aplicarFiltros()">Reintentar</app-boton>
     </app-alert-banner>
   }
   @if (cargandoTabla() && filas().length === 0) {
-    <app-skeleton [lineas]="6" [alto]="28" ariaLabel="Cargando solicitudes" />
+    <app-skeleton [lineas]="6" [alto]="28" ariaLabel="Cargando radicaciones" />
   } @else {
   <app-data-table
     [columnas]="columnas"
@@ -164,7 +165,7 @@
     [total]="total()"
     [paginaActual]="paginaActual()"
     [tamanoPagina]="tamanoPagina"
-    ariaLabel="Tabla de solicitudes de seguimiento"
+    ariaLabel="Radicaciones en seguimiento"
     (cambioPagina)="onCambioPagina($event)"
     (seleccionFila)="onSeleccionFila($event)"
     (accion)="onGestionar($event)"

@@ -650,16 +650,16 @@
 
           <fieldset class="contrato-servicios contrato-grid-full">
             <legend>Servicios públicos disponibles en el inmueble</legend>
-            @for (servicio of serviciosPublicos; track servicio) {
-              <label class="contrato-check">
-                <input
-                  type="checkbox"
-                  [checked]="conServicios().includes(servicio)"
-                  (change)="alternarServicio(servicio, $any($event.target).checked)"
-                />
-                <span>{{ servicio }}</span>
-              </label>
-            }
+            <div class="contrato-servicios__opciones">
+              @for (servicio of serviciosPublicos; track servicio; let i = $index) {
+                <app-check-declaracion
+                  [compacta]="true"
+                  [controlId]="'con-servicio-' + i"
+                  [ngModel]="conServicios().includes(servicio)"
+                  (ngModelChange)="alternarServicio(servicio, $event)"
+                >{{ servicio }}</app-check-declaracion>
+              }
+            </div>
           </fieldset>
         </div>
 

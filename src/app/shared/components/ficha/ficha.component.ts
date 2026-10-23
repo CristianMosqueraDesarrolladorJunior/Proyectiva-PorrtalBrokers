@@ -186,9 +186,9 @@ export interface SeccionFicha {
         color: var(--sb-on-surface);
         overflow-wrap: anywhere;
       }
+      /* Destaca con color y peso, no con tamaño: un texto largo («Estimada $… · se causa al expedir») no se desborda. */
       .fi__dato--destacado dd {
-        font-family: var(--font-family-heading);
-        font-size: var(--text-title, 1.125rem);
+        font-size: var(--text-body);
         font-weight: var(--font-weight-bold);
         color: var(--sb-primary);
         font-variant-numeric: tabular-nums;

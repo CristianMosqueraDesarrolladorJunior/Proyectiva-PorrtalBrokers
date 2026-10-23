@@ -306,10 +306,48 @@ export class PerfilComponent implements OnInit {
    */
   protected readonly reglasEditables = computed<readonly ReglaDocumentoUploader[]>(() => {
     const identidadYaCargada = this.identidadCargada();
+    // El broker registrado ya no legaliza: desde aquí solo carga su cédula, si aún no la tiene.
+    const registrado = !this.esProspecto();
     return this.documentosRegistro.filter(
-      (r) => r.tipo !== 'documentoIdentidad' || !identidadYaCargada,
+      (r) => (r.tipo !== 'documentoIdentidad' || !identidadYaCargada) && (!registrado || r.tipo === 'documentoIdentidad'),
     ).map((r) => ({ id: r.tipo, etiqueta: r.etiqueta, descripcion: r.descripcion, icono: 'upload_file', obligatorio: true }));
   });
+
+  // --- Firma de las cuentas de cobro (broker registrado) ---
+  protected readonly reglaFirma: readonly ReglaDocumentoUploader[] = [
+    { id: 'firma', etiqueta: 'Imagen de tu firma', descripcion: 'Firma en tinta oscura sobre fondo blanco, foto o escaneo (PNG o JPG, máximo 2 MB)', icono: 'draw', obligatorio: false },
+  ];
+  protected readonly subiendoFirma = signal(false);
+  protected readonly urlFirma = computed(() => {
+    const f = this.perfil().firma;
+    return f ? this.servicio.urlFirma(f.archivoId) : null;
+  });
+  protected readonly cargadaFirma = computed<Readonly<Record<string, string>>>(() => {
+    const f = this.perfil().firma;
+    return f ? { firma: f.nombre } : ({} as Record<string, string>);
+  });
+
+  protected onFirma(evento: ArchivoSeleccionado): void {
+    const archivo = evento.archivo;
+    if (!['image/png', 'image/jpeg'].includes(archivo.type) || archivo.size > 2 * 1_048_576) {
+      this.feedback.toast({ variante: 'error', mensaje: 'Tu firma debe ser una imagen PNG o JPG de máximo 2 MB.' });
+      return;
+    }
+    this.subiendoFirma.set(true);
+    this.servicio
+      .cargarFirma(archivo)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.subiendoFirma.set(false);
+          this.feedback.toast({ variante: 'exito', mensaje: 'Guardamos tu firma. Tus cuentas de cobro saldrán firmadas.' });
+        },
+        error: (err: unknown) => {
+          this.subiendoFirma.set(false);
+          this.feedback.toast({ variante: 'error', mensaje: mensajeErrorIntegracion(err) });
+        },
+      });
+  }
 
   protected readonly cargados = computed<Readonly<Record<string, string>>>(() =>
     Object.fromEntries(this.perfil().documentos.filter((d) => d.archivo).map((d) => [d.tipo, d.archivo])),
@@ -323,7 +361,9 @@ export class PerfilComponent implements OnInit {
 
   protected readonly documentosEditables = computed(() =>
     // La identidad aún sin cargar también es pendiente (antes desaparecía de la lista: 3 de 4).
-    this.perfil().documentos.filter((d) => d.tipo !== 'documentoIdentidad' || !d.archivo),
+    // Al broker registrado solo le aplica su cédula (los demás documentos eran de la legalización).
+    this.perfil().documentos.filter((d) =>
+      (d.tipo !== 'documentoIdentidad' || !d.archivo) && (this.esProspecto() || d.tipo === 'documentoIdentidad')),
   );
 
   // --- Transición de registro ---

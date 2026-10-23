@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { Observable } from 'rxjs';
 
-import type { ComercialConsola, CredencialGenerada, PersonaRequest } from '../../../core/models/consola.model';
+import type { ComercialConsola, CredencialGenerada, PersonaRequest, RendimientoConsola } from '../../../core/models/consola.model';
 import { COLUMNA_GESTIONAR, COLUMNAS_FECHAS, celdasFechas, cop, copCompacto, fechaHora } from '../../../core/services/admin.helpers';
 import { ConsolaService } from '../../../core/services/consola.service';
 import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion';
@@ -125,10 +125,34 @@ export class ComercialesComponent {
   protected readonly guardando = signal(false);
   protected readonly credencialNueva = signal<CredencialGenerada | null>(null);
 
+  /** Rendimiento del equipo (arriba) y del comercial abierto (sección del modal). */
+  protected readonly rendimientoEquipo = signal<RendimientoConsola | null>(null);
+  protected readonly rendimientoComercial = signal<RendimientoConsola | null>(null);
+  protected pct(a: number, b: number): number {
+    return b ? Math.round((a / b) * 100) : 0;
+  }
+
   protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
     const c = this.seleccionado();
     if (!c) return [];
+    const d = this.rendimientoComercial();
+    const rendimiento: SeccionFicha[] = d
+      ? [{
+          titulo: 'Rendimiento',
+          icono: 'trending_up',
+          datos: [
+            { etiqueta: 'Conversión de prospectos', valor: `${this.pct(d.prospectosConvertidos, d.prospectosConvertidos + d.prospectosActivos)} % · ${d.prospectosConvertidos} pasaron a broker`, destacado: true },
+            { etiqueta: 'Cotización → radicación', valor: `${this.pct(d.radicaciones, d.cotizaciones)} % · ${d.cotizaciones} cotizaciones, ${d.radicaciones} radicadas` },
+            { etiqueta: 'Radicación → póliza', valor: `${this.pct(d.expedidas, d.radicaciones)} % · ${d.expedidas} pólizas` },
+            { etiqueta: 'Renovación efectiva', valor: `${this.pct(d.renovadas, d.renovacionesCerradas)} % · ${d.renovadas} de ${d.renovacionesCerradas} con decisión` },
+            { etiqueta: 'Primas del mes', valor: `${copCompacto(d.primasMes)} · ${d.polizasMes} pólizas` },
+            { etiqueta: 'Prima promedio por póliza', valor: copCompacto(d.polizasTotal ? d.primasTotal / d.polizasTotal : 0) },
+            { etiqueta: `Comisión del comercial (${c.porcentajeComision ?? 0} %)`, valor: cop(d.comisionComercial), destacado: true },
+          ],
+        }]
+      : [];
     return [
+      ...rendimiento,
       {
         titulo: 'Datos del comercial',
         icono: 'badge',
@@ -168,6 +192,10 @@ export class ComercialesComponent {
   );
 
   constructor() {
+    this.consola.rendimiento().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (d) => this.rendimientoEquipo.set(d),
+      error: () => this.rendimientoEquipo.set(null),
+    });
     this.cargar();
   }
 
@@ -230,6 +258,11 @@ export class ComercialesComponent {
     if (!c) return;
     this.seleccionado.set(c);
     this.pestana.set('detalle');
+    this.rendimientoComercial.set(null);
+    this.consola.rendimientoComercial(c.codigo).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (d) => this.rendimientoComercial.set(d),
+      error: () => this.rendimientoComercial.set(null),
+    });
     this.nombre.set(c.nombre);
     this.correo.set(c.correo ?? '');
     this.telefono.set(c.telefono ?? '');

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import type { ComercialConsola, DetalleNegocioConsola, NegocioConsola } from '../../../core/models/consola.model';
@@ -10,18 +11,17 @@ import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion'
 import {
   AlertBannerComponent,
   BadgeEstadoComponent,
-  BarraAccionesComponent,
   BitacoraComponent,
   BotonComponent,
   DataTableComponent,
   EstadoVistaComponent,
   FichaComponent,
+  FiltradoInteligenteComponent,
   FormFieldComponent,
   GridLayoutComponent,
   KpiCardComponent,
   ModalDialogComponent,
   PageHeaderComponent,
-  SegmentedControlComponent,
 } from '../../../shared/components';
 import type {
   AccionFila,
@@ -62,18 +62,17 @@ const ETIQUETA_SARLAFT: Readonly<Record<string, string>> = {
   imports: [
     AlertBannerComponent,
     BadgeEstadoComponent,
-    BarraAccionesComponent,
     BitacoraComponent,
     BotonComponent,
     DataTableComponent,
     EstadoVistaComponent,
     FichaComponent,
+    FiltradoInteligenteComponent,
     FormFieldComponent,
     GridLayoutComponent,
     KpiCardComponent,
     ModalDialogComponent,
     PageHeaderComponent,
-    SegmentedControlComponent,
     GestionNegocioComponent,
   ],
   templateUrl: './negocios.component.html',
@@ -105,14 +104,42 @@ export class NegociosComponent {
   ];
   protected readonly filtro = signal('curso');
 
+  // --- Filtro de toda la vista (indicadores y tabla) ---
+  protected readonly fBusqueda = signal('');
+  protected readonly fComercial = signal('');
+  protected readonly fBroker = signal('');
+  protected readonly fDesde = signal('');
+  protected readonly fHasta = signal('');
+  protected readonly nombresComerciales = computed(() =>
+    [...new Set(this.negocios().map((n) => n.comercial ?? 'Sin asignar'))].sort());
+  protected readonly hayFiltros = computed(() =>
+    !!(this.fBusqueda() || this.fComercial() || this.fBroker() || this.fDesde() || this.fHasta()) || this.filtro() !== 'curso');
+
+  protected limpiarFiltros(): void {
+    [this.fBusqueda, this.fComercial, this.fBroker, this.fDesde, this.fHasta].forEach((s) => s.set(''));
+    this.filtro.set('curso');
+  }
+
+  /** Negocios dentro del filtro (sin la etapa): de aquí salen los indicadores. */
+  private readonly filtrados = computed(() => {
+    const q = this.fBusqueda().trim().toLowerCase();
+    const broker = this.fBroker().trim().toLowerCase();
+    const [comercial, desde, hasta] = [this.fComercial(), this.fDesde(), this.fHasta()];
+    return this.negocios().filter((n) => {
+      const dia = (n.creado ?? '').slice(0, 10);
+      const texto = [n.radicado, n.numeroPoliza, n.propietario, n.inquilino, n.inmueble, n.broker].join(' ').toLowerCase();
+      return (!q || texto.includes(q)) && (!broker || n.broker.toLowerCase().includes(broker))
+        && (!comercial || (n.comercial ?? 'Sin asignar') === comercial)
+        && (!desde || dia >= desde) && (!hasta || dia <= hasta);
+    });
+  });
+
+  // Lo más relevante; inquilino, inmueble y canon están en el detalle.
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'radicado', header: 'Radicado', tipo: 'principal', ordenable: true },
     { key: 'propietario', header: 'Propietario', tipo: 'principal', ordenable: true },
-    { key: 'inquilino', header: 'Inquilino', tipo: 'principal' },
-    { key: 'inmueble', header: 'Inmueble', tipo: 'principal' },
     { key: 'broker', header: 'Broker', tipo: 'principal', ordenable: true },
     ...(this.admin.esAdmin() ? [{ key: 'comercial', header: 'Comercial', ordenable: true }] : []),
-    { key: 'canon', header: 'Canon', alinear: 'derecha', ordenable: true, nowrap: true },
     { key: 'prima', header: 'Prima', alinear: 'derecha', ordenable: true, nowrap: true },
     { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
     ...COLUMNAS_FECHAS,
@@ -121,7 +148,7 @@ export class NegociosComponent {
 
   protected readonly visibles = computed(() => {
     const f = this.filtro();
-    return this.negocios().filter((n) =>
+    return this.filtrados().filter((n) =>
       f === 'todos' ? true
         : f === 'expedidos' ? n.estado === 'EXPEDIDA'
           : f === 'cerrados' ? n.estado === 'RECHAZADA' || n.estado === 'ANULADA'
@@ -134,16 +161,10 @@ export class NegociosComponent {
       radicado: n.radicado,
       radicadoSub: n.numeroPoliza ? `Póliza ${n.numeroPoliza}` : '',
       propietario: n.propietario ?? '—',
-      propietarioSub: [n.propietarioDocumento, n.propietarioTelefono].filter(Boolean).join(' · '),
-      inquilino: n.inquilino ?? '—',
-      inquilinoSub: n.inquilinoDocumento ?? '',
-      inmueble: n.inmueble ?? '—',
-      inmuebleSub: n.ciudad ?? '',
+      propietarioSub: n.inmueble ? `${n.inmueble}${n.ciudad ? ' · ' + n.ciudad : ''}` : '',
       broker: n.broker,
       brokerSub: n.brokerEstado === 'PROSPECTO' ? 'Prospecto' : 'Broker registrado',
       comercial: n.comercial ?? 'Sin asignar',
-      canon: n.canon === null ? '—' : cop(n.canon),
-      canonOrden: n.canon ?? 0,
       prima: n.prima === null ? '—' : cop(n.prima),
       primaOrden: n.prima ?? 0,
       estado: this.etiquetaEstado[n.estado] ?? n.estado,
@@ -153,10 +174,10 @@ export class NegociosComponent {
     })),
   );
 
-  protected readonly enCurso = computed(() => this.negocios().filter((n) => !this.finales.includes(n.estado)).length);
-  protected readonly expedidos = computed(() => this.negocios().filter((n) => n.estado === 'EXPEDIDA').length);
+  protected readonly enCurso = computed(() => this.filtrados().filter((n) => !this.finales.includes(n.estado)).length);
+  protected readonly expedidos = computed(() => this.filtrados().filter((n) => n.estado === 'EXPEDIDA').length);
   protected readonly primaExpedida = computed(() =>
-    this.negocios().filter((n) => n.estado === 'EXPEDIDA').reduce((t, n) => t + (n.prima ?? 0), 0),
+    this.filtrados().filter((n) => n.estado === 'EXPEDIDA').reduce((t, n) => t + (n.prima ?? 0), 0),
   );
 
   // --- Modal de operación ---
@@ -247,6 +268,17 @@ export class NegociosComponent {
 
   constructor() {
     this.cargar();
+    // Llega desde el buscador de la barra superior: muestra esa radicación en cualquier etapa.
+    inject(ActivatedRoute)
+      .queryParamMap.pipe(takeUntilDestroyed())
+      .subscribe((p) => {
+        const q = p.get('q');
+        if (q) {
+          this.limpiarFiltros();
+          this.fBusqueda.set(q);
+          this.filtro.set('todos');
+        }
+      });
     if (this.esAdmin) {
       this.consola
         .comerciales()

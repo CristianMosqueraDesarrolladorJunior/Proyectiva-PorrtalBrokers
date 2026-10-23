@@ -44,6 +44,30 @@ export interface DetalleSolicitud extends Solicitud {
   readonly canon?: number | null;
   /** Comisión estimada de la cotización: la real se causa al expedir. */
   readonly comisionEstimada?: number | null;
+  /** Datos completos del negocio (solo los ve el broker dueño de la radicación). */
+  readonly partes?: PartesNegocio | null;
+}
+
+/** Persona del negocio tal como quedó en el contrato o en la radicación. */
+export interface PersonaNegocio {
+  readonly nombre: string | null;
+  readonly tipoDocumento: string | null;
+  readonly documento: string | null;
+  readonly telefono: string | null;
+  readonly correo: string | null;
+  readonly direccion: string | null;
+}
+
+/** Propietario, inquilino, inmueble y póliza expedida de una radicación. */
+export interface PartesNegocio {
+  readonly propietario: PersonaNegocio | null;
+  readonly inquilino: PersonaNegocio | null;
+  readonly inmueble: string | null;
+  readonly ciudad: string | null;
+  readonly numeroPoliza: string | null;
+  readonly inicioVigencia: string | null;
+  readonly finVigencia: string | null;
+  readonly primaTotal: number | null;
 }
 
 /** Documento de una radicación que el broker puede ver desde Seguimiento (`GET /solicitudes/{ref}/documentos`). */

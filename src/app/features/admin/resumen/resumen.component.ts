@@ -2,8 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval, startWith, switchMap } from 'rxjs';
 
-import type { Movimiento, RendimientoConsola, ResumenConsola, SincronizacionConsola } from '../../../core/models/consola.model';
-import { ComisionesMesComponent, type ComisionDia } from '../../../shared/components/comisiones-mes/comisiones-mes.component';
+import type { ComercialConsola, Movimiento, RendimientoConsola, ResumenConsola, SincronizacionConsola } from '../../../core/models/consola.model';
 import { AdminService } from '../../../core/services/admin.service';
 import { celdasFechas, copCompacto } from '../../../core/services/admin.helpers';
 import { ConsolaService } from '../../../core/services/consola.service';
@@ -11,6 +10,7 @@ import { SessionService } from '../../../core/services/session.service';
 import {
   DataTableComponent,
   EstadoVistaComponent,
+  FiltradoInteligenteComponent,
   FormSectionCardComponent,
   GridLayoutComponent,
   KpiCardComponent,
@@ -33,12 +33,12 @@ const REFRESCO_MS = 30_000;
   imports: [
     DataTableComponent,
     EstadoVistaComponent,
+    FiltradoInteligenteComponent,
     FormSectionCardComponent,
     GridLayoutComponent,
     KpiCardComponent,
     PageHeaderComponent,
     RankingBarrasComponent,
-    ComisionesMesComponent,
   ],
   templateUrl: './resumen.component.html',
   styleUrls: ['../admin-comun.scss'],
@@ -54,8 +54,6 @@ export class ResumenComponent {
 
   /** Rendimiento y conversión; si no carga, el resumen sigue igual. */
   protected readonly rendimiento = signal<RendimientoConsola | null>(null);
-  protected readonly mesGrafica = signal(mesIso(new Date()));
-  protected readonly comisionesMes = signal<readonly ComisionDia[] | null>(null);
 
   /** Sincronizaciones con el Warehouse: cuándo corrió cada una y si falló (transacciones observables). */
   protected readonly sincronizaciones = signal<readonly SincronizacionConsola[]>([]);
@@ -84,24 +82,6 @@ export class ResumenComponent {
     return b ? Math.round((a / b) * 100) : 0;
   }
 
-  protected cambiarMesGrafica(delta: number): void {
-    const [a, m] = this.mesGrafica().split('-').map(Number);
-    this.mesGrafica.set(mesIso(new Date(a, m - 1 + delta, 1)));
-    this.cargarComisionesMes();
-    this.consola
-      .sincronizaciones()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({ next: (s) => this.sincronizaciones.set(s), error: () => this.sincronizaciones.set([]) });
-  }
-
-  private cargarComisionesMes(): void {
-    this.comisionesMes.set(null);
-    this.consola
-      .comisionesPorDia(this.mesGrafica())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({ next: (d) => this.comisionesMes.set(d), error: () => this.comisionesMes.set([]) });
-  }
-
   /** Retención = renovadas / pólizas con decisión cerrada (renovadas + no renovadas). */
   protected retencion(r: ResumenConsola): number {
     const cerradas = r.indicadores.renovadas + r.indicadores.noRenovadas;
@@ -123,8 +103,50 @@ export class ResumenComponent {
     { key: 'referencia', header: 'Referencia' },
   ];
 
+  // --- Filtro de toda la vista: comercial (administrador; recarga los indicadores), broker y fechas ---
+  protected readonly comerciales = signal<readonly ComercialConsola[]>([]);
+  protected readonly fComercial = signal('');
+  protected readonly fBroker = signal('');
+  protected readonly fDesde = signal('');
+  protected readonly fHasta = signal('');
+  protected readonly hayFiltros = computed(() => !!(this.fComercial() || this.fBroker() || this.fDesde() || this.fHasta()));
+
+  private coincideBroker(nombre: string | null | undefined): boolean {
+    const b = this.fBroker().trim().toLowerCase();
+    return !b || (nombre ?? '').toLowerCase().includes(b);
+  }
+
+  private readonly movimientosFiltrados = computed(() => {
+    const desde = this.fDesde();
+    const hasta = this.fHasta();
+    return this.movimientos().filter((m) => {
+      const dia = (m.fecha ?? '').slice(0, 10);
+      return this.coincideBroker(m.broker) && (!desde || dia >= desde) && (!hasta || dia <= hasta);
+    });
+  });
+
+  protected cambiarComercial(codigo: string): void {
+    this.fComercial.set(codigo);
+    this.cargarResumen();
+  }
+
+  /** Fechas y broker también cortan los indicadores: se recalculan en el servidor. */
+  protected cambiarFiltro(campo: 'desde' | 'hasta' | 'broker', valor: string): void {
+    ({ desde: this.fDesde, hasta: this.fHasta, broker: this.fBroker })[campo].set(valor);
+    this.cargarResumen();
+  }
+
+  protected limpiarFiltros(): void {
+    const recargar = this.hayFiltros();
+    this.fComercial.set('');
+    this.fBroker.set('');
+    this.fDesde.set('');
+    this.fHasta.set('');
+    if (recargar) this.cargarResumen();
+  }
+
   protected readonly filasMovimientos = computed<readonly FilaTabla[]>(() =>
-    this.movimientos().map((m) => ({
+    this.movimientosFiltrados().map((m) => ({
       fecha: celdasFechas(m.fecha, m.fecha).creado,
       fechaOrden: m.fecha,
       tipo: m.tipo,
@@ -137,7 +159,7 @@ export class ResumenComponent {
 
   protected readonly topBrokers = computed<readonly ItemRanking[]>(() =>
     // Solo quien ya tiene pólizas: un prospecto sin negocios no es un broker destacado (auditoría Z6).
-    (this.resumen()?.topBrokers ?? []).filter((b) => b.polizas > 0).map((b) => ({
+    (this.resumen()?.topBrokers ?? []).filter((b) => b.polizas > 0 && this.coincideBroker(b.nombre)).map((b) => ({
       etiqueta: `${b.nombre}${b.estado === 'PROSPECTO' ? ' · prospecto' : ''}`,
       valor: b.primas,
       valorTexto: `${copCompacto(b.primas)} · ${b.polizas} pólizas`,
@@ -156,16 +178,21 @@ export class ResumenComponent {
 
   constructor() {
     this.cargarResumen();
+    if (this.esAdmin) {
+      this.consola
+        .comerciales()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: (c) => this.comerciales.set(c), error: () => this.comerciales.set([]) });
+    }
     this.consola
-      .rendimiento()
+      .sincronizaciones()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({ next: (r) => this.rendimiento.set(r), error: () => this.rendimiento.set(null) });
-    this.cargarComisionesMes();
+      .subscribe({ next: (s) => this.sincronizaciones.set(s), error: () => this.sincronizaciones.set([]) });
     // Movimientos en vivo: primera carga inmediata y luego cada 30 s mientras la vista esté abierta.
     interval(REFRESCO_MS)
       .pipe(
         startWith(0),
-        switchMap(() => this.consola.movimientos(50)),
+        switchMap(() => this.consola.movimientos(200, this.fComercial())),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
@@ -180,8 +207,17 @@ export class ResumenComponent {
   protected cargarResumen(): void {
     this.cargando.set(true);
     this.error.set(false);
+    const comercial = this.fComercial();
     this.consola
-      .resumen()
+      .rendimiento(comercial)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (r) => this.rendimiento.set(r), error: () => this.rendimiento.set(null) });
+    this.consola
+      .movimientos(200, comercial)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (m) => this.movimientos.set(m), error: () => this.movimientos.set([]) });
+    this.consola
+      .resumen(comercial, { desde: this.fDesde(), hasta: this.fHasta(), broker: this.fBroker() })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (r) => {
@@ -196,15 +232,12 @@ export class ResumenComponent {
   }
 }
 
-function mesIso(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
 const NOMBRE_PROCESO: Record<string, string> = {
   consolidado: 'Estados de radicación',
   renovaciones: 'Renovaciones',
   comisiones: 'Pagos de comisión',
   negocios: 'Histórico de negocios',
+  usuarios_brokers: 'Brokers y su comercial',
 };
 
 const FUENTE_PROCESO: Record<string, string> = {
@@ -212,4 +245,5 @@ const FUENTE_PROCESO: Record<string, string> = {
   renovaciones: 'Warehouse de renovaciones (JSON) · cada 15 min',
   comisiones: 'Base Facturación · cada 10 min',
   negocios: 'Seguimiento Corretaje (Negocios) · cada 30 min',
+  usuarios_brokers: 'Usuarios Brokers (columna EJECUTIVO) · cada 30 min',
 };

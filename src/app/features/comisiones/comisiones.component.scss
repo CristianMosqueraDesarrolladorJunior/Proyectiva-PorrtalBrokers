@@ -132,14 +132,6 @@
 }
 
 // Filtros de la tabla de pólizas a cobrar.
-.filtros {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-3);
-  align-items: end;
-  margin-bottom: var(--space-3);
-}
-
 // Resumen que cuadra las cifras: expedidas = por cobrar + pagadas + otras.
 .comisiones__cuadre {
   margin: var(--space-0);

@@ -12,31 +12,35 @@
     <app-kpi-card label="A punto de vencer" [valor]="portafolio()?.aPuntoDeVencer ?? '—'" icono="warning" [variante]="(portafolio()?.aPuntoDeVencer ?? 0) > 0 ? 'alerta' : 'default'" sub="Vencen en 30 días o ya vencieron" />
   </app-grid-layout>
 
-  <app-barra-acciones>
-    <div filtros>
-      <app-form-field label="Vigencia" controlId="renov-estado">
-        <select id="renov-estado" [value]="estadoFiltro()" (change)="estadoFiltro.set($any($event.target).value)">
+  <app-filtrado-inteligente [totalFiltros]="4" idCuerpo="renov-filtros">
+    <div class="seg-filtros-grid">
+      <label class="seg-filtro">
+        <span>Búsqueda</span>
+        <input id="renov-busqueda" type="search" autocomplete="off" placeholder="Póliza o estado del área…"
+          [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Situación</span>
+        <select id="renov-situacion" [value]="estadoFiltro()" (change)="estadoFiltro.set($any($event.target).value)">
           <option value="">Todas</option>
-          @for (e of estados; track e.codigo) {
-            <option [value]="e.codigo">{{ e.descripcion }}</option>
+          @for (s of situaciones; track s.valor) {
+            <option [value]="s.valor">{{ s.etiqueta }}</option>
           }
         </select>
-      </app-form-field>
-      <app-form-field label="Buscar póliza" controlId="renov-busqueda">
-        <input
-          id="renov-busqueda"
-          type="search"
-          autocomplete="off"
-          placeholder="Número de póliza"
-          [value]="busqueda()"
-          (input)="busqueda.set($any($event.target).value)"
-        />
-      </app-form-field>
-      @if (hayFiltros()) {
-        <app-boton variante="ghost" icono="filter_alt_off" (clicked)="limpiarFiltros()">Limpiar filtros</app-boton>
-      }
+      </label>
+      <label class="seg-filtro">
+        <span>Vence desde</span>
+        <input id="renov-desde" type="date" [value]="venceDesde()" [max]="venceHasta() || null" (change)="venceDesde.set($any($event.target).value)" />
+      </label>
+      <label class="seg-filtro">
+        <span>Vence hasta</span>
+        <input id="renov-hasta" type="date" [value]="venceHasta()" [min]="venceDesde() || null" (change)="venceHasta.set($any($event.target).value)" />
+      </label>
     </div>
-  </app-barra-acciones>
+    <div class="seg-filtros-acciones">
+      <button type="button" class="seg-btn-ghost" [disabled]="!hayFiltros()" (click)="limpiarFiltros()">Limpiar filtros</button>
+    </div>
+  </app-filtrado-inteligente>
 
   <p class="renovaciones__orden" role="note">Ordenadas por urgencia: primero las que vencen pronto.</p>
 
@@ -66,3 +70,38 @@
     ></app-data-table>
   </app-estado-vista>
 </section>
+
+<app-modal-dialog
+  [abierto]="seleccionada() !== null"
+  [titulo]="'Póliza ' + (seleccionada()?.numero ?? '')"
+  [subtitulo]="(condiciones()?.asegurado ?? '') + (condiciones()?.asegurado ? ' · ' : '') + 'Vence el ' + fechaCorta(seleccionada()?.fechaVencimiento ?? '')"
+  eyebrow="Renovación"
+  tamano="lg"
+  (cerrar)="cerrarFicha()"
+>
+  <div cabecera>
+    @if (seleccionada(); as p) {
+      @if (situacion(); as s) {
+        <app-badge-estado [variante]="$any(s.variante)" [conPunto]="true">{{ s.texto }}</app-badge-estado>
+      }
+      @if (p.estadoWarehouse) {
+        <app-badge-estado variante="info">{{ p.estadoWarehouse }}</app-badge-estado>
+      }
+      @if (p.pagada) {
+        <app-badge-estado variante="success">Pagada</app-badge-estado>
+      }
+    }
+  </div>
+  @if (seleccionada()) {
+    @if (notaSinAccion()) {
+      <app-alert-banner variante="success" titulo="Solo consulta">{{ notaSinAccion() }}</app-alert-banner>
+    }
+    <app-ficha [secciones]="ficha()" />
+  }
+  <div acciones>
+    <app-boton variante="ghost" (clicked)="cerrarFicha()">Cerrar</app-boton>
+    @if (textoAccion(); as texto) {
+      <app-boton variante="accent" icono="autorenew" (clicked)="gestionarSeleccionada()">{{ texto }}</app-boton>
+    }
+  </div>
+</app-modal-dialog>

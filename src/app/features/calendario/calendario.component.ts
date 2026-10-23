@@ -1,4 +1,3 @@
-import { ComisionesMesComponent, type ComisionDia } from '../../shared/components/comisiones-mes/comisiones-mes.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
@@ -9,6 +8,7 @@ import {
   CalendarioMensualComponent,
 } from '../../shared/components/calendario-mensual/calendario-mensual.component';
 import { mensajeDeError, rutaSeguimiento } from '../../shared/components/calendario-mensual/calendario-eventos.helpers';
+import type { PlataDia } from '../../shared/components/calendario-mensual/calendario-mensual.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /** Etiqueta e insignia por tipo de evento. */
@@ -27,7 +27,7 @@ const PRESENTACION: Readonly<Record<EventoTemporal['tipoEvento'], Pick<EventoCal
 @Component({
   selector: 'app-calendario',
   standalone: true,
-  imports: [PageHeaderComponent, CalendarioMensualComponent, ComisionesMesComponent],
+  imports: [PageHeaderComponent, CalendarioMensualComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './calendario.component.html',
   styleUrl: './calendario.component.scss',
@@ -39,7 +39,7 @@ export class CalendarioComponent {
   protected readonly mes = signal(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   protected readonly eventos = signal<readonly EventoTemporal[]>([]);
   /** Plata por día del mes (si falla, el calendario sigue: la gráfica no se muestra). */
-  protected readonly comisiones = signal<readonly ComisionDia[] | null>(null);
+  protected readonly comisiones = signal<readonly PlataDia[]>([]);
   protected readonly mesIso = computed(() => `${this.mes().getFullYear()}-${String(this.mes().getMonth() + 1).padStart(2, '0')}`);
   protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -69,8 +69,8 @@ export class CalendarioComponent {
     const m = this.mes();
     this.cargando.set(true);
     this.error.set(null);
-    this.comisiones.set(null);
-    this.servicio.comisionesDelMes(this.mesIso()).subscribe({ next: (d) => this.comisiones.set(d), error: () => this.comisiones.set(null) });
+    this.comisiones.set([]);
+    this.servicio.comisionesDelMes(this.mesIso()).subscribe({ next: (d) => this.comisiones.set(d), error: () => this.comisiones.set([]) });
     this.servicio.eventosDelMes(`${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`).subscribe({
       next: (eventos) => {
         this.eventos.set(eventos);

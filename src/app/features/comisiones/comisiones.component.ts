@@ -19,6 +19,7 @@ import {
   DataTableComponent,
   EmptyStateComponent,
   EstadoVistaComponent,
+  FiltradoInteligenteComponent,
   FormFieldComponent,
   FormSectionCardComponent,
   GridLayoutComponent,
@@ -54,6 +55,7 @@ const REVISION_VACIA: RevisionCuenta = { filas: [], errores: [], avisos: [], tot
     DataTableComponent,
     EmptyStateComponent,
     EstadoVistaComponent,
+    FiltradoInteligenteComponent,
     FormFieldComponent,
     FormSectionCardComponent,
     GridLayoutComponent,
@@ -145,7 +147,7 @@ export class ComisionesComponent {
   protected readonly errorHistorial = signal(false);
 
   protected readonly columnasHistorial: readonly ColumnaTabla[] = [
-    { key: 'numero', header: 'N°', ordenable: true, nowrap: true },
+    { key: 'numero', header: 'Cuenta de cobro', tipo: 'principal', ordenable: true, nowrap: true },
     { key: 'fecha', header: 'Fecha', ordenable: true },
     { key: 'polizas', header: 'Pólizas', alinear: 'derecha' },
     { key: 'valor', header: 'Valor cobrado', alinear: 'derecha', ordenable: true },
@@ -155,7 +157,9 @@ export class ComisionesComponent {
 
   protected readonly filasHistorial = computed<readonly FilaTabla[]>(() =>
     this.historial().map((c) => ({
-      numero: c.consecutivo,
+      numero: `N° ${c.consecutivo}`,
+      numeroSub: c.referencia ?? '',
+      numeroOrden: c.consecutivo,
       fecha: new Date(c.fecha).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }),
       polizas: c.polizas,
       valor: pesos(c.totalValor),
@@ -267,8 +271,9 @@ export class ComisionesComponent {
           { etiqueta: 'Estado', valor: etiquetaEstado(p.estadoPago) },
           { etiqueta: 'Tu comisión', valor: monto(p.comision), destacado: true },
           { etiqueta: 'Porcentaje del acuerdo', valor: p.porcentaje > 0 ? `${p.porcentaje} %` : '—' },
-          { etiqueta: 'Fecha de pago', valor: fechaCorta(p.fechaPago) },
-          { etiqueta: 'Orden de pago / factura', valor: p.ordenPago || '—' },
+          // Solo lo que ya existe: una póliza sin pagar no muestra campos vacíos de pago.
+          ...(p.fechaPago ? [{ etiqueta: 'Fecha de pago', valor: fechaCorta(p.fechaPago) }] : []),
+          ...(p.ordenPago ? [{ etiqueta: 'Orden de pago / factura', valor: p.ordenPago }] : []),
         ],
       },
     ];
@@ -302,15 +307,15 @@ export class ComisionesComponent {
 
   protected onAccionHistorial(evento: AccionFila): void {
     const cuenta = this.historial().at(evento.indice);
-    if (cuenta) this.descargar(cuenta.id);
+    if (cuenta) this.descargar(cuenta);
   }
 
-  protected descargar(id: string): void {
+  protected descargar(cuenta: CuentaCobroResponse): void {
     this.comisiones
-      .descargarPdf(id)
+      .descargarPdf(cuenta.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (blob) => descargarArchivo(blob, `cuenta-de-cobro-${id}.pdf`),
+        next: (blob) => descargarArchivo(blob, `Cuenta-de-cobro-${cuenta.referencia ?? cuenta.consecutivo}.pdf`),
         error: (err: unknown) => this.feedback.error({ titulo: 'No se pudo generar la cuenta', mensaje: mensajeErrorIntegracion(err) }),
       });
   }

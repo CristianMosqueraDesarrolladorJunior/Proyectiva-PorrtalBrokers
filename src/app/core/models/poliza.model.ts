@@ -23,5 +23,5 @@ export interface Poliza {
   readonly pagada?: boolean;
 }
 
-/** Acción de una renovación: solo RENOVAR, CORREGIR e INDUCCION se gestionan. */
-export type AccionRenovacion = 'RENOVAR' | 'CORREGIR' | 'INDUCCION' | 'EN_PROCESO' | 'CERRADA';
+/** Acción de una renovación: solo RENOVAR, CORREGIR e INDUCCION se gestionan (vencida 6–11 meses = inducción; más de 11 = fuera de plazo). */
+export type AccionRenovacion = 'RENOVAR' | 'CORREGIR' | 'INDUCCION' | 'EN_PROCESO' | 'CERRADA' | 'FUERA_PLAZO';

@@ -55,6 +55,15 @@ export interface FiltrosSolicitudes {
   readonly fechaHasta?: string;
 }
 
+/** Parámetros HTTP de los filtros de Seguimiento (solo los que tienen valor). */
+function paramsFiltros(filtros: FiltrosSolicitudes): HttpParams {
+  let params = new HttpParams();
+  for (const [clave, valor] of Object.entries(filtros)) {
+    if (valor) params = params.set(clave, valor);
+  }
+  return params;
+}
+
 /**
  * Servicio del Dashboard y Seguimiento (Req 5, 6, 34).
  *
@@ -82,10 +91,12 @@ export class DashboardService {
    * Obtiene los KPIs del Dashboard (Req 5.3, 5.6).
    * @returns KPIs de primas, radicadas, en revisión y bloqueadas.
    */
-  obtenerKpis(): Observable<KpisDashboard> {
-    return this.http.get<KpisDashboard>(`${this.baseUrl}/dashboard/kpis`, {
-      withCredentials: true,
-    });
+  obtenerKpis(filtros: FiltrosSolicitudes = {}): Observable<KpisDashboard> {
+    // Con filtros, los KPIs salen de las mismas radicaciones que muestra la tabla filtrada.
+    const params = paramsFiltros(filtros);
+    return params.keys().length
+      ? this.http.get<KpisDashboard>(`${this.baseUrl}/solicitudes/kpis`, { params, withCredentials: true })
+      : this.http.get<KpisDashboard>(`${this.baseUrl}/dashboard/kpis`, { withCredentials: true });
   }
 
   /**
@@ -100,25 +111,7 @@ export class DashboardService {
     page: number,
     size: number,
   ): Observable<PaginaResultado<Solicitud>> {
-    let params = new HttpParams()
-      .set('page', String(page))
-      .set('size', String(size));
-
-    if (filtros.busqueda) {
-      params = params.set('busqueda', filtros.busqueda);
-    }
-    if (filtros.producto) {
-      params = params.set('producto', filtros.producto);
-    }
-    if (filtros.estado) {
-      params = params.set('estado', filtros.estado);
-    }
-    if (filtros.fechaDesde) {
-      params = params.set('fechaDesde', filtros.fechaDesde);
-    }
-    if (filtros.fechaHasta) {
-      params = params.set('fechaHasta', filtros.fechaHasta);
-    }
+    const params = paramsFiltros(filtros).set('page', String(page)).set('size', String(size));
 
     return this.http.get<PaginaResultado<Solicitud>>(
       `${this.baseUrl}/solicitudes`,

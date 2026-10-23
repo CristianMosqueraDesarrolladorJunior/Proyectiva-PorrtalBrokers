@@ -229,3 +229,120 @@
   color: var(--sb-on-primary-fixed);
   font-weight: var(--font-weight-bold);
 }
+
+// Plata por día (opcional): barras arriba de la rejilla, una por día, con una sola escala para las dos barras.
+// Colores sólidos validados para daltonismo: total azul, comisión de renovaciones naranja, de nuevas verde y lo
+// pendiente por renovar en naranja rayado (es un estimado).
+.cal-plata {
+  margin: 0 0 var(--space-4);
+}
+.cal-plata__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.cal-plata__titulo {
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-muted);
+}
+.cal-plata__leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--text-caption);
+  color: var(--color-text);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+.cal-plata__muestra {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.cal-plata__muestra--total,
+.cal-plata__barra--total {
+  background: #3b82f6;
+}
+.cal-plata__muestra--renovadas,
+.cal-plata__seg--renovadas {
+  background: #ea580c;
+}
+.cal-plata__muestra--nuevas,
+.cal-plata__seg--nuevas {
+  background: #059669;
+}
+.cal-plata__muestra--pendiente,
+.cal-plata__seg--pendiente {
+  background: repeating-linear-gradient(45deg, #ea580c 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 1px #ea580c;
+}
+.cal-plata__barras {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
+  height: 120px;
+  border-bottom: 1px solid var(--color-border);
+}
+.cal-plata__dia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  cursor: pointer;
+
+  &:hover,
+  &.cal-plata__dia--sel {
+    background: var(--color-surface-alt, rgba(15, 23, 42, 0.04));
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+}
+.cal-plata__par {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1px;
+}
+.cal-plata__barra,
+.cal-plata__pila {
+  width: 40%;
+  max-width: 10px;
+}
+.cal-plata__barra {
+  border-radius: 3px 3px 0 0;
+}
+.cal-plata__pila {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.cal-plata__seg {
+  display: block;
+  width: 100%;
+  flex: none;
+}
+.cal-plata__num {
+  font-size: 10px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}

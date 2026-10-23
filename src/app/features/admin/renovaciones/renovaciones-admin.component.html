@@ -35,6 +35,47 @@
     }
   </app-barra-acciones>
 
+  @if (vista() !== 'inducciones') {
+    <app-filtrado-inteligente [totalFiltros]="5" idCuerpo="renov-admin-filtros">
+      <div class="seg-filtros-grid">
+        <label class="seg-filtro">
+          <span>Búsqueda</span>
+          <input id="renov-admin-busqueda" type="search" autocomplete="off" placeholder="Póliza, asegurado o broker…"
+            [value]="fBusqueda()" (input)="fBusqueda.set($any($event.target).value)" />
+        </label>
+        <label class="seg-filtro">
+          <span>Situación</span>
+          <select id="renov-admin-situacion" [value]="fSituacion()" (change)="fSituacion.set($any($event.target).value)">
+            <option value="">Todas</option>
+            @for (s of situaciones; track s.valor) {
+              <option [value]="s.valor">{{ s.etiqueta }}</option>
+            }
+          </select>
+        </label>
+        <label class="seg-filtro">
+          <span>Comercial</span>
+          <select id="renov-admin-comercial" [value]="fComercial()" (change)="fComercial.set($any($event.target).value)">
+            <option value="">Todos</option>
+            @for (c of comercialesFiltro(); track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </label>
+        <label class="seg-filtro">
+          <span>Vence desde</span>
+          <input id="renov-admin-desde" type="date" [value]="fDesde()" [max]="fHasta() || null" (change)="fDesde.set($any($event.target).value)" />
+        </label>
+        <label class="seg-filtro">
+          <span>Vence hasta</span>
+          <input id="renov-admin-hasta" type="date" [value]="fHasta()" [min]="fDesde() || null" (change)="fHasta.set($any($event.target).value)" />
+        </label>
+      </div>
+      <div class="seg-filtros-acciones">
+        <button type="button" class="seg-btn-ghost" [disabled]="!hayFiltros()" (click)="limpiarFiltros()">Limpiar filtros</button>
+      </div>
+    </app-filtrado-inteligente>
+  }
+
 
   @if (vista() === 'inducciones') {
     <app-estado-vista

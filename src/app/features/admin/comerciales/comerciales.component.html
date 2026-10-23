@@ -14,6 +14,14 @@
     <app-kpi-card label="Equipo comercial" [valor]="comerciales().length" icono="badge" [sub]="activos() + ' reciben prospectos por rotación'" />
     <app-kpi-card label="Brokers en cartera" [valor]="totalBrokers()" icono="groups" sub="Intermediarios asignados" />
     <app-kpi-card label="Primas de las carteras" [valor]="compacto(totalIngreso())" icono="account_balance" sub="Pólizas expedidas" />
+    @if (rendimientoEquipo(); as d) {
+      <app-kpi-card label="Conversión de prospectos" [valor]="pct(d.prospectosConvertidos, d.prospectosConvertidos + d.prospectosActivos) + '%'" icono="how_to_reg"
+        [sub]="d.prospectosConvertidos + ' pasaron a broker · ' + d.prospectosActivos + ' en vinculación'" />
+      <app-kpi-card label="Cotización → póliza" [valor]="pct(d.expedidas, d.cotizaciones) + '%'" icono="trending_up"
+        [sub]="d.cotizaciones + ' cotizaciones · ' + d.radicaciones + ' radicadas · ' + d.expedidas + ' pólizas'" />
+      <app-kpi-card label="Renovación efectiva" [valor]="pct(d.renovadas, d.renovacionesCerradas) + '%'" icono="autorenew"
+        [sub]="d.renovadas + ' renovadas de ' + d.renovacionesCerradas + ' con decisión del área'" />
+    }
   </app-grid-layout>
 
 
