@@ -2,7 +2,13 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, injec
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DocumentosService, type RecursoDescargable } from '../../core/services/documentos.service';
+import { ContratoService } from '../../core/services/contrato.service';
+import { CotizadorService } from '../../core/services/cotizador.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import {
+  HistorialDocumentalComponent,
+  type TipoDocumentoHistorial,
+} from '../../shared/components/historial-documental/historial-documental.component';
 import { descargarArchivo } from '../../core/util/descargar-archivo';
 import { FeedbackService } from '../../shared/services/feedback/feedback.service';
 import { SessionService } from '../../core/services/session.service';
@@ -34,7 +40,7 @@ interface SeccionDoc {
 @Component({
   selector: 'app-documentos',
   standalone: true,
-  imports: [PageHeaderComponent],
+  imports: [HistorialDocumentalComponent, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './documentos.component.html',
   styleUrl: './documentos.component.scss',
@@ -48,6 +54,13 @@ export class DocumentosComponent implements OnInit {
   protected readonly cargando = signal(true);
   protected readonly errorCarga = signal(false);
   protected readonly descargandoId = signal<string | null>(null);
+
+  private readonly contratos = inject(ContratoService);
+  private readonly cotizaciones = inject(CotizadorService);
+  /** Historial propio: contratos y cotizaciones del broker, con la vista previa de los endpoints que ya existen. */
+  protected readonly fuenteHistorial = () => this.documentosService.historial();
+  protected readonly descargarHistorial = (tipo: TipoDocumentoHistorial, referencia: string) =>
+    tipo === 'contrato' ? this.contratos.descargarDocumento(referencia, 'pdf') : this.cotizaciones.descargarPdf(referencia);
 
   protected readonly secciones = computed(() => {
     const categorias = [
