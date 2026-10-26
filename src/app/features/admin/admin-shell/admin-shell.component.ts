@@ -18,6 +18,7 @@ const ACCESOS_ADMIN: readonly AccesoSidebar[] = [
   { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
   // "Referidos" queda oculto del menú (la ruta sigue existiendo).
   { ruta: 'comisiones', icono: 'receipt_long', etiqueta: 'Cuentas de cobro' },
+  { ruta: 'documentos', icono: 'folder_open', etiqueta: 'Documentos' },
 ];
 
 const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
@@ -27,6 +28,7 @@ const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
   { ruta: 'negocios', icono: 'description', etiqueta: 'Negocios' },
   { ruta: 'comisiones', icono: 'receipt_long', etiqueta: 'Cuentas de cobro' },
   { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
+  { ruta: 'documentos', icono: 'folder_open', etiqueta: 'Documentos' },
 ];
 
 /**

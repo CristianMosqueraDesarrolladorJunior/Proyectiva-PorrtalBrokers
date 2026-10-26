@@ -60,6 +60,7 @@ import type { Tab } from '../../../../shared/components/tabs/tabs.component';
 import {
   claveConsultaSarlaft,
   construirPayloadRadicacion,
+  hayDatosParaPrecargar,
   documentosObligatoriosFaltantes,
   esNumeroDocumentoPropietarioValido,
   etiquetasDocumentos,
@@ -549,7 +550,7 @@ export class RadicacionComponent {
 
   constructor() {
     this.restaurarBorrador(this.borrador.formulario() as Record<string, never> | null);
-    this.precargarDesdeContrato();
+    this.preguntarPrecargaContrato();
     this.contratoService.pendientes().subscribe({ next: (c) => this.contratosPendientes.set(c), error: () => this.contratosPendientes.set([]) });
     // Contrato firmado cargado en Contratación: se adjunta aquí como documento de la radicación.
     const firmado = this.borrador.archivoContratoFirmado();
@@ -614,6 +615,35 @@ export class RadicacionComponent {
     this.readjuntarDocumentos.set(Boolean(f['habiaDocumentos']) || Object.keys(f['archivosCargados'] ?? {}).length > 0);
     this.radicadoPendiente.set(f['radicadoPendiente'] ?? null);
     this.autorizacionDatos.set(f['autorizacionDatos'] ?? false);
+  }
+
+  /**
+   * El contrato que viene de Elaboración de contratos solo se precarga si el broker lo elige; si no, la solicitud
+   * empieza desde cero (sin ese contrato ni su cotización). Sin nada que precargar, no se pregunta.
+   */
+  private preguntarPrecargaContrato(): void {
+    const contrato = this.borrador.contrato();
+    const actual = {
+      propietario: this.numeroDocumentoPropietario(),
+      inquilino: this.documentoInquilino(),
+      estudio: this.numeroEstudioArrendamiento(),
+    };
+    if (!contrato || !hayDatosParaPrecargar(contrato, actual)) {
+      return;
+    }
+    this.feedback.info({
+      titulo: 'Tienes un contrato elaborado',
+      mensaje: `¿Quieres traer los datos del contrato ${contrato.referencia} a esta solicitud o empezar desde cero?`,
+      acciones: { confirmar: 'Traer datos del contrato', cancelar: 'Empezar desde cero' },
+      alResolver: (resultado) => {
+        if (resultado === 'confirmar') {
+          this.precargarDesdeContrato();
+        } else {
+          this.borrador.contrato.set(null);
+          this.borrador.cotizacion.set(null);
+        }
+      },
+    });
   }
 
   /** Con el contrato del flujo (generado en Contratación): propietario, inquilino y estudio, solo si están vacíos. */
@@ -1025,7 +1055,7 @@ export class RadicacionComponent {
       this.avisarContratoLeido({
         variante: 'warning',
         texto: 'Al contrato le faltan datos para registrarlo (partes, ciudad con cobertura, canon, fecha o cuenta). '
-          + 'Complétalos en Contratos: ya van precargados.',
+          + 'Complétalos en Elaboración de contratos: ya van precargados.',
       });
       return;
     }
@@ -1045,7 +1075,7 @@ export class RadicacionComponent {
       error: (err: unknown) => {
         this.registrandoContratoLeido.set(false);
         this.lecturaPorCompletar.set(lectura);
-        this.avisarContratoLeido({ variante: 'error', texto: `${mensajeErrorIntegracion(err)} Puedes completarlo en Contratos.` });
+        this.avisarContratoLeido({ variante: 'error', texto: `${mensajeErrorIntegracion(err)} Puedes completarlo en Elaboración de contratos.` });
       },
     });
   }

@@ -27,7 +27,7 @@ const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Póliza que va a inducción: el backend la clasifica VENCIDA con las reglas del área (VENCIDO en el Warehouse o
- * cinco meses tras el vencimiento sin gestión cerrada). Antes de eso se sigue renovando.
+ * desde el primer día después del vencimiento sin gestión cerrada). Solo se renueva la que no está vencida.
  */
 export function esPolizaVencida(poliza: { estado: string }): boolean {
   return poliza.estado === 'VENCIDA';
