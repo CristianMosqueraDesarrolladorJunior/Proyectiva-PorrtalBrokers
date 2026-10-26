@@ -29,6 +29,23 @@ import {
   type RadicacionRequest,
   type TipoPersona,
 } from '../../../../core/models/radicacion.model';
+import type { ContratoGenerado } from '../../../../core/services/borrador-radicacion.service';
+
+/**
+ * `true` si el contrato del flujo llenaría algún campo que el broker aún tiene vacío (propietario, inquilino o
+ * estudio): solo entonces se le pregunta si trae esos datos o empieza desde cero. Función pura.
+ */
+export function hayDatosParaPrecargar(
+  contrato: ContratoGenerado,
+  actual: { readonly propietario: string; readonly inquilino: string; readonly estudio: string },
+): boolean {
+  const vacio = (v: string) => v.trim().length === 0;
+  return (
+    (!!contrato.propietario?.numeroDocumento && vacio(actual.propietario)) ||
+    (!!contrato.inquilino?.numeroDocumento && vacio(actual.inquilino)) ||
+    (!!contrato.numeroEstudio && vacio(actual.estudio))
+  );
+}
 
 /** Longitud mínima del número de documento del propietario (Req 10.1). */
 export const DOCUMENTO_PROPIETARIO_LONGITUD_MIN = 5;

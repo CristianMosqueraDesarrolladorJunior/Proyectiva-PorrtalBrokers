@@ -121,6 +121,8 @@ export { FichaComponent } from './ficha/ficha.component';
 export type { DatoFicha, SeccionFicha } from './ficha/ficha.component';
 export { CredencialUnicaComponent } from './credencial-unica/credencial-unica.component';
 export { VisorArchivoComponent } from './visor-archivo/visor-archivo.component';
+export { HistorialDocumentalComponent } from './historial-documental/historial-documental.component';
+export type { TipoDocumentoHistorial } from './historial-documental/historial-documental.component';
 export { BitacoraComponent } from './bitacora/bitacora.component';
 export type { EventoBitacora } from './bitacora/bitacora.component';
 export type { TamanoModal } from './modal-dialog/modal-dialog.component';

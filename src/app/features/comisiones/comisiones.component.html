@@ -3,9 +3,10 @@
     eyebrow="Comisiones"
     tituloId="comisiones-titulo"
     titulo="Mis comisiones"
-    subtitulo="Elige tus pólizas pendientes de pago, genera tu cuenta de cobro y cárgala en la plataforma de proveedores de Seguros Bolívar."
+    subtitulo="Elige tus pólizas pendientes por cobrar, genera tu cuenta de cobro y cárgala en la plataforma de proveedores de Seguros Bolívar."
   >
   </app-page-header>
+  <p class="comisiones__cuadre" role="note">La información presentada tiene corte al último día hábil del mes anterior.</p>
 
   @if (bloqueado()) {
     <app-empty-state
@@ -35,7 +36,7 @@
           icono="handshake"
           [sub]="porcentajeConfirmado() ? 'Sobre el valor sin IVA' : 'Estimado · lo confirmamos al expedir'"
         />
-        <app-kpi-card label="Pólizas por cobrar" [valor]="pendientesCobro()" icono="pending_actions" sub="Pendientes de pago" />
+        <app-kpi-card label="Pólizas por cobrar" [valor]="pendientesCobro()" icono="pending_actions" sub="Pendientes por cobrar" />
         <app-kpi-card label="Pólizas pagadas" [valor]="pagadas()" icono="task_alt" sub="Ya te las pagaron" />
         <app-kpi-card label="Cuentas generadas" [valor]="historial().length" icono="receipt_long" sub="En total" />
       </div>
@@ -53,7 +54,7 @@
           [numero]="1"
           icono="receipt_long"
           titulo="Pólizas a cobrar"
-          [subtitulo]="'Elige las pendientes de pago (hasta ' + maximoFilas + ' por cuenta). Con «Ver detalle» ves los datos de la póliza y de su pago. Un pago recién registrado puede tardar unos minutos en verse aquí.'"
+          [subtitulo]="'Elige las pendientes por cobrar (hasta ' + maximoFilas + ' por cuenta). Con «Ver detalle» ves los datos de la póliza y de su pago. Un pago recién registrado puede tardar unos minutos en verse aquí.'"
         >
           <!-- Mismo filtro inteligente de Seguimiento -->
           <app-filtrado-inteligente [totalFiltros]="3" idCuerpo="comisiones-filtros">
@@ -148,7 +149,7 @@
               </p>
               <app-boton variante="accent" icono="download" (clicked)="descargar(cuenta)">Descargar cuenta de cobro</app-boton>
             } @else if (seleccionadas().length === 0) {
-              <p class="comisiones__letras">Elige en la tabla las pólizas pendientes de pago para armar tu cuenta.</p>
+              <p class="comisiones__letras">Elige en la tabla las pólizas pendientes por cobrar para armar tu cuenta.</p>
             } @else {
               <p class="comisiones__letras">{{ enLetras() }}</p>
             }

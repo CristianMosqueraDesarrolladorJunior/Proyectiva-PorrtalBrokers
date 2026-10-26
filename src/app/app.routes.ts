@@ -77,7 +77,7 @@ export const routes: Routes = [
       { path: 'agente', redirectTo: 'seguimiento' },
       {
         path: 'radicacion',
-        title: 'Nueva radicación — Portal Brokers Proyectiva',
+        title: 'Solicitar póliza — Portal Brokers Proyectiva',
         loadComponent: () =>
           import(
             './features/radicacion/pages/radicacion/radicacion.component'
@@ -85,7 +85,7 @@ export const routes: Routes = [
       },
       {
         path: 'contrato',
-        title: 'Crear contrato — Portal Brokers Proyectiva',
+        title: 'Elaboración de contratos — Portal Brokers Proyectiva',
         loadComponent: () =>
           import('./features/contrato/pages/contrato/contrato.component').then(
             (m) => m.ContratoComponent,
@@ -270,6 +270,15 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/polizas/polizas-admin.component').then(
             (m) => m.PolizasAdminComponent,
+          ),
+      },
+      {
+        path: 'documentos',
+        title: 'Documentos — Consola Proyectiva',
+        canActivate: [rolGuard('ADMINISTRADOR', 'COMERCIAL')],
+        loadComponent: () =>
+          import('./features/admin/documentos/documentos-admin.component').then(
+            (m) => m.DocumentosAdminComponent,
           ),
       },
       {
