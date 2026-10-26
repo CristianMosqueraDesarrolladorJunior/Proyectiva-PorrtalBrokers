@@ -21,7 +21,7 @@ const POLIZAS = [
 ];
 
 describe('comisiones-polizas', () => {
-  it('Given las pólizas, When se pregunta cuáles se cobran, Then solo las pendientes de pago', () => {
+  it('Given las pólizas, When se pregunta cuáles se cobran, Then solo las pendientes por cobrar', () => {
     expect(POLIZAS.filter(esCobrable).map((p) => p.numeroPoliza)).toEqual(['5010000000001']);
   });
 
