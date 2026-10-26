@@ -277,11 +277,42 @@ export class ContratoComponent {
     const estado = this.router.getCurrentNavigation()?.extras.state
       ?? (typeof history !== 'undefined' ? history.state : undefined);
     this.autollenarDesdeEstudio(estado);
-    this.autollenarDesdeCotizacion();
     const lectura = (estado as { lectura?: LecturaContratoResponse } | undefined)?.lectura;
+    const desdeRadicacion = !!lectura || !!(estado as { consulta?: unknown } | undefined)?.consulta;
+    if (desdeRadicacion) {
+      // El broker ya eligió completar el contrato desde la radicación: se precarga sin preguntar.
+      this.autollenarDesdeCotizacion();
+    } else {
+      this.preguntarPrecargaCotizacion();
+    }
     if (lectura) {
       this.precargarDesdeLectura(lectura);
     }
+  }
+
+  /** La cotización del flujo solo se precarga si el broker lo elige; si no, el contrato empieza desde cero. */
+  private preguntarPrecargaCotizacion(): void {
+    const cot = this.borrador.cotizacion();
+    if (!cot) {
+      return;
+    }
+    this.feedback.info({
+      titulo: 'Tienes una cotización en curso',
+      mensaje: `¿Quieres traer los datos de la cotización ${cot.referencia} a este contrato o empezar desde cero?`,
+      acciones: { confirmar: 'Traer datos de la cotización', cancelar: 'Empezar desde cero' },
+      alResolver: (resultado) =>
+        resultado === 'confirmar' ? this.autollenarDesdeCotizacion() : this.borrador.cotizacion.set(null),
+    });
+  }
+
+  /** Descarta lo que viene de otros módulos y vuelve a montar el formulario vacío. */
+  protected empezarDesdeCero(): void {
+    this.borrador.cotizacion.set(null);
+    this.borrador.contrato.set(null);
+    this.borrador.archivoContratoFirmado.set(null);
+    void this.router
+      .navigateByUrl('/app/documentos', { skipLocationChange: true })
+      .then(() => this.router.navigate(['/app/contrato']));
   }
 
   /**

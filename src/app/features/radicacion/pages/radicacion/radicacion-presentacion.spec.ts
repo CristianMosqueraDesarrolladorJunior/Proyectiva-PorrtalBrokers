@@ -7,6 +7,7 @@ import {
   esNumeroDocumentoPropietarioValido,
   esNumeroEstudioValido,
   etiquetasDocumentos,
+  hayDatosParaPrecargar,
   inmuebleEnDepartamentoBloqueado,
   pasoActivoRadicacion,
   permiteCargarDocumentos,
@@ -283,5 +284,27 @@ describe('inmuebleEnDepartamentoBloqueado', () => {
   it('Given sin inmueble o sin ciudades bloqueadas, When se evalúa, Then no advierte', () => {
     expect(inmuebleEnDepartamentoBloqueado(undefined, bloqueadas)).toBe(false);
     expect(inmuebleEnDepartamentoBloqueado('CR 1', [])).toBe(false);
+  });
+});
+
+describe('hayDatosParaPrecargar', () => {
+  const contrato = {
+    referencia: 'CTR-1',
+    propietario: { tipoDocumento: 'CC', numeroDocumento: '1012345678' },
+    inquilino: { tipoDocumento: 'CC', numeroDocumento: '1098765432' },
+  };
+  const vacio = { propietario: '', inquilino: '', estudio: '' };
+
+  it('Given un contrato con partes y el formulario vacío, Then hay algo que precargar (se pregunta)', () => {
+    expect(hayDatosParaPrecargar(contrato, vacio)).toBe(true);
+  });
+
+  it('Given que el broker ya llenó esos campos, Then no hay nada que precargar (no se pregunta)', () => {
+    expect(hayDatosParaPrecargar(contrato, { propietario: '1012345678', inquilino: '1098765432', estudio: '' })).toBe(false);
+  });
+
+  it('Given un contrato sin datos de partes, Then no se pregunta', () => {
+    expect(hayDatosParaPrecargar({ referencia: 'CTR-2' }, vacio)).toBe(false);
+    expect(hayDatosParaPrecargar({ referencia: 'CTR-3', numeroEstudio: '123' }, vacio)).toBe(true);
   });
 });

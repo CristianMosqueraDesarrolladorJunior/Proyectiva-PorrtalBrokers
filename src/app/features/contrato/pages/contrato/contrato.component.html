@@ -27,11 +27,15 @@
     </app-success-screen>
   } @else {
     <app-page-header
-    eyebrow="Contratación"
+    eyebrow="Elaboración de contratos"
     tituloId="contrato-titulo"
     titulo="Crear contrato de arrendamiento"
     subtitulo="Completa los datos en cada paso para generar automáticamente el contrato de arrendamiento."
-  ></app-page-header>
+  >
+    <div acciones>
+      <app-boton variante="ghost" icono="restart_alt" (clicked)="empezarDesdeCero()">Empezar desde cero</app-boton>
+    </div>
+  </app-page-header>
 
     <!-- Flujo de emisión: de dónde viene el contrato. -->
     @if (pasoActual() === 0) {
