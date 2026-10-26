@@ -27,6 +27,35 @@ export interface RecursoDescargable {
   readonly formato?: string;
 }
 
+/** Contrato del historial documental; `radicado` es la solicitud que lo usó (null si aún no se radica). */
+export interface ContratoHistorial {
+  readonly referencia: string;
+  readonly fecha: string;
+  readonly propietario: string | null;
+  readonly inquilino: string | null;
+  readonly inmueble: string | null;
+  readonly radicado: string | null;
+  readonly broker: string;
+}
+
+/** Cotización del historial documental; `contrato` es el último contrato elaborado con ella. */
+export interface CotizacionHistorial {
+  readonly referencia: string;
+  readonly fecha: string;
+  readonly ciudad: string | null;
+  readonly tipoInmueble: string | null;
+  readonly canon: number | null;
+  readonly total: number | null;
+  readonly contrato: string | null;
+  readonly broker: string;
+}
+
+/** Contratos y cotizaciones generados en el portal (del broker o, en la consola, de la cartera visible). */
+export interface HistorialDocumental {
+  readonly contratos: readonly ContratoHistorial[];
+  readonly cotizaciones: readonly CotizacionHistorial[];
+}
+
 /**
  * Evento o vencimiento de la Seccion_Calendario (Req 33.1, 33.2).
  */
@@ -67,6 +96,11 @@ export class DocumentosService {
       `${this.baseUrl}/documentos/recursos/${encodeURIComponent(id)}/descarga`,
       { responseType: 'blob', withCredentials: true },
     );
+  }
+
+  /** Contratos y cotizaciones del broker de la sesión. */
+  historial(): Observable<HistorialDocumental> {
+    return this.http.get<HistorialDocumental>(`${this.baseUrl}/documentos/historial`, { withCredentials: true });
   }
 
   /**

@@ -21,7 +21,7 @@ const GESTIONAR = ['app-data-table .dt-fija', 'app-data-table'];
 const VER_RECORRIDO = ['.sidebar__recorrido'];
 
 const SEGUIMIENTO: readonly PasoTour[] = [
-  { icono: 'dashboard', titulo: 'Así vendes una póliza', texto: 'El menú sigue el orden del trabajo: cotizas, generas el contrato, radicas y, cuando expedimos la póliza, cobras tu comisión.', objetivo: MENU },
+  { icono: 'dashboard', titulo: 'Así vendes una póliza', texto: 'El menú sigue el orden del trabajo: cotizas, elaboras el contrato, solicitas la póliza y, cuando expedimos la póliza, cobras tu comisión.', objetivo: MENU },
   { icono: 'insights', titulo: 'Tus cifras', texto: 'Cuántas radicaciones tienes, cuáles estamos revisando y cuántas ya son póliza.', objetivo: ['.dash-kpis-grid', ...CIFRAS] },
   { icono: 'payments', titulo: 'Tu comisión', texto: 'Lo que tienes por cobrar según el libro de comisiones. Desde aquí llegas a tu cuenta de cobro.', objetivo: ['.dash-comm'] },
   { icono: 'filter_alt', titulo: 'Encuentra una radicación', texto: 'Filtra por estado, producto o fechas, o busca por cliente o número.', objetivo: ['.seg-filtros-grid'] },
@@ -60,7 +60,7 @@ const RENOVACIONES: readonly PasoTour[] = [
 
 const COMISIONES: readonly PasoTour[] = [
   { icono: 'payments', titulo: 'Lo que tienes por cobrar', texto: 'Tus comisiones según el libro de comisiones y el acuerdo que tienes con nosotros.', objetivo: ['app-commission-breakdown-card', '.comisiones__kpis'] },
-  { icono: 'checklist', titulo: '1. Elige tus pólizas', texto: 'Marca las pendientes de pago (hasta el máximo por cuenta). Las fuera de plazo se cobran en una cuenta aparte.', objetivo: ['app-form-section-card[titulo="Pólizas a cobrar"]'] },
+  { icono: 'checklist', titulo: '1. Elige tus pólizas', texto: 'Marca las pendientes por cobrar (hasta el máximo por cuenta). Las fuera de plazo se cobran en una cuenta aparte.', objetivo: ['app-form-section-card[titulo="Pólizas a cobrar"]'] },
   { icono: 'receipt_long', titulo: '2. Genera tu cuenta de cobro', texto: 'Revisa el total, genera la cuenta y descárgala para firmarla.', objetivo: ['app-summary-card[titulo="Cuenta de cobro"]'] },
   { icono: 'open_in_new', titulo: '3. Cárgala en la plataforma de proveedores', texto: 'Del 1 al 10 de cada mes; si te piden corregirla, tienes hasta el 15.', objetivo: ['.comisiones__acciones .comisiones__proveedores', 'app-summary-card[titulo="Cuenta de cobro"]'] },
   { icono: 'history', titulo: 'Tus cuentas generadas', texto: 'Descarga cualquier cuenta que ya generaste.', objetivo: ['app-form-section-card[titulo="Cuentas de cobro generadas"]'] },

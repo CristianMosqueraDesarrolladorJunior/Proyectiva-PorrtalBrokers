@@ -22,6 +22,7 @@ import type {
 } from '../models/consola.model';
 
 import type { ProcedimientoResponse } from './radicacion.service';
+import type { HistorialDocumental } from './documentos.service';
 
 /** Consola operable del área (`/api/v1/admin/consola/*`). */
 @Injectable({ providedIn: 'root' })
@@ -147,6 +148,20 @@ export class ConsolaService {
 
   documentoPoliza(numero: string): Observable<Blob> {
     return this.http.get(`${this.base}/polizas/${encodeURIComponent(numero)}/pdf`, { ...this.opciones, responseType: 'blob' });
+  }
+
+  /** Contratos y cotizaciones de la cartera visible (todo para el administrador). */
+  historialDocumental(): Observable<HistorialDocumental> {
+    return this.http.get<HistorialDocumental>(`${this.base}/historial-documental`, this.opciones);
+  }
+
+  /** PDF de un contrato o una cotización del historial de la consola. */
+  documentoHistorial(tipo: 'contrato' | 'cotizacion', referencia: string): Observable<Blob> {
+    const ruta = tipo === 'contrato' ? 'contratos' : 'cotizaciones';
+    return this.http.get(`${this.base}/historial-documental/${ruta}/${encodeURIComponent(referencia)}/pdf`, {
+      ...this.opciones,
+      responseType: 'blob',
+    });
   }
 
   /** Procedimiento del negocio (estado del área, correcciones pedidas y documentos) para gestionarlo desde la consola. */

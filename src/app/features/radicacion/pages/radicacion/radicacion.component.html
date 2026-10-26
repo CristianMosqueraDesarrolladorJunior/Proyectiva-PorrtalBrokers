@@ -5,11 +5,15 @@
 -->
 <section class="radicacion" aria-labelledby="radicacion-titulo">
   <app-page-header
-    eyebrow="Nueva radicación"
+    eyebrow="Solicitar póliza"
     tituloId="radicacion-titulo"
-    titulo="Nueva radicación de póliza"
+    titulo="Solicitar póliza"
     subtitulo="Completa los datos y sube los documentos requeridos para procesar y emitir la póliza sin fricciones."
-  ></app-page-header>
+  >
+    <div acciones>
+      <app-boton variante="ghost" icono="restart_alt" (clicked)="nuevaRadicacion()">Empezar desde cero</app-boton>
+    </div>
+  </app-page-header>
 
   @if (radicado(); as numeroRadicado) {
     <app-summary-card
@@ -18,7 +22,7 @@
       [filas]="[{ label: 'Radicado', valor: numeroRadicado }]"
     >
       <div acciones class="rad-acciones-card">
-        <app-boton variante="accent" icono="add" (clicked)="nuevaRadicacion()">Nueva radicación</app-boton>
+        <app-boton variante="accent" icono="add" (clicked)="nuevaRadicacion()">Solicitar otra póliza</app-boton>
       </div>
     </app-summary-card>
   } @else if (casoConsultable()) {
@@ -60,7 +64,7 @@
           [numero]="1"
           icono="description"
           titulo="Contrato de arrendamiento"
-          subtitulo="Empieza aquí: elige el contrato que generaste en Contratación o carga el contrato firmado."
+          subtitulo="Empieza aquí: elige el contrato que generaste en Elaboración de contratos o carga el contrato firmado."
         >
           @if (contratoReferencia(); as referencia) {
             <app-alert-banner variante="success" titulo="Contrato listo">
@@ -68,7 +72,7 @@
             </app-alert-banner>
           } @else {
             @if (contratosPendientes().length) {
-              <app-form-field label="¿Ya generaste el contrato en Contratación? Elígelo" controlId="rad-contrato-generado"
+              <app-form-field label="¿Ya generaste el contrato en Elaboración de contratos? Elígelo" controlId="rad-contrato-generado"
                 ayuda="Usamos sus datos (propietario, inquilino, inmueble y canon) y no tienes que volver a escribirlos.">
                 <select id="rad-contrato-generado" (change)="usarContrato($any($event.target).value)">
                   <option value="">Selecciona un contrato…</option>
@@ -107,7 +111,7 @@
           }
           @if (lecturaPorCompletar()) {
             <app-boton variante="outline" icono="edit_document" (clicked)="completarContratoLeido()">
-              Completar los datos que faltan en Contratación
+              Completar los datos que faltan en Elaboración de contratos
             </app-boton>
           }
 

@@ -4,7 +4,7 @@ import type { FilaTabla } from '../../shared/components/data-table/data-table.co
 
 /** Estados de cobro de una póliza: etiqueta para el broker y variante de la insignia. */
 export const ESTADOS_COBRO: readonly { readonly valor: EstadoCobro; readonly etiqueta: string; readonly variante: string }[] = [
-  { valor: 'PENDIENTE', etiqueta: 'Pendiente de pago', variante: 'warning' },
+  { valor: 'PENDIENTE', etiqueta: 'Pendiente por cobrar', variante: 'warning' },
   { valor: 'EN_COBRO', etiqueta: 'En cuenta de cobro', variante: 'info' },
   { valor: 'ORDEN_PAGO', etiqueta: 'Con orden de pago', variante: 'info' },
   { valor: 'PAGADA', etiqueta: 'Pagada', variante: 'success' },
@@ -22,7 +22,7 @@ export function fechaCorta(iso: string | null): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : '—';
 }
 
-/** Solo las pendientes de pago se pueden incluir en una cuenta de cobro. */
+/** Solo las pendientes por cobrar se pueden incluir en una cuenta de cobro. */
 export function esCobrable(p: PolizaExpedida): boolean {
   return p.estadoPago === 'PENDIENTE';
 }
