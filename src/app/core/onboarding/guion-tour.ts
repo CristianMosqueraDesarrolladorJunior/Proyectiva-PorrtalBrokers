@@ -7,7 +7,7 @@ import type { PasoTour, PerfilTour } from '../models/onboarding.model';
 export const GUIA_RENOVACION: readonly PasoTour[] = [
   { icono: 'description', titulo: 'Los datos de tu póliza', texto: 'Arriba ves la póliza que vas a gestionar. Revisa su vencimiento antes de elegir cómo renovarla.' },
   { icono: 'bolt', titulo: 'Renovación digital', texto: 'La opción recomendada: renuevas en minutos y sin papel. Puedes dejar los mismos valores o ajustar el canon con el tope del IPC.' },
-  { icono: 'draw', titulo: 'Renovación física', texto: 'Genera el formato oficial, fírmalo y cárgalo aquí. Úsala solo si el tomador exige firma en físico.' },
+  { icono: 'draw', titulo: 'Renovación física', texto: 'Descarga el formato de renovación, fírmalo con el cliente y cárgalo aquí. Úsala solo si el tomador exige firma en físico.' },
   { icono: 'assignment', titulo: 'Caso especial', texto: 'Para un Otro Sí o una Cesión: cuéntanos el caso y adjunta los documentos que lo respaldan.' },
   { icono: 'rule', titulo: 'Corrección de documentos', texto: 'Si te pedimos corregir algo, aquí cargas los documentos para que la solicitud siga su curso.' },
 ];

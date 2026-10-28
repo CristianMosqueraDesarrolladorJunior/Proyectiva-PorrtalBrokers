@@ -3,10 +3,10 @@
     [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="negocios-titulo"
     titulo="Negocios"
-    subtitulo="Cada radicación con su propietario, inquilino e inmueble. El negocio termina cuando se expide la póliza."
+    subtitulo="Cada radicación con su propietario, inquilino e inmueble, y los negocios que tus brokers hicieron con el área por fuera del portal. El negocio termina cuando se expide la póliza."
   ></app-page-header>
 
-  <app-filtrado-inteligente [totalFiltros]="esAdmin ? 6 : 5" idCuerpo="negocios-filtros">
+  <app-filtrado-inteligente [totalFiltros]="esAdmin ? 7 : 6" idCuerpo="negocios-filtros">
     <div class="seg-filtros-grid">
       <label class="seg-filtro">
         <span>Búsqueda</span>
@@ -19,6 +19,14 @@
           @for (f of filtros; track f.valor) {
             <option [value]="f.valor">{{ f.etiqueta }}</option>
           }
+        </select>
+      </label>
+      <label class="seg-filtro">
+        <span>Origen</span>
+        <select id="negocios-origen" [value]="fOrigen()" (change)="fOrigen.set($any($event.target).value)">
+          <option value="">Portal y área</option>
+          <option value="PORTAL">Radicados en el portal</option>
+          <option value="AREA">Negocios con el área</option>
         </select>
       </label>
       @if (esAdmin) {
@@ -129,5 +137,21 @@
         <app-bitacora [eventos]="d.historial" mensajeVacio="Sin gestiones registradas" />
       }
     }
+  }
+</app-modal-dialog>
+
+<app-modal-dialog
+  [abierto]="detalleArea() !== null"
+  [titulo]="'Negocio ' + (detalleArea()?.radicado ?? '')"
+  [subtitulo]="detalleArea()?.broker ?? ''"
+  eyebrow="Negocio con el área · solo consulta"
+  tamano="lg"
+  (cerrar)="detalleArea.set(null)"
+>
+  @if (detalleArea(); as n) {
+    <div cabecera>
+      <app-badge-estado [variante]="varianteEstado(n.estado)" [conPunto]="true">{{ n.estadoArea ?? (etiquetaEstado[n.estado] ?? n.estado) }}</app-badge-estado>
+    </div>
+    <app-ficha [secciones]="fichaArea()" />
   }
 </app-modal-dialog>

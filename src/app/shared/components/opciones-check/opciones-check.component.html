@@ -1,0 +1,21 @@
+<div class="opciones-check" role="group" [attr.aria-label]="ariaLabel">
+  @for (opcion of opciones; track opcion.valor) {
+    <div
+      class="opcion"
+      role="checkbox"
+      tabindex="0"
+      [class.opcion--activa]="marcada(opcion.valor)"
+      [attr.aria-checked]="marcada(opcion.valor)"
+      (click)="alternar(opcion.valor)"
+      (keydown)="teclado($event, opcion.valor)"
+    >
+      <span class="opcion__icono"><app-icon [nombre]="opcion.icono" [tamano]="22" /></span>
+      <span class="opcion__etiqueta">{{ opcion.etiqueta }}</span>
+      <span class="opcion__casilla" aria-hidden="true">
+        @if (marcada(opcion.valor)) {
+          <app-icon nombre="check" [tamano]="16" [peso]="700" />
+        }
+      </span>
+    </div>
+  }
+</div>

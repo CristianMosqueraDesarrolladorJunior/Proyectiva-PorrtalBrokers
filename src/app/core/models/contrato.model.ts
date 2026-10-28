@@ -108,6 +108,8 @@ export interface ContratoArrendamientoRequest {
     readonly tieneClausulas: boolean;
     readonly clausulas?: string;
     readonly tipoFirma?: string;
+    /** Número de solicitud del estudio digital (pie «Solicitud» del contrato). */
+    readonly numeroSolicitud?: string;
   };
 }
 

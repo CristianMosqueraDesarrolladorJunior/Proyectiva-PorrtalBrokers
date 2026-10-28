@@ -1,0 +1,37 @@
+<section class="vista" aria-labelledby="soporte-titulo">
+  <app-page-header
+    [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
+    tituloId="soporte-titulo"
+    titulo="Soporte"
+    subtitulo="Novedades que reportan los brokers desde Ayuda. Marca cada una como solventada; el tiempo corre hasta que se cierra."
+  />
+
+  <app-grid-layout tipo="kpi-grid">
+    <app-kpi-card label="Pendientes" [valor]="pendientes()" icono="support_agent" tono="accent" sub="Por atender" />
+    <app-kpi-card label="Fuera de meta" [valor]="vencidas()" icono="timer_off" sub="Superan {{ metaHoras() }} h sin solventar" />
+  </app-grid-layout>
+
+  <app-filter-tabs [tabs]="pestanas" [activa]="filtro()" (activaChange)="elegirFiltro($event)" />
+
+  <app-estado-vista
+    [cargando]="cargando()"
+    [error]="error()"
+    [vacio]="filas().length === 0"
+    entidad="solicitudes de soporte"
+    iconoVacio="support_agent"
+    tituloVacio="No hay solicitudes en esta vista"
+    descripcionVacio="Cuando un broker pida soporte desde Ayuda, aparecerá aquí."
+    (reintentar)="cargar()"
+  >
+    <app-data-table
+      [columnas]="columnas"
+      [filas]="filas()"
+      [total]="filas().length"
+      [tamanoPagina]="20"
+      [conBusqueda]="true"
+      placeholderBusqueda="Buscar por ticket, broker, correo o asunto…"
+      ariaLabel="Solicitudes de soporte"
+      (accion)="alternar($event)"
+    />
+  </app-estado-vista>
+</section>

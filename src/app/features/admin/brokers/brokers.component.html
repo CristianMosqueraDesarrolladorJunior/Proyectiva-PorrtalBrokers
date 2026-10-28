@@ -3,13 +3,20 @@
     [eyebrow]="esAdmin ? 'Consola de administración' : 'Mi cartera'"
     tituloId="brokers-titulo"
     titulo="Brokers"
-    subtitulo="Brokers registrados y activos: contacto, comercial, acuerdo, producción y comisiones. Los prospectos están en su propia vista."
+    subtitulo="Todos tus brokers, con cuenta en el portal o aún sin activarla: contacto, comercial, acuerdo, producción (portal y área), renovaciones y comisiones. Los prospectos están en su propia vista."
   ></app-page-header>
 
   <app-grid-layout tipo="kpi-grid">
-    <app-kpi-card label="Brokers vinculados" [valor]="brokers().length" icono="verified_user" sub="Intermediarios registrados y activos" />
-    <app-kpi-card label="Primas emitidas" [valor]="compacto(totalIngreso())" icono="account_balance" sub="Pólizas expedidas por sus brokers" />
+    <app-kpi-card label="Brokers" [valor]="brokers().length" icono="verified_user" sub="Con cuenta activa o en el directorio del área" />
+    <app-kpi-card label="Sin activar" [valor]="sinActivar()" icono="person_add" tono="accent" sub="Aún no entran al portal: lo hacen con «Primera vez»" />
+    <app-kpi-card label="Primas emitidas" [valor]="compacto(totalIngreso())" icono="account_balance" sub="Pólizas expedidas por sus brokers (portal y área)" />
   </app-grid-layout>
+
+  <app-barra-acciones>
+    <div filtros>
+      <app-segmented-control [opciones]="filtros" [valor]="filtro()" ariaLabel="Filtrar por cuenta en el portal" (valorChange)="filtro.set($event)" />
+    </div>
+  </app-barra-acciones>
 
 
   <app-estado-vista
@@ -18,8 +25,8 @@
     [vacio]="brokers().length === 0"
     entidad="brokers"
     iconoVacio="groups"
-    tituloVacio="Aún no hay brokers registrados"
-    descripcionVacio="Cuando un prospecto se aprueba aparece aquí."
+    tituloVacio="Aún no hay brokers"
+    descripcionVacio="Aquí aparecen los brokers del directorio del área y los prospectos aprobados."
     (reintentar)="cargar()"
   >
     <app-data-table
@@ -29,7 +36,7 @@
       [tamanoPagina]="20"
       [conBusqueda]="true"
       placeholderBusqueda="Buscar por nombre, documento, correo o comercial…"
-      ariaLabel="Brokers registrados"
+      ariaLabel="Brokers"
       (accion)="gestionar($event)"
     />
   </app-estado-vista>
@@ -39,7 +46,7 @@
   [abierto]="seleccionado() !== null"
   [titulo]="seleccionado()?.nombre ?? ''"
   [subtitulo]="(seleccionado()?.tipo ?? '') + ' · ' + (seleccionado()?.documento ?? 'sin documento')"
-  eyebrow="Broker registrado"
+  [eyebrow]="seleccionado()?.conCuenta === false ? 'Broker del área · sin cuenta en el portal' : 'Broker registrado'"
   tamano="lg"
   [pestanas]="pestanas()"
   [pestana]="pestana()"
@@ -48,7 +55,11 @@
 >
   @if (seleccionado(); as b) {
     <div cabecera>
-      <app-badge-estado variante="success" [conPunto]="true">Activo</app-badge-estado>
+      @if (b.conCuenta) {
+        <app-badge-estado variante="success" [conPunto]="true">Activo</app-badge-estado>
+      } @else {
+        <app-badge-estado variante="warning" [conPunto]="true">Sin activar</app-badge-estado>
+      }
       <app-badge-estado variante="info">{{ b.comercialNombre ?? 'Sin comercial' }}</app-badge-estado>
       <app-badge-estado variante="warning">Acuerdo {{ b.porcentajeComision }} %</app-badge-estado>
     </div>

@@ -72,8 +72,7 @@ export const routes: Routes = [
             './features/dashboard/seguimiento/seguimiento.component'
           ).then((m) => m.SeguimientoComponent),
       },
-      // Agente IA, Referir cliente y Estado de referidos están ocultos en esta versión: sus rutas no abren por URL
-      // (auditoría R1/R2/Q3); el código se conserva para reactivarlos.
+      // Agente IA está oculto en esta versión: su ruta no abre por URL (auditoría R1/Q3); el código se conserva.
       { path: 'agente', redirectTo: 'seguimiento' },
       {
         path: 'radicacion',
@@ -99,8 +98,20 @@ export const routes: Routes = [
             (m) => m.CoberturasComponent,
           ),
       },
-      { path: 'referidos', redirectTo: 'seguimiento' },
-      { path: 'estado-referidos', redirectTo: 'seguimiento' },
+      {
+        path: 'referidos',
+        title: 'Referir cliente — Portal Brokers Proyectiva',
+        loadComponent: () =>
+          import('./features/referidos/referir/referir.component').then((m) => m.ReferirComponent),
+      },
+      {
+        path: 'estado-referidos',
+        title: 'Estado de referidos — Portal Brokers Proyectiva',
+        loadComponent: () =>
+          import('./features/referidos/estado-referidos/estado-referidos.component').then(
+            (m) => m.EstadoReferidosComponent,
+          ),
+      },
       {
         path: 'cotizador',
         title: 'Cotizador — Portal Brokers Proyectiva',
@@ -261,6 +272,15 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/prospectos/prospectos.component').then(
             (m) => m.ProspectosComponent,
+          ),
+      },
+      {
+        path: 'soporte',
+        title: 'Soporte — Consola Proyectiva',
+        canActivate: [rolGuard('ADMINISTRADOR', 'COMERCIAL')],
+        loadComponent: () =>
+          import('./features/admin/soporte/soporte.component').then(
+            (m) => m.SoporteAdminComponent,
           ),
       },
       {

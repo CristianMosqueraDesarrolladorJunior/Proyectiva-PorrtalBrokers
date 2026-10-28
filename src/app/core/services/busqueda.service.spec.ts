@@ -29,14 +29,14 @@ describe('BusquedaService.destino', () => {
     expect(servicio.destino(r('COTIZACION'))).toEqual({ ruta: '/app/documentos', q: 'COT-XYZ' });
   });
 
-  it('Given algo ya radicado, Then se sigue viendo en Seguimiento', () => {
+  it('Given un contrato ya radicado, Then también se abre en Documentos con su referencia', () => {
     rol.set('BROKER');
-    expect(servicio.destino(r('CONTRATO', 'RAD-1'))).toEqual({ ruta: '/app/seguimiento', q: 'RAD-1' });
+    expect(servicio.destino(r('CONTRATO', 'RAD-1'))).toEqual({ ruta: '/app/documentos', q: 'CTR-ABC' });
   });
 
-  it('Given la consola, Then el contrato sin radicar va a Documentos y lo radicado a Negocios', () => {
+  it('Given la consola, Then contratos y cotizaciones van a Documentos, radicados o no', () => {
     rol.set('COMERCIAL');
     expect(servicio.destino(r('CONTRATO'))).toEqual({ ruta: '/admin/documentos', q: 'CTR-ABC' });
-    expect(servicio.destino(r('COTIZACION', 'RAD-2'))).toEqual({ ruta: '/admin/negocios', q: 'RAD-2' });
+    expect(servicio.destino(r('COTIZACION', 'RAD-2'))).toEqual({ ruta: '/admin/documentos', q: 'COT-XYZ' });
   });
 });

@@ -4,7 +4,16 @@
     tituloId="ayuda-titulo"
     titulo="Centro de ayuda"
     subtitulo="Conecta con soporte, resuelve dudas y accede a canales oficiales."
-  ></app-page-header>
+  >
+    <div acciones>
+      <app-boton variante="accent" icono="support_agent" (clicked)="abrir()">Necesito soporte</app-boton>
+    </div>
+  </app-page-header>
+
+  @if (solicitudes().length > 0) {
+    <h3 class="ayuda__seccion-titulo">Mis solicitudes de soporte</h3>
+    <app-data-table [columnas]="columnas" [filas]="filas()" [total]="filas().length" [tamanoPagina]="5" ariaLabel="Mis solicitudes de soporte" />
+  }
 
   <!-- Contactos directos (Req 33.5) -->
   <h3 class="ayuda__seccion-titulo">Contactos directos</h3>
@@ -51,3 +60,32 @@
     }
   </div>
 </section>
+
+<app-modal-dialog
+  [abierto]="abierto()"
+  titulo="Necesito soporte"
+  subtitulo="Tus datos de contacto van incluidos; solo cuéntanos qué pasa."
+  eyebrow="Ayuda"
+  tamano="md"
+  (cerrar)="abierto.set(false)"
+>
+  <app-form-field label="¿Sobre qué es tu solicitud?" [requerido]="true" controlId="sop-areas" [error]="intentoEnvio() ? errores()['areas'] : ''">
+    <app-opciones-check ariaLabel="Áreas de la solicitud" [opciones]="opcionesAreas" [seleccion]="areas()" (seleccionChange)="areas.set($any($event))" />
+  </app-form-field>
+  <app-form-field label="Tipo de solicitud" controlId="sop-tipo">
+    <select id="sop-tipo" [ngModel]="tipo()" (ngModelChange)="tipo.set($event)">
+      <option value="CORRECTIVO">Algo está mal y necesito que lo corrijan</option>
+      <option value="PREVENTIVO">Quiero revisar algo antes de que falle</option>
+    </select>
+  </app-form-field>
+  <app-form-field label="Asunto" [requerido]="true" controlId="sop-asunto" [error]="intentoEnvio() ? errores()['asunto'] : ''">
+    <input id="sop-asunto" type="text" maxlength="200" [ngModel]="asunto()" (ngModelChange)="asunto.set($event)" />
+  </app-form-field>
+  <app-form-field label="Observación" [requerido]="true" controlId="sop-obs" [error]="intentoEnvio() ? errores()['observacion'] : ''">
+    <textarea id="sop-obs" rows="5" maxlength="2000" [ngModel]="observacion()" (ngModelChange)="observacion.set($event)"></textarea>
+  </app-form-field>
+  <div acciones>
+    <app-boton variante="accent" [disabled]="enviando()" (clicked)="enviar()">Enviar</app-boton>
+    <app-boton variante="ghost" (clicked)="abierto.set(false)">Cancelar</app-boton>
+  </div>
+</app-modal-dialog>

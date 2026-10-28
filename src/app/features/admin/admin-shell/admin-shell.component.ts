@@ -16,9 +16,10 @@ const ACCESOS_ADMIN: readonly AccesoSidebar[] = [
   { ruta: 'prospectos', icono: 'how_to_reg', etiqueta: 'Prospectos' },
   // «Pólizas» se oculta del menú (la ruta sigue existiendo).
   { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
-  // "Referidos" queda oculto del menú (la ruta sigue existiendo).
+  { ruta: 'referidos', icono: 'share', etiqueta: 'Referidos' },
   { ruta: 'comisiones', icono: 'receipt_long', etiqueta: 'Cuentas de cobro' },
   { ruta: 'documentos', icono: 'folder_open', etiqueta: 'Documentos' },
+  { ruta: 'soporte', icono: 'support_agent', etiqueta: 'Soporte' },
 ];
 
 const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
@@ -28,7 +29,9 @@ const ACCESOS_COMERCIAL: readonly AccesoSidebar[] = [
   { ruta: 'negocios', icono: 'description', etiqueta: 'Negocios' },
   { ruta: 'comisiones', icono: 'receipt_long', etiqueta: 'Cuentas de cobro' },
   { ruta: 'renovaciones', icono: 'autorenew', etiqueta: 'Renovaciones' },
+  { ruta: 'referidos', icono: 'share', etiqueta: 'Mis referidos' },
   { ruta: 'documentos', icono: 'folder_open', etiqueta: 'Documentos' },
+  { ruta: 'soporte', icono: 'support_agent', etiqueta: 'Soporte' },
 ];
 
 /**

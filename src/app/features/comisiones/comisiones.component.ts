@@ -28,6 +28,7 @@ import {
   MoneyInputComponent,
   PageHeaderComponent,
   SummaryCardComponent,
+  VisorArchivoComponent,
 } from '../../shared/components';
 import type { AccionFila, ColumnaTabla, FilaResumen, FilaTabla } from '../../shared/components';
 import { FichaComponent, type SeccionFicha } from '../../shared/components/ficha/ficha.component';
@@ -43,6 +44,13 @@ import { plural } from '../../core/util/plural';
  * del broker de la sesión. El prospecto ve el módulo bloqueado (el backend además responde 403).
  */
 const REVISION_VACIA: RevisionCuenta = { filas: [], errores: [], avisos: [], totalValor: 0, totalComision: 0 };
+
+/** Estado de la cuenta para el historial: anulada (devuelta o reemplazada), pagada o en trámite. */
+function estadoCuenta(c: CuentaCobroResponse): FilaTabla {
+  if (c.estadoPago === 'rechazada') return { estado: 'Anulada', estadoVariante: 'danger', estadoSub: c.motivoPago ?? '' };
+  if (c.estadoPago === 'pagada') return { estado: 'Pagada', estadoVariante: 'success', estadoSub: '' };
+  return { estado: 'En trámite', estadoVariante: 'info', estadoSub: '' };
+}
 
 @Component({
   selector: 'app-comisiones',
@@ -66,6 +74,7 @@ const REVISION_VACIA: RevisionCuenta = { filas: [], errores: [], avisos: [], tot
     SummaryCardComponent,
     ModalDialogComponent,
     FichaComponent,
+    VisorArchivoComponent,
   ],
   templateUrl: './comisiones.component.html',
   styleUrl: './comisiones.component.scss',
@@ -116,13 +125,7 @@ export class ComisionesComponent {
     { key: 'emision', header: 'Emisión', ordenable: true },
     { key: 'estado', header: 'Estado de pago', tipo: 'badge', ordenable: true },
     { key: 'comision', header: 'Comisión', alinear: 'derecha', ordenable: true },
-    {
-      key: 'ver',
-      header: 'Detalle',
-      tipo: 'acciones',
-      acciones: [{ id: 'ver', etiqueta: 'Ver detalle', icono: 'visibility' }],
-      alinear: 'derecha',
-    },
+    { key: 'ver', header: '', tipo: 'accion', textoAccion: 'Ver', alinear: 'derecha' },
   ];
   protected readonly pendientesCobro = computed(() => this.polizas().filter(esCobrable).length);
   protected readonly pagadas = computed(() => this.polizas().filter((p) => p.estadoPago === 'PAGADA').length);
@@ -152,6 +155,7 @@ export class ComisionesComponent {
     { key: 'polizas', header: 'Pólizas', alinear: 'derecha' },
     { key: 'valor', header: 'Valor cobrado', alinear: 'derecha', ordenable: true },
     { key: 'comision', header: 'Comisión', alinear: 'derecha', ordenable: true },
+    { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
     { key: 'descargar', header: '', tipo: 'accion', textoAccion: 'Descargar PDF', alinear: 'derecha' },
   ];
 
@@ -164,8 +168,84 @@ export class ComisionesComponent {
       polizas: c.polizas,
       valor: pesos(c.totalValor),
       comision: pesos(c.totalComision),
+      ...estadoCuenta(c),
     })),
   );
+
+  // --- Detalle: cuenta de cobro de la póliza ---
+  /** Cuenta vigente (no anulada) donde está la póliza del detalle; solo para las que ya se cobraron. */
+  protected readonly cuentaDelDetalle = computed(() => {
+    const p = this.detalle();
+    if (!p || !['EN_COBRO', 'ORDEN_PAGO', 'PAGADA'].includes(p.estadoPago)) return null;
+    return this.historial().find((c) => c.estadoPago !== 'rechazada' && (c.numerosPoliza ?? []).includes(p.numeroPoliza)) ?? null;
+  });
+  /** «Aún pendiente por cobrar» solo mientras el área no gestiona el pago. */
+  protected readonly puedeDevolver = computed(
+    () => this.detalle()?.estadoPago === 'EN_COBRO' && this.cuentaDelDetalle()?.estadoPago === 'pendiente',
+  );
+  protected readonly cuentaPrevia = signal<CuentaCobroResponse | null>(null);
+  protected readonly archivoPrevia = signal<Blob | null>(null);
+  protected readonly cargandoPrevia = signal(false);
+  protected readonly confirmarDevolucion = signal(false);
+  protected readonly devolviendo = signal(false);
+
+  protected verCuenta(cuenta: CuentaCobroResponse): void {
+    this.cuentaPrevia.set(cuenta);
+    this.archivoPrevia.set(null);
+    this.cargandoPrevia.set(true);
+    this.comisiones
+      .descargarPdf(cuenta.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (b) => {
+          this.archivoPrevia.set(b);
+          this.cargandoPrevia.set(false);
+        },
+        error: (err: unknown) => {
+          this.cargandoPrevia.set(false);
+          this.feedback.error({ titulo: 'No se pudo abrir la cuenta de cobro', mensaje: mensajeErrorIntegracion(err) });
+        },
+      });
+  }
+
+  protected devolverAPendiente(): void {
+    const cuenta = this.cuentaDelDetalle();
+    if (!cuenta || this.devolviendo()) return;
+    this.devolviendo.set(true);
+    this.comisiones
+      .devolverAPendiente(cuenta.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.devolviendo.set(false);
+          this.confirmarDevolucion.set(false);
+          this.detalle.set(null);
+          this.feedback.toast({
+            variante: 'exito',
+            mensaje: `Cuenta ${cuenta.referencia ?? cuenta.consecutivo} anulada: sus pólizas volvieron a Pendiente por cobrar.`,
+          });
+          this.cargarHistorial();
+          this.cargarPolizas();
+        },
+        error: (err: unknown) => {
+          this.devolviendo.set(false);
+          this.feedback.error({
+            titulo: 'No se pudo devolver a pendiente',
+            mensaje:
+              (err as { status?: number })?.status === 422
+                ? 'El área ya está gestionando el pago de esta cuenta: no se puede devolver.'
+                : mensajeErrorIntegracion(err),
+          });
+        },
+      });
+  }
+
+  // --- Volver a cobrar pólizas «En cuenta de cobro» ---
+  /** El servidor avisa cuando la cuenta reemplaza a otra: se confirma antes de generar. */
+  protected readonly avisosRecobro = computed(() =>
+    this.revision().avisos.filter((a) => a.includes('Si generas esta cuenta')),
+  );
+  protected readonly confirmarRecobro = signal(false);
 
   // --- Resumen lateral (summary-card) ---
   protected readonly resumenPrincipal = computed(() => ({
@@ -283,6 +363,11 @@ export class ComisionesComponent {
   protected generar(): void {
     this.intento.set(true);
     if (!this.puedeGenerar()) return;
+    if (this.avisosRecobro().length > 0 && !this.confirmarRecobro()) {
+      this.confirmarRecobro.set(true);
+      return;
+    }
+    this.confirmarRecobro.set(false);
     this.generando.set(true);
     this.comisiones
       .generarCuenta({ filas: this.revision().filas.map((f) => ({ poliza: f.poliza, valor: f.valor })) })

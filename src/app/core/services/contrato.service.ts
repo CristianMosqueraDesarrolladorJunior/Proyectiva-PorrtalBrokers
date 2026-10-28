@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+
+import { TIEMPO_LIMITE } from '../interceptors/timeout-retry.interceptor';
 
 import {
   ContratoArrendamientoRequest,
@@ -55,7 +57,11 @@ export class ContratoService {
     if (direccionContrato.trim()) {
       cuerpo.append('direccionContrato', direccionContrato.trim());
     }
-    return this.http.post<ValidacionCtl>('/api/v1/contratos/ctl/validacion', cuerpo, { withCredentials: true });
+    // La IA lee el CTL hasta en 25 s (backend): más que el límite general de 15 s.
+    return this.http.post<ValidacionCtl>('/api/v1/contratos/ctl/validacion', cuerpo, {
+      withCredentials: true,
+      context: new HttpContext().set(TIEMPO_LIMITE, 40_000),
+    });
   }
 
   /** Datos del estudio digital (arrendatario, codeudores, propietario e inmueble) para precargar el contrato. */
@@ -93,8 +99,10 @@ export class ContratoService {
   leer(archivo: File): Observable<LecturaContratoResponse> {
     const datos = new FormData();
     datos.append('archivo', archivo, archivo.name);
+    // Un contrato escaneado puede tardar hasta 60 s en la IA (backend) más la subida: no se corta a los 15 s.
     return this.http.post<LecturaContratoResponse>('/api/v1/contratos/lectura', datos, {
       withCredentials: true,
+      context: new HttpContext().set(TIEMPO_LIMITE, 90_000),
     });
   }
 }

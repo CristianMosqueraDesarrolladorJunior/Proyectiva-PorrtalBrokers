@@ -35,8 +35,7 @@ export interface AccesoSidebar {
  * (Cotización → Elaboración de contratos → Solicitar póliza) y luego Renovaciones, Comisiones, Calendario,
  * Documentos y Ayuda.
  *
- * "Agente IA", "Referir cliente" y "Estado referidos" quedan ocultos del sidebar
- * (sus rutas siguen existiendo). Cada `ruta` corresponde al mapa de enrutamiento
+ * "Agente IA" queda oculto del sidebar. Cada `ruta` corresponde al mapa de enrutamiento
  * del diseño (`/app/<ruta>`).
  */
 export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
@@ -45,7 +44,9 @@ export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
   { ruta: 'cotizador', icono: 'calculate', etiqueta: 'Cotización' },
   { ruta: 'contrato', icono: 'description', etiqueta: 'Elaboración de contratos' },
   { ruta: 'radicacion', icono: 'post_add', etiqueta: 'Solicitar póliza' },
-  // "Agente IA", "Referir cliente" y "Estado referidos" se ocultan del sidebar (sus rutas siguen existiendo).
+  { ruta: 'referidos', icono: 'person_add', etiqueta: 'Referir cliente' },
+  { ruta: 'estado-referidos', icono: 'conversion_path', etiqueta: 'Estado referidos' },
+  // "Agente IA" se oculta del sidebar.
   { ruta: 'renovaciones', icono: 'update', etiqueta: 'Renovaciones' },
   { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
   // «Pólizas» se oculta del sidebar: las pólizas se ven en Seguimiento y Renovaciones.

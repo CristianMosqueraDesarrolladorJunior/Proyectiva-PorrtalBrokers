@@ -181,6 +181,17 @@
     border-color: var(--color-accent);
   }
 
+  // Con corrección pendiente: se ve pero no se puede elegir.
+  &--bloqueada {
+    cursor: not-allowed;
+    opacity: 0.5;
+    filter: grayscale(1);
+
+    &:hover {
+      box-shadow: none;
+    }
+  }
+
   &__badge {
     position: absolute;
     top: var(--space-4);

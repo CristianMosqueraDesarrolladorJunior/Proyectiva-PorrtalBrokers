@@ -12,6 +12,13 @@
         </p>
       </header>
 
+      @if (enCorreccion() && !cierre()) {
+        <app-alert-banner variante="warning" titulo="Esta renovación tiene una corrección pendiente">
+          El área está esperando los documentos corregidos. Usa «Corrección de Documentos» para enviarlos, o «Caso Especial» si
+          aplica. La renovación digital y la física se habilitan cuando el área reciba la corrección.
+        </app-alert-banner>
+      }
+
       @if (cierre(); as c) {
         <app-alert-banner variante="success" [titulo]="c.titulo">
           {{ c.motivo ? 'Estado: ' + c.motivo + '. ' : '' }}{{ c.pagada ? 'La nueva vigencia ya está pagada. ' : '' }}No necesita gestión. Si crees que hay un error, escríbele a tu asesor comercial.
@@ -24,7 +31,9 @@
         <article
           class="card card--recomendado"
           role="button"
-          tabindex="0"
+          [class.card--bloqueada]="enCorreccion()"
+          [attr.aria-disabled]="enCorreccion() || null"
+          [attr.tabindex]="enCorreccion() ? -1 : 0"
           aria-label="Renovación Digital - Renueva tu póliza de forma digital"
           (click)="iniciarRenovacionDigital()"
           (keydown.enter)="iniciarRenovacionDigital()"
@@ -50,8 +59,10 @@
         <article
           class="card"
           role="button"
-          tabindex="0"
           aria-label="Renovación Física - Diligencia el formato físico de renovación"
+          [class.card--bloqueada]="enCorreccion()"
+          [attr.aria-disabled]="enCorreccion() || null"
+          [attr.tabindex]="enCorreccion() ? -1 : 0"
           (click)="iniciarRenovacionFisica()"
           (keydown.enter)="iniciarRenovacionFisica()"
           (keydown.space)="iniciarRenovacionFisica(); $event.preventDefault()"
@@ -64,7 +75,7 @@
             </div>
             <div class="card__body">
               <h3 class="card__title">Renovación Física</h3>
-              <p class="card__description">Genera el formato oficial de renovación, fírmalo y cárgalo aquí. Úsalo solo si el tomador exige firma en físico.</p>
+              <p class="card__description">Descarga el formato de renovación, fírmalo con el cliente y cárgalo aquí. Úsalo solo si el tomador exige firma en físico.</p>
             </div>
           </div>
           <span class="card__action" aria-hidden="true">Renovar con formato físico →</span>
@@ -599,6 +610,7 @@
 
   <!-- ══════════════════ DIGITAL — EN PROCESO (éxito) ══════════════════ -->
   @if (flujo() === 'digital' && etapa() === 'exito') {
+    <app-confeti />
     <div class="proceso">
       <div class="proceso__icon">
         <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
@@ -679,19 +691,18 @@
           <div class="instrucciones-card">
             <h3 class="instrucciones-card__titulo">Instrucciones</h3>
             <p class="instrucciones-card__texto">
-              Genera el formato oficial con los valores de la renovación, fírmalo con el cliente y cárgalo.
-              Después se validará el Conocimiento de Cliente antes de enviar la solicitud.
+              Descarga el formato de renovación (persona natural o jurídica), diligéncialo con el
+              cliente y cárgalo firmado. Después se validará el Conocimiento de Cliente antes de enviar la solicitud.
             </p>
             <ul class="instrucciones-card__lista">
               <li>El archivo debe ser legible</li>
               <li>Formatos permitidos: PDF, JPG, PNG</li>
               <li>Peso máximo por archivo: 10MB</li>
             </ul>
-            <button type="button" class="btn btn--outline" (click)="irAFormatos()">Ver formatos en blanco</button>
+            <button type="button" class="btn btn--outline" (click)="irAFormatos()">Descargar formato de renovación</button>
           </div>
 
           <div class="flujo-especial__formulario">
-            <app-formato-renovacion [numeroPoliza]="numeroPoliza()" [canonInicial]="condiciones()?.canon" [destinoInicial]="condiciones()?.destino" />
             <app-doc-uploader
               [reglas]="reglaFormularioRenovacion"
               [cargados]="cargados()"
@@ -927,7 +938,7 @@
       @if (etapa() === 'observaciones') {
         <div class="flujo-correccion__contenido">
           <p class="flujo-correccion__instruccion">
-            Paso 2: Describe detalladamente los cambios realizados en la documentación de tu póliza
+            Describe detalladamente los cambios realizados en la documentación de tu póliza
             de arrendamiento para agilizar el proceso de validación.
           </p>
 
@@ -1000,10 +1011,10 @@
 
           <div class="flujo-correccion__acciones">
             <button type="button" class="btn btn--outline" (click)="retroceder()">
-              ← Volver al Paso 1
+              ← Volver al documento
             </button>
-            <button type="button" class="btn btn--primary" (click)="avanzar()">
-              Validar Conocimiento de Cliente ▷
+            <button type="button" class="btn btn--primary" [disabled]="enviando()" (click)="enviarCorreccion()">
+              {{ enviando() ? 'Enviando…' : 'Enviar corrección' }}
             </button>
           </div>
         </div>
@@ -1011,6 +1022,7 @@
 
       <!-- Éxito de la corrección -->
       @if (etapa() === 'exito') {
+        <app-confeti />
         <div class="correccion-enviada">
           <div class="correccion-enviada__icon" aria-hidden="true">
             <svg width="72" height="72" viewBox="0 0 72 72" fill="none">

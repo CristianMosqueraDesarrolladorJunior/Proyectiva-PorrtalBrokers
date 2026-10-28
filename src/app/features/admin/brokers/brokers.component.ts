@@ -10,6 +10,7 @@ import { ConsolaService } from '../../../core/services/consola.service';
 import { mensajeErrorIntegracion } from '../../../core/util/errores-integracion';
 import {
   BadgeEstadoComponent,
+  BarraAccionesComponent,
   BitacoraComponent,
   BotonComponent,
   DataTableComponent,
@@ -27,9 +28,10 @@ import { FeedbackService } from '../../../shared/services/feedback/feedback.serv
 import { plural } from '../../../core/util/plural';
 
 /**
- * Brokers REGISTRADOS y activos (los prospectos viven en su propia vista). Un botón por fila abre el
- * modal de operación: detalle completo, acuerdo de comisión, reasignación de comercial (arrastra sus
- * negocios) y actividad. Comercial: solo su cartera y solo lectura.
+ * Todos los brokers: los que tienen cuenta activa y los del directorio del área que aún no la activan (los
+ * prospectos viven en su propia vista). Negocios, pólizas y primas suman el portal y el histórico del área. Un botón
+ * por fila abre el modal: detalle completo y, si tiene cuenta, acuerdo de comisión, reasignación de comercial
+ * (arrastra sus negocios) y actividad. Comercial: solo su cartera y solo lectura.
  */
 @Component({
   selector: 'app-admin-brokers',
@@ -37,6 +39,7 @@ import { plural } from '../../../core/util/plural';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     BadgeEstadoComponent,
+    BarraAccionesComponent,
     BitacoraComponent,
     BotonComponent,
     DataTableComponent,
@@ -68,25 +71,44 @@ export class BrokersComponent {
 
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'broker', header: 'Broker', tipo: 'principal', ordenable: true },
+    { key: 'cuenta', header: 'Cuenta', tipo: 'badge' },
     { key: 'contacto', header: 'Contacto', tipo: 'principal' },
     { key: 'comercial', header: 'Comercial', ordenable: true },
     { key: 'acuerdo', header: 'Acuerdo', alinear: 'derecha' },
     { key: 'negocios', header: 'Negocios', alinear: 'derecha', ordenable: true },
+    { key: 'renovaciones', header: 'Renovaciones', alinear: 'derecha', ordenable: true },
     { key: 'ingreso', header: 'Ingreso', alinear: 'derecha', ordenable: true },
     ...COLUMNAS_FECHAS,
     COLUMNA_GESTIONAR,
   ];
 
+  /** Filtro por estado de la cuenta en el portal. */
+  protected readonly filtro = signal('');
+  protected readonly filtros: readonly OpcionSegmentada[] = [
+    { valor: '', etiqueta: 'Todos' },
+    { valor: 'activa', etiqueta: 'Cuenta activa' },
+    { valor: 'sin', etiqueta: 'Sin activar' },
+  ];
+  protected readonly visibles = computed(() => {
+    const f = this.filtro();
+    return f === '' ? this.brokers() : this.brokers().filter((b) => b.conCuenta === (f === 'activa'));
+  });
+  protected readonly sinActivar = computed(() => this.brokers().filter((b) => !b.conCuenta).length);
+
   protected readonly filas = computed<readonly FilaTabla[]>(() =>
-    this.brokers().map((b) => ({
+    this.visibles().map((b) => ({
       broker: b.nombre,
       brokerSub: `${b.tipo} · ${b.documento ?? 'sin documento'}`,
+      cuenta: b.conCuenta ? 'Activa' : 'Sin activar',
+      cuentaVariante: b.conCuenta ? 'success' : 'warning',
       contacto: b.correo ?? '—',
       contactoSub: b.celular ?? '',
       comercial: b.comercialNombre ?? 'Sin asignar',
       acuerdo: `${b.porcentajeComision} %`,
       negocios: `${b.negocios} · ${b.polizas} pólizas`,
       negociosOrden: b.negocios,
+      renovaciones: String(b.renovaciones),
+      renovacionesOrden: b.renovaciones,
       ingreso: cop(b.primas),
       ingresoOrden: b.primas,
       ...celdasFechas(b.creado, b.ultimoMovimiento),
@@ -99,11 +121,16 @@ export class BrokersComponent {
   // --- Modal de operación ---
   protected readonly seleccionado = signal<BrokerConsola | null>(null);
   protected readonly pestana = signal('detalle');
-  protected readonly pestanas = computed<readonly Tab[]>(() => [
-    { id: 'detalle', etiqueta: 'Detalle' },
-    ...(this.esAdmin ? [{ id: 'acciones', etiqueta: 'Acciones' }] : []),
-    { id: 'actividad', etiqueta: 'Actividad' },
-  ]);
+  /** Sin cuenta en el portal no hay acuerdo, reasignación ni actividad que gestionar: solo su detalle. */
+  protected readonly pestanas = computed<readonly Tab[]>(() =>
+    this.seleccionado()?.conCuenta === false
+      ? [{ id: 'detalle', etiqueta: 'Detalle' }]
+      : [
+          { id: 'detalle', etiqueta: 'Detalle' },
+          ...(this.esAdmin ? [{ id: 'acciones', etiqueta: 'Acciones' }] : []),
+          { id: 'actividad', etiqueta: 'Actividad' },
+        ],
+  );
   protected readonly actividad = signal<readonly Movimiento[]>([]);
   protected readonly acuerdo = signal('20');
   protected readonly comercialDestino = signal('');
@@ -134,14 +161,19 @@ export class BrokersComponent {
           { etiqueta: 'Celular', valor: b.celular },
           { etiqueta: 'Comercial', valor: b.comercialNombre ?? 'Sin asignar' },
           { etiqueta: 'Acuerdo de comisión', valor: `${b.porcentajeComision} % sobre el valor sin IVA` },
+          {
+            etiqueta: 'Cuenta en el portal',
+            valor: b.conCuenta ? 'Activa' : 'Sin activar: entra con «Primera vez» y su cédula',
+          },
         ],
       },
       {
         titulo: 'Producción asegurada',
         icono: 'trending_up',
         datos: [
-          { etiqueta: 'Negocios radicados', valor: b.negocios },
+          { etiqueta: 'Negocios (portal y área)', valor: b.negocios },
           { etiqueta: 'Pólizas expedidas', valor: b.polizas },
+          { etiqueta: 'Pólizas en renovación', valor: b.renovaciones },
           { etiqueta: 'Ingreso al negocio', valor: cop(b.primas) },
           { etiqueta: 'Comisión de sus cuentas de cobro', valor: cop(b.comisionCobrada), destacado: true },
         ],
@@ -187,7 +219,7 @@ export class BrokersComponent {
   }
 
   protected gestionar(evento: AccionFila): void {
-    const b = this.brokers().at(evento.indice);
+    const b = this.visibles().at(evento.indice);
     if (!b) return;
     this.seleccionado.set(b);
     this.pestana.set('detalle');
@@ -195,6 +227,7 @@ export class BrokersComponent {
     this.comercialDestino.set('');
     this.correoNuevo.set(b.correo ?? '');
     this.actividad.set([]);
+    if (!b.id) return;
     this.consola
       .actividadBroker(b.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -208,14 +241,15 @@ export class BrokersComponent {
   /** Cambia el acuerdo con confirmación: es una acción de dinero y queda en la actividad (auditoría PR30, PR33). */
   protected guardarAcuerdo(): void {
     const b = this.seleccionado();
-    if (!b || Number(this.acuerdo()) === b.porcentajeComision) return;
+    const id = b?.id;
+    if (!b || !id || Number(this.acuerdo()) === b.porcentajeComision) return;
     this.feedback.info({
       titulo: 'Cambiar acuerdo de comisión',
       mensaje: `${b.nombre} pasará de ${b.porcentajeComision} % a ${this.acuerdo()} %. Aplica a las pólizas que se expidan desde ahora; las ya expedidas conservan su porcentaje. El cambio queda registrado en su actividad.`,
       acciones: { confirmar: 'Cambiar acuerdo', cancelar: 'Cancelar' },
       alResolver: (r) => {
         if (r !== 'confirmar') return;
-        this.ejecutar(this.admin.cambiarComision(b.id, Number(this.acuerdo())),
+        this.ejecutar(this.admin.cambiarComision(id, Number(this.acuerdo())),
           `Acuerdo de ${b.nombre} actualizado al ${this.acuerdo()} %.`);
       },
     });
@@ -224,7 +258,8 @@ export class BrokersComponent {
   /** Reasigna con confirmación y vista previa de lo que se mueve (auditoría PR26, PR27). */
   protected reasignar(): void {
     const b = this.seleccionado();
-    if (!b || !this.comercialDestino()) return;
+    const id = b?.id;
+    if (!b || !id || !this.comercialDestino()) return;
     const destino = this.comerciales().find((c) => c.codigo === this.comercialDestino());
     const nombreDestino = destino?.nombre ?? this.comercialDestino();
     this.feedback.info({
@@ -233,7 +268,7 @@ export class BrokersComponent {
       acciones: { confirmar: 'Reasignar', cancelar: 'Cancelar' },
       alResolver: (r) => {
         if (r !== 'confirmar') return;
-        this.ejecutar(this.admin.asignarComercial(b.id, this.comercialDestino()),
+        this.ejecutar(this.admin.asignarComercial(id, this.comercialDestino()),
           `${b.nombre} y todos sus negocios pasaron a ${nombreDestino}.`);
       },
     });
@@ -241,7 +276,8 @@ export class BrokersComponent {
 
   protected actualizarCorreo(): void {
     const b = this.seleccionado();
-    if (!b || !this.correoValido()) return;
+    const id = b?.id;
+    if (!b || !id || !this.correoValido()) return;
     const correo = this.correoNuevo().trim();
     this.feedback.info({
       titulo: 'Actualizar correo de acceso',
@@ -249,7 +285,7 @@ export class BrokersComponent {
       acciones: { confirmar: 'Actualizar y enviar', cancelar: 'Cancelar' },
       alResolver: (r) => {
         if (r !== 'confirmar') return;
-        this.ejecutar(this.consola.actualizarCorreoBroker(b.id, correo), `Enviamos el enlace de acceso a ${correo}.`);
+        this.ejecutar(this.consola.actualizarCorreoBroker(id, correo), `Enviamos el enlace de acceso a ${correo}.`);
       },
     });
   }

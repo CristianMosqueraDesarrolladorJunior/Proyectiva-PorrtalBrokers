@@ -48,8 +48,8 @@ export class BusquedaService {
     const q = r.radicado ?? r.referencia ?? '';
     if (r.tipo === 'POLIZA') return { ruta: interno ? '/admin/renovaciones' : '/app/renovaciones', q };
     if (r.tipo === 'CUENTA_COBRO') return { ruta: interno ? '/admin/comisiones' : '/app/comisiones', q };
-    // Contrato o cotización sin radicar: se abre en el historial de Documentos con su vista previa.
-    if (!r.radicado && (r.tipo === 'CONTRATO' || r.tipo === 'COTIZACION')) {
+    // Contrato o cotización: se abre en el historial de Documentos con su vista previa.
+    if (r.tipo === 'CONTRATO' || r.tipo === 'COTIZACION') {
       return { ruta: interno ? '/admin/documentos' : '/app/documentos', q: r.referencia ?? '' };
     }
     if (interno) return { ruta: '/admin/negocios', q };

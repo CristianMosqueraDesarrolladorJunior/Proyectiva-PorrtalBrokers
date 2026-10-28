@@ -6,7 +6,8 @@ import type { AccionRenovacion } from './poliza.model';
  */
 
 export interface BrokerConsola {
-  readonly id: string;
+  /** Null para el broker del área que aún no activa su cuenta en el portal. */
+  readonly id: string | null;
   readonly nombre: string;
   readonly documento: string | null;
   readonly correo: string | null;
@@ -20,8 +21,12 @@ export interface BrokerConsola {
   readonly primas: number;
   readonly comisionCobrada: number;
   readonly comisionPagada: number;
-  readonly creado: string;
+  readonly creado: string | null;
   readonly ultimoMovimiento: string | null;
+  /** Tiene cuenta activa en el portal (false = está en el directorio del área y aún no la activa). */
+  readonly conCuenta: boolean;
+  /** Pólizas del broker en el Warehouse de renovaciones. */
+  readonly renovaciones: number;
 }
 
 export interface ProspectoConsola {
@@ -107,7 +112,7 @@ export interface NegocioConsola {
   readonly inmueble: string | null;
   readonly ciudad: string | null;
   readonly broker: string;
-  /** PROSPECTO · REGISTRADO */
+  /** PROSPECTO · REGISTRADO · SIN_CUENTA (broker del área que aún no activa su cuenta) */
   readonly brokerEstado: string;
   readonly comercial: string | null;
   readonly canon: number | null;
@@ -115,8 +120,12 @@ export interface NegocioConsola {
   readonly prima: number | null;
   readonly estado: string;
   readonly numeroPoliza: string | null;
-  readonly creado: string;
+  readonly creado: string | null;
   readonly ultimoMovimiento: string | null;
+  /** PORTAL: radicado en el portal (se gestiona aquí). AREA: negocio con el área por fuera del portal (solo consulta). */
+  readonly origen: 'PORTAL' | 'AREA';
+  /** Estado tal como está en la hoja del área (POLIZA, RENOVACION, DESISTIDO…); null en los del portal. */
+  readonly estadoArea: string | null;
 }
 
 export interface ParteNegocio {

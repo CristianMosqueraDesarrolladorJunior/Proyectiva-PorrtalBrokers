@@ -65,7 +65,7 @@ const TOTAL_COLORES = 4;
         </div>
         <p class="comm__sub">
           {{ polizasPendientes }} de {{ plural(polizasRadicadas, 'póliza expedida', 'pólizas expedidas') }} aún sin pagar:
-          por cobrar, en cuenta de cobro o con orden de pago.
+          por cobrar, en cuenta de cobro o en gestión de pago.
         </p>
 
         <div

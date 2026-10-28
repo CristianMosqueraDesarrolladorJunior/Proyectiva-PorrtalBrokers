@@ -13,6 +13,8 @@ import {
   puedeRetroceder,
   type EstadoContrato,
   ULTIMO_PASO,
+  pendientesDelPaso,
+  pendientesDeudores,
 } from './contrato-presentacion';
 import type {
   CondicionesEconomicas,
@@ -34,6 +36,7 @@ describe('contrato-presentacion (lógica pura del Generador_Contrato)', () => {
     numeroIdentificacion: '1023456',
     telefono: '3001234567',
     correo: 'ana@ejemplo.com',
+    ciudadExpedicion: 'Bogotá',
     direccionResidencia: 'Calle 1 # 2-3',
   };
 
@@ -44,6 +47,7 @@ describe('contrato-presentacion (lógica pura del Generador_Contrato)', () => {
     numeroIdentificacion: '987654',
     telefono: '3109876',
     correo: 'carlos@ejemplo.com',
+    ciudadExpedicion: 'Cali',
     ocupacion: 'Ingeniero',
   };
 
@@ -201,6 +205,23 @@ describe('contrato-presentacion (lógica pura del Generador_Contrato)', () => {
         condiciones: { ...condicionesOk, canonMensual: 0 },
       };
       expect(puedeGenerar(incompleto)).toBe(false);
+    });
+  });
+
+  describe('lo que falta, en palabras del broker', () => {
+    it('dice qué campo falta en cada paso y nada cuando está completo', () => {
+      const estado = { arrendador: arrendadorOk, arrendatario: { ...arrendatarioOk, ciudadExpedicion: '', telefono: '12' },
+        inmueble: inmuebleOk, condiciones: {} };
+      expect(pendientesDelPaso(0, estado)).toEqual([]);
+      expect(pendientesDelPaso(1, estado)).toEqual(['Ciudad de expedición del documento', 'Teléfono (de 7 a 10 dígitos)']);
+      expect(pendientesDelPaso(3, estado)).toContain('Canon mensual');
+    });
+
+    it('pide a cada codeudor los datos que van al contrato', () => {
+      const deudor = { nombres: 'Pedro', apellidos: 'Díaz', ciudadExpedicion: '', telefono: '3201234567',
+        correo: 'pedro@ejemplo.com', direccionNotificacion: '' };
+      expect(pendientesDeudores([deudor])).toEqual([
+        'Deudor solidario 1: ciudad de expedición del documento', 'Deudor solidario 1: dirección de notificación']);
     });
   });
 });

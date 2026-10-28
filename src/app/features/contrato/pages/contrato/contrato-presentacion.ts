@@ -100,81 +100,106 @@ export function esIdentificacionValida(numero: string | undefined | null): boole
   return typeof numero === 'string' && PATRON_IDENTIFICACION.test(numero.trim());
 }
 
-/**
- * Valida los campos obligatorios del paso 1 — Datos del arrendador (Req 30.2, 30.6).
- * Función pura y total.
- *
- * @param datos datos parciales del arrendador capturados en el formulario.
- * @returns `true` si todos los campos obligatorios del paso son válidos.
- */
+/** Datos de identificación y contacto comunes a arrendador y arrendatario: lo que falta, en lenguaje del broker. */
+function pendientesPersona(d: Partial<DatosArrendador & DatosArrendatario>): string[] {
+  const p: string[] = [];
+  if (!campoDiligenciado(d.nombres)) p.push('Nombres');
+  if (!campoDiligenciado(d.apellidos)) p.push('Apellidos');
+  if (!campoDiligenciado(d.tipoIdentificacion)) p.push('Tipo de identificación');
+  if (!esIdentificacionValida(d.numeroIdentificacion)) p.push('Número de identificación (de 6 a 12 dígitos)');
+  // El contrato lleva «C.C. No. … de <ciudad>»: sin ella el documento queda con espacios en blanco.
+  if (!campoDiligenciado(d.ciudadExpedicion)) p.push('Ciudad de expedición del documento');
+  if (!esTelefonoValido(d.telefono)) p.push('Teléfono (de 7 a 10 dígitos)');
+  if (!esCorreoValido(d.correo)) p.push('Correo electrónico válido');
+  return p;
+}
+
+/** Paso 1 — Datos del arrendador (Req 30.2): campos que faltan o están mal escritos. */
+export function pendientesArrendador(datos: Partial<DatosArrendador>): string[] {
+  const p = pendientesPersona(datos);
+  if (!campoDiligenciado(datos.direccionResidencia)) p.push('Dirección de notificación');
+  return p;
+}
+
+/** Paso 2 — Datos del arrendatario (Req 30.3): campos que faltan o están mal escritos. */
+export function pendientesArrendatario(datos: Partial<DatosArrendatario>): string[] {
+  return pendientesPersona(datos);
+}
+
+/** Paso 3 — Datos del inmueble (Req 30.4): campos que faltan. */
+export function pendientesInmueble(datos: Partial<DatosInmueble>): string[] {
+  const p: string[] = [];
+  if (!campoDiligenciado(datos.tipoInmueble)) p.push('Tipo de inmueble');
+  if (!campoDiligenciado(datos.uso)) p.push('Uso del inmueble');
+  if (!campoDiligenciado(datos.direccionCompleta)) p.push('Dirección del inmueble');
+  if (!campoDiligenciado(datos.ciudad)) p.push('Ciudad del inmueble');
+  if (!campoDiligenciado(datos.matriculaInmobiliaria)) p.push('Matrícula inmobiliaria');
+  // Inmueble en leasing: sin permiso de subarriendo no se puede arrendar.
+  if (datos.leasing && datos.permisoSubarriendo !== true) p.push('Permiso de subarriendo del leasing');
+  return p;
+}
+
+/** Paso 4 — Condiciones económicas (Req 30.5): la administración admite $0; servicios y deudores son opcionales. */
+export function pendientesCondiciones(datos: Partial<CondicionesEconomicas>): string[] {
+  const p: string[] = [];
+  if (!esNumeroPositivo(datos.canonMensual)) p.push('Canon mensual');
+  if (!esNumeroNoNegativo(datos.cuotaAdministracion)) p.push('Cuota de administración (escribe 0 si no tiene)');
+  if (!esDuracionValida(datos.duracionMeses)) p.push('Duración del contrato');
+  if (!campoDiligenciado(datos.fechaInicio) || !esEnteroEnRango(datos.diaPagoMensual, DIA_PAGO_MIN, DIA_PAGO_MAX)) {
+    p.push('Fecha de inicio');
+  }
+  if (!campoDiligenciado(datos.reajusteAnual)) p.push('Reajuste anual');
+  if (!campoDiligenciado(datos.metodoPago)) p.push('Método de pago');
+  else if (datos.metodoPago !== 'efectivo' && !esNumeroCuentaValido(datos.numeroCuenta)) p.push('Número de cuenta');
+  return p;
+}
+
+/** Codeudores que van al contrato: cada uno con su ciudad de expedición, teléfono, correo y dirección. */
+export function pendientesDeudores(
+  deudores: readonly { nombres: string; apellidos: string; ciudadExpedicion: string; telefono: string; correo: string; direccionNotificacion: string }[],
+): string[] {
+  return deudores.flatMap((d, i) => {
+    const quien = `Deudor solidario ${i + 1}`;
+    const p: string[] = [];
+    if (!campoDiligenciado(d.nombres) || !campoDiligenciado(d.apellidos)) p.push(`${quien}: nombres y apellidos`);
+    if (!campoDiligenciado(d.ciudadExpedicion)) p.push(`${quien}: ciudad de expedición del documento`);
+    if (!esTelefonoValido(d.telefono)) p.push(`${quien}: teléfono (de 7 a 10 dígitos)`);
+    if (!esCorreoValido(d.correo)) p.push(`${quien}: correo electrónico válido`);
+    if (!campoDiligenciado(d.direccionNotificacion)) p.push(`${quien}: dirección de notificación`);
+    return p;
+  });
+}
+
+/** Lo que falta en un paso del Generador_Contrato; vacío si el paso está completo. */
+export function pendientesDelPaso(paso: number, estado: EstadoContrato): string[] {
+  switch (paso) {
+    case 0:
+      return pendientesArrendador(estado.arrendador);
+    case 1:
+      return pendientesArrendatario(estado.arrendatario);
+    case 2:
+      return pendientesInmueble(estado.inmueble);
+    case 3:
+      return pendientesCondiciones(estado.condiciones);
+    default:
+      return ['Paso desconocido'];
+  }
+}
+
 export function esPasoArrendadorValido(datos: Partial<DatosArrendador>): boolean {
-  return (
-    campoDiligenciado(datos.nombres) &&
-    campoDiligenciado(datos.apellidos) &&
-    campoDiligenciado(datos.tipoIdentificacion) &&
-    esIdentificacionValida(datos.numeroIdentificacion) &&
-    esTelefonoValido(datos.telefono) &&
-    esCorreoValido(datos.correo) &&
-    campoDiligenciado(datos.direccionResidencia)
-  );
+  return pendientesArrendador(datos).length === 0;
 }
 
-/**
- * Valida los campos obligatorios del paso 2 — Datos del arrendatario (Req 30.3, 30.6).
- * Función pura y total.
- *
- * @param datos datos parciales del arrendatario capturados en el formulario.
- * @returns `true` si todos los campos obligatorios del paso son válidos.
- */
 export function esPasoArrendatarioValido(datos: Partial<DatosArrendatario>): boolean {
-  return (
-    campoDiligenciado(datos.nombres) &&
-    campoDiligenciado(datos.apellidos) &&
-    campoDiligenciado(datos.tipoIdentificacion) &&
-    esIdentificacionValida(datos.numeroIdentificacion) &&
-    esTelefonoValido(datos.telefono) &&
-    esCorreoValido(datos.correo)
-  );
+  return pendientesArrendatario(datos).length === 0;
 }
 
-/**
- * Valida los campos obligatorios del paso 3 — Datos del inmueble (Req 30.4, 30.6).
- * Función pura y total.
- *
- * @param datos datos parciales del inmueble capturados en el formulario.
- * @returns `true` si todos los campos obligatorios del paso son válidos.
- */
 export function esPasoInmuebleValido(datos: Partial<DatosInmueble>): boolean {
-  return (
-    campoDiligenciado(datos.tipoInmueble) &&
-    campoDiligenciado(datos.uso) &&
-    campoDiligenciado(datos.direccionCompleta) &&
-    campoDiligenciado(datos.ciudad) &&
-    campoDiligenciado(datos.matriculaInmobiliaria) &&
-    // Inmueble en leasing: sin permiso de subarriendo no se puede arrendar.
-    (!datos.leasing || datos.permisoSubarriendo === true)
-  );
+  return pendientesInmueble(datos).length === 0;
 }
 
-/**
- * Valida los campos obligatorios del paso 4 — Condiciones económicas (Req 30.5, 30.6).
- * La cuota de administración es obligatoria pero admite $0; los servicios y los
- * deudores solidarios son opcionales. Función pura y total.
- *
- * @param datos condiciones económicas parciales capturadas en el formulario.
- * @returns `true` si todos los campos obligatorios del paso son válidos.
- */
 export function esPasoCondicionesValido(datos: Partial<CondicionesEconomicas>): boolean {
-  return (
-    esNumeroPositivo(datos.canonMensual) &&
-    esNumeroNoNegativo(datos.cuotaAdministracion) &&
-    esDuracionValida(datos.duracionMeses) &&
-    esEnteroEnRango(datos.diaPagoMensual, DIA_PAGO_MIN, DIA_PAGO_MAX) &&
-    campoDiligenciado(datos.fechaInicio) &&
-    campoDiligenciado(datos.reajusteAnual) &&
-    campoDiligenciado(datos.metodoPago) &&
-    (datos.metodoPago === 'efectivo' || esNumeroCuentaValido(datos.numeroCuenta))
-  );
+  return pendientesCondiciones(datos).length === 0;
 }
 
 /** Estado agregado de los datos capturados por paso del Generador_Contrato. */

@@ -6,11 +6,6 @@
     subtitulo="Tus contratos y cotizaciones, y los formatos, plantillas, clausulados e instructivos de apoyo."
   ></app-page-header>
 
-  <div class="doc-section">
-    <h3 class="doc-section__titulo">Mis contratos y cotizaciones</h3>
-    <app-historial-documental [fuente]="fuenteHistorial" [descargar]="descargarHistorial" />
-  </div>
-
   @if (cargando()) {
     <p role="status">Cargando documentos…</p>
   }
@@ -46,4 +41,9 @@
       </div>
     </div>
   }
+
+  <!-- Al final y en colapsable: contratos y cotizaciones propios (se buscan con Ctrl+K). -->
+  <div class="doc-section">
+    <app-historial-documental [fuente]="fuenteHistorial" [descargar]="descargarHistorial" />
+  </div>
 </section>

@@ -36,6 +36,8 @@ export { StepTabsComponent } from './step-tabs/step-tabs.component';
 export type { PasoTab, EstadoPasoTab } from './step-tabs/step-tabs.component';
 export { TabsComponent } from './tabs/tabs.component';
 export { RadioGroupComponent } from './radio-group/radio-group.component';
+export { OpcionesCheckComponent } from './opciones-check/opciones-check.component';
+export type { OpcionCheck } from './opciones-check/opciones-check.component';
 
 // --- Librería de Componentes Compartidos — parte 2 (Task 5.1) ---
 

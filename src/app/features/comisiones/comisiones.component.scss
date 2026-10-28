@@ -138,3 +138,20 @@
   font-size: var(--text-caption);
   color: var(--color-muted);
 }
+
+.comisiones__en-cuenta {
+  margin: var(--space-3) var(--space-0) var(--space-0);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--sb-surface-low);
+  border: 1px solid var(--sb-border);
+  font-size: var(--text-body-sm);
+  color: var(--sb-on-surface);
+}
+
+.comisiones__confirmar {
+  margin: var(--space-0);
+  font-size: var(--text-body-sm);
+  line-height: 1.5;
+  color: var(--sb-on-surface);
+}

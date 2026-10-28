@@ -34,7 +34,8 @@ export const ETAPAS_POR_FLUJO: Readonly<Record<FlujoGestion, readonly EtapaGesti
   'caso-especial': ['opciones', 'captura', 'sarlaft', 'exito'],
   // No renovar no valida Conocimiento de Cliente: el desistimiento se registra directo (como en Comercial renovaciones).
   'no-renovar': ['opciones', 'captura', 'exito'],
-  correccion: ['opciones', 'captura', 'observaciones', 'sarlaft', 'exito'],
+  // La corrección tampoco: solo se carga el documento que pidió el área y se envía.
+  correccion: ['opciones', 'captura', 'observaciones', 'exito'],
 };
 
 /** Paso del indicador: etiqueta + descripción corta (forma de `PasoTab`). */
@@ -76,7 +77,6 @@ export const PASOS_POR_FLUJO: Readonly<Record<FlujoGestion, readonly PasoGestion
     OPCIONES,
     { etiqueta: 'Documento', descripcion: 'Archivo corregido' },
     { etiqueta: 'Observaciones', descripcion: 'Qué cambió' },
-    SARLAFT,
     { etiqueta: 'Enviada', descripcion: 'Radicado' },
   ],
 };

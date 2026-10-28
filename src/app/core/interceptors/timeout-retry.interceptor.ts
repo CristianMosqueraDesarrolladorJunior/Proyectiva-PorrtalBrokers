@@ -1,8 +1,14 @@
-import { HttpEvent, HttpInterceptorFn } from '@angular/common/http';
+import { HttpContextToken, HttpEvent, HttpInterceptorFn } from '@angular/common/http';
 import { Observable, TimeoutError, of, retry, throwError, timeout } from 'rxjs';
 
 /** Tiempo límite por intento de solicitud, en milisegundos (15s) (Req 29.5). */
 export const TIMEOUT_MS = 15_000;
+
+/**
+ * Límite propio de una solicitud que tarda más por naturaleza (p. ej. la lectura de un contrato con IA, que el
+ * backend espera hasta 60 s): `{ context: new HttpContext().set(TIEMPO_LIMITE, 90_000) }`.
+ */
+export const TIEMPO_LIMITE = new HttpContextToken<number>(() => TIMEOUT_MS);
 
 /** Número máximo de reintentos tras el intento inicial (Req 29.5). */
 export const MAX_REINTENTOS = 3;
@@ -53,4 +59,4 @@ const IDEMPOTENTES = new Set(['GET', 'HEAD', 'OPTIONS']);
  * hasta 3 veces las solicitudes que fallan o se exceden en tiempo (Req 29.5).
  */
 export const timeoutRetryInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> =>
-  aplicarTimeoutReintento(next(req), TIMEOUT_MS, IDEMPOTENTES.has(req.method.toUpperCase()) ? MAX_REINTENTOS : 0);
+  aplicarTimeoutReintento(next(req), req.context.get(TIEMPO_LIMITE), IDEMPOTENTES.has(req.method.toUpperCase()) ? MAX_REINTENTOS : 0);

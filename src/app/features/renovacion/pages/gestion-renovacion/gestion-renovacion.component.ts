@@ -40,8 +40,8 @@ import {
   SuccessScreenComponent,
   TarjetaSeguimiento,
 } from '../../../../shared/components';
+import { ConfetiComponent } from '../../../../shared/components/feedback/confeti/confeti.component';
 import type { OpcionRadio } from '../../../../shared/components/radio-group/radio-group.component';
-import { FormatoRenovacionComponent } from '../../components/formato-renovacion/formato-renovacion.component';
 import { SarlaftRenovacionComponent } from '../../components/sarlaft-renovacion/sarlaft-renovacion.component';
 import {
 } from '../../caso-especial-habilitacion';
@@ -125,7 +125,7 @@ interface Confirmacion {
     RadioGroupComponent,
     SuccessScreenComponent,
     SarlaftRenovacionComponent,
-    FormatoRenovacionComponent,
+    ConfetiComponent,
   ],
   templateUrl: './gestion-renovacion.component.html',
   styleUrl: './gestion-renovacion.component.scss',
@@ -174,6 +174,15 @@ export class GestionRenovacionComponent {
       ? 'Esta renovación ya está en proceso con el área'
       : p.estado === 'RENOVADA' ? 'Esta póliza ya está renovada' : 'El área ya cerró esta póliza sin renovar';
     return { titulo, motivo: p.estadoWarehouse || p.gestion || '', pagada: !!p.pagada };
+  });
+
+  /**
+   * Con corrección pendiente el área espera los documentos corregidos: no se puede renovar (digital ni física) hasta
+   * corregir; solo quedan la corrección de documentos y el caso especial.
+   */
+  protected readonly enCorreccion = computed(() => {
+    const p = this.polizaReal();
+    return !!p && accionDe(p) === 'CORREGIR';
   });
 
   /** Póliza que vence según el Warehouse (col B) y propuestas cotizadas por el backend. */
@@ -432,10 +441,12 @@ export class GestionRenovacionComponent {
   // --- Opciones --------------------------------------------------------------
 
   protected iniciarRenovacionFisica(): void {
+    if (this.enCorreccion()) return;
     this.iniciar('fisica', 'captura');
   }
 
   protected iniciarRenovacionDigital(): void {
+    if (this.enCorreccion()) return;
     this.modalidadSeleccionada.set(null);
     this.iniciar('digital', 'detalles');
   }
@@ -588,6 +599,11 @@ export class GestionRenovacionComponent {
   protected onSarlaftVigente(resultado: SarlaftRenovacionAceptado): void {
     this.sarlaftActualizado = resultado.sarlaftActualizado ?? null;
     this.enviar(resultado.validacionId);
+  }
+
+  /** La corrección se envía sin validar Conocimiento de Cliente: solo lleva el documento que pidió el área. */
+  protected enviarCorreccion(): void {
+    this.enviar('');
   }
 
   /** No renovar se registra sin validar Conocimiento de Cliente. */

@@ -44,7 +44,7 @@
 
     @if (polizas().length > 0) {
       <p class="comisiones__cuadre" role="note">
-        {{ plural(polizas().length, 'expedida', 'expedidas') }} = {{ pendientesCobro() }} por cobrar + {{ pagadas() }} pagadas + {{ otrasPolizas() }} en cuenta de cobro, con orden de pago o fuera de plazo.
+        {{ plural(polizas().length, 'expedida', 'expedidas') }} = {{ pendientesCobro() }} por cobrar + {{ pagadas() }} pagadas + {{ otrasPolizas() }} en cuenta de cobro, en gestión de pago o fuera de plazo.
       </p>
     }
 
@@ -207,8 +207,86 @@
       (cerrar)="detalle.set(null)"
     >
       <app-ficha [secciones]="seccionesDetalle()" />
+      @if (cuentaDelDetalle(); as cuenta) {
+        <p class="comisiones__en-cuenta">
+          Está en la cuenta de cobro N° {{ cuenta.consecutivo }} ({{ cuenta.referencia }}).
+        </p>
+      }
       <div acciones>
         <app-boton variante="ghost" (clicked)="detalle.set(null)">Cerrar</app-boton>
+        @if (puedeDevolver()) {
+          <app-boton variante="outline" icono="undo" (clicked)="confirmarDevolucion.set(true)">Aún pendiente por cobrar</app-boton>
+        }
+        @if (cuentaDelDetalle(); as cuenta) {
+          <app-boton variante="accent" icono="visibility" (clicked)="verCuenta(cuenta)">Ver cuenta de cobro</app-boton>
+        }
+      </div>
+    </app-modal-dialog>
+
+    <!-- Vista previa de la cuenta de cobro de la póliza -->
+    <app-modal-dialog
+      [abierto]="cuentaPrevia() !== null"
+      [titulo]="'Cuenta de cobro N° ' + (cuentaPrevia()?.consecutivo ?? '')"
+      [subtitulo]="cuentaPrevia()?.referencia ?? ''"
+      eyebrow="Vista previa"
+      tamano="xl"
+      (cerrar)="cuentaPrevia.set(null)"
+    >
+      @if (cuentaPrevia(); as c) {
+        <app-visor-archivo [archivo]="archivoPrevia()" [cargando]="cargandoPrevia()" [nombre]="'Cuenta-de-cobro-' + (c.referencia ?? c.consecutivo) + '.pdf'" />
+      }
+      <div acciones>
+        <app-boton variante="ghost" (clicked)="cuentaPrevia.set(null)">Cerrar</app-boton>
+        @if (cuentaPrevia(); as c) {
+          <app-boton variante="accent" icono="download" (clicked)="descargar(c)">Descargar PDF</app-boton>
+        }
+      </div>
+    </app-modal-dialog>
+
+    <!-- Confirmación: devolver la cuenta a pendiente -->
+    <app-modal-dialog
+      [abierto]="confirmarDevolucion()"
+      titulo="¿Devolver a Pendiente por cobrar?"
+      eyebrow="Cuenta de cobro"
+      tamano="sm"
+      (cerrar)="confirmarDevolucion.set(false)"
+    >
+      <p class="comisiones__confirmar">
+        La cuenta de cobro <strong>{{ cuentaDelDetalle()?.referencia }}</strong> se anula y
+        <strong>{{ plural(cuentaDelDetalle()?.polizas ?? 0, 'póliza', 'pólizas') }}</strong> vuelven a Pendiente por cobrar
+        para que las agrupes en otra cuenta. Si ya la cargaste en la plataforma de proveedores, avísale a tu asesor comercial.
+      </p>
+      <div acciones>
+        <app-boton variante="ghost" (clicked)="confirmarDevolucion.set(false)">Cancelar</app-boton>
+        <app-boton variante="accent" icono="undo" [disabled]="devolviendo()" (clicked)="devolverAPendiente()">
+          {{ devolviendo() ? 'Devolviendo…' : 'Sí, devolver a pendiente' }}
+        </app-boton>
+      </div>
+    </app-modal-dialog>
+
+    <!-- Confirmación: volver a cobrar pólizas que ya estaban en una cuenta -->
+    <app-modal-dialog
+      [abierto]="confirmarRecobro()"
+      titulo="Vas a cobrar de nuevo pólizas que ya estaban en una cuenta"
+      eyebrow="Generar cuenta de cobro"
+      tamano="md"
+      (cerrar)="confirmarRecobro.set(false)"
+    >
+      <app-alert-banner variante="warning" titulo="Se genera un documento nuevo">
+        <ul class="lista">
+          @for (aviso of avisosRecobro(); track aviso) {
+            <li>{{ aviso }}</li>
+          }
+        </ul>
+      </app-alert-banner>
+      <p class="comisiones__confirmar">
+        Carga en la plataforma de proveedores solo la cuenta nueva; la anterior deja de ser válida.
+      </p>
+      <div acciones>
+        <app-boton variante="ghost" (clicked)="confirmarRecobro.set(false)">Cancelar</app-boton>
+        <app-boton variante="accent" icono="send" [disabled]="generando()" (clicked)="generar()">
+          {{ generando() ? 'Generando…' : 'Sí, generar la cuenta nueva' }}
+        </app-boton>
       </div>
     </app-modal-dialog>
   }

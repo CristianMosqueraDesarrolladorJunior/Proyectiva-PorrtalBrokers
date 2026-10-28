@@ -110,13 +110,16 @@ export class NegociosComponent {
   protected readonly fBroker = signal('');
   protected readonly fDesde = signal('');
   protected readonly fHasta = signal('');
+  /** '' = todos · PORTAL · AREA (negocios hechos con el área por fuera del portal). */
+  protected readonly fOrigen = signal('');
   protected readonly nombresComerciales = computed(() =>
     [...new Set(this.negocios().map((n) => n.comercial ?? 'Sin asignar'))].sort());
   protected readonly hayFiltros = computed(() =>
-    !!(this.fBusqueda() || this.fComercial() || this.fBroker() || this.fDesde() || this.fHasta()) || this.filtro() !== 'curso');
+    !!(this.fBusqueda() || this.fComercial() || this.fBroker() || this.fDesde() || this.fHasta() || this.fOrigen())
+      || this.filtro() !== 'curso');
 
   protected limpiarFiltros(): void {
-    [this.fBusqueda, this.fComercial, this.fBroker, this.fDesde, this.fHasta].forEach((s) => s.set(''));
+    [this.fBusqueda, this.fComercial, this.fBroker, this.fDesde, this.fHasta, this.fOrigen].forEach((s) => s.set(''));
     this.filtro.set('curso');
   }
 
@@ -124,13 +127,13 @@ export class NegociosComponent {
   private readonly filtrados = computed(() => {
     const q = this.fBusqueda().trim().toLowerCase();
     const broker = this.fBroker().trim().toLowerCase();
-    const [comercial, desde, hasta] = [this.fComercial(), this.fDesde(), this.fHasta()];
+    const [comercial, desde, hasta, origen] = [this.fComercial(), this.fDesde(), this.fHasta(), this.fOrigen()];
     return this.negocios().filter((n) => {
       const dia = (n.creado ?? '').slice(0, 10);
       const texto = [n.radicado, n.numeroPoliza, n.propietario, n.inquilino, n.inmueble, n.broker].join(' ').toLowerCase();
       return (!q || texto.includes(q)) && (!broker || n.broker.toLowerCase().includes(broker))
         && (!comercial || (n.comercial ?? 'Sin asignar') === comercial)
-        && (!desde || dia >= desde) && (!hasta || dia <= hasta);
+        && (!desde || dia >= desde) && (!hasta || dia <= hasta) && (!origen || n.origen === origen);
     });
   });
 
@@ -159,11 +162,13 @@ export class NegociosComponent {
   protected readonly filas = computed<readonly FilaTabla[]>(() =>
     this.visibles().map((n) => ({
       radicado: n.radicado,
-      radicadoSub: n.numeroPoliza ? `Póliza ${n.numeroPoliza}` : '',
+      radicadoSub: [n.origen === 'AREA' ? 'Negocio con el área' : '', n.numeroPoliza ? `Póliza ${n.numeroPoliza}` : '']
+        .filter(Boolean).join(' · '),
       propietario: n.propietario ?? '—',
       propietarioSub: n.inmueble ? `${n.inmueble}${n.ciudad ? ' · ' + n.ciudad : ''}` : '',
       broker: n.broker,
-      brokerSub: n.brokerEstado === 'PROSPECTO' ? 'Prospecto' : 'Broker registrado',
+      brokerSub: n.brokerEstado === 'PROSPECTO' ? 'Prospecto'
+        : n.brokerEstado === 'SIN_CUENTA' ? 'Sin cuenta en el portal' : 'Broker registrado',
       comercial: n.comercial ?? 'Sin asignar',
       prima: n.prima === null ? '—' : cop(n.prima),
       primaOrden: n.prima ?? 0,
@@ -342,8 +347,55 @@ export class NegociosComponent {
   protected gestionar(evento: AccionFila): void {
     const n = this.visibles().at(evento.indice);
     if (!n) return;
+    // Los negocios del área no se gestionan en el portal: se consultan con lo que trae la hoja.
+    if (n.origen === 'AREA') {
+      this.detalleArea.set(n);
+      return;
+    }
     this.abrir(n.radicado);
   }
+
+  // --- Negocio con el área (solo consulta) ---
+  protected readonly detalleArea = signal<NegocioConsola | null>(null);
+  protected readonly fichaArea = computed<readonly SeccionFicha[]>(() => {
+    const n = this.detalleArea();
+    if (!n) return [];
+    return [
+      {
+        titulo: 'Negocio con el área',
+        icono: 'history',
+        datos: [
+          { etiqueta: 'Solicitud', valor: n.radicado },
+          { etiqueta: 'Estado en la hoja del área', valor: n.estadoArea },
+          { etiqueta: 'Estado', valor: this.etiquetaEstado[n.estado] ?? n.estado },
+          { etiqueta: 'Póliza', valor: n.numeroPoliza ?? 'Sin póliza' },
+          { etiqueta: 'Prima con IVA', valor: n.prima === null ? null : cop(n.prima), destacado: true },
+          { etiqueta: 'Registrado', valor: n.creado ? fechaCorta(n.creado) : null },
+          { etiqueta: 'Expedición / último movimiento', valor: n.ultimoMovimiento ? fechaCorta(n.ultimoMovimiento) : null },
+        ],
+      },
+      {
+        titulo: 'Cliente e inmueble',
+        icono: 'home_work',
+        datos: [
+          { etiqueta: 'Cliente', valor: n.propietario },
+          { etiqueta: 'Documento', valor: n.propietarioDocumento },
+          { etiqueta: 'Inmueble', valor: n.inmueble, ancho: true },
+          { etiqueta: 'Ciudad', valor: n.ciudad },
+          { etiqueta: 'Canon', valor: n.canon === null ? null : cop(n.canon) },
+        ],
+      },
+      {
+        titulo: 'Broker',
+        icono: 'badge',
+        datos: [
+          { etiqueta: 'Broker', valor: n.broker },
+          { etiqueta: 'Cuenta en el portal', valor: n.brokerEstado === 'SIN_CUENTA' ? 'Sin activar' : 'Activa' },
+          { etiqueta: 'Comercial', valor: n.comercial ?? 'Sin asignar' },
+        ],
+      },
+    ];
+  });
 
   private abrir(radicado: string): void {
     this.pestana.set('negocio');

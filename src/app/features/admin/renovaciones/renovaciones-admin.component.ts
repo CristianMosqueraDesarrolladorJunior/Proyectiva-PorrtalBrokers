@@ -295,6 +295,8 @@ export class RenovacionesAdminComponent {
     const r = this.renovacion();
     if (!r) return [];
     return [
+      // Sin el JSON de la hoja se muestra lo básico; con él, «Detalle de la póliza» y «Contacto del asegurado» ya lo traen.
+      ...(this.datosWarehouse() ? [] : [
       {
         titulo: 'Póliza de arrendamiento',
         icono: 'policy',
@@ -317,6 +319,9 @@ export class RenovacionesAdminComponent {
           { etiqueta: 'Correo', valor: r.correo },
         ],
       },
+      ]),
+      // Todo el registro de la póliza en el Warehouse (hoja JSON).
+      ...seccionesDatosRenovacion(this.datosWarehouse()),
       {
         titulo: 'Gestión',
         icono: 'assignment',
@@ -331,8 +336,6 @@ export class RenovacionesAdminComponent {
           { etiqueta: 'Último movimiento', valor: fechaHora(r.ultimoMovimiento ?? r.creado) },
         ],
       },
-      // Todo el registro de la póliza en el Warehouse (hoja JSON).
-      ...seccionesDatosRenovacion(this.datosWarehouse()),
     ];
   });
 

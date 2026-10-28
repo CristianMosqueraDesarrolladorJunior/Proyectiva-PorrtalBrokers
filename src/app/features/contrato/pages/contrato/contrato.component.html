@@ -149,7 +149,7 @@
           </app-form-field>
 
 
-          <app-form-field label="Ciudad de expedición del documento" controlId="arr-ciudad-exp">
+          <app-form-field label="Ciudad de expedición del documento" [requerido]="true" controlId="arr-ciudad-exp">
             <select
               id="arr-ciudad-exp"
               [ngModel]="expedicionOtra() ? '__otra__' : arrCiudadExpedicion()"
@@ -207,12 +207,12 @@
             ¿Ya tienes el estudio digital aprobado? Trae sus datos: arrendatario, codeudores, propietario e inmueble.
           </p>
           <div class="contrato-grid">
-            <app-form-field label="Número de estudio digital" controlId="ate-estudio">
+            <app-form-field label="Número de solicitud del estudio digital" controlId="ate-estudio">
               <input
                 id="ate-estudio"
                 type="text"
                 autocomplete="off"
-                placeholder="Consecutivo del estudio"
+                placeholder="Número de solicitud"
                 [ngModel]="estudioConsecutivo()"
                 (ngModelChange)="estudioConsecutivo.set($event)"
               />
@@ -325,6 +325,18 @@
             />
           </app-form-field>
 
+          <app-form-field label="Ciudad de expedición del documento" [requerido]="true" controlId="ate-ciudad-exp">
+            <input
+              id="ate-ciudad-exp"
+              type="text"
+              list="contrato-ciudades"
+              autocomplete="off"
+              placeholder="Escribe o elige la ciudad"
+              [ngModel]="ateCiudadExpedicion()"
+              (ngModelChange)="ateCiudadExpedicion.set($event)"
+            />
+          </app-form-field>
+
         </div>
       </div>
     }
@@ -421,6 +433,18 @@
               placeholder="Ej: D-3"
               [ngModel]="inmDeposito()"
               (ngModelChange)="inmDeposito.set($event)"
+            />
+          </app-form-field>
+
+          <app-form-field label="Línea telefónica del inmueble (opcional)" controlId="inm-linea">
+            <input
+              id="inm-linea"
+              type="tel"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Ej: 6015551234"
+              [ngModel]="inmLineaTelefonica()"
+              (ngModelChange)="inmLineaTelefonica.set($event)"
             />
           </app-form-field>
 
@@ -693,6 +717,10 @@
                   <app-form-field label="Número de identificación" controlId="deu-numero-{{ i }}">
                     <input id="deu-numero-{{ i }}" type="text" [value]="deudor.numeroIdentificacion" readonly aria-readonly="true" />
                   </app-form-field>
+                  <app-form-field label="Ciudad de expedición del documento" [requerido]="true" controlId="deu-ciudad-{{ i }}">
+                    <input id="deu-ciudad-{{ i }}" type="text" list="contrato-ciudades" autocomplete="off" placeholder="Escribe o elige la ciudad"
+                      [ngModel]="deudor.ciudadExpedicion" (ngModelChange)="editarDeudor(i, 'ciudadExpedicion', $event)" />
+                  </app-form-field>
                   <app-form-field label="Teléfono" controlId="deu-telefono-{{ i }}">
                     <input id="deu-telefono-{{ i }}" type="tel" [ngModel]="deudor.telefono" (ngModelChange)="editarDeudor(i, 'telefono', $event)" />
                   </app-form-field>
@@ -711,12 +739,24 @@
       </div>
     }
 
-    <!-- Aviso de campos incompletos para avanzar/generar (gating, Req 30.6) -->
+    <!-- Lo que falta para avanzar o generar: el broker ve exactamente qué campo completar (Req 30.6) -->
     @if (intento() && !pasoActualValido()) {
-      <app-alert-banner variante="warning" titulo="Campos incompletos">
-        Diligencia correctamente todos los campos obligatorios de este paso para continuar.
-      </app-alert-banner>
+      <div id="contrato-pendientes" tabindex="-1">
+        <app-alert-banner variante="warning" [titulo]="'Para continuar completa ' + (pendientes().length === 1 ? 'este dato' : 'estos ' + pendientes().length + ' datos')">
+          <ul class="contrato-pendientes">
+            @for (p of pendientes(); track p) {
+              <li>{{ p }}</li>
+            }
+          </ul>
+        </app-alert-banner>
+      </div>
     }
+
+    <datalist id="contrato-ciudades">
+      @for (c of ciudadesExpedicion; track c) {
+        <option [value]="c"></option>
+      }
+    </datalist>
 
 
     @if (enviando()) {
@@ -739,7 +779,7 @@
         @if (esUltimoPaso()) {
           <app-boton
             variante="primary"
-            [disabled]="!generacionHabilitada() || enviando()"
+            [disabled]="enviando()"
             (clicked)="generar()"
           >
             Generar contrato
@@ -747,7 +787,6 @@
         } @else {
           <app-boton
             variante="primary"
-            [disabled]="!avanceHabilitado()"
             (clicked)="siguiente()"
           >
             Siguiente

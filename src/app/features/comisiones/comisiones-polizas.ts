@@ -6,7 +6,7 @@ import type { FilaTabla } from '../../shared/components/data-table/data-table.co
 export const ESTADOS_COBRO: readonly { readonly valor: EstadoCobro; readonly etiqueta: string; readonly variante: string }[] = [
   { valor: 'PENDIENTE', etiqueta: 'Pendiente por cobrar', variante: 'warning' },
   { valor: 'EN_COBRO', etiqueta: 'En cuenta de cobro', variante: 'info' },
-  { valor: 'ORDEN_PAGO', etiqueta: 'Con orden de pago', variante: 'info' },
+  { valor: 'ORDEN_PAGO', etiqueta: 'En gestión de pago', variante: 'info' },
   { valor: 'PAGADA', etiqueta: 'Pagada', variante: 'success' },
   { valor: 'FUERA_PLAZO', etiqueta: 'Fuera de plazo', variante: 'danger' },
   { valor: 'SIN_RECAUDO', etiqueta: 'Aún sin recaudo', variante: 'info' },
@@ -58,8 +58,7 @@ export function filaPoliza(p: PolizaExpedida): FilaTabla {
     comision: p.comision > 0 ? pesos(p.comision) : '—',
     comisionOrden: p.comision,
     ver: '',
-    verTexto: 'Ver detalle',
-    // Fuera de plazo también se cobra, en una cuenta aparte (el servidor no deja mezclarlas con las del plazo).
-    seleccionable: esCobrable(p) || p.estadoPago === 'FUERA_PLAZO' ? 1 : 0,
+    // Fuera de plazo se cobra en una cuenta aparte; «En cuenta de cobro» se puede volver a cobrar (con aviso).
+    seleccionable: esCobrable(p) || p.estadoPago === 'FUERA_PLAZO' || p.estadoPago === 'EN_COBRO' ? 1 : 0,
   };
 }

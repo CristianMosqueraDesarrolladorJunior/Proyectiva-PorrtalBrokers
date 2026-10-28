@@ -42,6 +42,11 @@ export class ComisionesService {
     return this.http.post<CuentaCobroResponse>(`${this.baseUrl}/cuentas`, request, { withCredentials: true });
   }
 
+  /** «Aún pendiente por cobrar»: anula la cuenta y sus pólizas vuelven a pendientes por cobrar. */
+  devolverAPendiente(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/cuentas/${encodeURIComponent(id)}/pendiente`, {}, { withCredentials: true });
+  }
+
   /** Descarga autenticada (la cookie viaja; solo el dueño o el área la obtienen). */
   descargarPdf(id: string): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/cuentas/${encodeURIComponent(id)}/pdf`, {

@@ -96,9 +96,9 @@ export class ReferirComponent {
 
   /** Pasos del flujo operativo (contenido informativo de la pantalla). */
   protected readonly pasosFlujo: readonly ItemInfoLista[] = [
-    { titulo: 'Contacto prioritario', descripcion: 'Nuestro equipo comercial contacta al titular por WhatsApp o llamada.' },
-    { titulo: 'Cotización y estudio digital', descripcion: 'Se genera la oferta vinculando automáticamente tu código de bróker.' },
-    { titulo: 'Cierre y liquidación', descripcion: 'Sigues el avance y tu comisión desde el estado de referidos.' },
+    { titulo: 'Refiere a tu cliente', descripcion: 'Escribe su nombre, cédula y celular; el correo es opcional.' },
+    { titulo: 'Elige el producto', descripcion: 'En esta fase se refiere el Seguro de Hogar.' },
+    { titulo: 'Haz el seguimiento', descripcion: 'Consulta el avance de cada referido en Estado referidos.' },
   ];
 
   constructor() {

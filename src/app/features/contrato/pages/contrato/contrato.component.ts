@@ -50,6 +50,8 @@ import {
   PASOS_CONTRATO,
   ULTIMO_PASO,
   esPasoValido,
+  pendientesDelPaso,
+  pendientesDeudores,
   puedeAvanzar,
   puedeGenerar,
   puedeRetroceder,
@@ -208,6 +210,7 @@ export class ContratoComponent {
   protected readonly ateNumeroIdentificacion = signal('');
   protected readonly ateTelefono = signal('');
   protected readonly ateCorreo = signal('');
+  protected readonly ateCiudadExpedicion = signal('');
 
   /** Precarga desde el estudio digital (arrendatario, codeudores, propietario e inmueble). */
   protected readonly estudioConsecutivo = signal('');
@@ -222,6 +225,7 @@ export class ContratoComponent {
   protected readonly inmMatricula = signal('');
   protected readonly inmGaraje = signal('');
   protected readonly inmDeposito = signal('');
+  protected readonly inmLineaTelefonica = signal('');
 
   // --- Paso 4: condiciones económicas y vigencia (Req 30.5) ---
   protected readonly conCanon = signal<number | null>(null);
@@ -432,9 +436,17 @@ export class ContratoComponent {
   }));
 
   /** Verdadero si el paso actual es válido (Req 30.6). */
-  protected readonly pasoActualValido = computed(() =>
-    esPasoValido(this.pasoActual(), this.estado()),
-  );
+  protected readonly pasoActualValido = computed(() => this.pendientes().length === 0);
+
+  /** Lo que falta para avanzar (o generar en el último paso), con el nombre del campo. */
+  protected readonly pendientes = computed(() => [
+    ...pendientesDelPaso(this.pasoActual(), this.estado()),
+    ...(this.pasoActual() === ULTIMO_PASO ? pendientesDeudores(this.deudoresValidos()) : []),
+    ...(this.pasoActual() === ULTIMO_PASO && this.deudoresExceden() ? ['Máximo dos deudores solidarios: quita los que sobren'] : []),
+  ]);
+
+  /** Ciudades del catálogo para sugerir la ciudad de expedición (se puede escribir otra). */
+  protected readonly ciudadesExpedicion = this.ciudadesPorDepartamento.flatMap((g) => g.ciudades);
 
   /** Habilitación del botón "Siguiente": gating de avance (Property 22, Req 30.6). */
   protected readonly avanceHabilitado = computed(() =>
@@ -450,7 +462,9 @@ export class ContratoComponent {
   protected readonly esUltimoPaso = computed(() => this.pasoActual() === ULTIMO_PASO);
 
   /** Habilitación de "Generar contrato": todos los pasos válidos (Req 30.7). */
-  protected readonly generacionHabilitada = computed(() => puedeGenerar(this.estado()) && !this.deudoresExceden());
+  protected readonly generacionHabilitada = computed(
+    () => puedeGenerar(this.estado()) && !this.deudoresExceden() && pendientesDeudores(this.deudoresValidos()).length === 0,
+  );
 
   /** Verdadero mientras se solicita la generación al backend (Req 30.7). */
   protected readonly enviando = computed(() => this.estadoEnvio() === 'enviando');
@@ -605,6 +619,7 @@ export class ContratoComponent {
   protected siguiente(): void {
     this.intento.set(true);
     if (!this.avanceHabilitado()) {
+      this.mostrarPendientes();
       return;
     }
     this.intento.set(false);
@@ -635,7 +650,11 @@ export class ContratoComponent {
    */
   protected generar(): void {
     this.intento.set(true);
-    if (!this.generacionHabilitada() || this.enviando()) {
+    if (this.enviando()) {
+      return;
+    }
+    if (!this.generacionHabilitada()) {
+      this.mostrarPendientes();
       return;
     }
     const request = this.construirRequest();
@@ -665,6 +684,11 @@ export class ContratoComponent {
     });
   }
 
+  /** Lleva la vista al aviso con lo que falta (queda justo encima de los botones). */
+  private mostrarPendientes(): void {
+    setTimeout(() => document.getElementById('contrato-pendientes')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  }
+
   /** Cancela el Generador_Contrato sin generar y vuelve a la pantalla anterior (Req 30.8). */
   protected cancelar(): void {
     this.cancelado.emit();
@@ -692,6 +716,7 @@ export class ContratoComponent {
       numeroIdentificacion: this.arrNumeroIdentificacion(),
       telefono: this.arrTelefono(),
       correo: this.arrCorreo(),
+      ciudadExpedicion: this.arrCiudadExpedicion(),
       direccionResidencia: this.arrDireccion(),
     };
   }
@@ -705,6 +730,7 @@ export class ContratoComponent {
       numeroIdentificacion: this.ateNumeroIdentificacion(),
       telefono: this.ateTelefono(),
       correo: this.ateCorreo(),
+      ciudadExpedicion: this.ateCiudadExpedicion(),
     };
   }
 
@@ -772,6 +798,7 @@ export class ContratoComponent {
       numeroIdentificacion: this.ateNumeroIdentificacion().trim(),
       telefono: this.ateTelefono().trim(),
       correo: this.ateCorreo().trim(),
+      ciudadExpedicion: this.ateCiudadExpedicion().trim(),
       // El arrendatario se notifica en el inmueble que arrienda.
       direccionNotificacion: this.inmDireccion().trim(),
     };
@@ -783,6 +810,7 @@ export class ContratoComponent {
       matriculaInmobiliaria: this.inmMatricula().trim(),
       ...(this.inmGaraje().trim() ? { garaje: this.inmGaraje().trim() } : {}),
       ...(this.inmDeposito().trim() ? { deposito: this.inmDeposito().trim() } : {}),
+      ...(this.inmLineaTelefonica().trim() ? { lineaTelefonica: this.inmLineaTelefonica().trim() } : {}),
     };
     const condiciones: CondicionesEconomicas = {
       canonMensual: this.conCanon() as number,
@@ -814,6 +842,8 @@ export class ContratoComponent {
         tieneClausulas: this.conTieneClausulas(),
         ...(this.conTieneClausulas() && this.conClausulas().trim() ? { clausulas: this.conClausulas().trim() } : {}),
         ...(this.conTipoFirma() ? { tipoFirma: this.conTipoFirma() } : {}),
+        // El pie «Solicitud» del contrato es el número de solicitud del estudio digital.
+        ...(this.estudioConsecutivo().trim() ? { numeroSolicitud: this.estudioConsecutivo().trim() } : {}),
       },
     };
   }

@@ -36,12 +36,13 @@ const GRUPOS: readonly { titulo: string; icono: string; campos: readonly (readon
   },
   {
     titulo: 'Broker de la póliza', icono: 'handshake', campos: [
-      ['nombreBrIn', 'Broker'], ['numBrIn', 'Documento del broker'], ['idBrIn', 'Código del broker'], ['emailBrIn', 'Correo del broker'],
+      ['nombreBrIn', 'Broker'], ['emailBrIn', 'Correo de contacto'],
     ],
   },
 ];
 
-const OCULTOS = new Set(['id']);
+// Documento y código del broker no se muestran: la ficha deja su nombre y su correo de contacto.
+const OCULTOS = new Set(['id', 'numBrIn', 'idBrIn']);
 
 /** «valorAsegSep» → «Valor aseg sep» para un campo nuevo que aún no tenga nombre. */
 function etiquetaDe(clave: string): string {
