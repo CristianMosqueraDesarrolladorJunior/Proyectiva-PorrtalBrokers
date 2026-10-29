@@ -29,7 +29,7 @@ import {
   ReferidosService,
   type ReferidoRequest,
 } from '../../../core/services/referidos.service';
-import { validarReferido } from '../referido-validacion';
+import { soloDigitos, validarReferido } from '../referido-validacion';
 import { SoloDigitosDirective } from '../../../shared/directives/solo-digitos.directive';
 import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
@@ -193,12 +193,16 @@ export class ReferirComponent {
 
   /** Mensaje de error del campo cédula cuando corresponde mostrarlo. */
   protected readonly errorCedula = computed(() =>
-    this.intentoEnvio() && !this.validacion().cedulaValida ? 'La cédula es obligatoria' : '',
+    this.intentoEnvio() && !this.validacion().cedulaValida
+      ? this.cedula().trim() ? 'La cédula debe tener entre 6 y 10 dígitos' : 'La cédula es obligatoria'
+      : '',
   );
 
   /** Mensaje de error del campo celular cuando corresponde mostrarlo. */
   protected readonly errorCelular = computed(() =>
-    this.intentoEnvio() && !this.validacion().celularValido ? 'El celular es obligatorio' : '',
+    this.intentoEnvio() && !this.validacion().celularValido
+      ? this.celular().trim() ? 'El celular debe tener entre 7 y 15 dígitos' : 'El celular es obligatorio'
+      : '',
   );
 
   /** Mensaje de error del campo producto cuando corresponde mostrarlo. */
@@ -259,7 +263,7 @@ export class ReferirComponent {
     return {
       nombre: this.nombre().trim(),
       cedula: this.cedula().trim(),
-      celular: this.celular().trim(),
+      celular: soloDigitos(this.celular()),
       producto: this.producto().trim(),
       ...(correo.length > 0 ? { correo } : {}),
       ...(comentario.length > 0 ? { comentario } : {}),

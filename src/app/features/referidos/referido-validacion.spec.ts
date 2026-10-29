@@ -50,6 +50,17 @@ describe('referido-validacion (lógica pura, Req 15.2)', () => {
       expect(resultado.formularioValido).toBe(false);
     });
 
+    it('acepta el celular con espacios, guiones o +57 (se envía solo con dígitos)', () => {
+      expect(validarReferido({ ...base, celular: '300 000 0000' }).celularValido).toBe(true);
+      expect(validarReferido({ ...base, celular: '+57 300-000-0000' }).celularValido).toBe(true);
+    });
+
+    it('rechaza lo que el backend rechazaría: cédula fuera de 6–10 dígitos y celular corto', () => {
+      expect(validarReferido({ ...base, cedula: '12345' }).cedulaValida).toBe(false);
+      expect(validarReferido({ ...base, cedula: '12345678901' }).cedulaValida).toBe(false);
+      expect(validarReferido({ ...base, celular: '300 12' }).celularValido).toBe(false);
+    });
+
     it('es inválido si falta el producto', () => {
       const resultado = validarReferido({ ...base, producto: '' });
       expect(resultado.productoValido).toBe(false);

@@ -49,6 +49,11 @@ export function campoDiligenciado(valor: string | undefined): boolean {
   return valor !== undefined && valor.trim().length > 0;
 }
 
+/** Deja solo los dígitos (el celular se escribe con espacios, guiones o +57). */
+export function soloDigitos(valor: string | undefined): string {
+  return (valor ?? '').replace(/\D/g, '');
+}
+
 /**
  * Valida el formulario de Referido (Req 15.2).
  *
@@ -64,8 +69,9 @@ export function validarReferido(
   referido: Pick<ReferidoRequest, 'nombre' | 'cedula' | 'celular' | 'producto'>,
 ): ResultadoValidacionReferido {
   const nombreValido = campoDiligenciado(referido.nombre);
-  const cedulaValida = campoDiligenciado(referido.cedula);
-  const celularValido = campoDiligenciado(referido.celular);
+  // Mismas reglas que el backend (ReferidoRequest): cédula 6–10 dígitos, celular 7–15 dígitos.
+  const cedulaValida = /^\d{6,10}$/.test((referido.cedula ?? '').trim());
+  const celularValido = /^\d{7,15}$/.test(soloDigitos(referido.celular));
   const productoValido = campoDiligenciado(referido.producto);
   return {
     nombreValido,
