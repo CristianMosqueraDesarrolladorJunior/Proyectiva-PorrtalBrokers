@@ -61,8 +61,22 @@
       [conBusqueda]="true"
       placeholderBusqueda="Buscar por cliente o producto..."
       ariaLabel="Tabla de referidos"
+      (accion)="ver($event)"
     ></app-data-table>
   }
+
+  <app-modal-dialog
+    [abierto]="detalle() !== null"
+    [titulo]="detalle()?.nombre ?? ''"
+    [subtitulo]="(detalle()?.radicado ?? '') + ' · ' + (detalle()?.producto ?? '')"
+    eyebrow="Referido"
+    tamano="lg"
+    (cerrar)="detalle.set(null)"
+  >
+    @if (detalle()) {
+      <app-ficha [secciones]="ficha()" />
+    }
+  </app-modal-dialog>
 
   <app-callout-card
     icono="bolt"

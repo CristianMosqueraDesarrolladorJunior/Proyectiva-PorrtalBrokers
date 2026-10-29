@@ -2,9 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 
 import {
   KpiCardComponent,
@@ -15,7 +19,10 @@ import {
   BotonComponent,
   SkeletonComponent,
   CalloutCardComponent,
+  FichaComponent,
+  ModalDialogComponent,
 } from '../../../shared/components';
+import type { AccionFila, SeccionFicha } from '../../../shared/components';
 import { FilterTabsComponent } from '../../../shared/components/filter-tabs/filter-tabs.component';
 import type { FilterTab } from '../../../shared/components/filter-tabs/filter-tabs.component';
 import { Router } from '@angular/router';
@@ -52,6 +59,8 @@ import { calcularKpisReferidos } from '../referido-kpis';
     SkeletonComponent,
     CalloutCardComponent,
     FilterTabsComponent,
+    FichaComponent,
+    ModalDialogComponent,
   ],
   templateUrl: './estado-referidos.component.html',
   styleUrl: './estado-referidos.component.scss',
@@ -109,20 +118,62 @@ export class EstadoReferidosComponent {
     { key: 'producto', header: 'Producto interés', ordenable: true },
     { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
     { key: 'fecha', header: 'Fecha referido', ordenable: true },
+    { key: 'ver', header: '', tipo: 'accion', textoAccion: 'Ver' },
   ];
+
+  private readonly visibles = computed(() =>
+    this.referidos().filter((r) => coincideEstado(r, this.estadoActivo() === 'todos' ? undefined : this.estadoActivo())),
+  );
 
   /** Filas mapeadas para el DataTable, con la variante de insignia por estado. */
   protected readonly filas = computed(() =>
-    this.referidos()
-      .filter((r) => coincideEstado(r, this.estadoActivo() === 'todos' ? undefined : this.estadoActivo()))
-      .map((r) => ({
+    this.visibles().map((r) => ({
       nombre: r.nombre,
       producto: r.producto,
       estado: r.estado,
       estadoVariante: estadoABadge(r.estado).replace('badge-', ''),
       fecha: r.fecha,
+      ver: '',
     })),
   );
+
+  /** Referido abierto en el detalle («Ver»). Cédula y celular llegan enmascarados del backend. */
+  protected readonly detalle = signal<Referido | null>(null);
+  protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
+    const r = this.detalle();
+    if (!r) return [];
+    return [
+      {
+        titulo: 'Referido',
+        icono: 'person_add',
+        datos: [
+          { etiqueta: 'Radicado', valor: r.radicado },
+          { etiqueta: 'Nombre', valor: r.nombre },
+          { etiqueta: 'Cédula', valor: r.cedula },
+          { etiqueta: 'Celular', valor: r.celular },
+          { etiqueta: 'Producto de interés', valor: r.producto },
+          { etiqueta: 'Estado', valor: r.estado },
+          { etiqueta: 'Fecha referido', valor: r.fecha },
+        ],
+      },
+    ];
+  });
+
+  protected ver(evento: AccionFila): void {
+    this.detalle.set(this.visibles()[evento.indice] ?? null);
+  }
+
+  /** Radicado que llega del buscador (Ctrl + K): se abre su detalle al cargar, una sola vez. */
+  private readonly parametros = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
+  private radicadoAbierto = '';
+  private readonly abrirDesdeBuscador = effect(() => {
+    const q = this.parametros().get('q');
+    const r = q && q !== this.radicadoAbierto ? this.referidos().find((x) => x.radicado === q) : undefined;
+    if (r) {
+      this.radicadoAbierto = r.radicado ?? '';
+      untracked(() => this.detalle.set(r));
+    }
+  });
 
   constructor() {
     this.cargar();

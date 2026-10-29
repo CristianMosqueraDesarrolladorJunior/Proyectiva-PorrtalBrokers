@@ -82,3 +82,20 @@
     </footer>
   </section>
 </main>
+
+<app-modal-dialog
+  [abierto]="opcionesCorreo().length > 0"
+  titulo="¿A qué correo te enviamos el enlace?"
+  subtitulo="Tienes varios correos registrados. Elige en cuál quieres recibir el enlace para crear o cambiar tu contraseña; ese quedará como tu correo de acceso."
+  eyebrow="Primera vez o contraseña olvidada"
+  tamano="sm"
+  (cerrar)="opcionesCorreo.set([])"
+>
+  <div class="login-correos" role="group" aria-label="Correos registrados">
+    @for (correo of opcionesCorreo(); track $index) {
+      <app-boton variante="outline" icono="mail" [disabled]="restableciendo()" (clicked)="elegirCorreo($index)">
+        {{ correo }}
+      </app-boton>
+    }
+  </div>
+</app-modal-dialog>

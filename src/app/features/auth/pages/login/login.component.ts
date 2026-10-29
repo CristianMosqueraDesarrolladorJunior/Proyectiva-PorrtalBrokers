@@ -8,8 +8,8 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { BotonComponent, FormFieldComponent } from '../../../../shared/components';
-import { AuthService } from '../../../../core/services/auth.service';
+import { BotonComponent, FormFieldComponent, ModalDialogComponent } from '../../../../shared/components';
+import { AuthService, type DestinoRestablecimiento } from '../../../../core/services/auth.service';
 import { VerClaveDirective } from '../../../../shared/directives/ver-clave.directive';
 import { rutaInicio } from '../../../../core/guards/rol.guard';
 import { LoginRequest } from '../../../../core/models/broker.model';
@@ -39,12 +39,9 @@ const MENSAJE_BLOQUEO_TEMPORAL =
 const MENSAJE_SERVICIO_NO_DISPONIBLE =
   'No pudimos validar tu ingreso en este momento. Intenta de nuevo en unos minutos.';
 
-/**
- * Confirmación del restablecimiento de contraseña. Es la misma exista o no la
- * cuenta, para no revelar qué usuarios están registrados.
- */
-const MENSAJE_RESTABLECIMIENTO =
-  'Si tu cédula o correo están registrados, te enviamos el enlace para crear o cambiar tu contraseña al correo que tienes registrado con Proyectiva. Revisa también la carpeta de spam. Si ya no usas ese correo, escríbele a tu asesor comercial. Si eres parte del equipo comercial, pide al administrador que restablezca tu acceso.';
+/** Cuando no hay un correo registrado al que enviar el enlace. */
+const MENSAJE_SIN_CORREO =
+  'No tenemos un correo registrado para esa cédula o correo. Revisa que esté bien escrito; si es correcto, escríbele a tu asesor comercial para que registre tu correo. Si eres parte del equipo comercial, pide al administrador que restablezca tu acceso.';
 
 /** Mensaje cuando se pide restablecer la contraseña sin haber escrito el usuario. */
 const MENSAJE_USUARIO_REQUERIDO =
@@ -73,7 +70,7 @@ interface FormularioLogin {
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, FormFieldComponent, BotonComponent, VerClaveDirective],
+  imports: [ReactiveFormsModule, FormFieldComponent, BotonComponent, ModalDialogComponent, VerClaveDirective],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -205,20 +202,59 @@ export class LoginComponent {
       return;
     }
 
+    this.pedirEnlace();
+  }
+
+  /** Correos enmascarados entre los que el broker elige dónde recibir el enlace (tiene varios registrados). */
+  protected readonly opcionesCorreo = signal<readonly string[]>([]);
+
+  /** El broker eligió uno de sus correos: se envía el enlace allí. */
+  protected elegirCorreo(indice: number): void {
+    this.opcionesCorreo.set([]);
+    this.pedirEnlace(indice);
+  }
+
+  private pedirEnlace(destino?: number): void {
     this.restableciendo.set(true);
     this.auth
-      .restablecerPassword(this.formulario.controls.usuario.value.trim())
+      .restablecerPassword(this.formulario.controls.usuario.value.trim(), destino)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: (r) => {
           this.restableciendo.set(false);
-          this.feedback.toast({ variante: 'exito', mensaje: MENSAJE_RESTABLECIMIENTO });
+          this.avisarDestino(r);
         },
         error: () => {
           this.restableciendo.set(false);
           this.feedback.toast({ variante: 'error', mensaje: MENSAJE_SERVICIO_NO_DISPONIBLE });
         },
       });
+  }
+
+  /** Aviso que se queda abierto hasta «Aceptar», para que el broker lea con calma a qué correo le llega. */
+  private avisarDestino(r: DestinoRestablecimiento | null): void {
+    if (r && r.disponible === false) {
+      this.feedback.toast({ variante: 'error', mensaje: MENSAJE_SERVICIO_NO_DISPONIBLE });
+      return;
+    }
+    const correos = r?.correos ?? [];
+    if (r && !r.enviado && correos.length > 1) {
+      this.opcionesCorreo.set(correos);
+      return;
+    }
+    if (correos.length === 0) {
+      this.feedback.info({
+        titulo: 'No encontramos un correo para enviarte el enlace',
+        mensaje: MENSAJE_SIN_CORREO,
+        acciones: { confirmar: 'Aceptar' },
+      });
+      return;
+    }
+    this.feedback.exito({
+      titulo: 'Te enviamos el enlace a tu correo',
+      mensaje: `Lo recibirás en ${correos[0]}. Ábrelo para crear o cambiar tu contraseña; si no lo ves en unos minutos, revisa la carpeta de spam o correo no deseado.`,
+      acciones: { confirmar: 'Aceptar' },
+    });
   }
 
   /** Navega al formulario de Solicitud_Registro_Broker (Req 1.8, 2.1, 2.2). */

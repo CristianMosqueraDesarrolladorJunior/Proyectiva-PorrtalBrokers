@@ -128,3 +128,9 @@
     padding: var(--space-6);
   }
 }
+
+.login-correos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

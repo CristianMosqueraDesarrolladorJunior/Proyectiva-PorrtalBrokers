@@ -26,6 +26,10 @@ export interface ReferidoResponse {
  * Fila del Estado de referidos (Req 15.4, 15.5).
  */
 export interface Referido {
+  readonly radicado?: string;
+  /** Enmascarados por el backend. */
+  readonly cedula?: string;
+  readonly celular?: string;
   readonly nombre: string;
   readonly producto: string;
   readonly estado: string;

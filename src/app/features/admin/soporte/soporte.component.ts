@@ -1,17 +1,22 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 
 import { AdminService } from '../../../core/services/admin.service';
 import { fechaHora } from '../../../core/services/admin.helpers';
 import { SoporteService, areasTexto, duracionTexto, vencida } from '../../../core/services/soporte.service';
 import type { EstadoSoporte, SolicitudSoporte } from '../../../core/services/soporte.service';
 import {
+  BadgeEstadoComponent,
   DataTableComponent,
   EstadoVistaComponent,
+  FichaComponent,
   GridLayoutComponent,
   KpiCardComponent,
+  ModalDialogComponent,
   PageHeaderComponent,
 } from '../../../shared/components';
-import type { AccionFila, ColumnaTabla, FilaTabla } from '../../../shared/components';
+import type { AccionFila, ColumnaTabla, FilaTabla, SeccionFicha } from '../../../shared/components';
 import { FilterTab, FilterTabsComponent } from '../../../shared/components/filter-tabs/filter-tabs.component';
 import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
 
@@ -20,7 +25,17 @@ import { FeedbackService } from '../../../shared/services/feedback/feedback.serv
   selector: 'app-admin-soporte',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent, EstadoVistaComponent, FilterTabsComponent, GridLayoutComponent, KpiCardComponent, PageHeaderComponent],
+  imports: [
+    BadgeEstadoComponent,
+    DataTableComponent,
+    EstadoVistaComponent,
+    FichaComponent,
+    FilterTabsComponent,
+    GridLayoutComponent,
+    KpiCardComponent,
+    ModalDialogComponent,
+    PageHeaderComponent,
+  ],
   templateUrl: './soporte.component.html',
   styleUrls: ['../admin-comun.scss'],
 })
@@ -52,8 +67,51 @@ export class SoporteAdminComponent implements OnInit {
     { key: 'asunto', header: 'Asunto y observación', tipo: 'principal' },
     { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
     { key: 'tiempo', header: 'Tiempo', tipo: 'badge', nowrap: true },
+    { key: 'ver', header: '', tipo: 'accion', textoAccion: 'Ver' },
     { key: 'gestionar', header: '', tipo: 'accion', textoAccion: 'Cambiar estado' },
   ];
+
+  /** Solicitud abierta en el detalle («Ver»). */
+  protected readonly detalle = signal<SolicitudSoporte | null>(null);
+  protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
+    const s = this.detalle();
+    if (!s) return [];
+    return [
+      {
+        titulo: 'Solicitud',
+        icono: 'support_agent',
+        datos: [
+          { etiqueta: 'Ticket', valor: s.ticket },
+          { etiqueta: 'Creada', valor: fechaHora(s.creadoEn) },
+          { etiqueta: 'Tipo', valor: s.tipo === 'PREVENTIVO' ? 'Preventivo' : 'Correctivo' },
+          { etiqueta: 'Sobre', valor: areasTexto(s.areas) },
+          { etiqueta: 'Asunto', valor: s.asunto, ancho: true },
+          { etiqueta: 'Observación', valor: s.observacion, ancho: true },
+        ],
+      },
+      {
+        titulo: 'Broker',
+        icono: 'person',
+        datos: [
+          { etiqueta: 'Nombre', valor: s.brokerNombre },
+          { etiqueta: 'Cédula', valor: s.brokerDocumento },
+          { etiqueta: 'Cuenta', valor: s.estadoCuenta === 'PROSPECTO' ? 'Prospecto' : 'Registrado' },
+          { etiqueta: 'Teléfono', valor: s.brokerTelefono },
+          { etiqueta: 'Correo', valor: s.brokerCorreo },
+        ],
+      },
+      {
+        titulo: 'Atención',
+        icono: 'timer',
+        datos: [
+          { etiqueta: 'Estado', valor: s.estado === 'PENDIENTE' ? 'Pendiente' : 'Solventado' },
+          { etiqueta: 'Tiempo', valor: duracionTexto(s.creadoEn, s.solventadoEn ?? this.ahora()) },
+          { etiqueta: 'Solventada', valor: s.solventadoEn ? fechaHora(s.solventadoEn) : null },
+          { etiqueta: 'Solventada por', valor: s.solventadoPor },
+        ],
+      },
+    ];
+  });
 
 
   private readonly visibles = computed(() =>
@@ -84,10 +142,23 @@ export class SoporteAdminComponent implements OnInit {
         // Solventadas congelan el tiempo en el instante en que se cerraron.
         tiempo: duracionTexto(s.creadoEn, s.solventadoEn ?? this.ahora()),
         tiempoVariante: s.estado === 'SOLVENTADO' ? 'success' : fuera ? 'danger' : 'info',
+        ver: 'x',
         gestionar: 'x',
       };
     }),
   );
+
+  /** Ticket que llega del buscador (Ctrl + K): se abre su detalle al cargar. */
+  private readonly abrirTicket = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
+  private ticketAbierto = '';
+  private readonly abrirDesdeBuscador = effect(() => {
+    const q = this.abrirTicket().get('q');
+    const s = q && q !== this.ticketAbierto ? this.solicitudes().find((x) => x.ticket === q) : undefined;
+    if (s) {
+      this.ticketAbierto = s.ticket; // una sola vez por búsqueda
+      untracked(() => { this.filtro.set('TODAS'); this.detalle.set(s); });
+    }
+  });
 
   ngOnInit(): void {
     this.cargar();
@@ -118,6 +189,10 @@ export class SoporteAdminComponent implements OnInit {
   protected alternar(evento: AccionFila): void {
     const s = this.visibles()[evento.indice];
     if (!s) return;
+    if (evento.columna === 'ver') {
+      this.detalle.set(s);
+      return;
+    }
     const nuevo: EstadoSoporte = s.estado === 'PENDIENTE' ? 'SOLVENTADO' : 'PENDIENTE';
     this.soporte.cambiarEstado(s.ticket, nuevo).subscribe({
       next: (r) => {

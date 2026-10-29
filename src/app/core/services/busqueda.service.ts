@@ -4,7 +4,8 @@ import { Observable, of } from 'rxjs';
 
 import { SessionService } from './session.service';
 
-export type TipoResultado = 'CONTRATO' | 'COTIZACION' | 'RADICACION' | 'POLIZA' | 'CUENTA_COBRO';
+export type TipoResultado =
+  | 'CONTRATO' | 'COTIZACION' | 'RADICACION' | 'POLIZA' | 'CUENTA_COBRO' | 'BROKER' | 'REFERIDO' | 'SOPORTE';
 
 /** Resultado del buscador global (`GET /dashboard/busqueda`). */
 export interface ResultadoBusqueda {
@@ -22,6 +23,9 @@ export const ETIQUETA_TIPO: Readonly<Record<TipoResultado, string>> = {
   COTIZACION: 'Cotización',
   CONTRATO: 'Contrato',
   CUENTA_COBRO: 'Cuenta de cobro',
+  BROKER: 'Broker',
+  REFERIDO: 'Referido',
+  SOPORTE: 'Soporte',
 };
 
 /**
@@ -48,6 +52,10 @@ export class BusquedaService {
     const q = r.radicado ?? r.referencia ?? '';
     if (r.tipo === 'POLIZA') return { ruta: interno ? '/admin/renovaciones' : '/app/renovaciones', q };
     if (r.tipo === 'CUENTA_COBRO') return { ruta: interno ? '/admin/comisiones' : '/app/comisiones', q };
+    // Broker, referido y soporte: la vista de destino abre el detalle del que coincide con q.
+    if (r.tipo === 'BROKER') return { ruta: interno ? '/admin/brokers' : '/app/perfil', q };
+    if (r.tipo === 'REFERIDO') return { ruta: interno ? '/admin/referidos' : '/app/estado-referidos', q };
+    if (r.tipo === 'SOPORTE') return { ruta: interno ? '/admin/soporte' : '/app/ayuda', q };
     // Contrato o cotización: se abre en el historial de Documentos con su vista previa.
     if (r.tipo === 'CONTRATO' || r.tipo === 'COTIZACION') {
       return { ruta: interno ? '/admin/documentos' : '/app/documentos', q: r.referencia ?? '' };

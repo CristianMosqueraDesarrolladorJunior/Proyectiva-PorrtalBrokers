@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CatalogoService } from '../../../core/services/catalogo.service';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 
 import type { ReferidoConsola } from '../../../core/models/consola.model';
 import { AdminService } from '../../../core/services/admin.service';
@@ -79,6 +80,7 @@ export class ReferidosAdminComponent {
     { key: 'broker', header: 'Broker', tipo: 'principal', ordenable: true },
     { key: 'estado', header: 'Estado', tipo: 'badge', ordenable: true },
     ...COLUMNAS_FECHAS,
+    { key: 'ver', header: '', tipo: 'accion', textoAccion: 'Ver' },
     COLUMNA_GESTIONAR,
   ];
 
@@ -99,6 +101,7 @@ export class ReferidosAdminComponent {
       estado: (this.estados[r.estado ?? ''] ?? { etiqueta: r.estado ?? 'Sin estado' }).etiqueta,
       estadoVariante: (this.estados[r.estado ?? ''] ?? { variante: 'info' as VarianteBadge }).variante,
       ...celdasFechas(r.creado, r.ultimoMovimiento),
+      ver: '',
       gestionar: '',
     })),
   );
@@ -154,6 +157,24 @@ export class ReferidosAdminComponent {
     ];
   });
 
+  /** Radicado que llega del buscador (Ctrl + K): se abre su detalle al cargar, una sola vez. */
+  private readonly parametros = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
+  private radicadoAbierto = '';
+  private readonly abrirDesdeBuscador = effect(() => {
+    const q = this.parametros().get('q');
+    const r = q && q !== this.radicadoAbierto ? this.referidos().find((x) => x.radicado === q) : undefined;
+    if (r) {
+      this.radicadoAbierto = r.radicado;
+      untracked(() => {
+        this.filtro.set('');
+        this.seleccionado.set(r);
+        this.pestana.set('detalle');
+        this.estadoDestino.set(r.estado ?? 'EN_PROCESO');
+        this.nota.set('');
+      });
+    }
+  });
+
   constructor() {
     this.cargar();
   }
@@ -185,7 +206,8 @@ export class ReferidosAdminComponent {
     const r = this.visibles().at(evento.indice);
     if (!r) return;
     this.seleccionado.set(r);
-    this.pestana.set('detalle');
+    // «Ver» abre el detalle; «Gestionar» va directo a la gestión (solo el admin la tiene).
+    this.pestana.set(evento.columna === 'gestionar' && this.esAdmin ? 'gestion' : 'detalle');
     this.estadoDestino.set(r.estado ?? 'EN_PROCESO');
     this.nota.set('');
   }

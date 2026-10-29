@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 
 import { CatalogoService } from '../../core/services/catalogo.service';
 import { AREAS_SOPORTE, SoporteService, areasTexto } from '../../core/services/soporte.service';
@@ -8,11 +10,12 @@ import { fechaHora } from '../../core/services/admin.helpers';
 import {
   BotonComponent,
   DataTableComponent,
+  FichaComponent,
   FormFieldComponent,
   ModalDialogComponent,
   OpcionesCheckComponent,
 } from '../../shared/components';
-import type { ColumnaTabla, FilaTabla } from '../../shared/components';
+import type { AccionFila, ColumnaTabla, FilaTabla, SeccionFicha } from '../../shared/components';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { FeedbackService } from '../../shared/services/feedback/feedback.service';
 import { validarSoporte } from './soporte-validacion';
@@ -24,7 +27,7 @@ import { validarSoporte } from './soporte-validacion';
 @Component({
   selector: 'app-ayuda',
   standalone: true,
-  imports: [PageHeaderComponent, BotonComponent, DataTableComponent, FormFieldComponent, FormsModule, ModalDialogComponent, OpcionesCheckComponent],
+  imports: [PageHeaderComponent, BotonComponent, DataTableComponent, FichaComponent, FormFieldComponent, FormsModule, ModalDialogComponent, OpcionesCheckComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './ayuda.component.html',
   styleUrl: './ayuda.component.scss',
@@ -58,7 +61,47 @@ export class AyudaComponent implements OnInit {
     { key: 'estado', header: 'Estado', tipo: 'badge' },
     { key: 'creado', header: 'Radicada', alinear: 'derecha', nowrap: true },
     { key: 'cierre', header: 'Solventada', alinear: 'derecha', nowrap: true },
+    { key: 'ver', header: '', tipo: 'accion', textoAccion: 'Ver' },
   ];
+
+  /** Solicitud abierta en el detalle («Ver»). */
+  protected readonly detalle = signal<SolicitudSoporte | null>(null);
+  protected readonly ficha = computed<readonly SeccionFicha[]>(() => {
+    const s = this.detalle();
+    if (!s) return [];
+    return [
+      {
+        titulo: 'Tu solicitud',
+        icono: 'support_agent',
+        datos: [
+          { etiqueta: 'Ticket', valor: s.ticket },
+          { etiqueta: 'Estado', valor: s.estado === 'PENDIENTE' ? 'En atención' : 'Solventado' },
+          { etiqueta: 'Tipo', valor: s.tipo === 'PREVENTIVO' ? 'Preventivo' : 'Correctivo' },
+          { etiqueta: 'Sobre', valor: areasTexto(s.areas) },
+          { etiqueta: 'Asunto', valor: s.asunto, ancho: true },
+          { etiqueta: 'Lo que nos contaste', valor: s.observacion, ancho: true },
+          { etiqueta: 'Radicada', valor: fechaHora(s.creadoEn) },
+          { etiqueta: 'Solventada', valor: s.solventadoEn ? fechaHora(s.solventadoEn) : null },
+        ],
+      },
+    ];
+  });
+
+  protected ver(evento: AccionFila): void {
+    this.detalle.set(this.solicitudes()[evento.indice] ?? null);
+  }
+
+  /** Ticket que llega del buscador (Ctrl + K): se abre su detalle al cargar, una sola vez. */
+  private readonly parametros = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
+  private ticketAbierto = '';
+  private readonly abrirDesdeBuscador = effect(() => {
+    const q = this.parametros().get('q');
+    const s = q && q !== this.ticketAbierto ? this.solicitudes().find((x) => x.ticket === q) : undefined;
+    if (s) {
+      this.ticketAbierto = s.ticket;
+      untracked(() => this.detalle.set(s));
+    }
+  });
   protected readonly filas = computed<readonly FilaTabla[]>(() =>
     this.solicitudes().map((s) => ({
       ticket: s.ticket,
@@ -69,6 +112,7 @@ export class AyudaComponent implements OnInit {
       estadoVariante: s.estado === 'PENDIENTE' ? 'warning' : 'success',
       creado: fechaHora(s.creadoEn),
       cierre: fechaHora(s.solventadoEn),
+      ver: '',
     })),
   );
 

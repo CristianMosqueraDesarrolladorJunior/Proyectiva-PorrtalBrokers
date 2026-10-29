@@ -35,3 +35,21 @@
     />
   </app-estado-vista>
 </section>
+
+<app-modal-dialog
+  [abierto]="detalle() !== null"
+  [titulo]="'Solicitud ' + (detalle()?.ticket ?? '')"
+  [subtitulo]="detalle()?.brokerNombre ?? ''"
+  eyebrow="Soporte"
+  tamano="lg"
+  (cerrar)="detalle.set(null)"
+>
+  @if (detalle(); as s) {
+    <div cabecera>
+      <app-badge-estado [variante]="s.estado === 'PENDIENTE' ? 'warning' : 'success'" [conPunto]="true">
+        {{ s.estado === 'PENDIENTE' ? 'Pendiente' : 'Solventado' }}
+      </app-badge-estado>
+    </div>
+    <app-ficha [secciones]="ficha()" />
+  }
+</app-modal-dialog>

@@ -12,7 +12,7 @@
 
   @if (solicitudes().length > 0) {
     <h3 class="ayuda__seccion-titulo">Mis solicitudes de soporte</h3>
-    <app-data-table [columnas]="columnas" [filas]="filas()" [total]="filas().length" [tamanoPagina]="5" ariaLabel="Mis solicitudes de soporte" />
+    <app-data-table [columnas]="columnas" [filas]="filas()" [total]="filas().length" [tamanoPagina]="5" ariaLabel="Mis solicitudes de soporte" (accion)="ver($event)" />
   }
 
   <!-- Contactos directos (Req 33.5) -->
@@ -60,6 +60,19 @@
     }
   </div>
 </section>
+
+<app-modal-dialog
+  [abierto]="detalle() !== null"
+  [titulo]="'Solicitud ' + (detalle()?.ticket ?? '')"
+  [subtitulo]="detalle()?.asunto ?? ''"
+  eyebrow="Mis solicitudes de soporte"
+  tamano="md"
+  (cerrar)="detalle.set(null)"
+>
+  @if (detalle()) {
+    <app-ficha [secciones]="ficha()" />
+  }
+</app-modal-dialog>
 
 <app-modal-dialog
   [abierto]="abierto()"

@@ -144,17 +144,48 @@ describe('LoginComponent', () => {
     expect(ultimoToast()).toContain('No pudimos validar tu ingreso');
   });
 
-  it('solicita el restablecimiento de contraseña y confirma sin revelar si la cuenta existe', () => {
+  it('al pedir el enlace muestra, con «Aceptar», el correo enmascarado al que llega', () => {
     // Given
-    authSpy.restablecerPassword.mockReturnValue(of(undefined));
+    const exito = jest.spyOn(TestBed.inject(FeedbackService), 'exito');
+    authSpy.restablecerPassword.mockReturnValue(of({ correos: ['ca***@gmail.com'], enviado: true, disponible: true }));
     escribir('#login-usuario', '1023018112');
     fixture.detectChanges();
     // When
     query('.login-olvido').click();
     fixture.detectChanges();
     // Then
-    expect(authSpy.restablecerPassword).toHaveBeenCalledWith('1023018112');
-    expect(ultimoToast()).toContain('Si tu cédula o correo están registrados');
+    expect(authSpy.restablecerPassword).toHaveBeenCalledWith('1023018112', undefined);
+    expect(exito).toHaveBeenCalledWith(expect.objectContaining({
+      mensaje: expect.stringContaining('ca***@gmail.com'),
+      acciones: { confirmar: 'Aceptar' },
+    }));
+  });
+
+  it('con varios correos deja elegir y envía al elegido', () => {
+    authSpy.restablecerPassword
+      .mockReturnValueOnce(of({ correos: ['ca***@gmail.com', 'of***@inmo.co'], enviado: false, disponible: true }))
+      .mockReturnValueOnce(of({ correos: ['of***@inmo.co'], enviado: true, disponible: true }));
+    escribir('#login-usuario', '1023018112');
+    fixture.detectChanges();
+    query('.login-olvido').click();
+    fixture.detectChanges();
+
+    const opciones = Array.from(document.querySelectorAll('.login-correos button')) as HTMLButtonElement[];
+    expect(opciones).toHaveLength(2);
+    expect(opciones[0].textContent).toContain('ca***@gmail.com');
+    expect(opciones[1].textContent).toContain('of***@inmo.co');
+    opciones[1].click();
+    fixture.detectChanges();
+    expect(authSpy.restablecerPassword).toHaveBeenLastCalledWith('1023018112', 1);
+  });
+
+  it('sin correo registrado lo dice con un aviso que se cierra con «Aceptar»', () => {
+    const info = jest.spyOn(TestBed.inject(FeedbackService), 'info');
+    authSpy.restablecerPassword.mockReturnValue(of({ correos: [], enviado: false, disponible: true }));
+    escribir('#login-usuario', '1023018112');
+    fixture.detectChanges();
+    query('.login-olvido').click();
+    expect(info).toHaveBeenCalledWith(expect.objectContaining({ acciones: { confirmar: 'Aceptar' } }));
   });
 
   it('pide el usuario antes de solicitar el restablecimiento', () => {

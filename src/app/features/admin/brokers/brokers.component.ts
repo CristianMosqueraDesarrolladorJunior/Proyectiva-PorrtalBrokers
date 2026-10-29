@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CatalogoService } from '../../../core/services/catalogo.service';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import type { Observable } from 'rxjs';
 
 import type { BrokerConsola, ComercialConsola, Movimiento } from '../../../core/models/consola.model';
@@ -218,9 +219,24 @@ export class BrokersComponent {
       });
   }
 
+  /** Cédula que llega del buscador (Ctrl + K): se abre su detalle al cargar, una sola vez. */
+  private readonly parametros = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
+  private cedulaAbierta = '';
+  private readonly abrirDesdeBuscador = effect(() => {
+    const q = (this.parametros().get('q') ?? '').replace(/\D/g, '');
+    const b = q && q !== this.cedulaAbierta ? this.brokers().find((x) => (x.documento ?? '').replace(/\D/g, '') === q) : undefined;
+    if (b) {
+      this.cedulaAbierta = q;
+      untracked(() => this.abrir(b));
+    }
+  });
+
   protected gestionar(evento: AccionFila): void {
     const b = this.visibles().at(evento.indice);
-    if (!b) return;
+    if (b) this.abrir(b);
+  }
+
+  private abrir(b: BrokerConsola): void {
     this.seleccionado.set(b);
     this.pestana.set('detalle');
     this.acuerdo.set(String(b.porcentajeComision));

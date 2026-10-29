@@ -36,6 +36,17 @@ export interface RegistroBrokerResponse {
  * Req 28.1). Tras un login exitoso establece el `PerfilBroker` en `SessionService`
  * y tras el logout lo limpia; nunca lee ni almacena el token en JavaScript.
  */
+/**
+ * Respuesta del restablecimiento: correos enmascarados a los que va (o puede ir) el enlace.
+ * `enviado: false` con varios correos → el broker elige uno; sin correos → no hay correo utilizable.
+ * `disponible: false` → el servicio de identidad no respondió.
+ */
+export interface DestinoRestablecimiento {
+  readonly correos: readonly string[];
+  readonly enviado: boolean;
+  readonly disponible: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -74,8 +85,11 @@ export class AuthService {
    * igual exista o no la cuenta.
    * @param usuario cédula o correo.
    */
-  restablecerPassword(usuario: string): Observable<void> {
-    return this.http.post<void>(`${this.baseUrl}/auth/restablecimiento`, { usuario });
+  restablecerPassword(usuario: string, destino?: number): Observable<DestinoRestablecimiento> {
+    return this.http.post<DestinoRestablecimiento>(`${this.baseUrl}/auth/restablecimiento`, {
+      usuario,
+      ...(destino !== undefined ? { destino } : {}),
+    });
   }
 
   /**
