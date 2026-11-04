@@ -84,4 +84,9 @@ export interface PolizaExpedida {
   readonly comision: number;
   /** Orden de pago o factura con la que se pagó; vacío si no hay. */
   readonly ordenPago: string;
+  /** Propietario y dirección del predio, para reconocer la póliza sin memorizar el número. */
+  readonly propietario?: string | null;
+  readonly predio?: string | null;
+  /** Póliza anterior cuando esta es su renovación (número completo). */
+  readonly polizaMadre?: string | null;
 }

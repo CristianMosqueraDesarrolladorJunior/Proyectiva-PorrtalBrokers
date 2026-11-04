@@ -16,8 +16,8 @@ export function accionDe(p: Pick<Poliza, 'estado' | 'gestion' | 'accion'>): Acci
 export const SITUACION: Record<AccionRenovacion, { texto: string; variante: string }> = {
   RENOVAR: { texto: 'Por renovar', variante: 'warning' },
   CORREGIR: { texto: 'Corrección pendiente', variante: 'warning' },
-  INDUCCION: { texto: 'Vencida · requiere inducción', variante: 'danger' },
-  EN_PROCESO: { texto: 'En proceso con el área', variante: 'info' },
+  INDUCCION: { texto: 'Vencida: renovar con nuevo estudio', variante: 'danger' },
+  EN_PROCESO: { texto: 'Renovación radicada', variante: 'info' },
   CERRADA: { texto: 'Cerrada', variante: 'success' },
   FUERA_PLAZO: { texto: 'Fuera de plazo', variante: 'danger' },
 };

@@ -75,7 +75,7 @@
   [abierto]="seleccionada() !== null"
   [titulo]="'Póliza ' + (seleccionada()?.numero ?? '')"
   [subtitulo]="(condiciones()?.asegurado ?? '') + (condiciones()?.asegurado ? ' · ' : '') + 'Vence el ' + fechaCorta(seleccionada()?.fechaVencimiento ?? '')"
-  eyebrow="Renovación"
+  [eyebrow]="noRenovando() ? 'No renovación' : 'Renovación'"
   tamano="lg"
   (cerrar)="cerrarFicha()"
 >
@@ -92,16 +92,28 @@
       }
     }
   </div>
-  @if (seleccionada()) {
-    @if (notaSinAccion()) {
-      <app-alert-banner variante="success" titulo="Solo consulta">{{ notaSinAccion() }}</app-alert-banner>
+  @if (seleccionada(); as sel) {
+    @if (noRenovando()) {
+      <app-no-renovacion [numeroPoliza]="sel.numero" [embebido]="true" (registrada)="onNoRenovacionRegistrada()" />
+    } @else {
+      @if (notaSinAccion()) {
+        <app-alert-banner variante="success" titulo="Solo consulta">{{ notaSinAccion() }}</app-alert-banner>
+      }
+      <app-ficha [secciones]="ficha()" />
     }
-    <app-ficha [secciones]="ficha()" />
   }
   <div acciones>
-    <app-boton variante="ghost" (clicked)="cerrarFicha()">Cerrar</app-boton>
-    @if (textoAccion(); as texto) {
-      <app-boton variante="accent" icono="autorenew" (clicked)="gestionarSeleccionada()">{{ texto }}</app-boton>
+    @if (noRenovando()) {
+      <app-boton variante="ghost" (clicked)="volverAFicha()">Volver a la póliza</app-boton>
+      <app-boton variante="ghost" (clicked)="cerrarFicha()">Cerrar</app-boton>
+    } @else {
+      <app-boton variante="ghost" (clicked)="cerrarFicha()">Cerrar</app-boton>
+      @if (puedeNoRenovar()) {
+        <app-boton variante="outline" icono="block" (clicked)="noRenovarSeleccionada()">No renovar póliza</app-boton>
+      }
+      @if (textoAccion(); as texto) {
+        <app-boton variante="accent" icono="autorenew" (clicked)="gestionarSeleccionada()">{{ texto }}</app-boton>
+      }
     }
   </div>
 </app-modal-dialog>

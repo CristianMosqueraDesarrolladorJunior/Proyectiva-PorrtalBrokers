@@ -42,6 +42,8 @@ import {
 } from '../../../../shared/components';
 import { ConfetiComponent } from '../../../../shared/components/feedback/confeti/confeti.component';
 import type { OpcionRadio } from '../../../../shared/components/radio-group/radio-group.component';
+import type { OpcionSegmentada } from '../../../../shared/components/segmented-control/segmented-control.component';
+import { FormFieldComponent, FormSectionCardComponent, SegmentedControlComponent } from '../../../../shared/components';
 import { SarlaftRenovacionComponent } from '../../components/sarlaft-renovacion/sarlaft-renovacion.component';
 import {
 } from '../../caso-especial-habilitacion';
@@ -126,6 +128,9 @@ interface Confirmacion {
     SuccessScreenComponent,
     SarlaftRenovacionComponent,
     ConfetiComponent,
+    FormSectionCardComponent,
+    FormFieldComponent,
+    SegmentedControlComponent,
   ],
   templateUrl: './gestion-renovacion.component.html',
   styleUrl: './gestion-renovacion.component.scss',
@@ -171,7 +176,7 @@ export class GestionRenovacionComponent {
     const accion = accionDe(p);
     if (accion !== 'CERRADA' && accion !== 'EN_PROCESO') return null;
     const titulo = accion === 'EN_PROCESO'
-      ? 'Esta renovación ya está en proceso con el área'
+      ? 'Renovación radicada: el área ya la está gestionando'
       : p.estado === 'RENOVADA' ? 'Esta póliza ya está renovada' : 'El área ya cerró esta póliza sin renovar';
     return { titulo, motivo: p.estadoWarehouse || p.gestion || '', pagada: !!p.pagada };
   });
@@ -221,6 +226,42 @@ export class GestionRenovacionComponent {
   );
 
   protected readonly motivoNoRenovacion = signal<string>('');
+
+  /** Datos del inmueble que pide el área para renovar; se preguntan junto al Conocimiento de Cliente. */
+  protected readonly tipoServicio = signal('');
+  protected readonly estadoInmueble = signal('');
+  protected readonly mismoInquilino = signal('');
+  protected readonly deudorSolidario = signal('');
+  protected readonly intentoInmueble = signal(false);
+  protected readonly opcionesTipoServicio: readonly OpcionSegmentada[] = [
+    { valor: 'Vivienda', etiqueta: 'Vivienda' },
+    { valor: 'Comercio', etiqueta: 'Comercio' },
+  ];
+  protected readonly opcionesEstadoInmueble: readonly OpcionSegmentada[] = [
+    { valor: 'Ocupado', etiqueta: 'Ocupado' },
+    { valor: 'Desocupado', etiqueta: 'Desocupado' },
+  ];
+  protected readonly opcionesSiNo: readonly OpcionSegmentada[] = [
+    { valor: 'Si', etiqueta: 'Sí' },
+    { valor: 'No', etiqueta: 'No' },
+  ];
+  /** Solo la renovación (digital o física) lleva los datos del inmueble. */
+  protected readonly pideInmueble = computed(() => this.flujo() === 'digital' || this.flujo() === 'fisica');
+  protected readonly inmuebleCompleto = computed(
+    () => !!(this.tipoServicio() && this.estadoInmueble() && this.mismoInquilino() && this.deudorSolidario()),
+  );
+  private datosInmueble() {
+    return this.pideInmueble()
+      ? {
+          inmueble: {
+            tipoServicio: this.tipoServicio(),
+            estadoInmueble: this.estadoInmueble(),
+            mismoInquilino: this.mismoInquilino(),
+            deudorSolidario: this.deudorSolidario(),
+          },
+        }
+      : {};
+  }
   /** Motivos reales del Warehouse (catálogo `motivo_no_renovacion`); se envía el valor que escribe el área. */
   protected readonly opcionesMotivo = computed<readonly OpcionRadio[]>(() =>
     this.catalogo.opciones('motivo_no_renovacion').filter((m) => m['para_broker'] === true).map((m) => ({ valor: m.descripcion, etiqueta: m.descripcion })),
@@ -597,6 +638,11 @@ export class GestionRenovacionComponent {
 
   /** Con SARLAFT vigente registra la gestión en el backend y muestra el éxito. */
   protected onSarlaftVigente(resultado: SarlaftRenovacionAceptado): void {
+    if (this.pideInmueble() && !this.inmuebleCompleto()) {
+      this.intentoInmueble.set(true);
+      this.feedback.error({ titulo: 'Faltan datos del inmueble', mensaje: 'Responde las cuatro preguntas del inmueble antes de enviar.' });
+      return;
+    }
     this.sarlaftActualizado = resultado.sarlaftActualizado ?? null;
     this.enviar(resultado.validacionId);
   }
@@ -686,6 +732,7 @@ export class GestionRenovacionComponent {
           ...(archivo ? { formularioRenovacion: archivo } : {}),
           ...conComentarios,
           ...conSarlaft,
+          ...this.datosInmueble(),
         });
       case 'digital': {
         const v = this.formulario.getRawValue();
@@ -709,6 +756,7 @@ export class GestionRenovacionComponent {
               }),
           ...(observaciones ? { comentarios: observaciones } : {}),
           ...conSarlaft,
+          ...this.datosInmueble(),
         });
       }
       case 'caso-especial':

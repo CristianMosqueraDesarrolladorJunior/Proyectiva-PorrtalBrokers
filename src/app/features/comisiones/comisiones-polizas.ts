@@ -49,6 +49,9 @@ export function filaPoliza(p: PolizaExpedida): FilaTabla {
   return {
     id: p.numeroPoliza,
     poliza: p.numeroPoliza,
+    polizaSub: p.polizaMadre ? `Renovación de ${p.polizaMadre}` : '',
+    propietario: p.propietario ?? '—',
+    propietarioSub: p.predio ?? '',
     emision: fechaCorta(p.fechaEmision),
     emisionOrden: p.fechaEmision ?? '',
     estado: etiquetaEstado(p.estadoPago),

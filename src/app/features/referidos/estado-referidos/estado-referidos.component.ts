@@ -151,6 +151,7 @@ export class EstadoReferidosComponent {
           { etiqueta: 'Nombre', valor: r.nombre },
           { etiqueta: 'Cédula', valor: r.cedula },
           { etiqueta: 'Celular', valor: r.celular },
+          { etiqueta: 'Correo', valor: r.correo },
           { etiqueta: 'Producto de interés', valor: r.producto },
           { etiqueta: 'Estado', valor: r.estado },
           { etiqueta: 'Fecha referido', valor: r.fecha },

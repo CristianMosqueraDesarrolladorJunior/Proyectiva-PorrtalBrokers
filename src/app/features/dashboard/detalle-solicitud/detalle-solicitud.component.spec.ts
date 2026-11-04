@@ -220,7 +220,7 @@ describe('DetalleSolicitudComponent', () => {
         'Fecha',
         'Comisión',
       ]);
-      expect(filas[3].valor).toBe('En revisión');
+      expect(filas[3].valor).toBe('Radicación en revisión');
       expect(filas[1].valor).toBe('M**** P****');
     });
   });

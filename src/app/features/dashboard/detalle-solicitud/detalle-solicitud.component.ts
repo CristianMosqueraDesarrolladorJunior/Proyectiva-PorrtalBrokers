@@ -125,6 +125,9 @@ export class DetalleSolicitudComponent implements OnChanges {
   /** La ficha ya trae la póliza expedida: el aviso verde sobraría. */
   protected readonly polizaEnFicha = computed(() => this.secciones().some((s) => s.titulo === 'Póliza expedida'));
   protected readonly referenciaVista = signal('');
+  /** Cabecera del modal: el broker reconoce el negocio por el propietario y la dirección del predio. */
+  protected readonly propietarioVista = signal('');
+  protected readonly predioVista = signal('');
   protected readonly etiquetaEstado = signal('');
   protected readonly varianteEstado = signal<'success' | 'warning' | 'danger' | 'info'>('info');
 
@@ -201,6 +204,8 @@ export class DetalleSolicitudComponent implements OnChanges {
     this.filas.set(construirFilasDetalle(detalle, (e) => this.catalogo.etiquetaSeguimiento(e)));
     this.secciones.set(construirSecciones(detalle, (e) => this.catalogo.etiquetaSeguimiento(e)));
     this.referenciaVista.set(detalle.referencia);
+    this.propietarioVista.set((detalle.partes?.propietario?.nombre ?? detalle.cliente ?? '').trim());
+    this.predioVista.set((detalle.partes?.inmueble ?? detalle.inmueble ?? '').trim());
     this.etiquetaEstado.set(this.catalogo.etiquetaSeguimiento(detalle.estado));
     this.varianteEstado.set(VARIANTE_ESTADO[detalle.estado] ?? 'info');
     this.hitos.set(detalle.timeline);
@@ -284,6 +289,8 @@ export class DetalleSolicitudComponent implements OnChanges {
     this.filas.set([]);
     this.secciones.set([]);
     this.referenciaVista.set('');
+    this.propietarioVista.set('');
+    this.predioVista.set('');
     this.hitos.set([]);
     this.estadoActual.set(null);
     this.referenciaCargada.set(null);
@@ -385,6 +392,17 @@ export function construirSecciones(
         { etiqueta: 'Estado', valor: etiquetaEstado(detalle.estado) },
       ],
     },
+    // El predio va antes que el propietario: es como el broker identifica el negocio.
+    ...((p?.inmueble ?? detalle.inmueble)
+      ? [{
+          titulo: 'Inmueble asegurado',
+          icono: 'apartment',
+          datos: [
+            { etiqueta: 'Dirección del predio', valor: p?.inmueble ?? detalle.inmueble ?? null, ancho: true },
+            { etiqueta: 'Ciudad', valor: p?.ciudad ?? null },
+          ],
+        }]
+      : []),
     {
       titulo: 'Propietario · tomador',
       icono: 'home_work',
@@ -405,16 +423,6 @@ export function construirSecciones(
             { etiqueta: 'Documento', valor: documento(inquilino) },
             { etiqueta: 'Teléfono', valor: inquilino.telefono },
             { etiqueta: 'Correo', valor: inquilino.correo },
-          ],
-        }]
-      : []),
-    ...(p?.inmueble
-      ? [{
-          titulo: 'Inmueble asegurado',
-          icono: 'apartment',
-          datos: [
-            { etiqueta: 'Dirección', valor: p.inmueble, ancho: true },
-            { etiqueta: 'Ciudad', valor: p.ciudad },
           ],
         }]
       : []),

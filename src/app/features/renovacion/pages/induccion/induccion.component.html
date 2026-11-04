@@ -20,8 +20,8 @@
     </app-page-header>
 
     <app-info-box icono="info">
-      <strong>Trámite de Pólizas Vencidas (Inducción):</strong> las pólizas que se encuentren vencidas con posterioridad
-      al primer día de su vencimiento y que cumplan con los criterios establecidos se tramitan a través de un proceso de
+      <strong>Trámite de Pólizas Vencidas (Inducción):</strong> la póliza se renueva hasta el último día del mes en
+      que vence (si vence el 1 de noviembre, hasta el 30 de noviembre). Desde el mes siguiente, las pólizas que cumplan con los criterios establecidos se tramitan a través de un proceso de
       inducción.
     </app-info-box>
 
@@ -47,6 +47,10 @@
                 <span>El contrato tiene deudor solidario</span>
                 <app-toggle-switch [checked]="conDeudor()" ariaLabel="El contrato tiene deudor solidario" (checkedChange)="conDeudor.set($event)" />
               </div>
+              <div class="induccion__toggle">
+                <span>Hay un segundo deudor solidario</span>
+                <app-toggle-switch [checked]="conDeudor2()" ariaLabel="Hay un segundo deudor solidario" (checkedChange)="conDeudor2.set($event)" />
+              </div>
             }
             <div class="induccion__grid">
               <app-form-field class="induccion__ancho" label="Nombre completo" [controlId]="clave + '-nombre'" [requerido]="true" [error]="errorDe(clave, 'nombre')">
@@ -62,7 +66,7 @@
               <app-form-field label="Número de identificación" [controlId]="clave + '-numero'" [requerido]="true" [error]="errorDe(clave, 'número de identificación')">
                 <input [id]="clave + '-numero'" type="text" inputmode="numeric" autocomplete="off" [value]="partes()[clave].numeroIdentificacion" (input)="actualizarParte(clave, 'numeroIdentificacion', valorDe($event))" />
               </app-form-field>
-              <app-form-field label="Celular" [controlId]="clave + '-telefono'" [requerido]="true" [error]="errorDe(clave, 'teléfono')">
+              <app-form-field label="Celular" [controlId]="clave + '-telefono'" [requerido]="true" [error]="errorDe(clave, 'teléfono')" ayuda="Si es del exterior, escríbelo con su indicativo (por ejemplo +1 305 555 1234).">
                 <input [id]="clave + '-telefono'" type="tel" autocomplete="off" [value]="partes()[clave].telefono" (input)="actualizarParte(clave, 'telefono', valorDe($event))" />
               </app-form-field>
               <app-form-field label="Correo" [controlId]="clave + '-correo'" [requerido]="true" [error]="errorDe(clave, 'correo')">
@@ -81,7 +85,7 @@
 
         <app-form-section-card [numero]="clavesVisibles().length + 2" icono="verified" titulo="Paz y salvo" subtitulo="Confirma que el inquilino está al día con el arriendo.">
           <app-doc-uploader [reglas]="reglaPazYSalvo" [cargados]="cargadosPazYSalvo()" (archivoSeleccionado)="onPazYSalvo($event)" />
-          <app-form-field label="Observaciones (opcional)" controlId="induccion-obs">
+          <app-form-field label="Observaciones (opcional)" controlId="induccion-obs" ayuda="Si el canon tiene incremento, escribe aquí el nuevo valor y desde cuándo aplica.">
             <textarea id="induccion-obs" rows="3" maxlength="500" [value]="observaciones()" (input)="observaciones.set(valorDe($event))"></textarea>
           </app-form-field>
         </app-form-section-card>

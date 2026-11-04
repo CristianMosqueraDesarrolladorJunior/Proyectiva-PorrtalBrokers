@@ -2,8 +2,10 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  EventEmitter,
   inject,
   Input,
+  Output,
   signal,
 } from '@angular/core';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
@@ -75,6 +77,12 @@ export class NoRenovacionComponent {
   /** Número de póliza sobre la que se notifica la No Renovación (Req 22). */
   @Input() numeroPoliza = '';
 
+  /** `true` cuando vive dentro de otro modal (p. ej. la ficha de Renovaciones): sin encabezado de página. */
+  @Input() embebido = false;
+
+  /** Se emite una vez el backend registra la no renovación (el contenedor puede refrescar su listado). */
+  @Output() readonly registrada = new EventEmitter<void>();
+
   /** Opciones de motivo presentadas como tarjetas de selección (Req 22.1). */
   /** Motivos reales del Warehouse (catálogo `motivo_no_renovacion`); se envía el valor que escribe el área. */
   protected readonly opcionesMotivo = computed<readonly OpcionRadio[]>(() =>
@@ -144,6 +152,7 @@ export class NoRenovacionComponent {
       next: (respuesta) => {
         this.radicado.set(respuesta.radicado);
         this.estadoEnvio.set('exito');
+        this.registrada.emit();
       },
       error: () => {
         this.estadoEnvio.set('inactivo');

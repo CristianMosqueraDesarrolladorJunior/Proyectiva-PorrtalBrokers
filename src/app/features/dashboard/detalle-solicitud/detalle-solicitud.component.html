@@ -4,12 +4,13 @@
 -->
 <app-modal-dialog
   [abierto]="abierto()"
-  [titulo]="referenciaVista() ? 'Negocio ' + referenciaVista() : 'Detalle de la solicitud'"
-  [subtitulo]="pendienteEnvio()
-    ? 'Tu radicación aún no nos llega: carga los documentos que faltan y envíala.'
-    : puedeCorregir()
-      ? 'Te pedimos actualizar documentos para continuar con la expedición.'
-      : 'Consulta el avance de tu solicitud de póliza de arrendamiento.'"
+  [titulo]="propietarioVista() || (referenciaVista() ? 'Negocio ' + referenciaVista() : 'Detalle de la solicitud')"
+  [subtitulo]="predioVista()
+    || (pendienteEnvio()
+      ? 'Tu radicación aún no nos llega: carga los documentos que faltan y envíala.'
+      : puedeCorregir()
+        ? 'Te pedimos actualizar documentos para continuar con la expedición.'
+        : 'Consulta el avance de tu solicitud de póliza de arrendamiento.')"
   eyebrow="Seguimiento"
   tamano="lg"
   (cerrar)="onCerrar()"

@@ -16,6 +16,8 @@ export interface Solicitud {
   readonly estadoPago: string;
   readonly fecha: string;
   readonly comision: number;
+  /** Dirección del predio asegurado (la que el broker recuerda, más que el número de póliza). */
+  readonly inmueble?: string | null;
 }
 
 /** Página de resultados con paginación de 10 por página (Req 6.5). */

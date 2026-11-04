@@ -215,7 +215,7 @@
       <div acciones>
         <app-boton variante="ghost" (clicked)="detalle.set(null)">Cerrar</app-boton>
         @if (puedeDevolver()) {
-          <app-boton variante="outline" icono="undo" (clicked)="confirmarDevolucion.set(true)">Aún pendiente por cobrar</app-boton>
+          <app-boton variante="outline" icono="undo" (clicked)="confirmarDevolucion.set(true)">Anular cuenta de cobro</app-boton>
         }
         @if (cuentaDelDetalle(); as cuenta) {
           <app-boton variante="accent" icono="visibility" (clicked)="verCuenta(cuenta)">Ver cuenta de cobro</app-boton>
@@ -246,20 +246,20 @@
     <!-- Confirmación: devolver la cuenta a pendiente -->
     <app-modal-dialog
       [abierto]="confirmarDevolucion()"
-      titulo="¿Devolver a Pendiente por cobrar?"
+      titulo="¿Anular esta cuenta de cobro?"
       eyebrow="Cuenta de cobro"
       tamano="sm"
       (cerrar)="confirmarDevolucion.set(false)"
     >
       <p class="comisiones__confirmar">
-        La cuenta de cobro <strong>{{ cuentaDelDetalle()?.referencia }}</strong> se anula y
-        <strong>{{ plural(cuentaDelDetalle()?.polizas ?? 0, 'póliza', 'pólizas') }}</strong> vuelven a Pendiente por cobrar
-        para que las agrupes en otra cuenta. Si ya la cargaste en la plataforma de proveedores, avísale a tu asesor comercial.
+        Vas a anular la cuenta de cobro <strong>{{ cuentaDelDetalle()?.referencia }}</strong>. Sus
+        <strong>{{ plural(cuentaDelDetalle()?.polizas ?? 0, 'póliza', 'pólizas') }}</strong> quedan otra vez en «Pendiente por cobrar»
+        y puedes incluirlas en una cuenta nueva. Si ya la subiste a la plataforma de proveedores, avísale a tu asesor comercial.
       </p>
       <div acciones>
         <app-boton variante="ghost" (clicked)="confirmarDevolucion.set(false)">Cancelar</app-boton>
         <app-boton variante="accent" icono="undo" [disabled]="devolviendo()" (clicked)="devolverAPendiente()">
-          {{ devolviendo() ? 'Devolviendo…' : 'Sí, devolver a pendiente' }}
+          {{ devolviendo() ? 'Anulando…' : 'Sí, anular' }}
         </app-boton>
       </div>
     </app-modal-dialog>

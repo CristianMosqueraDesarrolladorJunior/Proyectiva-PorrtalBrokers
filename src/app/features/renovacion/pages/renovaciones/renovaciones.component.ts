@@ -34,6 +34,7 @@ import {
 import type { Poliza } from '../../../../core/models/poliza.model';
 import { cop, fechaCorta } from '../../../../core/services/admin.helpers';
 import { seccionesDatosRenovacion, type DatosRenovacion } from '../../../../core/util/datos-renovacion';
+import { NoRenovacionComponent } from '../no-renovacion/no-renovacion.component';
 import { SITUACION, accionDe, accionRenovacion, ordenarPorUrgencia } from '../../renovaciones-lista';
 
 
@@ -63,6 +64,7 @@ import { SITUACION, accionDe, accionRenovacion, ordenarPorUrgencia } from '../..
     GridLayoutComponent,
     KpiCardComponent,
     ModalDialogComponent,
+    NoRenovacionComponent,
     PageHeaderComponent,
   ],
   templateUrl: './renovaciones.component.html',
@@ -192,12 +194,38 @@ export class RenovacionesComponent {
     return accion === 'RENOVAR' ? 'Renovar póliza' : accion === 'CORREGIR' ? 'Corregir documentos'
       : accion === 'INDUCCION' ? 'Iniciar inducción' : null;
   });
+  /** «No renovar» se decide desde la ficha, sin entrar al proceso; también cuando la póliza va a inducción. */
+  protected readonly puedeNoRenovar = computed(() => {
+    const p = this.seleccionada();
+    return !!p && (accionDe(p) === 'RENOVAR' || accionDe(p) === 'INDUCCION');
+  });
+
+  /** `true` mientras el formulario de no renovación se muestra dentro del modal de la póliza. */
+  protected readonly noRenovando = signal(false);
+
+  /** «No renovar póliza»: el formulario se abre en el mismo modal (no navega a otra página). */
+  protected noRenovarSeleccionada(): void {
+    const p = this.seleccionada();
+    if (!p || !this.puedeNoRenovar()) return;
+    this.noRenovando.set(true);
+  }
+
+  /** Vuelve de la no renovación al detalle de la póliza (dentro del mismo modal). */
+  protected volverAFicha(): void {
+    this.noRenovando.set(false);
+  }
+
+  /** La no renovación quedó registrada: se recarga el portafolio para reflejar el nuevo estado. */
+  protected onNoRenovacionRegistrada(): void {
+    this.cargar();
+  }
+
   protected readonly notaSinAccion = computed(() => {
     const p = this.seleccionada();
     if (!p) return '';
     switch (accionDe(p)) {
       case 'EN_PROCESO':
-        return 'El área ya está gestionando esta renovación. Te avisamos cuando cambie.';
+        return 'Renovación radicada: el área ya la está gestionando. Te avisamos cuando cambie.';
       case 'FUERA_PLAZO':
         return 'Venció hace más de 11 meses: ya no se puede renovar ni hacer inducción. Para asegurarla de nuevo, cotiza una póliza nueva.';
       case 'CERRADA':
@@ -269,6 +297,7 @@ export class RenovacionesComponent {
 
   protected cerrarFicha(): void {
     this.seleccionada.set(null);
+    this.noRenovando.set(false);
   }
 
   /** Botón de la ficha: renovar, corregir o inducción (solo si la regla lo permite). */

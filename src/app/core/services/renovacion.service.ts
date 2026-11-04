@@ -143,6 +143,7 @@ export class RenovacionService {
       fechaInicio: request.fechaInicio,
       fechaFin: request.fechaFin,
       ...request.ajustes,
+      ...request.inmueble,
     });
     if (request.formularioRenovacion) {
       datos.append('formulario', request.formularioRenovacion, request.formularioRenovacion.name);

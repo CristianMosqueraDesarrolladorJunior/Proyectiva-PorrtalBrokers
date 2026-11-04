@@ -162,7 +162,7 @@ export class NegociosComponent {
   protected readonly filas = computed<readonly FilaTabla[]>(() =>
     this.visibles().map((n) => ({
       radicado: n.radicado,
-      radicadoSub: [n.origen === 'AREA' ? 'Negocio con el área' : '', n.numeroPoliza ? `Póliza ${n.numeroPoliza}` : '']
+      radicadoSub: [n.origen === 'AREA' ? 'Póliza radicada' : '', n.numeroPoliza ? `Póliza ${n.numeroPoliza}` : '']
         .filter(Boolean).join(' · '),
       propietario: n.propietario ?? '—',
       propietarioSub: n.inmueble ? `${n.inmueble}${n.ciudad ? ' · ' + n.ciudad : ''}` : '',
@@ -355,14 +355,14 @@ export class NegociosComponent {
     this.abrir(n.radicado);
   }
 
-  // --- Negocio con el área (solo consulta) ---
+  // --- Póliza radicada con el área (solo consulta) ---
   protected readonly detalleArea = signal<NegocioConsola | null>(null);
   protected readonly fichaArea = computed<readonly SeccionFicha[]>(() => {
     const n = this.detalleArea();
     if (!n) return [];
     return [
       {
-        titulo: 'Negocio con el área',
+        titulo: 'Póliza radicada',
         icono: 'history',
         datos: [
           { etiqueta: 'Solicitud', valor: n.radicado },

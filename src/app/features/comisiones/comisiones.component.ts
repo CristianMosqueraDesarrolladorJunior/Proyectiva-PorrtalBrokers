@@ -121,7 +121,8 @@ export class ComisionesComponent {
   );
   protected readonly filasPolizas = computed<readonly FilaTabla[]>(() => this.polizasFiltradas().map(filaPoliza));
   protected readonly columnasPolizas: readonly ColumnaTabla[] = [
-    { key: 'poliza', header: 'N° póliza', ordenable: true },
+    { key: 'poliza', header: 'N° póliza', tipo: 'principal', ordenable: true },
+    { key: 'propietario', header: 'Propietario y predio', tipo: 'principal', ordenable: true },
     { key: 'emision', header: 'Emisión', ordenable: true },
     { key: 'estado', header: 'Estado de pago', tipo: 'badge', ordenable: true },
     { key: 'comision', header: 'Comisión', alinear: 'derecha', ordenable: true },
@@ -230,10 +231,10 @@ export class ComisionesComponent {
         error: (err: unknown) => {
           this.devolviendo.set(false);
           this.feedback.error({
-            titulo: 'No se pudo devolver a pendiente',
+            titulo: 'No se pudo anular la cuenta de cobro',
             mensaje:
               (err as { status?: number })?.status === 422
-                ? 'El área ya está gestionando el pago de esta cuenta: no se puede devolver.'
+                ? 'El área ya está gestionando el pago de esta cuenta: ya no se puede anular.'
                 : mensajeErrorIntegracion(err),
           });
         },
@@ -339,6 +340,9 @@ export class ComisionesComponent {
         icono: 'policy',
         datos: [
           { etiqueta: 'N° de póliza', valor: p.numeroPoliza },
+          ...(p.polizaMadre ? [{ etiqueta: 'Renovación de la póliza', valor: p.polizaMadre }] : []),
+          { etiqueta: 'Propietario', valor: p.propietario ?? null },
+          { etiqueta: 'Dirección del predio', valor: p.predio ?? null, ancho: true },
           { etiqueta: 'Fecha de emisión', valor: fechaCorta(p.fechaEmision) },
           { etiqueta: 'Valor pagado por el propietario', valor: monto(p.valorPoliza) },
           { etiqueta: 'Último día para cobrarla', valor: fechaCorta(p.fechaLimiteCobro) },
@@ -351,6 +355,10 @@ export class ComisionesComponent {
           { etiqueta: 'Estado', valor: etiquetaEstado(p.estadoPago) },
           { etiqueta: 'Tu comisión', valor: monto(p.comision), destacado: true },
           { etiqueta: 'Porcentaje del acuerdo', valor: p.porcentaje > 0 ? `${p.porcentaje} %` : '—' },
+          // Así cuadra la cuenta del broker: el % se aplica sobre la prima sin IVA, no sobre el valor con IVA.
+          ...(p.comision > 0 && p.porcentaje > 0
+            ? [{ etiqueta: 'Cómo se calcula', valor: `${p.porcentaje} % de ${pesos(Math.round((p.comision * 100) / p.porcentaje))} (prima sin IVA)` }]
+            : []),
           // Solo lo que ya existe: una póliza sin pagar no muestra campos vacíos de pago.
           ...(p.fechaPago ? [{ etiqueta: 'Fecha de pago', valor: fechaCorta(p.fechaPago) }] : []),
           ...(p.ordenPago ? [{ etiqueta: 'Orden de pago / factura', valor: p.ordenPago }] : []),

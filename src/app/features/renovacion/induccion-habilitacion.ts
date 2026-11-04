@@ -7,12 +7,13 @@
 import type { ParteInduccion } from '../../core/models/renovacion.model';
 import type { LecturaContratoResponse, ParteLeida } from '../../core/models/contrato.model';
 
-export type ClaveParte = 'propietario' | 'inquilino' | 'deudorSolidario';
+export type ClaveParte = 'propietario' | 'inquilino' | 'deudorSolidario' | 'deudorSolidario2';
 
 export const ETIQUETA_PARTE: Readonly<Record<ClaveParte, string>> = {
   propietario: 'Propietario (arrendador)',
   inquilino: 'Inquilino (arrendatario)',
   deudorSolidario: 'Deudor solidario',
+  deudorSolidario2: 'Segundo deudor solidario',
 };
 
 export const PARTE_VACIA: ParteInduccion = {
@@ -27,7 +28,7 @@ const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Póliza que va a inducción: el backend la clasifica VENCIDA con las reglas del área (VENCIDO en el Warehouse o
- * desde el primer día después del vencimiento sin gestión cerrada). Solo se renueva la que no está vencida.
+ * desde el mes siguiente al vencimiento sin gestión cerrada). Solo se renueva la que no está vencida.
  */
 export function esPolizaVencida(poliza: { estado: string }): boolean {
   return poliza.estado === 'VENCIDA';
@@ -41,7 +42,8 @@ export function revisarParte(clave: ClaveParte, parte: ParteInduccion): string[]
   if (!/^[0-9A-Za-z]{5,15}$/.test(parte.numeroIdentificacion.trim())) {
     errores.push(`${quien}: el número de identificación no es válido.`);
   }
-  if (!/^\d{7,10}$/.test(parte.telefono.replace(/\D/g, ''))) errores.push(`${quien}: el teléfono no es válido.`);
+  // 7 a 15 dígitos: celulares de Colombia y números del exterior con su indicativo (+1, +34…).
+  if (!/^\d{7,15}$/.test(parte.telefono.replace(/\D/g, ''))) errores.push(`${quien}: el teléfono no es válido.`);
   if (!CORREO.test(parte.correo.trim())) errores.push(`${quien}: el correo no es válido.`);
   return errores;
 }
@@ -52,8 +54,10 @@ export function revisarInduccion(
   conDeudor: boolean,
   hayContrato: boolean,
   hayPazYSalvo: boolean,
+  conDeudor2 = false,
 ): string[] {
   const claves: ClaveParte[] = conDeudor ? ['propietario', 'inquilino', 'deudorSolidario'] : ['propietario', 'inquilino'];
+  if (conDeudor && conDeudor2) claves.push('deudorSolidario2');
   const errores = claves.flatMap((c) => revisarParte(c, partes[c]));
   if (!hayContrato) errores.push('Carga el contrato de arrendamiento.');
   if (!hayPazYSalvo) errores.push('Carga el paz y salvo del inquilino.');
@@ -82,5 +86,6 @@ export function partesDesdeLectura(
     propietario: parteDesdeLectura(actuales.propietario, lectura.arrendador),
     inquilino: parteDesdeLectura(actuales.inquilino, lectura.arrendatario),
     deudorSolidario: parteDesdeLectura(actuales.deudorSolidario, lectura.deudorSolidario),
+    deudorSolidario2: actuales.deudorSolidario2,
   };
 }

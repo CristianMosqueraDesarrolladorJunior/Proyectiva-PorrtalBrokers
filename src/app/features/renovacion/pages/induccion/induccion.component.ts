@@ -86,11 +86,17 @@ export class InduccionComponent {
     propietario: PARTE_VACIA,
     inquilino: PARTE_VACIA,
     deudorSolidario: PARTE_VACIA,
+    deudorSolidario2: PARTE_VACIA,
   });
   protected readonly conDeudor = signal(true);
-  protected readonly clavesVisibles = computed<readonly ClaveParte[]>(() =>
-    this.conDeudor() ? ['propietario', 'inquilino', 'deudorSolidario'] : ['propietario', 'inquilino'],
-  );
+  /** Algunos contratos tienen dos deudores solidarios. */
+  protected readonly conDeudor2 = signal(false);
+  protected readonly clavesVisibles = computed<readonly ClaveParte[]>(() => {
+    if (!this.conDeudor()) return ['propietario', 'inquilino'];
+    return this.conDeudor2()
+      ? ['propietario', 'inquilino', 'deudorSolidario', 'deudorSolidario2']
+      : ['propietario', 'inquilino', 'deudorSolidario'];
+  });
 
   protected readonly contrato = signal<File | null>(null);
   protected readonly pazYSalvo = signal<File | null>(null);
@@ -118,7 +124,7 @@ export class InduccionComponent {
   protected readonly confirmacion = signal<RenovacionResponse | null>(null);
 
   protected readonly errores = computed(() =>
-    revisarInduccion(this.partes(), this.conDeudor(), this.contrato() !== null, this.pazYSalvo() !== null),
+    revisarInduccion(this.partes(), this.conDeudor(), this.contrato() !== null, this.pazYSalvo() !== null, this.conDeudor2()),
   );
 
   protected readonly resumen = computed<readonly FilaResumen[]>(() => {
@@ -179,6 +185,7 @@ export class InduccionComponent {
           propietario: p.propietario,
           inquilino: p.inquilino,
           deudorSolidario: this.conDeudor() ? p.deudorSolidario : undefined,
+          deudorSolidario2: this.conDeudor() && this.conDeudor2() ? p.deudorSolidario2 : undefined,
           observaciones: this.observaciones().trim() || undefined,
         },
         contrato,

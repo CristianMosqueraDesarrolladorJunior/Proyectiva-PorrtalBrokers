@@ -61,7 +61,7 @@ describe('CtlValidacionComponent', () => {
     cmp.validar({ id: 'certificadoTradicion', archivo: pdf() });
     fixture.detectChanges();
 
-    expect(el.textContent).toContain('La dirección no coincide con el contrato');
+    expect(el.textContent).toContain('Puedes continuar: revisaremos la dirección');
   });
 
   it('Given sin fecha de impresión, When se valida, Then avisa que no fue posible validar la antigüedad', () => {

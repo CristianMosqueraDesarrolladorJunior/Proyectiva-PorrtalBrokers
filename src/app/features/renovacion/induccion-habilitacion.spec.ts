@@ -28,7 +28,7 @@ describe('induccion-habilitacion', () => {
   });
 
   it('exige el deudor solo si se incluye, y los dos archivos', () => {
-    const partes = { propietario: COMPLETA, inquilino: COMPLETA, deudorSolidario: PARTE_VACIA };
+    const partes = { propietario: COMPLETA, inquilino: COMPLETA, deudorSolidario: PARTE_VACIA, deudorSolidario2: PARTE_VACIA };
     expect(revisarInduccion(partes, false, true, true)).toEqual([]);
     expect(revisarInduccion(partes, true, true, true)).toHaveLength(4);
     expect(revisarInduccion(partes, false, false, false)).toEqual([
@@ -37,8 +37,16 @@ describe('induccion-habilitacion', () => {
     ]);
   });
 
+  it('acepta teléfonos del exterior y exige el segundo deudor solo si se marca', () => {
+    expect(revisarParte('propietario', { ...COMPLETA, telefono: '+1 305 555 1234' })).toEqual([]);
+    expect(revisarParte('propietario', { ...COMPLETA, telefono: '123' })).toHaveLength(1);
+    const partes = { propietario: COMPLETA, inquilino: COMPLETA, deudorSolidario: COMPLETA, deudorSolidario2: PARTE_VACIA };
+    expect(revisarInduccion(partes, true, true, true)).toEqual([]);
+    expect(revisarInduccion(partes, true, true, true, true)).toHaveLength(4);
+  });
+
   it('precarga solo lo leído sin borrar lo ya escrito', () => {
-    const actuales = { propietario: COMPLETA, inquilino: PARTE_VACIA, deudorSolidario: PARTE_VACIA };
+    const actuales = { propietario: COMPLETA, inquilino: PARTE_VACIA, deudorSolidario: PARTE_VACIA, deudorSolidario2: PARTE_VACIA };
     const r = partesDesdeLectura(actuales, {
       arrendador: { telefono: '3109998877' },
       arrendatario: { nombres: 'Luis', apellidos: 'Gómez', numeroIdentificacion: '79123456' },

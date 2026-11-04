@@ -1251,7 +1251,7 @@ export const CATALOGOS_PRUEBA = {
       "codigo": "radicada"
     },
     {
-      "descripcion": "En revisión",
+      "descripcion": "Radicación en revisión",
       "codigo": "en_revision"
     },
     {

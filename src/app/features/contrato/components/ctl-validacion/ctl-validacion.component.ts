@@ -76,9 +76,9 @@ export const ANTIGUEDAD_MAXIMA_CTL_DIAS = 90;
         }
 
         @if (r.direccionCoincide === false) {
-          <app-alert-banner variante="warning" titulo="La dirección no coincide con el contrato" icono="location_off">
-            El certificado indica «{{ r.direccion }}», distinta de la dirección del contrato. Revísalas antes de
-            continuar.
+          <app-alert-banner variante="warning" titulo="Puedes continuar: revisaremos la dirección" icono="location_off">
+            El certificado dice «{{ r.direccion }}» y no se parece a la dirección del contrato. Esto no te impide
+            seguir: el analista la revisará. Si es un error de escritura, corrígela en el contrato.
           </app-alert-banner>
         }
 

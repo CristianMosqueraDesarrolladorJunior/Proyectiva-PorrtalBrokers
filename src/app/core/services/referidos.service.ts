@@ -30,6 +30,7 @@ export interface Referido {
   /** Enmascarados por el backend. */
   readonly cedula?: string;
   readonly celular?: string;
+  readonly correo?: string | null;
   readonly nombre: string;
   readonly producto: string;
   readonly estado: string;

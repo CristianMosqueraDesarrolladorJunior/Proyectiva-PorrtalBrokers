@@ -26,7 +26,7 @@
         <select id="negocios-origen" [value]="fOrigen()" (change)="fOrigen.set($any($event.target).value)">
           <option value="">Portal y área</option>
           <option value="PORTAL">Radicados en el portal</option>
-          <option value="AREA">Negocios con el área</option>
+          <option value="AREA">Pólizas radicadas</option>
         </select>
       </label>
       @if (esAdmin) {
@@ -144,7 +144,7 @@
   [abierto]="detalleArea() !== null"
   [titulo]="'Negocio ' + (detalleArea()?.radicado ?? '')"
   [subtitulo]="detalleArea()?.broker ?? ''"
-  eyebrow="Negocio con el área · solo consulta"
+  eyebrow="Póliza radicada · solo consulta"
   tamano="lg"
   (cerrar)="detalleArea.set(null)"
 >

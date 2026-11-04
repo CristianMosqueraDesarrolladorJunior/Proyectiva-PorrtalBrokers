@@ -49,7 +49,7 @@ const TAMANO_PAGINA = 10;
 /** Opciones de estado para el filtro (Req 6.2). */
 const ESTADOS: readonly { readonly valor: string; readonly etiqueta: string }[] = [
   { valor: 'radicada', etiqueta: 'Radicada' },
-  { valor: 'en_revision', etiqueta: 'En revisión' },
+  { valor: 'en_revision', etiqueta: 'Radicación en revisión' },
   { valor: 'aprobada', etiqueta: 'Aprobada' },
   { valor: 'bloqueada', etiqueta: 'Bloqueada' },
   { valor: 'observada', etiqueta: 'Observada' },
@@ -113,6 +113,7 @@ export class SeguimientoComponent {
   protected readonly columnas: readonly ColumnaTabla[] = [
     { key: 'referencia', header: 'Ref', ordenable: true, nowrap: true },
     { key: 'cliente', header: 'Propietario', ordenable: true },
+    { key: 'inmueble', header: 'Predio' },
     { key: 'producto', header: 'Producto', ordenable: true },
     { key: 'estadoLabel', header: 'Estado', tipo: 'badge', ordenable: true },
     { key: 'estadoPago', header: 'Pago de comisión' },
@@ -162,7 +163,8 @@ export class SeguimientoComponent {
   protected readonly filas = computed(() =>
     this.solicitudes().map((s) => ({
       referencia: s.referencia,
-      cliente: s.cliente,
+      cliente: s.cliente || '—',
+      inmueble: s.inmueble ?? '—',
       producto: s.producto,
       estadoLabel: this.catalogo.etiquetaSeguimiento(s.estado),
       estadoLabelVariante: estadoABadge(s.estado).replace('badge-', ''),
