@@ -274,7 +274,7 @@ export interface EntradaPayloadRadicacion {
  * Los documentos se filtran contra la allowlist y se deduplican. Función pura y total.
  */
 export function construirPayloadRadicacion(e: EntradaPayloadRadicacion): RadicacionRequest {
-  const permitidos = new Set<string>(e.vocabulario);
+  const permitidos = new Set<string>([...e.vocabulario, 'contratoArrendamientoFirmado']);
   const documentos = [...new Set(e.documentosCargados.map((d) => d.trim()))].filter((d) =>
     permitidos.has(d),
   ) as TipoDocumentoRadicacion[];

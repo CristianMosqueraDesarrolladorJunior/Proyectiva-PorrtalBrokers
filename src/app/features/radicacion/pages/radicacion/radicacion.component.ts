@@ -30,7 +30,8 @@ import { mensajeErrorIntegracion } from '../../../../core/util/errores-integraci
 import { reglaDesdeCatalogo, validarDocumento } from '../../../../shared/validation/documento-validacion';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
 import { ContratoService, type ContratoPendiente } from '../../../../core/services/contrato.service';
-import type { LecturaContratoResponse, PersonaEstudio } from '../../../../core/models/contrato.model';
+import type { LecturaContratoResponse, PersonaEstudio, ValidacionCtl } from '../../../../core/models/contrato.model';
+import { novedadTitularesCtl } from '../../../contrato/pages/contrato/contrato-presentacion';
 import { LectorContratoComponent } from '../../../contrato/components/lector-contrato/lector-contrato.component';
 import { contratoDesdeLectura } from './contrato-desde-lectura';
 import {
@@ -405,9 +406,23 @@ export class RadicacionComponent {
 
   /** El CTL se carga con su propio componente (valida antigüedad y dirección); el resto, en la lista. */
   protected readonly pideCtl = computed(() => this.obligatorios().includes('certificadoTradicion' as TipoDocumentoRadicacion));
-  protected readonly reglasSinCtl = computed(() => this.reglasObligatorias().filter((r) => r.id !== 'certificadoTradicion'));
+  /** El contrato firmado tiene su propio cargador arriba (lector de contrato), no va en esta lista. */
+  protected readonly reglasSinCtl = computed(() =>
+    this.reglasObligatorias().filter((r) => r.id !== 'certificadoTradicion' && r.id !== DOCUMENTO_OPCIONAL),
+  );
   /** Dirección del contrato leído, para detectar discrepancias con el CTL. */
   protected readonly direccionContrato = signal('');
+
+  /** Lo que el CTL leído trae (círculo registral, titulares…) para mostrarlo y cruzarlo con el propietario. */
+  protected readonly ctlLeido = signal<ValidacionCtl | null>(null);
+
+  /** Aviso (no bloquea) cuando el propietario que se radica no figura entre los titulares del CTL. */
+  protected readonly novedadCtl = computed(() =>
+    novedadTitularesCtl(this.ctlLeido()?.titulares, this.numeroDocumentoPropietario()));
+
+  protected onCtlValidado(r: ValidacionCtl): void {
+    this.ctlLeido.set(r);
+  }
 
   protected onCtlArchivo(archivo: File): void {
     this.onArchivo({ id: 'certificadoTradicion', archivo });
@@ -938,7 +953,8 @@ export class RadicacionComponent {
       tipoDocumentoApoderado: this.tipoDocumentoApoderado(),
       documentoApoderado: this.numeroDocumentoApoderado(),
       correoApoderado: this.firmaApoderado() ? this.correoApoderado().trim() : undefined,
-      observaciones: this.observaciones(),
+      // La novedad del CTL viaja como observación para que el analista la revise (no bloquea la radicación).
+      observaciones: [this.observaciones().trim(), this.novedadCtl()].filter((t) => !!t).join(' · ').slice(0, 2000),
       canonDe: this.canones() ? this.canonDe() : undefined,
       vocabulario: this.documentosCatalogo.filter((d) => d['aplica'] !== 'OPCIONAL').map((d) => d.codigo),
     });

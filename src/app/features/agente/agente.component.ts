@@ -117,8 +117,6 @@ const LISTAS_SARLAFT = [
 
 const PASOS_ENVIO = ['Empaquetando expediente…', 'Enviando a la aseguradora…', 'Generando número de radicado…'];
 
-const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmado';
-
 const CIRCUNFERENCIA_ANILLO = 119.4;
 
 /** Longitud máxima de un mensaje del broker. */
@@ -272,7 +270,6 @@ export class AgenteComponent {
   protected readonly reglasApoderado = computed(() =>
     this.firmaApoderado() ? this.tiposApoderado.map((t) => this.regla(t, true)) : [],
   );
-  protected readonly reglaOpcional = [this.regla(DOCUMENTO_OPCIONAL, false)];
   protected readonly totalDocumentos = computed(() => this.obligatorios().length);
   protected readonly documentosValidados = computed(
     () => this.obligatorios().filter((t) => this.tiposValidos().has(t)).length,

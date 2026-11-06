@@ -33,6 +33,7 @@ import type {
   VarianteBadge,
 } from '../../../shared/components';
 import { FeedbackService } from '../../../shared/services/feedback/feedback.service';
+import { DocumentosNegocioComponent } from './documentos-negocio/documentos-negocio.component';
 import { GestionNegocioComponent } from './gestion-negocio/gestion-negocio.component';
 
 function varianteEstado(estado: string): VarianteBadge {
@@ -73,6 +74,7 @@ const ETIQUETA_SARLAFT: Readonly<Record<string, string>> = {
     KpiCardComponent,
     ModalDialogComponent,
     PageHeaderComponent,
+    DocumentosNegocioComponent,
     GestionNegocioComponent,
   ],
   templateUrl: './negocios.component.html',
@@ -190,6 +192,7 @@ export class NegociosComponent {
   protected readonly pestana = signal('negocio');
   protected readonly pestanas = computed<readonly Tab[]>(() => [
     { id: 'negocio', etiqueta: 'Negocio' },
+    { id: 'documentos', etiqueta: 'Documentos' },
     { id: 'gestionar', etiqueta: 'Gestionar' },
     { id: 'historial', etiqueta: 'Historial' },
   ]);

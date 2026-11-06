@@ -28,6 +28,7 @@ import type {
   DuracionContratoMeses,
 } from '../../../../core/models/contrato.model';
 import type { TipoDocumentoIdentidad } from '../../../../core/models/radicacion.model';
+import { PARTE_EXTRA_VACIA, extraParaSolicitud, type ParteExtra } from '../../../../core/models/contrato.model';
 
 /** Índice del primer paso del Generador_Contrato (0-indexado). */
 export const PRIMER_PASO = 0;
@@ -101,17 +102,42 @@ export function esIdentificacionValida(numero: string | undefined | null): boole
 }
 
 /** Datos de identificación y contacto comunes a arrendador y arrendatario: lo que falta, en lenguaje del broker. */
-function pendientesPersona(d: Partial<DatosArrendador & DatosArrendatario>): string[] {
+function pendientesPersona(d: Partial<DatosArrendador & DatosArrendatario>, conContacto = true): string[] {
   const p: string[] = [];
-  if (!campoDiligenciado(d.nombres)) p.push('Nombres');
-  if (!campoDiligenciado(d.apellidos)) p.push('Apellidos');
+  // La persona jurídica no tiene apellidos ni ciudad de expedición, pero sí representante legal.
+  const juridica = d.tipoPersona === 'JURIDICA';
+  if (!campoDiligenciado(d.nombres)) p.push(juridica ? 'Razón social' : 'Nombres');
+  if (!juridica && !campoDiligenciado(d.apellidos)) p.push('Apellidos');
   if (!campoDiligenciado(d.tipoIdentificacion)) p.push('Tipo de identificación');
   if (!esIdentificacionValida(d.numeroIdentificacion)) p.push('Número de identificación (de 6 a 12 dígitos)');
   // El contrato lleva «C.C. No. … de <ciudad>»: sin ella el documento queda con espacios en blanco.
-  if (!campoDiligenciado(d.ciudadExpedicion)) p.push('Ciudad de expedición del documento');
-  if (!esTelefonoValido(d.telefono)) p.push('Teléfono (de 7 a 10 dígitos)');
-  if (!esCorreoValido(d.correo)) p.push('Correo electrónico válido');
+  if (!juridica && !campoDiligenciado(d.ciudadExpedicion)) p.push('Ciudad de expedición del documento');
+  const rep = d.representanteLegal;
+  if (juridica && !(campoDiligenciado(rep?.nombre) && esIdentificacionValida(rep?.numeroIdentificacion))) {
+    p.push('Representante legal (nombre y documento)');
+  }
+  const apo = d.apoderado;
+  if (apo && !(campoDiligenciado(apo.nombre) && esIdentificacionValida(apo.numeroIdentificacion))) {
+    p.push('Apoderado (nombre y documento)');
+  }
+  if (conContacto && !esTelefonoValido(d.telefono)) p.push('Teléfono (de 7 a 10 dígitos)');
+  if (conContacto && !esCorreoValido(d.correo)) p.push('Correo electrónico válido');
   return p;
+}
+
+/** Datos de un coarrendador en el formato de {@link DatosArrendador} (su contacto no va en el contrato). */
+export function coarrendadorADatos(c: CoarrendadorForm): DatosArrendador {
+  return {
+    nombres: c.nombres.trim(), apellidos: c.apellidos.trim(), tipoIdentificacion: c.tipoIdentificacion,
+    numeroIdentificacion: c.numeroIdentificacion.trim(), telefono: '', correo: '', direccionResidencia: '',
+    ...(c.ciudadExpedicion.trim() ? { ciudadExpedicion: c.ciudadExpedicion.trim() } : {}),
+    ...extraParaSolicitud(c.extra),
+  };
+}
+
+/** Lo que falta de los otros propietarios, indicando cuál (1.º, 2.º…). */
+export function pendientesCoarrendadores(lista: readonly CoarrendadorForm[]): string[] {
+  return lista.flatMap((c, i) => pendientesPersona(coarrendadorADatos(c), false).map((f) => `Propietario ${i + 2}: ${f}`));
 }
 
 /** Paso 1 — Datos del arrendador (Req 30.2): campos que faltan o están mal escritos. */
@@ -314,5 +340,63 @@ function esDuracionValida(
 export interface OpcionIdentificacion {
   readonly valor: TipoDocumentoIdentidad;
   readonly etiqueta: string;
+}
+
+/** Otro propietario del mismo inmueble (coarrendador), tal como se captura en el formulario. */
+export interface CoarrendadorForm {
+  readonly nombres: string;
+  readonly apellidos: string;
+  readonly tipoIdentificacion: TipoDocumentoIdentidad;
+  readonly numeroIdentificacion: string;
+  readonly ciudadExpedicion: string;
+  readonly extra: ParteExtra;
+}
+
+export function coarrendadorVacio(): CoarrendadorForm {
+  return { nombres: '', apellidos: '', tipoIdentificacion: 'CC', numeroIdentificacion: '', ciudadExpedicion: '',
+    extra: PARTE_EXTRA_VACIA };
+}
+
+/** Un titular del dominio tal como lo lee el CTL, ya separado en nombre y documento. */
+export interface TitularCtl {
+  readonly nombre: string;
+  readonly tipoIdentificacion: TipoDocumentoIdentidad;
+  readonly numeroIdentificacion: string;
+}
+
+const TIPOS_CTL: Readonly<Record<string, TipoDocumentoIdentidad>> = { CC: 'CC', CE: 'CE', NIT: 'NIT', PA: 'PA' };
+
+/**
+ * Titulares del CTL: «NOMBRE - CC 123456 | OTRO - NIT 900123». Lo que no trae tipo y número claros se descarta (no se
+ * inventa un documento). Función pura y total.
+ */
+export function parsearTitulares(texto: string | null | undefined): readonly TitularCtl[] {
+  return (texto ?? '').split('|').flatMap((trozo) => {
+    const m = /^\s*(.+?)\s*[-–]\s*(CC|CE|NIT|PA)\.?\s*(?:No\.?)?\s*([0-9A-Za-z]{5,20})\s*$/i.exec(trozo);
+    return m ? [{ nombre: m[1].trim(), tipoIdentificacion: TIPOS_CTL[m[2].toUpperCase()], numeroIdentificacion: m[3] }] : [];
+  });
+}
+
+/**
+ * Aviso cuando el documento del propietario no figura entre los titulares del CTL; {@code null} si coincide o si
+ * falta alguno de los dos datos (sin con qué comparar no se alerta). Un NIT puede traer el dígito de verificación.
+ */
+export function novedadTitularesCtl(titularesCtl: string | null | undefined, documentoPropietario: string): string | null {
+  const titulares = parsearTitulares(titularesCtl);
+  const doc = documentoPropietario.replace(/\D/g, '');
+  if (!titulares.length || doc.length < 5) return null;
+  const coincide = titulares.some((t) => {
+    const d = t.numeroIdentificacion.replace(/\D/g, '');
+    return d === doc || (t.tipoIdentificacion === 'NIT' && (d.startsWith(doc) || doc.startsWith(d)));
+  });
+  return coincide ? null
+    : `El documento del propietario no figura entre los titulares del CTL (${titulares.map((t) => t.nombre).join(', ')}).`;
+}
+
+/** Nombres y apellidos de un nombre completo colombiano: últimas dos palabras = apellidos (se puede corregir). */
+export function separarNombre(completo: string): { nombres: string; apellidos: string } {
+  const t = completo.trim().split(/\s+/);
+  const n = t.length >= 4 ? 2 : t.length === 3 ? 1 : t.length === 2 ? 1 : 0;
+  return { nombres: t.slice(0, t.length - n).join(' '), apellidos: t.slice(t.length - n).join(' ') };
 }
 

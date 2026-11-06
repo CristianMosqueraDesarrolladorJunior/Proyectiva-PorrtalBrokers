@@ -64,17 +64,17 @@ describe('radicacion-presentacion', () => {
   describe('documentos obligatorios y habilitación de envío (Req 11, 12)', () => {
     const sinCargar: readonly TipoDocumentoRadicacion[] = [];
 
-    it('Persona Natural exige exactamente 2 documentos base', () => {
+    it('Persona Natural exige 2 documentos base más el contrato firmado', () => {
       // When
       const faltantes = documentosObligatoriosFaltantes(
         { tipoPersona: 'natural', firmaApoderado: false, sarlaftRequiereFormulario: false, documentos: DOCUMENTOS },
         sinCargar,
       );
       // Then
-      expect([...faltantes]).toEqual(['cedulaPropietario', 'certificadoTradicion']);
+      expect([...faltantes]).toEqual(['cedulaPropietario', 'certificadoTradicion', 'contratoArrendamientoFirmado']);
     });
 
-    it('Persona Jurídica exige 3 documentos base incluido el Formulario SARLAFT (Req 12.3)', () => {
+    it('Persona Jurídica exige 3 documentos base incluido el Formulario SARLAFT y el contrato firmado (Req 12.3)', () => {
       // When
       const faltantes = documentosObligatoriosFaltantes(
         { tipoPersona: 'juridica', firmaApoderado: false, sarlaftRequiereFormulario: false, documentos: DOCUMENTOS },
@@ -85,6 +85,7 @@ describe('radicacion-presentacion', () => {
         'certificadoExistencia',
         'cedulaRepresentanteLegal',
         'formularioSarlaft',
+        'contratoArrendamientoFirmado',
       ]);
     });
 
@@ -132,6 +133,7 @@ describe('radicacion-presentacion', () => {
       const cargados: readonly TipoDocumentoRadicacion[] = [
         'cedulaPropietario',
         'certificadoTradicion',
+        'contratoArrendamientoFirmado',
       ];
       // When / Then
       expect(puedeEnviarRadicacion(entrada, cargados, true)).toBe(true);
@@ -153,14 +155,14 @@ describe('radicacion-presentacion', () => {
       expect(puedeEnviarRadicacion(entrada, cargados, false)).toBe(false);
     });
 
-    it('el contrato de arrendamiento firmado nunca aparece como pendiente (Req 11.3)', () => {
+    it('el contrato de arrendamiento firmado es obligatorio: sin él no se puede radicar', () => {
       // When
       const faltantes = documentosObligatoriosFaltantes(
-        { tipoPersona: 'juridica', firmaApoderado: true, sarlaftRequiereFormulario: false, documentos: DOCUMENTOS },
-        sinCargar,
+        { tipoPersona: 'natural', firmaApoderado: false, sarlaftRequiereFormulario: false, documentos: DOCUMENTOS },
+        ['cedulaPropietario', 'certificadoTradicion'],
       );
       // Then
-      expect(faltantes).not.toContain('contratoArrendamientoFirmado');
+      expect(faltantes).toEqual(['contratoArrendamientoFirmado']);
     });
   });
 

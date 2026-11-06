@@ -546,7 +546,24 @@
             ></app-doc-uploader>
 
             @if (pideCtl()) {
-              <app-ctl-validacion [direccionContrato]="direccionContrato()" [adjunto]="!!archivosCargados()['certificadoTradicion']" (archivo)="onCtlArchivo($event)" />
+              <app-ctl-validacion [direccionContrato]="direccionContrato()" [adjunto]="!!archivosCargados()['certificadoTradicion']" (archivo)="onCtlArchivo($event)" (validado)="onCtlValidado($event)" />
+              @if (ctlLeido(); as ctl) {
+                @if (ctl.oficinaRegistro || ctl.titulares) {
+                  <div class="rad-estudio-datos">
+                    @if (ctl.oficinaRegistro) {
+                      <div><span>Oficina de registro</span><strong>{{ ctl.oficinaRegistro }}</strong></div>
+                    }
+                    @if (ctl.titulares) {
+                      <div><span>Titulares del CTL</span><strong>{{ ctl.titulares }}</strong></div>
+                    }
+                  </div>
+                }
+              }
+              @if (novedadCtl(); as aviso) {
+                <app-alert-banner variante="warning" titulo="Revisa el propietario" icono="difference">
+                  {{ aviso }} Puedes continuar: se lo informamos al analista como observación.
+                </app-alert-banner>
+              }
             }
 
             @if (firmaApoderado()) {

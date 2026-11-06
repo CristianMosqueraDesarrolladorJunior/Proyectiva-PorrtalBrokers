@@ -1,5 +1,6 @@
 import { CheckDeclaracionComponent } from '../../../../shared/components/check-declaracion/check-declaracion.component';
 import { CtlValidacionComponent } from '../../components/ctl-validacion/ctl-validacion.component';
+import { ParteExtraComponent } from '../../components/parte-extra/parte-extra.component';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -39,15 +40,24 @@ import type {
   LecturaContratoResponse,
   MetodoPagoContrato,
   FormatoContrato,
+  ParteExtra,
+  ValidacionCtl,
 } from '../../../../core/models/contrato.model';
+import { PARTE_EXTRA_VACIA, extraParaSolicitud } from '../../../../core/models/contrato.model';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
 import { descargarArchivo } from '../../../../core/util/descargar-archivo';
 import { BorradorRadicacionService } from '../../../../core/services/borrador-radicacion.service';
 import type { TipoDocumentoIdentidad } from '../../../../core/models/radicacion.model';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
 import {
+  type CoarrendadorForm,
   type OpcionIdentificacion,
   PASOS_CONTRATO,
+  coarrendadorADatos,
+  coarrendadorVacio,
+  parsearTitulares,
+  pendientesCoarrendadores,
+  separarNombre,
   ULTIMO_PASO,
   esPasoValido,
   pendientesDelPaso,
@@ -60,6 +70,8 @@ import {
 } from './contrato-presentacion';
 
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { ModalDialogComponent } from '../../../../shared/components/modal-dialog/modal-dialog.component';
+import { VisorArchivoComponent } from '../../../../shared/components/visor-archivo/visor-archivo.component';
 import { SoloDigitosDirective } from '../../../../shared/directives/solo-digitos.directive';
 import { plural } from '../../../../core/util/plural';
 import { FeedbackService } from '../../../../shared/services/feedback/feedback.service';
@@ -113,6 +125,9 @@ const OTRA_CIUDAD = '__otra__';
     InfoBoxComponent,
     SuccessScreenComponent,
     CtlValidacionComponent,
+    ParteExtraComponent,
+    ModalDialogComponent,
+    VisorArchivoComponent,
   ],
   templateUrl: './contrato.component.html',
   styleUrl: './contrato.component.scss',
@@ -185,6 +200,11 @@ export class ContratoComponent {
   protected readonly arrCorreo = signal('');
   protected readonly arrDireccion = signal('');
   protected readonly arrCiudadExpedicion = signal('');
+  /** Persona natural/jurídica, representante legal y apoderado del arrendador y del arrendatario. */
+  protected readonly arrExtra = signal<ParteExtra>(PARTE_EXTRA_VACIA);
+  protected readonly ateExtra = signal<ParteExtra>(PARTE_EXTRA_VACIA);
+  /** Otros propietarios del inmueble (máximo tres además del arrendador). */
+  protected readonly coarrendadores = signal<readonly CoarrendadorForm[]>([]);
   /** Ciudades del catálogo agrupadas por departamento para el select de expedición. */
   protected readonly ciudadesPorDepartamento = Object.entries(
     inject(CatalogoService).opciones('ciudad').reduce<Record<string, string[]>>((g, c) => {
@@ -226,6 +246,10 @@ export class ContratoComponent {
   protected readonly inmGaraje = signal('');
   protected readonly inmDeposito = signal('');
   protected readonly inmLineaTelefonica = signal('');
+  /** Del CTL: círculo registral, departamento y municipio del inmueble. */
+  protected readonly inmOficinaRegistro = signal('');
+  protected readonly inmDepartamento = signal('');
+  protected readonly inmMunicipio = signal('');
 
   // --- Paso 4: condiciones económicas y vigencia (Req 30.5) ---
   protected readonly conCanon = signal<number | null>(null);
@@ -442,6 +466,7 @@ export class ContratoComponent {
   protected readonly pendientes = computed(() => [
     ...pendientesDelPaso(this.pasoActual(), this.estado()),
     ...(this.pasoActual() === ULTIMO_PASO ? pendientesDeudores(this.deudoresValidos()) : []),
+    ...(this.pasoActual() === 0 || this.pasoActual() === ULTIMO_PASO ? pendientesCoarrendadores(this.coarrendadores()) : []),
     ...(this.pasoActual() === ULTIMO_PASO && this.deudoresExceden() ? ['Máximo dos deudores solidarios: quita los que sobren'] : []),
   ]);
 
@@ -463,8 +488,65 @@ export class ContratoComponent {
 
   /** Habilitación de "Generar contrato": todos los pasos válidos (Req 30.7). */
   protected readonly generacionHabilitada = computed(
-    () => puedeGenerar(this.estado()) && !this.deudoresExceden() && pendientesDeudores(this.deudoresValidos()).length === 0,
+    () => puedeGenerar(this.estado()) && !this.deudoresExceden() && pendientesDeudores(this.deudoresValidos()).length === 0
+      && pendientesCoarrendadores(this.coarrendadores()).length === 0,
   );
+
+  /** Otros propietarios en el formato de la solicitud (la generación exige que estén completos). */
+  private coarrendadoresValidos(): DatosArrendador[] {
+    return this.coarrendadores().map(coarrendadorADatos);
+  }
+
+  protected agregarCoarrendador(): void {
+    this.coarrendadores.update((l) => (l.length >= 3 ? l : [...l, coarrendadorVacio()]));
+  }
+
+  protected quitarCoarrendador(i: number): void {
+    this.coarrendadores.update((l) => l.filter((_, k) => k !== i));
+  }
+
+  protected cambiarCoarrendador(i: number, cambio: Partial<CoarrendadorForm>): void {
+    this.coarrendadores.update((l) => l.map((c, k) => (k === i ? { ...c, ...cambio } : c)));
+  }
+
+  /**
+   * Con el CTL leído se precarga lo que el certificado trae (oficina de registro, municipio, departamento, matrícula) y
+   * los titulares del dominio como arrendador y coarrendadores. Nunca se pisa lo que el broker ya escribió: si el CTL
+   * trae otros titulares, solo se le avisa.
+   */
+  protected onCtlValidado(r: ValidacionCtl): void {
+    if (r.oficinaRegistro && !this.inmOficinaRegistro().trim()) this.inmOficinaRegistro.set(r.oficinaRegistro);
+    if (r.departamento && !this.inmDepartamento().trim()) this.inmDepartamento.set(r.departamento);
+    if (r.municipio && !this.inmMunicipio().trim()) this.inmMunicipio.set(r.municipio);
+    if (r.matricula && !this.inmMatricula().trim()) this.inmMatricula.set(r.matricula);
+    const titulares = parsearTitulares(r.titulares);
+    if (!titulares.length) return;
+    const digitos = (v: string): string => v.replace(/\D/g, '');
+    const [primero, ...resto] = titulares;
+    if (!this.arrNombres().trim() && !this.arrNumeroIdentificacion().trim()) {
+      const juridica = primero.tipoIdentificacion === 'NIT';
+      const { nombres, apellidos } = juridica ? { nombres: primero.nombre, apellidos: '' } : separarNombre(primero.nombre);
+      this.arrNombres.set(nombres);
+      this.arrApellidos.set(apellidos);
+      this.arrTipoIdentificacion.set(primero.tipoIdentificacion);
+      this.arrNumeroIdentificacion.set(primero.numeroIdentificacion);
+      if (juridica) this.arrExtra.set({ ...this.arrExtra(), tipoPersona: 'JURIDICA' });
+      if (!this.coarrendadores().length) {
+        this.coarrendadores.set(resto.slice(0, 3).map((t) => ({
+          ...coarrendadorVacio(),
+          ...(t.tipoIdentificacion === 'NIT' ? { nombres: t.nombre } : separarNombre(t.nombre)),
+          tipoIdentificacion: t.tipoIdentificacion,
+          numeroIdentificacion: t.numeroIdentificacion,
+          extra: t.tipoIdentificacion === 'NIT' ? { ...PARTE_EXTRA_VACIA, tipoPersona: 'JURIDICA' as const } : PARTE_EXTRA_VACIA,
+        })));
+      }
+      this.avisarEstudio({ tipo: 'success', titulo: 'Propietarios tomados del CTL',
+        texto: `Precargamos ${plural(titulares.length, 'titular', 'titulares')} del certificado. Revisa nombres, apellidos y la ciudad de expedición.` });
+    } else if (!titulares.some((t) => digitos(t.numeroIdentificacion) === digitos(this.arrNumeroIdentificacion()))) {
+      this.avisarEstudio({ tipo: 'warning', titulo: 'El CTL registra otros titulares',
+        texto: `El documento del arrendador no figura entre los titulares del certificado: ${titulares.map((t) => t.nombre).join(', ')}. Verifica que sea el propietario.` });
+    }
+  }
 
   /** Verdadero mientras se solicita la generación al backend (Req 30.7). */
   protected readonly enviando = computed(() => this.estadoEnvio() === 'enviando');
@@ -493,6 +575,8 @@ export class ContratoComponent {
           this.ateApellidos.set(a.apellidos ?? this.ateApellidos());
           this.ateTelefono.set(a.telefono ?? this.ateTelefono());
           this.ateCorreo.set(a.correo ?? this.ateCorreo());
+          // El estudio dice si el inquilino es persona jurídica (userType PJ): entonces firma su representante.
+          if (a.tipoPersona === 'PJ') this.ateExtra.set({ ...this.ateExtra(), tipoPersona: 'JURIDICA' });
         }
         const arr = p.arrendador;
         // El arrendador del estudio solo se usa si es el mismo propietario de la radicación (o no hay uno).
@@ -574,6 +658,76 @@ export class ContratoComponent {
   protected alternarServicio(servicio: string, marcado: boolean): void {
     this.conServicios.update((lista) =>
       marcado ? [...new Set([...lista, servicio])] : lista.filter((s) => s !== servicio));
+  }
+
+  // --- Vista previa del contrato terminado (el PDF es el Word oficial convertido: mismo documento) ---
+  protected readonly previaAbierta = signal(false);
+  protected readonly archivoPrevia = signal<Blob | null>(null);
+  protected readonly cargandoPrevia = signal(false);
+  protected readonly errorPrevia = signal(false);
+
+  /**
+   * Vista previa en PDF ANTES de guardar: el broker lee el contrato, puede volver a modificar un valor y pedirla de
+   * nuevo; solo la versión que acepta como correcta se guarda (con los mismos datos que está viendo).
+   */
+  protected verVistaPrevia(): void {
+    this.intento.set(true);
+    if (this.cargandoPrevia() || this.enviando()) {
+      return;
+    }
+    if (!this.generacionHabilitada()) {
+      this.mostrarPendientes();
+      return;
+    }
+    const request = this.construirRequest();
+    if (request === null) {
+      this.feedback.toast({ variante: 'error', mensaje: 'Completa los datos requeridos antes de ver el contrato.' });
+      return;
+    }
+    this.previaAbierta.set(true);
+    this.archivoPrevia.set(null);
+    this.errorPrevia.set(false);
+    this.cargandoPrevia.set(true);
+    this.contratoService.vistaPrevia(request).subscribe({
+      next: (blob) => {
+        this.archivoPrevia.set(blob);
+        this.cargandoPrevia.set(false);
+      },
+      error: () => {
+        this.errorPrevia.set(true);
+        this.cargandoPrevia.set(false);
+      },
+    });
+  }
+
+  /** El broker aceptó la vista previa: ahora sí se guarda el contrato. */
+  protected aceptarVistaPrevia(): void {
+    this.previaAbierta.set(false);
+    this.generar();
+  }
+
+  /** Abre el contrato recién generado para que el broker lo lea antes de descargarlo o radicar. */
+  protected verContrato(): void {
+    const referencia = this.confirmacion()?.radicado;
+    if (!referencia) {
+      return;
+    }
+    this.previaAbierta.set(true);
+    if (this.archivoPrevia()) {
+      return;
+    }
+    this.errorPrevia.set(false);
+    this.cargandoPrevia.set(true);
+    this.contratoService.descargarDocumento(referencia, 'pdf').subscribe({
+      next: (blob) => {
+        this.archivoPrevia.set(blob);
+        this.cargandoPrevia.set(false);
+      },
+      error: () => {
+        this.errorPrevia.set(true);
+        this.cargandoPrevia.set(false);
+      },
+    });
   }
 
   /** Formato en descarga (null = ninguno); cada botón se bloquea solo mientras genera su archivo. */
@@ -666,6 +820,8 @@ export class ContratoComponent {
     this.contratoService.generar(request).subscribe({
       next: (respuesta) => {
         this.confirmacion.set(respuesta);
+        // "Ver contrato" ya guardado vuelve a pedir el documento guardado, no el de la vista previa.
+        this.archivoPrevia.set(null);
         // La radicación exige este contrato: queda en el borrador con lo que la precarga.
         this.borrador.contrato.set({
           referencia: respuesta.radicado,
@@ -718,6 +874,7 @@ export class ContratoComponent {
       correo: this.arrCorreo(),
       ciudadExpedicion: this.arrCiudadExpedicion(),
       direccionResidencia: this.arrDireccion(),
+      ...extraParaSolicitud(this.arrExtra()),
     };
   }
 
@@ -731,6 +888,7 @@ export class ContratoComponent {
       telefono: this.ateTelefono(),
       correo: this.ateCorreo(),
       ciudadExpedicion: this.ateCiudadExpedicion(),
+      ...extraParaSolicitud(this.ateExtra()),
     };
   }
 
@@ -790,6 +948,7 @@ export class ContratoComponent {
       direccionResidencia: this.arrDireccion().trim(),
       ciudadExpedicion: this.arrCiudadExpedicion().trim(),
       direccionNotificacion: this.arrDireccion().trim(),
+      ...extraParaSolicitud(this.arrExtra()),
     };
     const arrendatario: DatosArrendatario = {
       nombres: this.ateNombres().trim(),
@@ -801,6 +960,7 @@ export class ContratoComponent {
       ciudadExpedicion: this.ateCiudadExpedicion().trim(),
       // El arrendatario se notifica en el inmueble que arrienda.
       direccionNotificacion: this.inmDireccion().trim(),
+      ...extraParaSolicitud(this.ateExtra()),
     };
     const inmueble: DatosInmueble = {
       tipoInmueble: this.inmTipoInmueble().trim(),
@@ -811,6 +971,9 @@ export class ContratoComponent {
       ...(this.inmGaraje().trim() ? { garaje: this.inmGaraje().trim() } : {}),
       ...(this.inmDeposito().trim() ? { deposito: this.inmDeposito().trim() } : {}),
       ...(this.inmLineaTelefonica().trim() ? { lineaTelefonica: this.inmLineaTelefonica().trim() } : {}),
+      ...(this.inmOficinaRegistro().trim() ? { oficinaRegistro: this.inmOficinaRegistro().trim() } : {}),
+      ...(this.inmDepartamento().trim() ? { departamento: this.inmDepartamento().trim() } : {}),
+      ...(this.inmMunicipio().trim() ? { municipio: this.inmMunicipio().trim() } : {}),
     };
     const condiciones: CondicionesEconomicas = {
       canonMensual: this.conCanon() as number,
@@ -833,6 +996,7 @@ export class ContratoComponent {
       condiciones,
       ...(cotizacionReferencia ? { cotizacionReferencia } : {}),
       ...(deudores.length ? { deudores } : {}),
+      ...(this.coarrendadoresValidos().length ? { coarrendadores: this.coarrendadoresValidos() } : {}),
       adicionales: {
         leasing: this.inmLeasing(),
         arrendadorEsTitular: this.conArrendadorEsTitular(),

@@ -79,6 +79,16 @@ export class ContratoService {
     });
   }
 
+  /** PDF del contrato con los datos del formulario, sin guardarlo: el broker lo revisa antes de aceptarlo. */
+  vistaPrevia(request: ContratoArrendamientoRequest): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/vista-previa`, request, {
+      withCredentials: true,
+      responseType: 'blob',
+      // La conversión a PDF puede tardar hasta ~90 s en el backend.
+      context: new HttpContext().set(TIEMPO_LIMITE, 100_000),
+    });
+  }
+
   /** Contratos que generó la cuenta y aún no radicó (la radicación los ofrece para no volver a empezar). */
   pendientes(): Observable<readonly ContratoPendiente[]> {
     return this.http.get<ContratoPendiente[]>('/api/v1/contratos/pendientes', { withCredentials: true });

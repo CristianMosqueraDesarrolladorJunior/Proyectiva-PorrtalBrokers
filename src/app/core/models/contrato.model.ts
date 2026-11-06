@@ -9,6 +9,48 @@ import type { TipoDocumentoIdentidad } from './radicacion.model';
 /** Duración del contrato en meses ofrecida por el generador (Req 30.5). */
 export type DuracionContratoMeses = 12 | 24 | 36;
 
+/** Persona natural o jurídica de una parte del contrato (la jurídica lleva la razón social en «nombres»). */
+export type TipoPersonaContrato = 'NATURAL' | 'JURIDICA';
+
+/** Representante legal de una persona jurídica. */
+export interface RepresentanteLegalContrato {
+  readonly nombre: string;
+  readonly tipoIdentificacion: TipoDocumentoIdentidad;
+  readonly numeroIdentificacion: string;
+}
+
+/** Apoderado que firma por una parte. */
+export interface ApoderadoContrato {
+  readonly nombre: string;
+  readonly tipoIdentificacion: TipoDocumentoIdentidad;
+  readonly numeroIdentificacion: string;
+  readonly direccion?: string;
+  readonly telefono?: string;
+  readonly correo?: string;
+}
+
+/** Lo que una parte agrega a nombre y documento: persona natural/jurídica, representante legal y apoderado. */
+export interface ParteExtra {
+  readonly tipoPersona: TipoPersonaContrato;
+  readonly representanteLegal: RepresentanteLegalContrato | null;
+  readonly apoderado: ApoderadoContrato | null;
+}
+
+export const PARTE_EXTRA_VACIA: ParteExtra = { tipoPersona: 'NATURAL', representanteLegal: null, apoderado: null };
+
+/** Campos de {@link ParteExtra} tal como viajan en la solicitud (solo lo que aplica a la parte). */
+export function extraParaSolicitud(e: ParteExtra): {
+  tipoPersona?: TipoPersonaContrato;
+  representanteLegal?: RepresentanteLegalContrato;
+  apoderado?: ApoderadoContrato;
+} {
+  return {
+    ...(e.tipoPersona === 'JURIDICA' ? { tipoPersona: 'JURIDICA' as const } : {}),
+    ...(e.tipoPersona === 'JURIDICA' && e.representanteLegal ? { representanteLegal: e.representanteLegal } : {}),
+    ...(e.apoderado ? { apoderado: e.apoderado } : {}),
+  };
+}
+
 /** Paso 1: datos del arrendador (Req 30.2). */
 export interface DatosArrendador {
   readonly nombres: string;
@@ -20,6 +62,9 @@ export interface DatosArrendador {
   readonly direccionResidencia: string;
   readonly ciudadExpedicion?: string;
   readonly direccionNotificacion?: string;
+  readonly tipoPersona?: TipoPersonaContrato;
+  readonly representanteLegal?: RepresentanteLegalContrato;
+  readonly apoderado?: ApoderadoContrato;
 }
 
 /** Paso 2: datos del arrendatario (Req 30.3). */
@@ -33,6 +78,9 @@ export interface DatosArrendatario {
   readonly ocupacion?: string;
   readonly ciudadExpedicion?: string;
   readonly direccionNotificacion?: string;
+  readonly tipoPersona?: TipoPersonaContrato;
+  readonly representanteLegal?: RepresentanteLegalContrato;
+  readonly apoderado?: ApoderadoContrato;
 }
 
 /** Paso 3: datos del inmueble (Req 30.4). */
@@ -50,6 +98,10 @@ export interface DatosInmueble {
   readonly lineaTelefonica?: string; // opcional
   readonly garaje?: string; // número del garaje, si tiene
   readonly deposito?: string; // número del depósito, si tiene
+  /** Círculo registral (Oficina de Registro de Instrumentos Públicos) que figura en el CTL. */
+  readonly oficinaRegistro?: string;
+  readonly departamento?: string;
+  readonly municipio?: string;
 }
 
 /** Paso 4: condiciones económicas del contrato (Req 30.5). */
@@ -82,6 +134,12 @@ export interface ValidacionCtl {
   /** `null` cuando no hay dirección del contrato con la que comparar. */
   readonly direccionCoincide: boolean | null;
   readonly departamentoBloqueado: boolean;
+  /** Círculo registral del CTL. */
+  readonly oficinaRegistro?: string | null;
+  /** Titulares del dominio: «NOMBRE - TIPO NUMERO» separados por « | ». */
+  readonly titulares?: string | null;
+  readonly tipoPredio?: string | null;
+  readonly area?: string | null;
 }
 
 /** Formatos de descarga del contrato (siempre un archivo individual, nunca .zip). */
@@ -100,6 +158,8 @@ export interface ContratoArrendamientoRequest {
   readonly cotizacionReferencia?: string;
   /** Deudores solidarios (máximo dos, precargados del estudio digital). */
   readonly deudores?: readonly DeudorSolidario[];
+  /** Otros propietarios del inmueble (máximo tres además del arrendador). */
+  readonly coarrendadores?: readonly DatosArrendador[];
   /** Leasing, titular de la cuenta, cláusulas adicionales y modalidad de firma (columnas AP–AV del Consolidado). */
   readonly adicionales?: {
     readonly leasing: boolean;
@@ -135,14 +195,23 @@ export interface PersonaEstudio {
   readonly telefono: string | null;
   readonly correo: string | null;
   readonly direccionNotificacion: string | null;
+  readonly fechaExpedicion?: string | null;
+  readonly ocupacion?: string | null;
+  readonly tipoPerfil?: string | null;
+  readonly representanteLegal?: boolean | null;
+  /** PN (natural) o PJ (jurídica). */
+  readonly tipoPersona?: string | null;
 }
 
 /** Precarga del contrato desde el estudio digital (`GET /contratos/prellenado`). */
 export interface PrellenadoContrato {
   readonly consecutivo: string | null;
   readonly estado: string | null;
+  /** Siempre nulo: el estudio no trae al propietario (sale del CTL). */
   readonly arrendador: PersonaEstudio | null;
   readonly arrendatario: PersonaEstudio | null;
+  /** Inmobiliaria que radicó el estudio (el «realState» del API); no es el propietario. */
+  readonly inmobiliaria?: PersonaEstudio | null;
   readonly deudores: readonly PersonaEstudio[];
   readonly inmueble: {
     readonly direccion: string | null;
@@ -151,6 +220,7 @@ export interface PrellenadoContrato {
     readonly tipoInmueble: string | null;
     readonly canon: string | null;
     readonly administracion: string | null;
+    readonly administracionIncluida?: boolean | null;
   } | null;
 }
 

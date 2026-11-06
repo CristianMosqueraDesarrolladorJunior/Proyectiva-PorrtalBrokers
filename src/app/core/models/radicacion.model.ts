@@ -179,5 +179,7 @@ export function documentosRequeridosRadicacion(req: {
   if (req.requierePermisoSubarriendo) {
     base.push('permisoSubarriendo');
   }
+  // El contrato firmado cargado por el broker es obligatorio: el generado en el portal no lo reemplaza.
+  base.push('contratoArrendamientoFirmado');
   return base;
 }

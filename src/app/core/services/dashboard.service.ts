@@ -92,11 +92,10 @@ export class DashboardService {
    * @returns KPIs de primas, radicadas, en revisión y bloqueadas.
    */
   obtenerKpis(filtros: FiltrosSolicitudes = {}): Observable<KpisDashboard> {
-    // Con filtros, los KPIs salen de las mismas radicaciones que muestra la tabla filtrada.
+    // Siempre de las mismas radicaciones que muestra la tabla (con o sin filtros): antes, sin filtros, salían de
+    // otra consulta que no contaba las radicaciones del Consolidado y las tarjetas no cuadraban con la tabla.
     const params = paramsFiltros(filtros);
-    return params.keys().length
-      ? this.http.get<KpisDashboard>(`${this.baseUrl}/solicitudes/kpis`, { params, withCredentials: true })
-      : this.http.get<KpisDashboard>(`${this.baseUrl}/dashboard/kpis`, { withCredentials: true });
+    return this.http.get<KpisDashboard>(`${this.baseUrl}/solicitudes/kpis`, { params, withCredentials: true });
   }
 
   /**

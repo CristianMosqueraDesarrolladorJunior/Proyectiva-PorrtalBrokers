@@ -169,6 +169,14 @@ export class ConsolaService {
     return this.http.get<ProcedimientoResponse>(`${this.base}/negocios/${encodeURIComponent(radicado)}/procedimiento`, this.opciones);
   }
 
+  /** Archivo que el broker cargó en el negocio (vista previa en la consola). */
+  documentoNegocioArchivo(radicado: string, tipo: string): Observable<Blob> {
+    return this.http.get(`${this.base}/negocios/${encodeURIComponent(radicado)}/documentos/${encodeURIComponent(tipo)}`, {
+      ...this.opciones,
+      responseType: 'blob',
+    });
+  }
+
   /** El comercial reemplaza un documento del negocio (SARLAFT en validación; cualquiera en corrección). */
   subirDocumentoNegocio(radicado: string, tipo: string, archivo: File): Observable<unknown> {
     const datos = new FormData();

@@ -13,8 +13,9 @@
           Radicar solicitud para emisión de póliza
         </app-boton>
         <div class="exito-descarga" role="group" aria-labelledby="exito-descarga-titulo">
-          <p id="exito-descarga-titulo" class="exito-descarga__titulo">Descarga tu contrato</p>
+          <p id="exito-descarga-titulo" class="exito-descarga__titulo">Revisa o descarga tu contrato</p>
           <div class="exito-descarga__botones">
+            <app-boton variante="accent" icono="visibility" (clicked)="verContrato()">Ver contrato</app-boton>
             <app-boton variante="outline" icono="picture_as_pdf" [disabled]="descargando() !== null" (clicked)="descargarContrato('pdf')">
               {{ descargando() === 'pdf' ? 'Generando PDF…' : 'PDF' }}
             </app-boton>
@@ -60,7 +61,8 @@
       <div class="contrato-paso">
         <h2 class="contrato-paso-titulo">Datos del arrendador</h2>
         <div class="contrato-grid">
-          <app-form-field label="Nombres" [requerido]="true" controlId="arr-nombres">
+          <app-parte-extra prefijo="arr" [tipos]="tiposIdentificacion" [valor]="arrExtra()" (valorChange)="arrExtra.set($event)" />
+          <app-form-field [label]="arrExtra().tipoPersona === 'JURIDICA' ? 'Razón social' : 'Nombres'" [requerido]="true" controlId="arr-nombres">
             <input
               id="arr-nombres"
               type="text"
@@ -71,16 +73,18 @@
             />
           </app-form-field>
 
-          <app-form-field label="Apellidos" [requerido]="true" controlId="arr-apellidos">
-            <input
-              id="arr-apellidos"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: Pérez Gómez"
-              [ngModel]="arrApellidos()"
-              (ngModelChange)="arrApellidos.set($event)"
-            />
-          </app-form-field>
+          @if (arrExtra().tipoPersona !== 'JURIDICA') {
+            <app-form-field label="Apellidos" [requerido]="true" controlId="arr-apellidos">
+              <input
+                id="arr-apellidos"
+                type="text"
+                autocomplete="off"
+                placeholder="Ej: Pérez Gómez"
+                [ngModel]="arrApellidos()"
+                (ngModelChange)="arrApellidos.set($event)"
+              />
+            </app-form-field>
+          }
 
           <app-form-field
             label="Tipo de identificación"
@@ -195,6 +199,45 @@
             />
           </app-form-field>
         </div>
+
+        <!-- Otros propietarios del mismo inmueble (hasta tres más) -->
+        <h3 class="contrato-subtitulo">Otros propietarios del inmueble (opcional)</h3>
+        @for (c of coarrendadores(); track $index; let i = $index) {
+          <div class="contrato-grid">
+            <app-parte-extra [prefijo]="'coa' + i" [tipos]="tiposIdentificacion" [valor]="c.extra"
+              (valorChange)="cambiarCoarrendador(i, { extra: $event })" />
+            <app-form-field [label]="c.extra.tipoPersona === 'JURIDICA' ? 'Razón social' : 'Nombres'" [requerido]="true" [controlId]="'coa-nombres-' + i">
+              <input [id]="'coa-nombres-' + i" type="text" autocomplete="off" [ngModel]="c.nombres"
+                (ngModelChange)="cambiarCoarrendador(i, { nombres: $event })" />
+            </app-form-field>
+            @if (c.extra.tipoPersona !== 'JURIDICA') {
+              <app-form-field label="Apellidos" [requerido]="true" [controlId]="'coa-apellidos-' + i">
+                <input [id]="'coa-apellidos-' + i" type="text" autocomplete="off" [ngModel]="c.apellidos"
+                  (ngModelChange)="cambiarCoarrendador(i, { apellidos: $event })" />
+              </app-form-field>
+            }
+            <app-form-field label="Tipo de identificación" [requerido]="true" [controlId]="'coa-tipo-' + i">
+              <select [id]="'coa-tipo-' + i" [ngModel]="c.tipoIdentificacion"
+                (ngModelChange)="cambiarCoarrendador(i, { tipoIdentificacion: $event })">
+                @for (t of tiposIdentificacion; track t.valor) { <option [value]="t.valor">{{ t.etiqueta }}</option> }
+              </select>
+            </app-form-field>
+            <app-form-field label="Número de identificación" [requerido]="true" [controlId]="'coa-num-' + i">
+              <input [id]="'coa-num-' + i" type="text" inputmode="numeric" autocomplete="off" [ngModel]="c.numeroIdentificacion"
+                (ngModelChange)="cambiarCoarrendador(i, { numeroIdentificacion: $event })" />
+            </app-form-field>
+            @if (c.extra.tipoPersona !== 'JURIDICA') {
+              <app-form-field label="Ciudad de expedición del documento" [requerido]="true" [controlId]="'coa-ciudad-' + i">
+                <input [id]="'coa-ciudad-' + i" type="text" autocomplete="off" [ngModel]="c.ciudadExpedicion"
+                  (ngModelChange)="cambiarCoarrendador(i, { ciudadExpedicion: $event })" />
+              </app-form-field>
+            }
+            <app-boton variante="outline" (clicked)="quitarCoarrendador(i)">Quitar este propietario</app-boton>
+          </div>
+        }
+        @if (coarrendadores().length < 3) {
+          <app-boton variante="outline" icono="add" (clicked)="agregarCoarrendador()">Agregar otro propietario</app-boton>
+        }
       </div>
     }
 
@@ -237,7 +280,8 @@
           </app-info-box>
         </div>
         <div class="contrato-grid">
-          <app-form-field label="Nombres" [requerido]="true" controlId="ate-nombres">
+          <app-parte-extra prefijo="ate" [tipos]="tiposIdentificacion" [valor]="ateExtra()" (valorChange)="ateExtra.set($event)" />
+          <app-form-field [label]="ateExtra().tipoPersona === 'JURIDICA' ? 'Razón social' : 'Nombres'" [requerido]="true" controlId="ate-nombres">
             <input
               id="ate-nombres"
               type="text"
@@ -248,16 +292,18 @@
             />
           </app-form-field>
 
-          <app-form-field label="Apellidos" [requerido]="true" controlId="ate-apellidos">
-            <input
-              id="ate-apellidos"
-              type="text"
-              autocomplete="off"
-              placeholder="Ej: Silva Rodríguez"
-              [ngModel]="ateApellidos()"
-              (ngModelChange)="ateApellidos.set($event)"
-            />
-          </app-form-field>
+          @if (ateExtra().tipoPersona !== 'JURIDICA') {
+            <app-form-field label="Apellidos" [requerido]="true" controlId="ate-apellidos">
+              <input
+                id="ate-apellidos"
+                type="text"
+                autocomplete="off"
+                placeholder="Ej: Silva Rodríguez"
+                [ngModel]="ateApellidos()"
+                (ngModelChange)="ateApellidos.set($event)"
+              />
+            </app-form-field>
+          }
 
           <app-form-field
             label="Tipo de identificación"
@@ -414,6 +460,21 @@
             />
           </app-form-field>
 
+          <app-form-field label="Oficina de registro" ayuda="Círculo registral del CTL, p. ej. Bogotá Zona Norte" controlId="inm-oficina">
+            <input id="inm-oficina" type="text" autocomplete="off" [ngModel]="inmOficinaRegistro()"
+              (ngModelChange)="inmOficinaRegistro.set($event)" />
+          </app-form-field>
+
+          <app-form-field label="Departamento" controlId="inm-departamento">
+            <input id="inm-departamento" type="text" autocomplete="off" [ngModel]="inmDepartamento()"
+              (ngModelChange)="inmDepartamento.set($event)" />
+          </app-form-field>
+
+          <app-form-field label="Municipio" controlId="inm-municipio">
+            <input id="inm-municipio" type="text" autocomplete="off" [ngModel]="inmMunicipio()"
+              (ngModelChange)="inmMunicipio.set($event)" />
+          </app-form-field>
+
           <app-form-field label="Número de garaje (opcional)" controlId="inm-garaje">
             <input
               id="inm-garaje"
@@ -470,7 +531,7 @@
 
         <!-- Validación del CTL: antigüedad ≤ 90 días y dirección igual a la del contrato -->
         <h3 class="contrato-subtitulo">Certificado de Tradición y Libertad (CTL)</h3>
-        <app-ctl-validacion [direccionContrato]="inmDireccion()" />
+        <app-ctl-validacion [direccionContrato]="inmDireccion()" (validado)="onCtlValidado($event)" />
       </div>
     }
 
@@ -779,10 +840,11 @@
         @if (esUltimoPaso()) {
           <app-boton
             variante="primary"
-            [disabled]="enviando()"
-            (clicked)="generar()"
+            icono="visibility"
+            [disabled]="enviando() || cargandoPrevia()"
+            (clicked)="verVistaPrevia()"
           >
-            Generar contrato
+            {{ cargandoPrevia() ? 'Preparando el contrato…' : 'Ver contrato antes de guardar' }}
           </app-boton>
         } @else {
           <app-boton
@@ -795,4 +857,29 @@
       </div>
     </div>
   }
+
+  <!-- Vista previa en PDF: antes de guardar (aceptar o volver a modificar) y, ya guardado, para releerlo. -->
+  <app-modal-dialog
+    [abierto]="previaAbierta()"
+    [titulo]="confirmacion() ? 'Tu contrato' : 'Revisa tu contrato antes de guardarlo'"
+    [subtitulo]="confirmacion()?.radicado ?? 'Si algo no está bien, vuelve y corrígelo: solo se guarda la versión que aceptes.'"
+    tamano="xl"
+    (cerrar)="previaAbierta.set(false)"
+  >
+    @if (errorPrevia()) {
+      <app-alert-banner variante="error" titulo="No pudimos mostrar el contrato" icono="error">
+        {{ confirmacion() ? 'Puedes descargarlo en Word, que es el mismo documento.' : 'Intenta de nuevo; tus datos siguen en el formulario.' }}
+      </app-alert-banner>
+    } @else {
+      <app-visor-archivo [archivo]="archivoPrevia()" [cargando]="cargandoPrevia()"
+        [nombre]="'Contrato-' + (confirmacion()?.radicado ?? 'vista-previa') + '.pdf'" />
+    }
+    @if (!confirmacion()) {
+      <div acciones>
+        <app-boton variante="outline" icono="edit" (clicked)="previaAbierta.set(false)">Volver y modificar</app-boton>
+        <app-boton variante="accent" icono="check" [disabled]="cargandoPrevia() || errorPrevia() || !archivoPrevia()"
+          (clicked)="aceptarVistaPrevia()">Está correcto, guardar contrato</app-boton>
+      </div>
+    }
+  </app-modal-dialog>
 </section>
