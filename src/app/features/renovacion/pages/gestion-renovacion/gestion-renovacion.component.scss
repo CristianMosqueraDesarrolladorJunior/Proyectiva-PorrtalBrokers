@@ -1582,15 +1582,3 @@
   }
 }
 
-.datos-inmueble {
-  max-width: var(--content-max-width);
-  margin: var(--space-0) auto var(--space-6);
-}
-.datos-inmueble__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-}
-@media (max-width: 640px) {
-  .datos-inmueble__grid { grid-template-columns: 1fr; }
-}

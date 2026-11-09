@@ -42,8 +42,6 @@ import {
 } from '../../../../shared/components';
 import { ConfetiComponent } from '../../../../shared/components/feedback/confeti/confeti.component';
 import type { OpcionRadio } from '../../../../shared/components/radio-group/radio-group.component';
-import type { OpcionSegmentada } from '../../../../shared/components/segmented-control/segmented-control.component';
-import { FormFieldComponent, FormSectionCardComponent, SegmentedControlComponent } from '../../../../shared/components';
 import { SarlaftRenovacionComponent } from '../../components/sarlaft-renovacion/sarlaft-renovacion.component';
 import {
 } from '../../caso-especial-habilitacion';
@@ -53,6 +51,7 @@ import {
   etapaAnterior,
   indicePaso,
   siguienteEtapa,
+  superaTopeAdministracion,
   type EtapaGestion,
   type FlujoGestion,
 } from '../../gestion-renovacion-flujo';
@@ -128,9 +127,6 @@ interface Confirmacion {
     SuccessScreenComponent,
     SarlaftRenovacionComponent,
     ConfetiComponent,
-    FormSectionCardComponent,
-    FormFieldComponent,
-    SegmentedControlComponent,
   ],
   templateUrl: './gestion-renovacion.component.html',
   styleUrl: './gestion-renovacion.component.scss',
@@ -227,41 +223,6 @@ export class GestionRenovacionComponent {
 
   protected readonly motivoNoRenovacion = signal<string>('');
 
-  /** Datos del inmueble que pide el área para renovar; se preguntan junto al Conocimiento de Cliente. */
-  protected readonly tipoServicio = signal('');
-  protected readonly estadoInmueble = signal('');
-  protected readonly mismoInquilino = signal('');
-  protected readonly deudorSolidario = signal('');
-  protected readonly intentoInmueble = signal(false);
-  protected readonly opcionesTipoServicio: readonly OpcionSegmentada[] = [
-    { valor: 'Vivienda', etiqueta: 'Vivienda' },
-    { valor: 'Comercio', etiqueta: 'Comercio' },
-  ];
-  protected readonly opcionesEstadoInmueble: readonly OpcionSegmentada[] = [
-    { valor: 'Ocupado', etiqueta: 'Ocupado' },
-    { valor: 'Desocupado', etiqueta: 'Desocupado' },
-  ];
-  protected readonly opcionesSiNo: readonly OpcionSegmentada[] = [
-    { valor: 'Si', etiqueta: 'Sí' },
-    { valor: 'No', etiqueta: 'No' },
-  ];
-  /** Solo la renovación (digital o física) lleva los datos del inmueble. */
-  protected readonly pideInmueble = computed(() => this.flujo() === 'digital' || this.flujo() === 'fisica');
-  protected readonly inmuebleCompleto = computed(
-    () => !!(this.tipoServicio() && this.estadoInmueble() && this.mismoInquilino() && this.deudorSolidario()),
-  );
-  private datosInmueble() {
-    return this.pideInmueble()
-      ? {
-          inmueble: {
-            tipoServicio: this.tipoServicio(),
-            estadoInmueble: this.estadoInmueble(),
-            mismoInquilino: this.mismoInquilino(),
-            deudorSolidario: this.deudorSolidario(),
-          },
-        }
-      : {};
-  }
   /** Motivos reales del Warehouse (catálogo `motivo_no_renovacion`); se envía el valor que escribe el área. */
   protected readonly opcionesMotivo = computed<readonly OpcionRadio[]>(() =>
     this.catalogo.opciones('motivo_no_renovacion').filter((m) => m['para_broker'] === true).map((m) => ({ valor: m.descripcion, etiqueta: m.descripcion })),
@@ -539,6 +500,24 @@ export class GestionRenovacionComponent {
     this.etapa.set(siguienteEtapa(this.flujo(), this.etapa()));
   }
 
+  /**
+   * Del ajuste al Conocimiento de Cliente. Si la administración sube más del 30 % (regla del área) se avisa,
+   * pero no se bloquea: el analista lo revisa.
+   */
+  protected avanzarDesdeAjuste(): void {
+    const anterior = Number(this.condiciones()?.administracion ?? 0);
+    const nueva = Number(this.formulario.get('administracion')?.value ?? 0);
+    if (superaTopeAdministracion(anterior, nueva)) {
+      const pesos = (v: number) => '$' + Math.round(v).toLocaleString('es-CO');
+      this.feedback.info({
+        titulo: 'La administración sube más del 30 %',
+        mensaje: `Pasa de ${pesos(anterior)} a ${pesos(nueva)} (${Math.round((nueva / anterior - 1) * 100)} %). `
+          + 'Puedes continuar; el analista de renovaciones la revisará antes de expedir.',
+      });
+    }
+    this.avanzar();
+  }
+
   protected retroceder(): void {
     this.etapa.set(etapaAnterior(this.flujo(), this.etapa()));
   }
@@ -638,11 +617,6 @@ export class GestionRenovacionComponent {
 
   /** Con SARLAFT vigente registra la gestión en el backend y muestra el éxito. */
   protected onSarlaftVigente(resultado: SarlaftRenovacionAceptado): void {
-    if (this.pideInmueble() && !this.inmuebleCompleto()) {
-      this.intentoInmueble.set(true);
-      this.feedback.error({ titulo: 'Faltan datos del inmueble', mensaje: 'Responde las cuatro preguntas del inmueble antes de enviar.' });
-      return;
-    }
     this.sarlaftActualizado = resultado.sarlaftActualizado ?? null;
     this.enviar(resultado.validacionId);
   }
@@ -732,7 +706,6 @@ export class GestionRenovacionComponent {
           ...(archivo ? { formularioRenovacion: archivo } : {}),
           ...conComentarios,
           ...conSarlaft,
-          ...this.datosInmueble(),
         });
       case 'digital': {
         const v = this.formulario.getRawValue();
@@ -756,7 +729,6 @@ export class GestionRenovacionComponent {
               }),
           ...(observaciones ? { comentarios: observaciones } : {}),
           ...conSarlaft,
-          ...this.datosInmueble(),
         });
       }
       case 'caso-especial':

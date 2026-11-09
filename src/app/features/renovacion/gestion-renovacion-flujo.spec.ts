@@ -5,6 +5,7 @@ import {
   etapaAnterior,
   indicePaso,
   siguienteEtapa,
+  superaTopeAdministracion,
   type FlujoGestion,
 } from './gestion-renovacion-flujo';
 
@@ -49,5 +50,14 @@ describe('gestion-renovacion-flujo (proceso real de renovaciones)', () => {
     expect(esSarlaftVigente(36)).toBe(false);
     expect(esSarlaftVigente(50)).toBe(false);
     expect(esSarlaftVigente(-1)).toBe(false);
+  });
+});
+
+describe('superaTopeAdministracion', () => {
+  it('avisa solo cuando la administración sube más del 30 %', () => {
+    expect(superaTopeAdministracion(1_000_000, 1_443_000)).toBe(true); // caso real 5010002935801 (+44 %)
+    expect(superaTopeAdministracion(1_000_000, 1_300_000)).toBe(false); // justo 30 %
+    expect(superaTopeAdministracion(530_400, 686_700)).toBe(false); // +29,5 %
+    expect(superaTopeAdministracion(0, 500_000)).toBe(false); // sin administración anterior
   });
 });

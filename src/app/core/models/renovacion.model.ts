@@ -191,15 +191,6 @@ export interface SolicitudRenovacionRequest {
   readonly comentarios?: string;
   readonly validacionSarlaftId: string;
   readonly sarlaftActualizado?: File;               // SARLAFT no vigente: certificado actualizado
-  readonly inmueble?: DatosInmuebleRenovacion;
-}
-
-/** Datos del inmueble que pide el área para renovar (tipo de servicio, estado, mismo inquilino, deudor solidario). */
-export interface DatosInmuebleRenovacion {
-  readonly tipoServicio: string;
-  readonly estadoInmueble: string;
-  readonly mismoInquilino: string;
-  readonly deudorSolidario: string;
 }
 
 /** Datos para rellenar el formato oficial de renovación de Bolívar (renovación física). */

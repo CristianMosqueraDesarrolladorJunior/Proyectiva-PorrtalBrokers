@@ -104,3 +104,11 @@ export function etapaAnterior(flujo: FlujoGestion, etapa: EtapaGestion): EtapaGe
 export function esSarlaftVigente(mesesDesdeExpedicion: number): boolean {
   return mesesDesdeExpedicion >= 0 && mesesDesdeExpedicion < MESES_VIGENCIA_SARLAFT;
 }
+
+/** Regla del área: la administración nueva no debería subir más del 30 % sobre la anterior (solo se avisa). */
+export const TOPE_INCREMENTO_ADMINISTRACION = 0.3;
+
+/** `true` si la administración nueva supera en más del 30 % a la anterior; sin anterior no hay con qué comparar. */
+export function superaTopeAdministracion(anterior: number, nueva: number): boolean {
+  return anterior > 0 && nueva > anterior * (1 + TOPE_INCREMENTO_ADMINISTRACION);
+}

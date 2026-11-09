@@ -600,7 +600,7 @@
               <span class="observaciones-card__info">Las observaciones serán adjuntadas al expediente de renovación de la póliza de arrendamiento.</span>
             </div>
 
-            <button type="button" class="btn btn--primary" [disabled]="cotizando() || alertas().length > 0" (click)="avanzar()">Validar Conocimiento de Cliente →</button>
+            <button type="button" class="btn btn--primary" [disabled]="cotizando() || alertas().length > 0" (click)="avanzarDesdeAjuste()">Validar Conocimiento de Cliente →</button>
             <button type="button" class="btn btn--secondary" (click)="retroceder()">← Volver al paso anterior</button>
           </div>
         </div>
@@ -775,26 +775,6 @@
 
   <!-- ══════════════════ SARLAFT (todas las gestiones) ══════════════════ -->
   @if (etapa() === 'sarlaft') {
-    @if (pideInmueble()) {
-      <div class="datos-inmueble">
-        <app-form-section-card [numero]="1" icono="home" titulo="Datos del inmueble" subtitulo="El área los necesita para renovar la póliza.">
-          <div class="datos-inmueble__grid">
-            <app-form-field label="Tipo de servicio" [requerido]="true" [error]="intentoInmueble() && !tipoServicio() ? 'Elige una opción' : ''">
-              <app-segmented-control [opciones]="opcionesTipoServicio" [valor]="tipoServicio()" ariaLabel="Tipo de servicio" (valorChange)="tipoServicio.set($event)" />
-            </app-form-field>
-            <app-form-field label="Estado del inmueble" [requerido]="true" [error]="intentoInmueble() && !estadoInmueble() ? 'Elige una opción' : ''">
-              <app-segmented-control [opciones]="opcionesEstadoInmueble" [valor]="estadoInmueble()" ariaLabel="Estado del inmueble" (valorChange)="estadoInmueble.set($event)" />
-            </app-form-field>
-            <app-form-field label="¿Sigue el mismo inquilino?" [requerido]="true" [error]="intentoInmueble() && !mismoInquilino() ? 'Elige una opción' : ''">
-              <app-segmented-control [opciones]="opcionesSiNo" [valor]="mismoInquilino()" ariaLabel="Mismo inquilino" (valorChange)="mismoInquilino.set($event)" />
-            </app-form-field>
-            <app-form-field label="¿Tiene deudor solidario?" [requerido]="true" [error]="intentoInmueble() && !deudorSolidario() ? 'Elige una opción' : ''">
-              <app-segmented-control [opciones]="opcionesSiNo" [valor]="deudorSolidario()" ariaLabel="Deudor solidario" (valorChange)="deudorSolidario.set($event)" />
-            </app-form-field>
-          </div>
-        </app-form-section-card>
-      </div>
-    }
     <app-sarlaft-renovacion
       [numeroPoliza]="numeroPoliza()"
       [textoContinuar]="enviando() ? 'Enviando, puede tardar unos segundos…' : 'Continuar y enviar'"
