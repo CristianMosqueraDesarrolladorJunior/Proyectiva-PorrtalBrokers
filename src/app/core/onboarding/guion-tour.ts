@@ -1,3 +1,4 @@
+import { enMantenimiento } from '../util/mantenimiento';
 import type { PasoTour, PerfilTour } from '../models/onboarding.model';
 
 /**
@@ -155,5 +156,11 @@ export const RECORRIDOS_POR_VISTA: Readonly<Record<PerfilTour, Readonly<Record<s
 
 /** Recorrido de la vista (ruta sin parámetros) para el perfil; vacío si la vista no tiene. */
 export function recorridoDeVista(perfil: PerfilTour, ruta: string): readonly PasoTour[] {
-  return RECORRIDOS_POR_VISTA[perfil][ruta.split('?')[0].split('#')[0]] ?? [];
+  const limpia = ruta.split('?')[0].split('#')[0];
+  // Módulo del broker en mejora (producción): la vista es el aviso, no hay nada que recorrer.
+  const [, raiz, modulo] = limpia.split('/');
+  if (raiz === 'app' && modulo && enMantenimiento(modulo)) {
+    return [];
+  }
+  return RECORRIDOS_POR_VISTA[perfil][limpia] ?? [];
 }

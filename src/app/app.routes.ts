@@ -1,8 +1,16 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth.guard';
 import { rolGuard } from './core/guards/rol.guard';
 import { moduloGuard } from './core/guards/modulo.guard';
+import { enMantenimiento } from './core/util/mantenimiento';
+
+/** Módulo del broker en mejora (solo producción): carga el aviso «Estamos trabajando…» en vez de la pantalla. */
+const enMejora = (modulo: string) =>
+  enMantenimiento(modulo)
+    ? import('./features/mantenimiento/mantenimiento.component').then((m) => m.MantenimientoComponent)
+    : null;
 
 /**
  * Tabla de rutas raíz del Portal de Autogestión de Brokers (Req 4, 29.4).
@@ -72,8 +80,13 @@ export const routes: Routes = [
             './features/dashboard/seguimiento/seguimiento.component'
           ).then((m) => m.SeguimientoComponent),
       },
-      // Agente IA está oculto en esta versión: su ruta no abre por URL (auditoría R1/Q3); el código se conserva.
-      { path: 'agente', redirectTo: 'seguimiento' },
+      // Agente IA: visible en local; en producción («agente» en mantenimiento) no abre ni por URL (auditoría R1/Q3).
+      {
+        path: 'agente',
+        title: 'Agente IA — Portal Brokers Proyectiva',
+        canActivate: [() => !enMantenimiento('agente') || inject(Router).createUrlTree(['/app/seguimiento'])],
+        loadComponent: () => import('./features/agente/agente.component').then((m) => m.AgenteComponent),
+      },
       {
         path: 'radicacion',
         title: 'Solicitar póliza — Portal Brokers Proyectiva',
@@ -131,13 +144,13 @@ export const routes: Routes = [
       {
         path: 'comisiones',
         title: 'Comisiones — Portal Brokers Proyectiva',
-        loadComponent: () =>
+        loadComponent: () => enMejora('comisiones') ??
           import('./features/comisiones/comisiones.component').then((m) => m.ComisionesComponent),
       },
       {
         path: 'renovaciones',
         title: 'Renovaciones — Portal Brokers Proyectiva',
-        loadComponent: () =>
+        loadComponent: () => enMejora('renovaciones') ??
           import(
             './features/renovacion/pages/renovaciones/renovaciones.component'
           ).then((m) => m.RenovacionesComponent),
@@ -145,7 +158,7 @@ export const routes: Routes = [
       {
         path: 'renovaciones/induccion',
         title: 'Inducción de póliza — Portal Brokers Proyectiva',
-        loadComponent: () =>
+        loadComponent: () => enMejora('renovaciones') ??
           import('./features/renovacion/pages/induccion/induccion.component').then(
             (m) => m.InduccionComponent,
           ),
@@ -153,7 +166,7 @@ export const routes: Routes = [
       {
         path: 'renovaciones/detalle',
         title: 'Renovar póliza — Portal Brokers Proyectiva',
-        loadComponent: () =>
+        loadComponent: () => enMejora('renovaciones') ??
           import(
             './features/renovacion/pages/gestion-renovacion/gestion-renovacion.component'
           ).then((m) => m.GestionRenovacionComponent),
@@ -161,7 +174,7 @@ export const routes: Routes = [
       {
         path: 'renovaciones/no-renovacion',
         title: 'No renovación — Portal Brokers Proyectiva',
-        loadComponent: () =>
+        loadComponent: () => enMejora('renovaciones') ??
           import(
             './features/renovacion/pages/no-renovacion/no-renovacion.component'
           ).then((m) => m.NoRenovacionComponent),
@@ -169,7 +182,7 @@ export const routes: Routes = [
       {
         path: 'renovaciones/caso-especial',
         title: 'Caso especial — Portal Brokers Proyectiva',
-        loadComponent: () =>
+        loadComponent: () => enMejora('renovaciones') ??
           import(
             './features/renovacion/pages/caso-especial/caso-especial.component'
           ).then((m) => m.CasoEspecialComponent),

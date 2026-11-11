@@ -27,6 +27,28 @@
 // La commission-card ocupa la columna izquierda (7/12) a toda su altura.
 .dash-comm {
   display: block;
+  position: relative;
+}
+
+// Comisiones en mejora (producción): la tarjeta en gris y sin clics, con el aviso encima.
+.dash-comm--en-mejora app-commission-breakdown-card {
+  filter: grayscale(1);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.dash-comm__aviso {
+  position: absolute;
+  inset: 50% var(--space-4) auto;
+  transform: translateY(-50%);
+  z-index: 1;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  background: var(--sb-surface);
+  box-shadow: var(--sb-shadow-2);
+  text-align: center;
+  font-weight: 600;
 }
 
 // KPIs en grid 2x2 dentro de la columna derecha (5/12) (Req 5.3).

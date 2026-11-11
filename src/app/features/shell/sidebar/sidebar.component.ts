@@ -11,6 +11,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { moduloBloqueado } from '../../../core/models/cuenta.model';
 import { CatalogoService } from '../../../core/services/catalogo.service';
+import { enMantenimiento } from '../../../core/util/mantenimiento';
 import { LayoutService } from '../../../core/services/layout.service';
 import { MiPerfilService } from '../../../core/services/mi-perfil.service';
 import { PerfilService } from '../../../core/services/perfil.service';
@@ -35,7 +36,7 @@ export interface AccesoSidebar {
  * (Cotización → Elaboración de contratos → Solicitar póliza) y luego Renovaciones, Comisiones, Calendario,
  * Documentos y Ayuda.
  *
- * "Agente IA" queda oculto del sidebar. Cada `ruta` corresponde al mapa de enrutamiento
+ * "Agente IA" solo se ve donde no está en mantenimiento (local). Cada `ruta` corresponde al mapa de enrutamiento
  * del diseño (`/app/<ruta>`).
  */
 export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
@@ -46,14 +47,16 @@ export const ACCESOS_SIDEBAR: readonly AccesoSidebar[] = [
   { ruta: 'radicacion', icono: 'post_add', etiqueta: 'Solicitar póliza' },
   { ruta: 'referidos', icono: 'person_add', etiqueta: 'Referir cliente' },
   { ruta: 'estado-referidos', icono: 'conversion_path', etiqueta: 'Estado referidos' },
-  // "Agente IA" se oculta del sidebar.
+  { ruta: 'agente', icono: 'smart_toy', etiqueta: 'Agente IA' },
   { ruta: 'renovaciones', icono: 'update', etiqueta: 'Renovaciones' },
   { ruta: 'comisiones', icono: 'payments', etiqueta: 'Comisiones' },
   // «Pólizas» se oculta del sidebar: las pólizas se ven en Seguimiento y Renovaciones.
   { ruta: 'calendario', icono: 'calendar_today', etiqueta: 'Calendario' },
   { ruta: 'documentos', icono: 'folder_open', etiqueta: 'Documentos' },
   { ruta: 'ayuda', icono: 'help_outline', etiqueta: 'Ayuda' },
-] as const;
+]
+  // En producción el Agente IA se oculta (módulo «agente» en mantenimiento).
+  .filter((a) => a.ruta !== 'agente' || !enMantenimiento('agente'));
 
 /**
  * SidebarComponent — barra lateral de navegación del Shell_Aplicacion (Req 4).

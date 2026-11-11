@@ -99,8 +99,11 @@
   <div class="dash-grid" [class.dash-grid--sin-comision]="!veComisiones()">
     <!-- Tarjeta de comisión estimada con barra apilada por ramo (Req 5.2); el prospecto no la ve. -->
     @if (veComisiones()) {
+    <div class="dash-comm" [class.dash-comm--en-mejora]="comisionEnMejora" [attr.aria-disabled]="comisionEnMejora || null">
+    @if (comisionEnMejora) {
+      <p class="dash-comm__aviso" role="note">Estamos trabajando para mejorar nuestro servicio</p>
+    }
     <app-commission-breakdown-card
-      class="dash-comm"
       [valorEstimado]="comisiones()?.valorEstimado ?? 0"
       [periodo]="comisiones()?.periodo ?? ''"
       [polizasRadicadas]="comisiones()?.polizasRadicadas ?? 0"
@@ -108,6 +111,7 @@
         [polizasPendientes]="comisiones()?.polizasPendientes ?? 0"
         [plazoMeses]="plazoCobroMeses"
     />
+    </div>
     }
 
     <!-- KPIs en grid 2x2 con íconos + delta de tendencia (Req 5.3, 5.4) -->

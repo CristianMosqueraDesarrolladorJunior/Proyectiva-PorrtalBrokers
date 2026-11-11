@@ -43,6 +43,7 @@ import { estadoABadge } from '../../../shared/pipes/estado-badge';
 import { formatearCop } from '../../../shared/util/moneda';
 import { plural } from '../../../core/util/plural';
 import { ACCESOS_SIDEBAR } from '../../shell/sidebar/sidebar.component';
+import { enMantenimiento } from '../../../core/util/mantenimiento';
 /** Tamaño de página del Seguimiento: 10 solicitudes por página (Req 6.5). */
 const TAMANO_PAGINA = 10;
 
@@ -168,10 +169,10 @@ export class SeguimientoComponent {
       producto: s.producto,
       estadoLabel: this.catalogo.etiquetaSeguimiento(s.estado),
       estadoLabelVariante: estadoABadge(s.estado).replace('badge-', ''),
-      estadoPago: s.estadoPago,
+      estadoPago: this.comisionEnMejora ? 'En mejora' : s.estadoPago,
       fecha: fechaCorta(s.fecha),
       fechaOrden: s.fecha,
-      comisionLabel: s.comision > 0 ? this.formatearCop(s.comision) : '—',
+      comisionLabel: this.comisionEnMejora ? 'En mejora' : s.comision > 0 ? this.formatearCop(s.comision) : '—',
       gestionar: '',
       // "Gestionar" solo cuando el broker debe corregir; el resto solo se consulta.
       gestionarTexto: s.estado === 'observada' ? '' : 'Ver detalle',
@@ -260,6 +261,9 @@ export class SeguimientoComponent {
     this.referenciaSeleccionada.set(null);
   }
 
+  /** Comisiones en mejora (solo producción): la tarjeta y las columnas de comisión se ven en gris. */
+  protected readonly comisionEnMejora = enMantenimiento('comisiones');
+
   /** El prospecto no ve comisiones (módulo restringido): sin tarjeta de comisión en el tablero. */
   protected readonly veComisiones = computed(() => {
     const estado = this.session.perfil()?.estadoCuenta;
@@ -269,7 +273,7 @@ export class SeguimientoComponent {
   /** Obtiene comisiones y KPIs del backend (Req 5.2, 5.3, 5.6). */
   private cargarDashboard(): void {
     // Las comisiones son un módulo restringido para el prospecto (catálogo `modulo_portal`): no se piden.
-    if (this.veComisiones()) {
+    if (this.veComisiones() && !this.comisionEnMejora) {
       this.dashboardService.obtenerComisiones().subscribe({
         next: (c) => this.comisiones.set(c),
         error: () => this.comisiones.set(null),
