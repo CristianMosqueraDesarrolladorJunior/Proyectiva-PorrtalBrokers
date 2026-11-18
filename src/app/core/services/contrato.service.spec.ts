@@ -16,6 +16,14 @@ describe('ContratoService', () => {
 
   afterEach(() => http.verify());
 
+  it('Given el formulario completo, When pide la vista previa, Then llama a la ruta que publica el backend', () => {
+    servicio.vistaPrevia({} as Parameters<ContratoService['vistaPrevia']>[0]).subscribe();
+    const req = http.expectOne('/api/v1/contratos/vista-previa');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['%PDF'], { type: 'application/pdf' }));
+  });
+
   it('Given el botón de PDF, When se descarga, Then pide solo el PDF como archivo individual', () => {
     servicio.descargarDocumento('CTR-1', 'pdf').subscribe();
     const req = http.expectOne((r) => r.url === '/api/v1/contratos/CTR-1/documento');

@@ -81,7 +81,8 @@ export class ContratoService {
 
   /** PDF del contrato con los datos del formulario, sin guardarlo: el broker lo revisa antes de aceptarlo. */
   vistaPrevia(request: ContratoArrendamientoRequest): Observable<Blob> {
-    return this.http.post(`${this.baseUrl}/vista-previa`, request, {
+    // El backend la publica en /contratos/vista-previa (no cuelga de /arrendamiento).
+    return this.http.post('/api/v1/contratos/vista-previa', request, {
       withCredentials: true,
       responseType: 'blob',
       // La conversión a PDF puede tardar hasta ~90 s en el backend.
