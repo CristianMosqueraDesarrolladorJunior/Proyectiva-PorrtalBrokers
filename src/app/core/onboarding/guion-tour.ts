@@ -44,7 +44,7 @@ const CONTRATO: readonly PasoTour[] = [
 ];
 
 const RADICACION: readonly PasoTour[] = [
-  { icono: 'description', titulo: '1. El contrato', texto: 'Elige el contrato que generaste o carga el firmado: precargamos sus datos.', objetivo: ['app-form-section-card[titulo="Contrato de arrendamiento"]'] },
+  { icono: 'description', titulo: '1. El contrato', texto: 'Carga el contrato firmado: tomamos sus datos y solo te pedimos lo que falte.', objetivo: ['app-form-section-card[titulo="Contrato de arrendamiento firmado"]'] },
   { icono: 'person', titulo: '2. El propietario', texto: 'Confirma los datos del titular del inmueble.', objetivo: ['app-form-section-card[titulo="Datos del propietario"]'] },
   { icono: 'task_alt', titulo: '3. El estudio', texto: 'Consulta el estudio aprobado del inquilino. Si aún no lo tiene, te llevamos a El Libertador para solicitarlo.', objetivo: ['app-form-section-card[titulo="Estudio de arrendamiento"]'] },
   { icono: 'draw', titulo: '4. Quién firma', texto: 'El propietario o un apoderado, persona natural o jurídica.', objetivo: ['app-form-section-card[titulo="¿Quién firma el contrato?"]'] },

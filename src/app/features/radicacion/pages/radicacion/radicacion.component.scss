@@ -316,3 +316,31 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+// Modal de datos del contrato firmado: los opcionales y el resumen de lo que ya se tomó del contrato.
+.rad-ctr-opcionales {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-muted);
+}
+
+.rad-ctr-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--sb-surface-low);
+
+  dt {
+    font-size: var(--text-caption);
+    color: var(--color-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: var(--font-weight-semibold);
+  }
+}

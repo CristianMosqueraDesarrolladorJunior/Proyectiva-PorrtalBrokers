@@ -142,6 +142,8 @@ export class LectorContratoComponent {
 
   /** Archivo válido elegido, se lea o no (la inducción lo adjunta aunque la lectura falle). */
   @Output() readonly archivo = new EventEmitter<File>();
+  /** No se pudo leer el archivo: quien lo usa sigue y pide los datos a mano. */
+  @Output() readonly noLeido = new EventEmitter<void>();
 
   protected readonly reglas: readonly ReglaDocumentoUploader[] = [
     {
@@ -206,6 +208,7 @@ export class LectorContratoComponent {
         error: (err: unknown) => {
           this.leyendo.set(false);
           this.errorLectura.set(mensajeErrorIntegracion(err));
+          this.noLeido.emit();
           this.feedback.toast({ variante: 'error', mensaje: 'No pudimos leer tu contrato. Reintenta o escribe los datos a mano.' });
         },
       });

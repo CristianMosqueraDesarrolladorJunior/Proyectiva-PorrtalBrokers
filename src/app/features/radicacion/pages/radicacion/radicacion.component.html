@@ -11,7 +11,9 @@
     subtitulo="Completa los datos y sube los documentos requeridos para procesar y emitir la póliza sin fricciones."
   >
     <div acciones>
-      <app-boton variante="ghost" icono="restart_alt" (clicked)="nuevaRadicacion()">Empezar desde cero</app-boton>
+      @if (hayAvance() && !radicado()) {
+        <app-boton variante="ghost" icono="restart_alt" (clicked)="nuevaRadicacion()">Empezar desde cero</app-boton>
+      }
     </div>
   </app-page-header>
 
@@ -59,40 +61,18 @@
             Estos datos ya van en el contrato.
           </app-info-box>
         }
-        <!-- Sección 1: sin contrato no se radica; quien ya lo tiene firmado lo carga aquí y sigue. -->
+        <!-- Sección 1: el contrato firmado. Sus datos se leen; lo que falte se pide en un modal. Sin redirecciones. -->
         <app-form-section-card
           [numero]="1"
           icono="description"
-          titulo="Contrato de arrendamiento"
-          subtitulo="Empieza aquí: elige el contrato que generaste en Elaboración de contratos o carga el contrato firmado."
+          titulo="Contrato de arrendamiento firmado"
+          subtitulo="Carga el contrato firmado en PDF. Tomamos sus datos y solo te pedimos lo que falte."
         >
-          @if (contratoReferencia(); as referencia) {
-            <app-alert-banner variante="success" titulo="Contrato listo">
-              El contrato <strong>{{ referencia }}</strong> quedó guardado y se enlazará a esta radicación.
-            </app-alert-banner>
-          } @else {
-            @if (contratosPendientes().length) {
-              <app-form-field label="¿Ya generaste el contrato en Elaboración de contratos? Elígelo" controlId="rad-contrato-generado"
-                ayuda="Usamos sus datos (propietario, inquilino, inmueble y canon) y no tienes que volver a escribirlos.">
-                <select id="rad-contrato-generado" (change)="usarContrato($any($event.target).value)">
-                  <option value="">Selecciona un contrato…</option>
-                  @for (c of contratosPendientes(); track c.referencia) {
-                    <option [value]="c.referencia">{{ c.referencia }} · {{ c.propietario }} · {{ c.inmueble }}</option>
-                  }
-                </select>
-              </app-form-field>
-            }
-            <app-info-box icono="info">
-              Si lo hiciste por fuera del portal, carga el contrato firmado: leemos el propietario, el inquilino, el inmueble y el canon
-              y precargamos esta radicación. No enviamos nada hasta que confirmes.
-            </app-info-box>
-          }
-
-          <!-- El contrato firmado se carga siempre primero: no depende de haber usado el Contratador. -->
           <app-lector-contrato
             titulo="Carga aquí el contrato firmado (PDF)"
             (archivo)="onContratoFirmado($event)"
             (leido)="onContratoLeido($event)"
+            (noLeido)="onContratoNoLeido()"
           />
           <app-form-field label="¿Cómo se firmó el contrato?" controlId="rad-firma-contrato">
             <select
@@ -106,20 +86,25 @@
               }
             </select>
           </app-form-field>
-          @if (registrandoContratoLeido()) {
-            <app-info-box icono="hourglass_top">Registrando el contrato con los datos leídos…</app-info-box>
+          @if (contratoFirmadoCargado() && !leyendoContrato()) {
+            @if (contratoConfirmado()) {
+              <app-alert-banner variante="success" titulo="Datos del contrato confirmados">
+                {{ datosContrato().propietarioNombres }} {{ datosContrato().propietarioApellidos }} arrienda a
+                {{ datosContrato().inquilinoNombres }} {{ datosContrato().inquilinoApellidos }} el inmueble de
+                {{ datosContrato().direccion }}{{ datosContrato().direccion.includes(datosContrato().ciudad) ? '' : ', ' + datosContrato().ciudad }}, por {{ formatearCop(+datosContrato().canon) }} al mes.
+              </app-alert-banner>
+              <app-boton variante="ghost" icono="edit" (clicked)="abrirDatosContrato(true)">Corregir datos del contrato</app-boton>
+            } @else {
+              <app-alert-banner variante="warning" titulo="Confirma los datos del contrato">
+                {{ faltantesContrato().length
+                  ? 'Al contrato le faltan ' + faltantesContrato().length + ' dato(s). Complétalos para poder enviar la solicitud.'
+                  : 'Revisa los datos que tomamos del contrato y confírmalos.' }}
+              </app-alert-banner>
+              <app-boton variante="accent" icono="fact_check" (clicked)="abrirDatosContrato()">
+                {{ faltantesContrato().length ? 'Completar datos del contrato' : 'Revisar y confirmar' }}
+              </app-boton>
+            }
           }
-          @if (lecturaPorCompletar()) {
-            <app-boton variante="outline" icono="edit_document" (clicked)="completarContratoLeido()">
-              Completar los datos que faltan en Elaboración de contratos
-            </app-boton>
-          }
-
-          <div class="rad-contrato-accion">
-            <app-boton variante="outline" icono="edit_document" (clicked)="crearContrato()">
-              {{ contratoReferencia() ? 'Generar otro contrato' : 'No tengo contrato: generarlo con la plantilla' }}
-            </app-boton>
-          </div>
         </app-form-section-card>
 
         <app-form-section-card
@@ -235,7 +220,7 @@
             @switch (estudio.estado) {
               @case ('APROBADO') {
                 <app-alert-banner variante="success" titulo="Estudio aprobado">
-                  El estudio del inquilino está aprobado. Usaremos estos datos para autollenar el contrato.
+                  El estudio del inquilino está aprobado. Sus datos completan lo que no traiga el contrato firmado.
                 </app-alert-banner>
                 @if (novedadesEstudio().length) {
                   <app-alert-banner variante="warning" titulo="Revisa antes de enviar" icono="difference">
@@ -246,11 +231,6 @@
                     </ul>
                     Puedes continuar: se lo informamos al analista como observación para que lo revise.
                   </app-alert-banner>
-                }
-                @if (canones()) {
-                  <app-form-field label="¿Con qué canon radicas?" controlId="rad-canon" ayuda="El del contrato y el cotizado no coinciden; elige el que debe quedar en la póliza.">
-                    <app-radio-group [opciones]="opcionesCanon()" [valor]="canonDe()" (valorChange)="onCanonDe($event)" ariaLabel="Canon con el que se radica" />
-                  </app-form-field>
                 }
                 <div class="rad-estudio-datos">
                   @if (estudio.inquilino) {
@@ -665,3 +645,170 @@
     </app-modal-dialog>
   }
 </section>
+
+<!-- Datos del contrato firmado: solo se pide lo que no se pudo tomar del contrato, la solicitud o el estudio. -->
+<app-modal-dialog
+  [abierto]="modalContratoAbierto()"
+  titulo="Datos del contrato firmado"
+  [subtitulo]="editarTodoContrato() ? 'Corrige lo que no coincida con el contrato firmado.'
+    : camposModalContrato().length ? 'No pudimos tomar estos datos del contrato. Escríbelos tal como aparecen en él.'
+    : 'Tomamos todos los datos del contrato. Revísalos y confírmalos.'"
+  eyebrow="Solicitar póliza"
+  tamano="lg"
+  (cerrar)="modalContratoAbierto.set(false)"
+>
+  <div class="rad-form-grid">
+          @if (campoEnModal('propietarioNombres')) {
+            <app-form-field label="{{ tipoDocumentoPropietario() === 'NIT' ? 'Razón social del propietario' : 'Nombres del propietario' }}" [requerido]="true" controlId="rad-ctr-propietarioNombres"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('propietarioNombres') ? 'Escribe el nombre como aparece en el contrato.' : ''">
+              <input id="rad-ctr-propietarioNombres" type="text" [ngModel]="datosContrato().propietarioNombres"
+                (ngModelChange)="cambiarDatoContrato('propietarioNombres', $event)" />
+            </app-form-field>
+          }
+          @if (tipoDocumentoPropietario() !== 'NIT' && campoEnModal('propietarioApellidos')) {
+            <app-form-field label="Apellidos del propietario" [requerido]="true" controlId="rad-ctr-propietarioApellidos"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('propietarioApellidos') ? 'Escribe los apellidos como aparecen en el contrato.' : ''">
+              <input id="rad-ctr-propietarioApellidos" type="text" [ngModel]="datosContrato().propietarioApellidos"
+                (ngModelChange)="cambiarDatoContrato('propietarioApellidos', $event)" />
+            </app-form-field>
+          }
+          @if (campoEnModal('inquilinoNombres')) {
+            <app-form-field label="{{ tipoDocumentoInquilino() === 'NIT' ? 'Razón social del inquilino' : 'Nombres del inquilino' }}" [requerido]="true" controlId="rad-ctr-inquilinoNombres"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('inquilinoNombres') ? 'Escribe el nombre como aparece en el contrato.' : ''">
+              <input id="rad-ctr-inquilinoNombres" type="text" [ngModel]="datosContrato().inquilinoNombres"
+                (ngModelChange)="cambiarDatoContrato('inquilinoNombres', $event)" />
+            </app-form-field>
+          }
+          @if (tipoDocumentoInquilino() !== 'NIT' && campoEnModal('inquilinoApellidos')) {
+            <app-form-field label="Apellidos del inquilino" [requerido]="true" controlId="rad-ctr-inquilinoApellidos"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('inquilinoApellidos') ? 'Escribe los apellidos como aparecen en el contrato.' : ''">
+              <input id="rad-ctr-inquilinoApellidos" type="text" [ngModel]="datosContrato().inquilinoApellidos"
+                (ngModelChange)="cambiarDatoContrato('inquilinoApellidos', $event)" />
+            </app-form-field>
+          }
+          @if (campoEnModal('direccion')) {
+            <app-form-field label="Dirección del inmueble" [requerido]="true" controlId="rad-ctr-direccion"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('direccion') ? 'Escribe la dirección del inmueble.' : ''">
+              <input id="rad-ctr-direccion" type="text" [ngModel]="datosContrato().direccion"
+                (ngModelChange)="cambiarDatoContrato('direccion', $event)" />
+            </app-form-field>
+          }
+          @if (campoEnModal('ciudad')) {
+            <app-form-field label="Ciudad del inmueble" [requerido]="true" controlId="rad-ctr-ciudad"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('ciudad') ? 'Elige la ciudad del inmueble.' : ''">
+              <select id="rad-ctr-ciudad" [ngModel]="datosContrato().ciudad" (ngModelChange)="cambiarDatoContrato('ciudad', $event)">
+                <option value="">Selecciona…</option>
+                @for (c of ciudadesCatalogo; track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </app-form-field>
+          }
+          @if (campoEnModal('uso')) {
+            <app-form-field label="Uso del inmueble" [requerido]="true" controlId="rad-ctr-uso"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('uso') ? 'Elige el uso del inmueble.' : ''">
+              <select id="rad-ctr-uso" [ngModel]="datosContrato().uso" (ngModelChange)="cambiarDatoContrato('uso', $event)">
+                <option value="">Selecciona…</option>
+                <option value="VIVIENDA">Vivienda</option>
+                <option value="COMERCIO">Comercio</option>
+              </select>
+            </app-form-field>
+          }
+          @if (campoEnModal('canon')) {
+            <app-form-field label="Canon mensual" [requerido]="true" controlId="rad-ctr-canon"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('canon') ? 'Escribe el canon mensual (sin puntos).' : ''">
+              <input id="rad-ctr-canon" type="text" inputmode="numeric" appSoloDigitos [ngModel]="datosContrato().canon"
+                (ngModelChange)="cambiarDatoContrato('canon', $event)" />
+            </app-form-field>
+          }
+          @if (campoEnModal('administracion')) {
+            <app-form-field label="Cuota de administración" [requerido]="false" controlId="rad-ctr-administracion"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('administracion') ? 'Escribe un valor válido o déjalo vacío.' : ''"
+              ayuda="Déjala vacía si el contrato no la tiene.">
+              <input id="rad-ctr-administracion" type="text" inputmode="numeric" appSoloDigitos [ngModel]="datosContrato().administracion"
+                (ngModelChange)="cambiarDatoContrato('administracion', $event)" />
+            </app-form-field>
+          }
+          @if (campoEnModal('fechaInicio')) {
+            <app-form-field label="Fecha de inicio del contrato" [requerido]="true" controlId="rad-ctr-fechaInicio"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('fechaInicio') ? 'La fecha debe estar entre hace 90 días y dentro de un año.' : ''">
+              <input id="rad-ctr-fechaInicio" type="date" [ngModel]="datosContrato().fechaInicio"
+                (ngModelChange)="cambiarDatoContrato('fechaInicio', $event)" />
+            </app-form-field>
+          }
+          @if (campoEnModal('duracionMeses')) {
+            <app-form-field label="Duración del contrato (meses)" [requerido]="true" controlId="rad-ctr-duracionMeses"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('duracionMeses') ? 'Escribe la duración en meses (de 1 a 60).' : ''">
+              <input id="rad-ctr-duracionMeses" type="text" inputmode="numeric" appSoloDigitos [ngModel]="datosContrato().duracionMeses"
+                (ngModelChange)="cambiarDatoContrato('duracionMeses', $event)" />
+            </app-form-field>
+          }
+          @if (campoEnModal('diaPago')) {
+            <app-form-field label="Día de pago del canon" [requerido]="true" controlId="rad-ctr-diaPago"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('diaPago') ? 'Escribe un día del mes (de 1 a 31).' : ''">
+              <input id="rad-ctr-diaPago" type="text" inputmode="numeric" appSoloDigitos [ngModel]="datosContrato().diaPago"
+                (ngModelChange)="cambiarDatoContrato('diaPago', $event)" />
+            </app-form-field>
+          }
+          @if (campoEnModal('formaPago')) {
+            <app-form-field label="¿Cómo se paga el canon?" [requerido]="true" controlId="rad-ctr-formaPago"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('formaPago') ? 'Elige cómo se paga el canon.' : ''">
+              <select id="rad-ctr-formaPago" [ngModel]="datosContrato().formaPago" (ngModelChange)="cambiarDatoContrato('formaPago', $event)">
+                <option value="">Selecciona…</option>
+                <option value="transferencia">Transferencia a una cuenta</option>
+                <option value="efectivo">Efectivo</option>
+              </select>
+            </app-form-field>
+          }
+          @if (datosContrato().formaPago === 'transferencia') {
+          @if (campoEnModal('numeroCuenta')) {
+              <app-form-field label="Número de cuenta" [requerido]="true" controlId="rad-ctr-numeroCuenta"
+                [error]="intentoConfirmarContrato() && faltantesContrato().includes('numeroCuenta') ? 'Escribe el número de cuenta (solo dígitos).' : ''">
+                <input id="rad-ctr-numeroCuenta" type="text" inputmode="numeric" appSoloDigitos [ngModel]="datosContrato().numeroCuenta"
+                  (ngModelChange)="cambiarDatoContrato('numeroCuenta', $event)" />
+              </app-form-field>
+            }
+          }
+  </div>
+  @if (opcionalesModalContrato().length) {
+    <h4 class="rad-ctr-opcionales">Si aplican al inmueble</h4>
+    <div class="rad-form-grid">
+          @if (opcionalesModalContrato().includes('matricula')) {
+            <app-form-field label="Matrícula inmobiliaria" [requerido]="false" controlId="rad-ctr-matricula"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('matricula') ? '' : ''">
+              <input id="rad-ctr-matricula" type="text" [ngModel]="datosContrato().matricula"
+                (ngModelChange)="cambiarDatoContrato('matricula', $event)" />
+            </app-form-field>
+          }
+          @if (opcionalesModalContrato().includes('garaje')) {
+            <app-form-field label="Número de garaje" [requerido]="false" controlId="rad-ctr-garaje"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('garaje') ? '' : ''">
+              <input id="rad-ctr-garaje" type="text" [ngModel]="datosContrato().garaje"
+                (ngModelChange)="cambiarDatoContrato('garaje', $event)" />
+            </app-form-field>
+          }
+          @if (opcionalesModalContrato().includes('deposito')) {
+            <app-form-field label="Número de depósito" [requerido]="false" controlId="rad-ctr-deposito"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('deposito') ? '' : ''">
+              <input id="rad-ctr-deposito" type="text" [ngModel]="datosContrato().deposito"
+                (ngModelChange)="cambiarDatoContrato('deposito', $event)" />
+            </app-form-field>
+          }
+    </div>
+  }
+  @if (!editarTodoContrato()) {
+    <dl class="rad-ctr-resumen">
+      @for (c of ['propietarioNombres', 'propietarioApellidos', 'inquilinoNombres', 'inquilinoApellidos', 'direccion', 'ciudad', 'canon', 'fechaInicio', 'duracionMeses', 'diaPago']; track c) {
+        @if (!camposModalContrato().includes($any(c)) && $any(datosContrato())[c]) {
+          <div><dt>{{ $any(etiquetasDatosContrato)[c] }}</dt><dd>{{ c === 'canon' ? formatearCop(+datosContrato().canon) : $any(datosContrato())[c] }}</dd></div>
+        }
+      }
+    </dl>
+  }
+  <div acciones>
+    @if (!editarTodoContrato()) {
+      <app-boton variante="ghost" icono="edit" (clicked)="editarTodoContrato.set(true)">Corregir otros datos</app-boton>
+    }
+    <app-boton variante="accent" icono="check" (clicked)="confirmarDatosContrato()">Confirmar datos del contrato</app-boton>
+  </div>
+</app-modal-dialog>

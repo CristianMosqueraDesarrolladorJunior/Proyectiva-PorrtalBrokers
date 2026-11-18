@@ -2,7 +2,7 @@ import { consultaSarlaftHabilitada } from '../../../../core/util/sarlaft';
 import { CtlValidacionComponent } from '../../../contrato/components/ctl-validacion/ctl-validacion.component';
 import { huellaArchivo, tipoConMismaHuella } from '../../../../shared/util/huella-archivo';
 import { abrirFormularioSarlaft } from '../../../../core/util/sarlaft-enlace';
-import { concat, of, switchMap, toArray, type Observable } from 'rxjs';
+import { concat, map, of, switchMap, toArray, type Observable } from 'rxjs';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -29,11 +29,22 @@ import { departamentoBloqueado } from '../../../cotizador/cobertura-ciudades';
 import { mensajeErrorIntegracion } from '../../../../core/util/errores-integracion';
 import { reglaDesdeCatalogo, validarDocumento } from '../../../../shared/validation/documento-validacion';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
-import { ContratoService, type ContratoPendiente } from '../../../../core/services/contrato.service';
-import type { LecturaContratoResponse, PersonaEstudio, ValidacionCtl } from '../../../../core/models/contrato.model';
+import { ContratoService } from '../../../../core/services/contrato.service';
+import type { LecturaContratoResponse, PersonaEstudio, PrellenadoContrato, ValidacionCtl } from '../../../../core/models/contrato.model';
 import { novedadTitularesCtl } from '../../../contrato/pages/contrato/contrato-presentacion';
 import { LectorContratoComponent } from '../../../contrato/components/lector-contrato/lector-contrato.component';
-import { contratoDesdeLectura } from './contrato-desde-lectura';
+import {
+  completarDatos,
+  DATOS_CONTRATO_OPCIONALES,
+  DATOS_CONTRATO_VACIOS,
+  type DatosContratoFirmado,
+  datosDeCotizacion,
+  datosDeEstudio,
+  datosDeLectura,
+  datosFaltantes,
+  ETIQUETAS_DATOS_CONTRATO,
+  solicitudDeContrato,
+} from './datos-contrato-firmado';
 import {
   AlertBannerComponent,
   BotonComponent,
@@ -61,7 +72,6 @@ import type { Tab } from '../../../../shared/components/tabs/tabs.component';
 import {
   claveConsultaSarlaft,
   construirPayloadRadicacion,
-  hayDatosParaPrecargar,
   documentosObligatoriosFaltantes,
   esNumeroDocumentoPropietarioValido,
   etiquetasDocumentos,
@@ -139,10 +149,6 @@ export class RadicacionComponent {
 
   /** Cotización elegida en "Radicar esta cotización" (solo lectura en esta pantalla). */
   protected readonly cotizacion = this.borrador.cotizacion;
-  /** Contrato generado: toda radicación lo exige. */
-  protected readonly contratoReferencia = computed(() => this.borrador.contrato()?.referencia ?? null);
-  /** El contrato declara el inmueble en leasing: el permiso de subarriendo pasa a ser obligatorio. */
-  protected readonly contratoConLeasing = computed(() => this.borrador.contrato()?.leasing === true);
   /** Declaración de autorización de tratamiento de datos (Habeas Data), exigida por el backend. */
   protected readonly autorizacionDatos = signal(false);
   /** Observación del broker para el área (columna "Observaciones Usuario Radicación" del Consolidado). */
@@ -191,16 +197,6 @@ export class RadicacionComponent {
   protected readonly novedadesEstudio = signal<readonly string[]>([]);
   /** Personas del estudio aprobado (inquilino y codeudores) con su contacto, tal como las entrega el estudio. */
   protected readonly personasEstudio = signal<{ inquilino: PersonaEstudio | null; codeudores: readonly PersonaEstudio[] } | null>(null);
-  /** Cánones del contrato y de la cotización: si difieren, el broker elige cuál radica. */
-  protected readonly canones = signal<{ contrato: number; cotizado: number } | null>(null);
-  protected readonly canonDe = signal<'contrato' | 'cotizacion'>('contrato');
-  protected readonly opcionesCanon = computed(() => {
-    const c = this.canones();
-    return c ? [
-      { valor: 'contrato', etiqueta: `Canon del contrato · ${formatearCop(c.contrato)}` },
-      { valor: 'cotizacion', etiqueta: `Canon cotizado · ${formatearCop(c.cotizado)}` },
-    ] : [];
-  });
   /** Error técnico de la consulta de estudio. */
   protected readonly errorEstudio = signal<string | null>(null);
 
@@ -377,7 +373,7 @@ export class RadicacionComponent {
       tipoPersona: this.tipoPersona(),
       firmaApoderado: this.firmaApoderado(),
       sarlaftRequiereFormulario: this.formularioSarlaftObligatorio(),
-      requierePermisoSubarriendo: this.contratoConLeasing(),
+      requierePermisoSubarriendo: false,
       documentos: this.documentosCatalogo,
     }),
   );
@@ -456,7 +452,7 @@ export class RadicacionComponent {
         tipoPersona: this.tipoPersona(),
         firmaApoderado: this.firmaApoderado(),
         sarlaftRequiereFormulario: this.formularioSarlaftObligatorio(),
-        requierePermisoSubarriendo: this.contratoConLeasing(),
+        requierePermisoSubarriendo: false,
         documentos: this.documentosCatalogo,
       },
       this.cargadosValidos(),
@@ -475,7 +471,7 @@ export class RadicacionComponent {
    */
   protected readonly envioHabilitado = computed(() =>
     this.autorizacionDatos() &&
-    this.contratoReferencia() !== null &&
+    this.contratoListo() &&
     this.estudioAprobado() &&
     this.documentosHabilitados() &&
     puedeEnviarRadicacion(
@@ -483,7 +479,7 @@ export class RadicacionComponent {
         tipoPersona: this.tipoPersona(),
         firmaApoderado: this.firmaApoderado(),
         sarlaftRequiereFormulario: this.formularioSarlaftObligatorio(),
-        requierePermisoSubarriendo: this.contratoConLeasing(),
+        requierePermisoSubarriendo: false,
         documentos: this.documentosCatalogo,
       },
       this.cargadosValidos(),
@@ -496,7 +492,7 @@ export class RadicacionComponent {
 
   protected readonly pasoActivo = computed(() =>
     pasoActivoRadicacion(
-      this.contratoReferencia() !== null,
+      this.contratoListo(),
       this.datosSarlaftCompletos(),
       this.estadoSarlaft(),
       this.faltantes().length,
@@ -511,6 +507,13 @@ export class RadicacionComponent {
 
   /** Checklist lateral: refleja en vivo qué falta para poder enviar. */
   protected readonly filasProgreso = computed<FilaResumen[]>(() => [
+    {
+      label: 'Contrato firmado',
+      valor: !this.contratoFirmadoCargado() ? 'Pendiente'
+        : this.leyendoContrato() ? 'Leyendo…'
+        : this.contratoConfirmado() ? 'Confirmado'
+        : this.faltantesContrato().length ? 'Faltan datos' : 'Por confirmar',
+    },
     {
       label: 'Datos del propietario',
       valor: this.numeroDocumentoPropietario().trim().length > 0 ? 'Ingresados' : 'Pendiente',
@@ -548,25 +551,13 @@ export class RadicacionComponent {
 
   protected readonly confirmarCancelar = signal(false);
 
-  /** Contratos generados en Contratación que aún no se radican: se eligen aquí en vez de volver a empezar. */
-  protected readonly contratosPendientes = signal<readonly ContratoPendiente[]>([]);
-
-  protected usarContrato(referencia: string): void {
-    const c = this.contratosPendientes().find((x) => x.referencia === referencia);
-    if (!c) return;
-    this.borrador.contrato.set({
-      referencia: c.referencia,
-      leasing: c.leasing,
-      propietario: { tipoDocumento: c.tipoDocumentoPropietario, numeroDocumento: c.documentoPropietario },
-      inquilino: { tipoDocumento: c.tipoDocumentoInquilino, numeroDocumento: c.documentoInquilino },
-    });
-    this.precargarDesdeContrato();
-  }
-
   constructor() {
     this.restaurarBorrador(this.borrador.formulario() as Record<string, never> | null);
-    this.preguntarPrecargaContrato();
-    this.contratoService.pendientes().subscribe({ next: (c) => this.contratosPendientes.set(c), error: () => this.contratosPendientes.set([]) });
+    // Con una cotización de origen, sus valores completan lo que el contrato firmado no traiga.
+    const cotizacion = this.cotizacion();
+    if (cotizacion) {
+      this.sumarDatosContrato(datosDeCotizacion(cotizacion, this.ciudadesCatalogo));
+    }
     // Contrato firmado cargado en Contratación: se adjunta aquí como documento de la radicación.
     const firmado = this.borrador.archivoContratoFirmado();
     if (firmado) {
@@ -599,6 +590,7 @@ export class RadicacionComponent {
       habiaDocumentos: Object.keys(this.archivosCargados()).length > 0 || this.readjuntarDocumentos(),
       radicadoPendiente: this.radicadoPendiente(),
       autorizacionDatos: this.autorizacionDatos(),
+      datosContrato: this.datosContrato(),
     };
   }
 
@@ -630,56 +622,10 @@ export class RadicacionComponent {
     this.readjuntarDocumentos.set(Boolean(f['habiaDocumentos']) || Object.keys(f['archivosCargados'] ?? {}).length > 0);
     this.radicadoPendiente.set(f['radicadoPendiente'] ?? null);
     this.autorizacionDatos.set(f['autorizacionDatos'] ?? false);
-  }
-
-  /**
-   * El contrato que viene de Elaboración de contratos solo se precarga si el broker lo elige; si no, la solicitud
-   * empieza desde cero (sin ese contrato ni su cotización). Sin nada que precargar, no se pregunta.
-   */
-  private preguntarPrecargaContrato(): void {
-    const contrato = this.borrador.contrato();
-    const actual = {
-      propietario: this.numeroDocumentoPropietario(),
-      inquilino: this.documentoInquilino(),
-      estudio: this.numeroEstudioArrendamiento(),
-    };
-    if (!contrato || !hayDatosParaPrecargar(contrato, actual)) {
-      return;
-    }
-    this.feedback.info({
-      titulo: 'Tienes un contrato elaborado',
-      mensaje: `¿Quieres traer los datos del contrato ${contrato.referencia} a esta solicitud o empezar desde cero?`,
-      acciones: { confirmar: 'Traer datos del contrato', cancelar: 'Empezar desde cero' },
-      alResolver: (resultado) => {
-        if (resultado === 'confirmar') {
-          this.precargarDesdeContrato();
-        } else {
-          this.borrador.contrato.set(null);
-          this.borrador.cotizacion.set(null);
-        }
-      },
-    });
-  }
-
-  /** Con el contrato del flujo (generado en Contratación): propietario, inquilino y estudio, solo si están vacíos. */
-  private precargarDesdeContrato(): void {
-    const contrato = this.borrador.contrato();
-    if (!contrato) {
-      return;
-    }
-    const tipo = (t: string | undefined): TipoDocumentoIdentidad | null =>
-      t === 'CC' || t === 'CE' || t === 'NIT' || t === 'PA' ? t : null;
-    if (contrato.propietario?.numeroDocumento && !this.numeroDocumentoPropietario().trim()) {
-      this.numeroDocumentoPropietario.set(contrato.propietario.numeroDocumento);
-      this.tipoDocumentoPropietario.set(tipo(contrato.propietario.tipoDocumento) ?? this.tipoDocumentoPropietario());
-    }
-    if (contrato.inquilino?.numeroDocumento && !this.documentoInquilino().trim()) {
-      this.documentoInquilino.set(contrato.inquilino.numeroDocumento);
-      this.tipoDocumentoInquilino.set(tipo(contrato.inquilino.tipoDocumento) ?? this.tipoDocumentoInquilino());
-    }
-    if (contrato.numeroEstudio && !this.numeroEstudioArrendamiento().trim()) {
-      this.numeroEstudioArrendamiento.set(contrato.numeroEstudio);
-    }
+    // El contrato firmado se vuelve a cargar con los documentos; sus datos se conservan pero se confirman de nuevo.
+    this.datosContrato.set({ ...DATOS_CONTRATO_VACIOS, ...((f['datosContrato'] as Partial<DatosContratoFirmado> | undefined) ?? {}) });
+    this.contratoConfirmado.set(false);
+    this.contratoRegistrado = null;
   }
 
   /** Tras radicar: deja la pantalla lista para una nueva radicación (sin borrador ni datos anteriores). */
@@ -742,32 +688,19 @@ export class RadicacionComponent {
   }
 
   private cargarNovedades(resultado: ResultadoEstudioArrendamiento): void {
-    const contrato = this.contratoReferencia();
     this.novedadesEstudio.set([]);
     this.personasEstudio.set(null);
-    this.canones.set(null);
-    this.canonDe.set('contrato');
     if (resultado.estado !== 'APROBADO') {
       return;
     }
     this.contratoService.prellenado(this.numeroEstudioArrendamiento().trim(), this.documentoInquilino().replace(/\D/g, ''),
       this.tipoDocumentoInquilino()).subscribe({
-      next: (p) => this.personasEstudio.set({ inquilino: p.arrendatario, codeudores: p.deudores }),
+      next: (p) => {
+        this.personasEstudio.set({ inquilino: p.arrendatario, codeudores: p.deudores });
+        this.sumarEstudio(p);
+      },
       error: () => this.personasEstudio.set(null),
     });
-    if (!contrato) {
-      return;
-    }
-    this.radicacionService
-      .novedades(contrato, this.numeroEstudioArrendamiento().trim(), this.documentoInquilino().trim(), this.tipoDocumentoInquilino())
-      .subscribe({
-        next: (n) => {
-          this.novedadesEstudio.set(n.novedades);
-          this.canones.set(n.canonContrato != null && n.canonCotizado != null && n.canonContrato !== n.canonCotizado
-            ? { contrato: n.canonContrato, cotizado: n.canonCotizado } : null);
-        },
-        error: () => this.novedadesEstudio.set([]),
-      });
   }
 
   /**
@@ -846,10 +779,6 @@ export class RadicacionComponent {
   );
 
   /** Actualiza el estado de apoderado al elegir el firmante del contrato (Req 10.2). */
-  protected onCanonDe(valor: string): void {
-    this.canonDe.set(valor === 'cotizacion' ? 'cotizacion' : 'contrato');
-  }
-
   protected onCambioFirmante(valor: string): void {
     this.firmaApoderado.set(valor === 'apoderado');
   }
@@ -941,8 +870,14 @@ export class RadicacionComponent {
     }
     this.enviando.set(true);
 
-    const request = construirPayloadRadicacion({
-      contratoReferencia: this.contratoReferencia(),
+    const contrato = this.solicitudContrato();
+    if (!contrato) {
+      this.enviando.set(false);
+      return;
+    }
+    const clave = JSON.stringify(contrato);
+    const datos = (contratoReferencia: string) => construirPayloadRadicacion({
+      contratoReferencia,
       numeroEstudioArrendamiento: this.numeroEstudioArrendamiento(),
       tipoDocumentoInquilino: this.tipoDocumentoInquilino(),
       documentoInquilino: this.documentoInquilino(),
@@ -955,16 +890,21 @@ export class RadicacionComponent {
       correoApoderado: this.firmaApoderado() ? this.correoApoderado().trim() : undefined,
       // La novedad del CTL viaja como observación para que el analista la revise (no bloquea la radicación).
       observaciones: [this.observaciones().trim(), this.novedadCtl()].filter((t) => !!t).join(' · ').slice(0, 2000),
-      canonDe: this.canones() ? this.canonDe() : undefined,
       vocabulario: this.documentosCatalogo.filter((d) => d['aplica'] !== 'OPCIONAL').map((d) => d.codigo),
     });
+    const registro$: Observable<string> = this.contratoRegistrado?.clave === clave
+      ? of(this.contratoRegistrado.referencia)
+      : this.contratoService.generar(contrato).pipe(map((r) => {
+        this.contratoRegistrado = { clave, referencia: r.radicado };
+        return r.radicado;
+      }));
 
     // Radica, sube cada documento y envía al área (fila en el Warehouse en "Pendiente Validación Documental").
     let codigo = '';
     const pendiente = this.radicadoPendiente();
     const creacion$: Observable<{ readonly radicado: string }> = pendiente
       ? of({ radicado: pendiente })
-      : this.radicacionService.radicar(request);
+      : registro$.pipe(switchMap((referencia) => this.radicacionService.radicar(datos(referencia))));
     creacion$
       .pipe(
         switchMap((respuesta) => {
@@ -1004,27 +944,16 @@ export class RadicacionComponent {
     });
   }
 
-  /**
-   * Abre el Generador_Contrato de arrendamiento navegando a su ruta (Req 11.5, 30.1).
-   *
-   * <p>Si ya se consultó el Estudio Digital, lleva su resultado como estado de
-   * navegación para que el contrato autollene los campos del inquilino, el inmueble
-   * y el propietario desde los datos del estudio (todos enmascarados por el backend).</p>
-   */
   private readonly contratoService = inject(ContratoService);
-  /** Contrato firmado leído al que le faltan datos: se completa en Contratos con la lectura precargada. */
-  protected readonly lecturaPorCompletar = signal<LecturaContratoResponse | null>(null);
-  protected readonly registrandoContratoLeido = signal(false);
 
-  /** El contrato firmado cargado se adjunta a la radicación como "Contrato de arrendamiento firmado". */
+  /** El contrato firmado cargado se adjunta a la solicitud y se lee; si no se puede leer, el broker escribe los datos. */
   protected onContratoFirmado(archivo: File): void {
     this.onArchivo({ id: DOCUMENTO_OPCIONAL, archivo });
+    this.contratoConfirmado.set(false);
+    this.contratoRegistrado = null;
+    this.leyendoContrato.set(true);
   }
 
-  /**
-   * Con la lectura del contrato firmado: precarga los documentos de la radicación y, si trae todo lo que el
-   * contrato exige, lo registra de una (queda listo para radicar). Si falta algo, se completa en Contratos.
-   */
   /** Cómo se firmó el contrato que se carga (el Consolidado lo pide: firma electrónica o por notaría). */
   protected readonly tiposFirma = this.catalogo.opciones('tipo_firma');
   protected readonly firmaContratoCargado = signal('');
@@ -1038,7 +967,9 @@ export class RadicacionComponent {
     ),
   );
 
+  /** Lo leído del contrato firmado manda; los documentos de las partes solo se llenan si el broker no los escribió. */
   protected onContratoLeido(lectura: LecturaContratoResponse): void {
+    this.leyendoContrato.set(false);
     this.direccionContrato.set(lectura.inmueble.direccionCompleta ?? '');
     if (!this.numeroDocumentoPropietario().trim() && lectura.arrendador.numeroIdentificacion) {
       this.numeroDocumentoPropietario.set(lectura.arrendador.numeroIdentificacion);
@@ -1046,80 +977,119 @@ export class RadicacionComponent {
     if (!this.documentoInquilino().trim() && lectura.arrendatario.numeroIdentificacion) {
       this.documentoInquilino.set(lectura.arrendatario.numeroIdentificacion);
     }
-    const estudio = this.numeroEstudioArrendamiento().trim();
-    const documento = this.documentoInquilino().replace(/\D/g, '');
-    if (!estudio || !documento) {
-      this.registrarContratoLeido(lectura, []);
-      return;
-    }
-    // Se traen todos los implicados del estudio digital; si no responde, se sigue con los del contrato escaneado.
-    this.contratoService.prellenado(estudio, documento, this.tipoDocumentoInquilino()).subscribe({
-      next: (p) => this.registrarContratoLeido(lectura, p.deudores),
-      error: () => this.registrarContratoLeido(lectura, []),
-    });
+    // El contrato leído va primero: sus datos reemplazan los que venían de la cotización o el estudio.
+    const anteriores = this.datosContrato();
+    this.datosContrato.set(completarDatos(DATOS_CONTRATO_VACIOS, datosDeLectura(lectura, this.ciudadesCatalogo)));
+    this.sumarDatosContrato(anteriores);
+    this.abrirDatosContrato();
   }
 
-  private registrarContratoLeido(lectura: LecturaContratoResponse, deudoresEstudio: readonly PersonaEstudio[]): void {
+  /** No se pudo leer el contrato: sigue igual y el broker escribe los datos en el modal. */
+  protected onContratoNoLeido(): void {
+    this.leyendoContrato.set(false);
+    this.abrirDatosContrato();
+  }
+
+  // --- Datos del contrato firmado ---------------------------------------------------------------------
+  /**
+   * Datos del contrato firmado que respaldan la solicitud: del contrato leído, de la solicitud y del estudio o la
+   * cotización; lo que falte se pide en un modal con sus campos y el broker lo confirma. Los contratos elaborados en
+   * el portal no se usan (no están firmados) y nunca se redirige a otra pantalla.
+   */
+  protected readonly datosContrato = signal<DatosContratoFirmado>(DATOS_CONTRATO_VACIOS);
+  protected readonly contratoConfirmado = signal(false);
+  protected readonly modalContratoAbierto = signal(false);
+  /** Leyendo el contrato firmado (el modal se abre al terminar, con lo que se haya podido leer). */
+  protected readonly leyendoContrato = signal(false);
+  /** Muestra en el modal todos los campos, no solo los que faltan. */
+  protected readonly editarTodoContrato = signal(false);
+  /** Intentó confirmar con datos pendientes: se marcan los campos. */
+  protected readonly intentoConfirmarContrato = signal(false);
+  /** Contrato registrado al enviar: un reintento con los mismos datos lo reutiliza en vez de crear otro. */
+  private contratoRegistrado: { readonly clave: string; readonly referencia: string } | null = null;
+  /** Ya se cargó el contrato firmado (paso 1). */
+  protected readonly contratoFirmadoCargado = computed(() => this.tiposValidos().has(DOCUMENTO_OPCIONAL));
+  protected readonly etiquetasDatosContrato = ETIQUETAS_DATOS_CONTRATO;
+  protected readonly ciudadesCatalogo = this.catalogo.opciones('ciudad').map((c) => c.descripcion)
+    .sort((a, b) => a.localeCompare(b, 'es'));
+  /** Datos del contrato que faltan o no son válidos (con las reglas del servidor). */
+  protected readonly faltantesContrato = computed(() => datosFaltantes(
+    this.datosContrato(),
+    { tipo: this.tipoDocumentoPropietario(), numero: this.numeroDocumentoPropietario() },
+    { tipo: this.tipoDocumentoInquilino(), numero: this.documentoInquilino() },
+  ));
+  /** Campos que se muestran en el modal: los que faltaban al abrirlo (no desaparecen mientras se escriben). */
+  protected readonly camposModalContrato = signal<readonly (keyof DatosContratoFirmado)[]>([]);
+  /** Datos opcionales del inmueble (matrícula, garaje, depósito) que el contrato no trajo: se piden «si aplica». */
+  protected readonly opcionalesModalContrato = signal<readonly (keyof DatosContratoFirmado)[]>([]);
+  /** Contrato listo para registrarse al enviar (null mientras falte algo). */
+  private readonly solicitudContrato = computed(() => solicitudDeContrato(
+    this.datosContrato(),
+    {
+      propietario: { tipo: this.tipoDocumentoPropietario(), numero: this.numeroDocumentoPropietario() },
+      inquilino: { tipo: this.tipoDocumentoInquilino(), numero: this.documentoInquilino() },
+      tipoFirma: this.firmaContratoCargado(),
+      cotizacionReferencia: this.cotizacion()?.referencia,
+      numeroEstudio: this.numeroEstudioArrendamiento().trim(),
+    },
+    this.catalogosContrato(),
+  ));
+  /** Contrato firmado cargado, con sus datos completos y confirmados por el broker. */
+  protected readonly contratoListo = computed(() =>
+    this.contratoFirmadoCargado() && this.contratoConfirmado() && this.solicitudContrato() !== null);
+
+  private catalogosContrato() {
     const usos = this.catalogo.opciones('uso_inmueble');
-    const request = contratoDesdeLectura(lectura, {
-      ciudades: this.catalogo.opciones('ciudad').map((c) => c.descripcion),
+    return {
+      ciudades: this.ciudadesCatalogo,
       usoVivienda: usos.find((u) => u['plantilla'] !== 'COMERCIO')?.descripcion ?? 'Vivienda',
       usoComercio: usos.find((u) => u['plantilla'] === 'COMERCIO')?.descripcion ?? 'Comercial',
-    }, this.firmaContratoCargado() || (this.tiposFirma[0]?.codigo ?? ''), deudoresEstudio);
-    if (!request) {
-      this.lecturaPorCompletar.set(lectura);
-      this.avisarContratoLeido({
-        variante: 'warning',
-        texto: 'Al contrato le faltan datos para registrarlo (partes, ciudad con cobertura, canon, fecha o cuenta). '
-          + 'Complétalos en Elaboración de contratos: ya van precargados.',
-      });
+    };
+  }
+
+  /** Abre el modal con los campos que faltan (o todos, si el broker quiere corregir algo). */
+  protected abrirDatosContrato(todos = false): void {
+    const faltan = this.faltantesContrato();
+    const d = this.datosContrato();
+    this.editarTodoContrato.set(todos);
+    this.camposModalContrato.set(faltan);
+    this.opcionalesModalContrato.set(DATOS_CONTRATO_OPCIONALES.filter((c) => !d[c].trim()));
+    this.intentoConfirmarContrato.set(false);
+    this.modalContratoAbierto.set(true);
+  }
+
+  /** ¿El campo se muestra editable en el modal? */
+  protected campoEnModal(campo: keyof DatosContratoFirmado): boolean {
+    return this.editarTodoContrato() || this.camposModalContrato().includes(campo);
+  }
+
+  /** El broker cambia un dato del contrato: hay que volver a confirmarlo. */
+  protected cambiarDatoContrato(campo: keyof DatosContratoFirmado, valor: string): void {
+    this.datosContrato.update((d) => ({ ...d, [campo]: valor ?? '' }));
+    this.contratoConfirmado.set(false);
+  }
+
+  /** Confirma los datos del contrato; si algo falta, se queda abierto y lo marca. */
+  protected confirmarDatosContrato(): void {
+    this.intentoConfirmarContrato.set(true);
+    const faltan = this.faltantesContrato();
+    if (faltan.length) {
+      // Si falta algo que no estaba en pantalla (p. ej. la cuenta al elegir transferencia), se muestra también.
+      this.camposModalContrato.update((c) => [...new Set([...c, ...faltan])]);
       return;
     }
-    this.lecturaPorCompletar.set(null);
-    this.registrandoContratoLeido.set(true);
-    this.contratoService.generar(request).subscribe({
-      next: (respuesta) => {
-        this.registrandoContratoLeido.set(false);
-        this.borrador.contrato.set({ referencia: respuesta.radicado, leasing: false });
-        this.avisarContratoLeido({
-          variante: lectura.firmado ? 'success' : 'warning',
-          texto: lectura.firmado
-            ? 'Contrato firmado leído y registrado con sus datos. Ya puedes radicar.'
-            : 'Registramos el contrato con sus datos, pero no vimos las firmas: lo revisaremos.',
-        });
-      },
-      error: (err: unknown) => {
-        this.registrandoContratoLeido.set(false);
-        this.lecturaPorCompletar.set(lectura);
-        this.avisarContratoLeido({ variante: 'error', texto: `${mensajeErrorIntegracion(err)} Puedes completarlo en Elaboración de contratos.` });
-      },
-    });
+    this.contratoConfirmado.set(true);
+    this.modalContratoAbierto.set(false);
   }
 
-  /** Abre Contratos con la lectura del contrato firmado precargada para completar lo que falta. */
-  protected completarContratoLeido(): void {
-    void this.router.navigate(['/app/contrato'], { state: { lectura: this.lecturaPorCompletar() } });
+  /** Suma una fuente de datos al contrato sin pisar lo que ya hay (ni lo que escribió el broker). */
+  private sumarDatosContrato(fuente: Partial<DatosContratoFirmado>): void {
+    this.datosContrato.update((d) => completarDatos(d, fuente));
   }
 
-  protected crearContrato(): void {
-    const estudio = this.resultadoEstudio();
-    void this.router.navigate(['/app/contrato'], {
-      state: estudio
-        ? {
-            estudio,
-            // Con el estudio ya consultado, el contrato trae del estudio digital a las partes y el inmueble.
-            consulta: {
-              numeroEstudio: this.numeroEstudioArrendamiento().trim(),
-              tipoDocumentoInquilino: this.tipoDocumentoInquilino(),
-              documentoInquilino: this.documentoInquilino().trim(),
-            },
-            propietario: {
-              tipoDocumento: this.tipoDocumentoPropietario(),
-              numeroDocumento: this.numeroDocumentoPropietario().trim(),
-            },
-          }
-        : undefined,
-    });
+  /** El estudio aprobado completa lo que el contrato firmado y la solicitud no trajeron (inquilino e inmueble). */
+  private sumarEstudio(p: PrellenadoContrato): void {
+    this.sumarDatosContrato(datosDeEstudio(p, this.ciudadesCatalogo));
   }
 
   /** Construye la regla de presentación del uploader para un documento (Req 35.7). */
@@ -1135,9 +1105,4 @@ export class RadicacionComponent {
     };
   }
 
-  /** Resultado de registrar el contrato firmado leído. */
-  private avisarContratoLeido(m: { variante: 'success' | 'warning' | 'error'; texto: string }): void {
-    const variante = m.variante === 'success' ? 'exito' : m.variante === 'warning' ? 'info' : 'error';
-    this.feedback.toast({ variante, titulo: 'Contrato firmado', mensaje: m.texto });
-  }
 }
