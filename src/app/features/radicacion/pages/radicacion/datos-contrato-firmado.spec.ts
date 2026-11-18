@@ -18,7 +18,7 @@ const INQUILINO = { tipo: 'CC' as const, numero: '1010333444' };
 
 const lectura = (parcial: Partial<LecturaContratoResponse> = {}): LecturaContratoResponse => ({
   firmado: true,
-  arrendador: { nombres: 'Ana', apellidos: 'Pérez' },
+  arrendador: { nombres: 'Ana', apellidos: 'Pérez', telefono: '300 123 4567', correo: 'ana@correo.com' },
   arrendatario: { nombres: 'Luis', apellidos: 'Gómez' },
   inmueble: { direccionCompleta: 'Cra 7 # 10-20', ciudad: 'bogota d.c.', uso: 'Vivienda' },
   condiciones: { canonMensual: 1_500_000, fechaInicio: '2026-12-05', duracionMeses: 12 },
@@ -28,7 +28,8 @@ const lectura = (parcial: Partial<LecturaContratoResponse> = {}): LecturaContrat
 
 const completos: DatosContratoFirmado = {
   ...DATOS_CONTRATO_VACIOS,
-  propietarioNombres: 'Ana', propietarioApellidos: 'Pérez', inquilinoNombres: 'Luis', inquilinoApellidos: 'Gómez',
+  propietarioNombres: 'Ana', propietarioApellidos: 'Pérez', propietarioCelular: '3001234567', propietarioCorreo: 'ana@correo.com',
+  inquilinoNombres: 'Luis', inquilinoApellidos: 'Gómez', tipoFirma: 'ELECTRONICA', tieneClausulas: 'NO',
   direccion: 'Cra 7 # 10-20', ciudad: 'Bogotá D.C.', uso: 'VIVIENDA', canon: '1500000', fechaInicio: '2026-12-05',
   duracionMeses: '12', diaPago: '5', formaPago: 'efectivo',
 };
@@ -38,7 +39,8 @@ describe('datos del contrato firmado', () => {
     const datos = completarDatos(DATOS_CONTRATO_VACIOS, datosDeLectura(lectura(), CIUDADES));
     expect(datos.ciudad).toBe('Bogotá D.C.');
     expect(datos.diaPago).toBe('5');
-    expect(datosFaltantes(datos, PROPIETARIO, INQUILINO, HOY)).toEqual(['formaPago']);
+    expect(datos.propietarioCelular).toBe('3001234567');
+    expect(datosFaltantes(datos, PROPIETARIO, INQUILINO, HOY)).toEqual(['formaPago', 'tipoFirma', 'tieneClausulas']);
   });
 
   it('Given el contrato y el estudio, When se completan, Then el contrato manda y el estudio solo llena lo vacío', () => {
@@ -81,14 +83,15 @@ describe('datos del contrato firmado', () => {
 
   it('Given datos confirmados, When se arma el contrato, Then usa los documentos de la solicitud y la cotización', () => {
     const req = solicitudDeContrato(completos, {
-      propietario: PROPIETARIO, inquilino: INQUILINO, cotizacionReferencia: 'COT-1', tipoFirma: 'ELECTRONICA', numeroEstudio: '123',
+      propietario: PROPIETARIO, inquilino: INQUILINO, cotizacionReferencia: 'COT-1', numeroEstudio: '123',
     }, CATALOGOS)!;
+    expect(req.arrendador).toMatchObject({ telefono: '3001234567', correo: 'ana@correo.com' });
     expect(req.arrendador.numeroIdentificacion).toBe('79111222');
     expect(req.arrendatario.numeroIdentificacion).toBe('1010333444');
     expect(req.condiciones).toMatchObject({ canonMensual: 1_500_000, metodoPago: 'efectivo', diaPagoMensual: 5, duracionMeses: 12 });
     expect(req.condiciones.numeroCuenta).toBeUndefined();
     expect(req.cotizacionReferencia).toBe('COT-1');
-    expect(req.adicionales).toMatchObject({ tipoFirma: 'ELECTRONICA', numeroSolicitud: '123' });
+    expect(req.adicionales).toMatchObject({ tipoFirma: 'ELECTRONICA', numeroSolicitud: '123', tieneClausulas: false });
   });
 
   it('Given el nombre completo sin apellidos, When tiene 2 o 4 palabras, Then los separa; con 3 no adivina', () => {
@@ -96,6 +99,19 @@ describe('datos del contrato firmado', () => {
     expect(partirNombre('CRISTIAN MOSQUERA', undefined)).toEqual(['CRISTIAN', 'MOSQUERA']);
     expect(partirNombre('ANA MARIA PEREZ', '')).toEqual(['ANA MARIA PEREZ', '']);
     expect(partirNombre('Ana', 'Pérez')).toEqual(['Ana', 'Pérez']);
+  });
+
+  it('Given cláusulas adicionales, When se marcan, Then exige el texto y lo envía', () => {
+    const conClausulas = { ...completos, tieneClausulas: 'SI' as const };
+    expect(datosFaltantes(conClausulas, PROPIETARIO, INQUILINO, HOY)).toEqual(['clausulas']);
+    const req = solicitudDeContrato({ ...conClausulas, clausulas: 'El inquilino puede tener mascotas.' },
+      { propietario: PROPIETARIO, inquilino: INQUILINO }, CATALOGOS)!;
+    expect(req.adicionales).toMatchObject({ tieneClausulas: true, clausulas: 'El inquilino puede tener mascotas.' });
+  });
+
+  it('Given un celular o correo inválido, When se valida, Then los pide', () => {
+    expect(datosFaltantes({ ...completos, propietarioCelular: '12', propietarioCorreo: 'ana' }, PROPIETARIO, INQUILINO, HOY))
+      .toEqual(['propietarioCelular', 'propietarioCorreo']);
   });
 
   it('Given algo pendiente, When se arma el contrato, Then no hay contrato que enviar', () => {

@@ -637,7 +637,6 @@ export class RadicacionComponent {
     this.restaurarBorrador({});
     this.observaciones.set('');
     this.readjuntarDocumentos.set(false);
-    this.firmaContratoCargado.set('');
     this.radicado.set(null);
   }
 
@@ -893,12 +892,14 @@ export class RadicacionComponent {
     const sarlaft = !this.consultaSarlaftActiva
       ? (archivos['formularioSarlaft'] ? 'Formulario cargado' : 'Sin formulario')
       : this.estadoSarlaft() ? this.catalogo.etiqueta('sarlaft_resultado', this.estadoSarlaft()!.toLowerCase()) : 'Sin consultar';
-    const firma = this.tiposFirma.find((f) => f.codigo === this.firmaContratoCargado())?.descripcion;
+    const firma = this.tiposFirma.find((f) => f.codigo === d.tipoFirma)?.descripcion;
     const secciones: SeccionFicha[] = [
       {
         titulo: 'Propietario (cliente)', icono: 'person', datos: [
           { etiqueta: 'Nombre', valor: nombre(d.propietarioNombres, d.propietarioApellidos), destacado: true },
           { etiqueta: 'Documento', valor: `${tipoDoc(this.tipoDocumentoPropietario())} ${this.numeroDocumentoPropietario()}` },
+          { etiqueta: 'Celular', valor: d.propietarioCelular },
+          { etiqueta: 'Correo', valor: d.propietarioCorreo },
           { etiqueta: 'Tipo de persona', valor: this.tipoPersona() === 'natural' ? 'Natural' : 'Jurídica' },
         ],
       },
@@ -931,6 +932,7 @@ export class RadicacionComponent {
           { etiqueta: 'Día de pago del canon', valor: d.diaPago },
           { etiqueta: 'Forma de pago del canon', valor: d.formaPago === 'transferencia' ? `Transferencia · cuenta ${d.numeroCuenta}` : 'Efectivo' },
           { etiqueta: 'Firma del contrato', valor: firma ?? null },
+          { etiqueta: 'Cláusulas adicionales', valor: d.tieneClausulas === 'SI' ? d.clausulas.trim() : 'No tiene', ancho: d.tieneClausulas === 'SI' },
         ],
       },
       {
@@ -1056,7 +1058,6 @@ export class RadicacionComponent {
 
   /** Cómo se firmó el contrato que se carga (el Consolidado lo pide: firma electrónica o por notaría). */
   protected readonly tiposFirma = this.catalogo.opciones('tipo_firma');
-  protected readonly firmaContratoCargado = signal('');
 
   /** El inmueble del estudio está en un departamento bloqueado (Antioquia): se avisa; el servidor decide. */
   protected readonly estudioSinCobertura = computed(() =>
@@ -1128,7 +1129,6 @@ export class RadicacionComponent {
     {
       propietario: { tipo: this.tipoDocumentoPropietario(), numero: this.numeroDocumentoPropietario() },
       inquilino: { tipo: this.tipoDocumentoInquilino(), numero: this.documentoInquilino() },
-      tipoFirma: this.firmaContratoCargado(),
       cotizacionReferencia: this.cotizacion()?.referencia,
       numeroEstudio: this.numeroEstudioArrendamiento().trim(),
     },

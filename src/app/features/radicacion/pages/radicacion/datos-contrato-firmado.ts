@@ -24,6 +24,9 @@ export interface CatalogosContrato {
 export interface DatosContratoFirmado {
   readonly propietarioNombres: string;
   readonly propietarioApellidos: string;
+  /** Celular y correo del propietario: el área los necesita en el Consolidado (Celular/Correo Cliente). */
+  readonly propietarioCelular: string;
+  readonly propietarioCorreo: string;
   readonly inquilinoNombres: string;
   readonly inquilinoApellidos: string;
   readonly direccion: string;
@@ -44,15 +47,22 @@ export interface DatosContratoFirmado {
   readonly deposito: string;
   /** Tipo de inmueble (apartamento, casa, local…): se toma del contrato o del estudio; no se pide. */
   readonly tipoInmueble: string;
+  /** Modalidad de firma del contrato cargado (catálogo `tipo_firma`). */
+  readonly tipoFirma: string;
+  /** ¿El contrato firmado trae cláusulas adicionales? y cuáles. */
+  readonly tieneClausulas: 'SI' | 'NO' | '';
+  readonly clausulas: string;
 }
 
 /** Datos del inmueble que no siempre aplican: no bloquean el envío. */
 export const DATOS_CONTRATO_OPCIONALES: readonly (keyof DatosContratoFirmado)[] = ['matricula', 'garaje', 'deposito'];
 
 export const DATOS_CONTRATO_VACIOS: DatosContratoFirmado = {
-  propietarioNombres: '', propietarioApellidos: '', inquilinoNombres: '', inquilinoApellidos: '',
+  propietarioNombres: '', propietarioApellidos: '', propietarioCelular: '', propietarioCorreo: '',
+  inquilinoNombres: '', inquilinoApellidos: '',
   direccion: '', ciudad: '', uso: '', canon: '', administracion: '', fechaInicio: '', duracionMeses: '',
   diaPago: '', formaPago: '', numeroCuenta: '', tipoCuenta: '', banco: '', matricula: '', garaje: '', deposito: '', tipoInmueble: '',
+  tipoFirma: '', tieneClausulas: '', clausulas: '',
 };
 
 /** Documento de una parte, tal como lo escribió el broker en la solicitud. */
@@ -114,6 +124,8 @@ export function datosDeLectura(l: LecturaContratoResponse, ciudades: readonly st
   return {
     propietarioNombres,
     propietarioApellidos,
+    propietarioCelular: (l.arrendador.telefono ?? '').replace(/\D/g, ''),
+    propietarioCorreo: l.arrendador.correo ?? '',
     inquilinoNombres,
     inquilinoApellidos,
     direccion: l.inmueble.direccionCompleta ?? '',
@@ -165,6 +177,8 @@ export function datosDeCotizacion(c: CotizacionParaRadicar, ciudades: readonly s
 export const ETIQUETAS_DATOS_CONTRATO: Readonly<Record<keyof DatosContratoFirmado, string>> = {
   propietarioNombres: 'Nombres del propietario',
   propietarioApellidos: 'Apellidos del propietario',
+  propietarioCelular: 'Celular del propietario',
+  propietarioCorreo: 'Correo del propietario',
   inquilinoNombres: 'Nombres del inquilino',
   inquilinoApellidos: 'Apellidos del inquilino',
   direccion: 'Dirección del inmueble',
@@ -183,6 +197,9 @@ export const ETIQUETAS_DATOS_CONTRATO: Readonly<Record<keyof DatosContratoFirmad
   garaje: 'Número de garaje',
   deposito: 'Número de depósito',
   tipoInmueble: 'Tipo de inmueble',
+  tipoFirma: '¿Cómo se firmó el contrato?',
+  tieneClausulas: '¿Tiene cláusulas adicionales?',
+  clausulas: 'Cláusulas adicionales',
 };
 
 /**
@@ -202,6 +219,10 @@ export function datosFaltantes(
   const inqJuridico = inquilino.tipo === 'NIT';
   exigir('propietarioNombres', nombres(propJuridica, d.propietarioNombres));
   exigir('propietarioApellidos', propJuridica || NOMBRE.test(d.propietarioApellidos.trim()));
+  // Mismas reglas del backend: celular de 7 a 15 dígitos y correo con formato válido.
+  exigir('propietarioCelular', /^\d{7,15}$/.test(d.propietarioCelular.replace(/[\s+\-()]/g, '')));
+  exigir('propietarioCorreo', d.propietarioCorreo.trim().length <= 254
+    && /^[^@\s<>]{1,64}@[^@\s<>]+\.[^@\s<>]+$/.test(d.propietarioCorreo.trim()));
   exigir('inquilinoNombres', nombres(inqJuridico, d.inquilinoNombres));
   exigir('inquilinoApellidos', inqJuridico || NOMBRE.test(d.inquilinoApellidos.trim()));
   exigir('direccion', lleno(d.direccion));
@@ -222,6 +243,11 @@ export function datosFaltantes(
   if (d.formaPago === 'transferencia') {
     exigir('numeroCuenta', /^\d{5,30}$/.test(d.numeroCuenta.replace(/[\s-]/g, '')));
   }
+  exigir('tipoFirma', lleno(d.tipoFirma));
+  exigir('tieneClausulas', d.tieneClausulas === 'SI' || d.tieneClausulas === 'NO');
+  if (d.tieneClausulas === 'SI') {
+    exigir('clausulas', lleno(d.clausulas) && d.clausulas.trim().length <= 4000);
+  }
   return faltan;
 }
 
@@ -229,7 +255,6 @@ export function datosFaltantes(
 export interface ExtrasContrato {
   readonly propietario: DocumentoParte;
   readonly inquilino: DocumentoParte;
-  readonly tipoFirma?: string;
   readonly cotizacionReferencia?: string;
   readonly numeroEstudio?: string;
 }
@@ -256,8 +281,8 @@ export function solicitudDeContrato(
       apellidos: juridica ? '' : d.propietarioApellidos.trim(),
       tipoIdentificacion: extras.propietario.tipo,
       numeroIdentificacion: extras.propietario.numero.trim(),
-      telefono: '',
-      correo: '',
+      telefono: d.propietarioCelular.replace(/[\s+\-()]/g, ''),
+      correo: d.propietarioCorreo.trim(),
       direccionResidencia: '',
       ...(juridica ? { tipoPersona: 'JURIDICA' as const } : {}),
     },
@@ -302,8 +327,9 @@ export function solicitudDeContrato(
     adicionales: {
       leasing: false,
       arrendadorEsTitular: true,
-      tieneClausulas: false,
-      ...(lleno(extras.tipoFirma) ? { tipoFirma: extras.tipoFirma } : {}),
+      tieneClausulas: d.tieneClausulas === 'SI',
+      ...(d.tieneClausulas === 'SI' ? { clausulas: d.clausulas.trim() } : {}),
+      tipoFirma: d.tipoFirma,
       ...(lleno(extras.numeroEstudio) ? { numeroSolicitud: extras.numeroEstudio } : {}),
     },
   };

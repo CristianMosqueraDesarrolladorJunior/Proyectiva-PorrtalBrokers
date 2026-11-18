@@ -74,18 +74,6 @@
             (leido)="onContratoLeido($event)"
             (noLeido)="onContratoNoLeido()"
           />
-          <app-form-field label="¿Cómo se firmó el contrato?" controlId="rad-firma-contrato">
-            <select
-              id="rad-firma-contrato"
-              [ngModel]="firmaContratoCargado()"
-              (ngModelChange)="firmaContratoCargado.set($event)"
-            >
-              <option value="">Selecciona…</option>
-              @for (f of tiposFirma; track f.codigo) {
-                <option [value]="f.codigo">{{ f.descripcion }}</option>
-              }
-            </select>
-          </app-form-field>
           @if (contratoFirmadoCargado() && !leyendoContrato()) {
             @if (contratoConfirmado()) {
               <app-alert-banner variante="success" titulo="Datos del contrato confirmados">
@@ -672,6 +660,20 @@
                 (ngModelChange)="cambiarDatoContrato('propietarioApellidos', $event)" />
             </app-form-field>
           }
+          @if (campoEnModal('propietarioCelular')) {
+            <app-form-field label="Celular del propietario" [requerido]="true" controlId="rad-ctr-propietarioCelular"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('propietarioCelular') ? 'Escribe un celular válido (solo dígitos).' : ''">
+              <input id="rad-ctr-propietarioCelular" type="tel" inputmode="numeric" appSoloDigitos autocomplete="off"
+                [ngModel]="datosContrato().propietarioCelular" (ngModelChange)="cambiarDatoContrato('propietarioCelular', $event)" />
+            </app-form-field>
+          }
+          @if (campoEnModal('propietarioCorreo')) {
+            <app-form-field label="Correo del propietario" [requerido]="true" controlId="rad-ctr-propietarioCorreo"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('propietarioCorreo') ? 'Escribe un correo válido.' : ''">
+              <input id="rad-ctr-propietarioCorreo" type="email" autocomplete="off"
+                [ngModel]="datosContrato().propietarioCorreo" (ngModelChange)="cambiarDatoContrato('propietarioCorreo', $event)" />
+            </app-form-field>
+          }
           @if (campoEnModal('inquilinoNombres')) {
             <app-form-field label="{{ tipoDocumentoInquilino() === 'NIT' ? 'Razón social del inquilino' : 'Nombres del inquilino' }}" [requerido]="true" controlId="rad-ctr-inquilinoNombres"
               [error]="intentoConfirmarContrato() && faltantesContrato().includes('inquilinoNombres') ? 'Escribe el nombre como aparece en el contrato.' : ''">
@@ -769,7 +771,36 @@
               </app-form-field>
             }
           }
+          @if (campoEnModal('tipoFirma')) {
+            <app-form-field label="¿Cómo se firmó el contrato?" [requerido]="true" controlId="rad-ctr-tipoFirma"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('tipoFirma') ? 'Elige cómo se firmó el contrato.' : ''">
+              <select id="rad-ctr-tipoFirma" [ngModel]="datosContrato().tipoFirma" (ngModelChange)="cambiarDatoContrato('tipoFirma', $event)">
+                <option value="">Selecciona…</option>
+                @for (f of tiposFirma; track f.codigo) {
+                  <option [value]="f.codigo">{{ f.descripcion }}</option>
+                }
+              </select>
+            </app-form-field>
+          }
+          @if (campoEnModal('tieneClausulas')) {
+            <app-form-field label="¿El contrato tiene cláusulas adicionales?" [requerido]="true" controlId="rad-ctr-tieneClausulas"
+              [error]="intentoConfirmarContrato() && faltantesContrato().includes('tieneClausulas') ? 'Indica si el contrato tiene cláusulas adicionales.' : ''">
+              <select id="rad-ctr-tieneClausulas" [ngModel]="datosContrato().tieneClausulas" (ngModelChange)="cambiarDatoContrato('tieneClausulas', $event)">
+                <option value="">Selecciona…</option>
+                <option value="NO">No</option>
+                <option value="SI">Sí</option>
+              </select>
+            </app-form-field>
+          }
   </div>
+  @if (datosContrato().tieneClausulas === 'SI' && (campoEnModal('tieneClausulas') || campoEnModal('clausulas'))) {
+    <app-form-field label="Cláusulas adicionales" [requerido]="true" controlId="rad-ctr-clausulas"
+      ayuda="Cópialas tal como aparecen en el contrato firmado."
+      [error]="intentoConfirmarContrato() && faltantesContrato().includes('clausulas') ? 'Escribe las cláusulas adicionales (máximo 4.000 caracteres).' : ''">
+      <textarea id="rad-ctr-clausulas" rows="4" maxlength="4000" [ngModel]="datosContrato().clausulas"
+        (ngModelChange)="cambiarDatoContrato('clausulas', $event)"></textarea>
+    </app-form-field>
+  }
   @if (opcionalesModalContrato().length) {
     <h4 class="rad-ctr-opcionales">Si aplican al inmueble</h4>
     <div class="rad-form-grid">
@@ -798,7 +829,7 @@
   }
   @if (!editarTodoContrato()) {
     <dl class="rad-ctr-resumen">
-      @for (c of ['propietarioNombres', 'propietarioApellidos', 'inquilinoNombres', 'inquilinoApellidos', 'direccion', 'ciudad', 'canon', 'fechaInicio', 'duracionMeses', 'diaPago']; track c) {
+      @for (c of ['propietarioNombres', 'propietarioApellidos', 'propietarioCelular', 'propietarioCorreo', 'inquilinoNombres', 'inquilinoApellidos', 'direccion', 'ciudad', 'canon', 'fechaInicio', 'duracionMeses', 'diaPago']; track c) {
         @if (!camposModalContrato().includes($any(c)) && $any(datosContrato())[c]) {
           <div><dt>{{ $any(etiquetasDatosContrato)[c] }}</dt><dd>{{ valorDatoContrato($any(c)) }}</dd></div>
         }
