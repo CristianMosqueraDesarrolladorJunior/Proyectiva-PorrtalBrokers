@@ -61,7 +61,9 @@ import {
   ModalDialogComponent,
   InfoTipComponent,
   AvisoSarlaftComponent,
+  FichaComponent,
 } from '../../../../shared/components';
+import type { SeccionFicha } from '../../../../shared/components/ficha/ficha.component';
 import type { FilaResumen } from '../../../../shared/components';
 import type { OpcionRadio } from '../../../../shared/components/radio-group/radio-group.component';
 import type {
@@ -134,6 +136,7 @@ const DOCUMENTO_OPCIONAL: TipoDocumentoRadicacion = 'contratoArrendamientoFirmad
     SummaryCardComponent,
     ModalDialogComponent,
     InfoTipComponent,
+    FichaComponent,
     LectorContratoComponent,
     CtlValidacionComponent,
     AvisoSarlaftComponent,
@@ -863,6 +866,103 @@ export class RadicacionComponent {
     });
   }
 
+  // --- Resumen y confirmación: el broker ve toda la data con la que se radica antes de enviarla ------------
+  protected readonly resumenAbierto = signal(false);
+
+  /** «Revisar y enviar»: abre el resumen; el envío solo sale desde su confirmación. */
+  protected revisarEnvio(): void {
+    if (this.envioHabilitado() && !this.enviando()) {
+      this.resumenAbierto.set(true);
+    }
+  }
+
+  protected confirmarEnvio(): void {
+    this.resumenAbierto.set(false);
+    this.enviar();
+  }
+
+  /** Toda la información con la que se radica la póliza, agrupada como la leerá el analista. */
+  protected readonly resumenRadicacion = computed<readonly SeccionFicha[]>(() => {
+    const d = this.datosContrato();
+    const tipoDoc = (t: string) => this.etiquetaTipoDocumento[t] ?? t;
+    const nombre = (n: string, a: string) => [n, a].filter((x) => x.trim()).join(' ');
+    const fecha = (iso: string) => this.fechaLarga(iso);
+    const estudio = this.resultadoEstudio();
+    const cot = this.cotizacion();
+    const archivos = this.archivosCargados();
+    const sarlaft = !this.consultaSarlaftActiva
+      ? (archivos['formularioSarlaft'] ? 'Formulario cargado' : 'Sin formulario')
+      : this.estadoSarlaft() ? this.catalogo.etiqueta('sarlaft_resultado', this.estadoSarlaft()!.toLowerCase()) : 'Sin consultar';
+    const firma = this.tiposFirma.find((f) => f.codigo === this.firmaContratoCargado())?.descripcion;
+    const secciones: SeccionFicha[] = [
+      {
+        titulo: 'Propietario (cliente)', icono: 'person', datos: [
+          { etiqueta: 'Nombre', valor: nombre(d.propietarioNombres, d.propietarioApellidos), destacado: true },
+          { etiqueta: 'Documento', valor: `${tipoDoc(this.tipoDocumentoPropietario())} ${this.numeroDocumentoPropietario()}` },
+          { etiqueta: 'Tipo de persona', valor: this.tipoPersona() === 'natural' ? 'Natural' : 'Jurídica' },
+        ],
+      },
+      {
+        titulo: 'Inquilino', icono: 'badge', datos: [
+          { etiqueta: 'Nombre', valor: nombre(d.inquilinoNombres, d.inquilinoApellidos), destacado: true },
+          { etiqueta: 'Documento', valor: `${tipoDoc(this.tipoDocumentoInquilino())} ${this.documentoInquilino()}` },
+          ...(this.personasEstudio()?.codeudores ?? []).map((c, i) => ({
+            etiqueta: `Codeudor ${i + 1}`, valor: `${nombre(c.nombres ?? '', c.apellidos ?? '')} · ${c.tipoIdentificacion ?? ''} ${c.numeroIdentificacion ?? ''}`,
+          })),
+        ],
+      },
+      {
+        titulo: 'Inmueble', icono: 'home', datos: [
+          { etiqueta: 'Dirección', valor: d.direccion, ancho: true },
+          { etiqueta: 'Ciudad', valor: d.ciudad },
+          { etiqueta: 'Uso', valor: d.uso === 'COMERCIO' ? 'Comercio' : 'Vivienda' },
+          { etiqueta: 'Tipo de inmueble', valor: d.tipoInmueble || null },
+          { etiqueta: 'Matrícula inmobiliaria', valor: d.matricula || null },
+          { etiqueta: 'Garaje', valor: d.garaje || null },
+          { etiqueta: 'Depósito', valor: d.deposito || null },
+        ],
+      },
+      {
+        titulo: 'Condiciones del contrato firmado', icono: 'request_quote', datos: [
+          { etiqueta: 'Canon mensual', valor: formatearCop(Number(d.canon)), destacado: true },
+          { etiqueta: 'Cuota de administración', valor: d.administracion ? formatearCop(Number(d.administracion)) : 'No tiene' },
+          { etiqueta: 'Fecha de inicio', valor: fecha(d.fechaInicio) },
+          { etiqueta: 'Duración', valor: `${d.duracionMeses} meses` },
+          { etiqueta: 'Día de pago del canon', valor: d.diaPago },
+          { etiqueta: 'Forma de pago del canon', valor: d.formaPago === 'transferencia' ? `Transferencia · cuenta ${d.numeroCuenta}` : 'Efectivo' },
+          { etiqueta: 'Firma del contrato', valor: firma ?? null },
+        ],
+      },
+      {
+        titulo: 'Estudio de arrendamiento', icono: 'task_alt', datos: [
+          { etiqueta: 'Número de estudio', valor: this.numeroEstudioArrendamiento() },
+          { etiqueta: 'Estado', valor: estudio?.estado === 'APROBADO' ? 'Aprobado' : estudio?.estado ?? null },
+          ...(cot ? [{ etiqueta: 'Cotización', valor: `${cot.referencia} · prima total ${formatearCop(cot.total)}` }] : []),
+        ],
+      },
+      {
+        titulo: 'Firmante y Conocimiento de Cliente', icono: 'draw', datos: [
+          { etiqueta: 'Firma el contrato', valor: this.firmaApoderado() ? 'Apoderado' : 'Propietario' },
+          ...(this.firmaApoderado() ? [
+            { etiqueta: 'Documento del apoderado', valor: `${tipoDoc(this.tipoDocumentoApoderado())} ${this.numeroDocumentoApoderado()}` },
+            { etiqueta: 'Correo del apoderado', valor: this.correoApoderado() || null },
+          ] : []),
+          { etiqueta: 'Conocimiento de Cliente', valor: sarlaft },
+        ],
+      },
+      {
+        titulo: 'Documentos', icono: 'folder', datos: [
+          { etiqueta: 'Contrato de arrendamiento firmado', valor: archivos[DOCUMENTO_OPCIONAL] ?? null },
+          ...this.cargadosValidos().filter((t) => t !== DOCUMENTO_OPCIONAL)
+            .map((t) => ({ etiqueta: this.etiquetaDocumento[t] ?? t, valor: archivos[t] ?? 'Cargado' })),
+          ...(this.observaciones().trim() ? [{ etiqueta: 'Observaciones', valor: this.observaciones().trim(), ancho: true }] : []),
+        ],
+      },
+    ];
+    // En una confirmación solo se muestra lo que viaja: los opcionales vacíos (garaje, depósito…) no aparecen.
+    return secciones.map((s) => ({ ...s, datos: s.datos.filter((d) => d.valor !== null && d.valor !== undefined && String(d.valor).trim() !== '') }));
+  });
+
   /** Envía la radicación al backend cuando el envío está habilitado (Req 11.4). */
   protected enviar(): void {
     if (!this.envioHabilitado() || this.enviando()) {
@@ -1061,6 +1161,27 @@ export class RadicacionComponent {
   /** ¿El campo se muestra editable en el modal? */
   protected campoEnModal(campo: keyof DatosContratoFirmado): boolean {
     return this.editarTodoContrato() || this.camposModalContrato().includes(campo);
+  }
+
+  /** Valor legible de un dato del contrato (pesos, fecha larga, meses). */
+  protected valorDatoContrato(campo: keyof DatosContratoFirmado): string {
+    const v = this.datosContrato()[campo];
+    switch (campo) {
+      case 'canon':
+      case 'administracion':
+        return formatearCop(Number(v));
+      case 'fechaInicio':
+        return this.fechaLarga(v);
+      case 'duracionMeses':
+        return `${v} meses`;
+      default:
+        return v;
+    }
+  }
+
+  private fechaLarga(iso: string): string {
+    return /^\d{4}-\d{2}-\d{2}$/.test(iso)
+      ? new Date(`${iso}T12:00:00`).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : iso;
   }
 
   /** El broker cambia un dato del contrato: hay que volver a confirmarlo. */

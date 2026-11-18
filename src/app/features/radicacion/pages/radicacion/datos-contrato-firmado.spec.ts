@@ -6,6 +6,7 @@ import {
   datosDeEstudio,
   datosDeLectura,
   datosFaltantes,
+  partirNombre,
   solicitudDeContrato,
 } from './datos-contrato-firmado';
 
@@ -88,6 +89,13 @@ describe('datos del contrato firmado', () => {
     expect(req.condiciones.numeroCuenta).toBeUndefined();
     expect(req.cotizacionReferencia).toBe('COT-1');
     expect(req.adicionales).toMatchObject({ tipoFirma: 'ELECTRONICA', numeroSolicitud: '123' });
+  });
+
+  it('Given el nombre completo sin apellidos, When tiene 2 o 4 palabras, Then los separa; con 3 no adivina', () => {
+    expect(partirNombre('ANTHONY STIVE CANO ALVAREZ', '')).toEqual(['ANTHONY STIVE', 'CANO ALVAREZ']);
+    expect(partirNombre('CRISTIAN MOSQUERA', undefined)).toEqual(['CRISTIAN', 'MOSQUERA']);
+    expect(partirNombre('ANA MARIA PEREZ', '')).toEqual(['ANA MARIA PEREZ', '']);
+    expect(partirNombre('Ana', 'Pérez')).toEqual(['Ana', 'Pérez']);
   });
 
   it('Given algo pendiente, When se arma el contrato, Then no hay contrato que enviar', () => {

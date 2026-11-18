@@ -70,6 +70,23 @@ const numero = (v: number | string | null | undefined): string => {
 // Mismas reglas de nombre que el backend (ValidacionEntrada): persona natural y razón social.
 const NOMBRE = /^\p{L}[\p{L} .'\-]{0,79}$/u;
 const RAZON_SOCIAL = /^[\p{L}0-9][\p{L}0-9 .,&'\-]{0,119}$/u;
+/**
+ * La lectura a veces trae el nombre completo en «nombres» y sin apellidos. Con 2 o 4 palabras la partición es
+ * inequívoca (1+1 o 2+2); con otra cantidad se deja igual y el broker escribe los apellidos.
+ */
+export function partirNombre(nombres: string | null | undefined, apellidos: string | null | undefined): [string, string] {
+  const n = (nombres ?? '').trim();
+  const a = (apellidos ?? '').trim();
+  const palabras = n.split(/\s+/).filter(Boolean);
+  if (a || (palabras.length !== 2 && palabras.length !== 4)) {
+    return [n, a];
+  }
+  const corte = palabras.length / 2;
+  return [palabras.slice(0, corte).join(' '), palabras.slice(corte).join(' ')];
+}
+
+/** Tipo de inmueble útil (descarta valores genéricos como «inmueble» que a veces trae la lectura). */
+const tipoUtil = (t: string | null | undefined): string => (lleno(t) && !/^inmueble$/i.test(t.trim()) ? t.trim() : '');
 const esComercio = (texto: string): boolean => /comerc|local|oficina|bodega/i.test(texto);
 
 /** Ciudad del catálogo que corresponde al texto (sin tildes ni mayúsculas); vacío si no está. */
@@ -92,11 +109,13 @@ export function completarDatos(actual: DatosContratoFirmado, fuente: Partial<Dat
 export function datosDeLectura(l: LecturaContratoResponse, ciudades: readonly string[]): Partial<DatosContratoFirmado> {
   const c = l.condiciones;
   const usoTexto = `${l.inmueble.uso ?? ''} ${l.inmueble.tipoInmueble ?? ''}`;
+  const [propietarioNombres, propietarioApellidos] = partirNombre(l.arrendador.nombres, l.arrendador.apellidos);
+  const [inquilinoNombres, inquilinoApellidos] = partirNombre(l.arrendatario.nombres, l.arrendatario.apellidos);
   return {
-    propietarioNombres: l.arrendador.nombres ?? '',
-    propietarioApellidos: l.arrendador.apellidos ?? '',
-    inquilinoNombres: l.arrendatario.nombres ?? '',
-    inquilinoApellidos: l.arrendatario.apellidos ?? '',
+    propietarioNombres,
+    propietarioApellidos,
+    inquilinoNombres,
+    inquilinoApellidos,
     direccion: l.inmueble.direccionCompleta ?? '',
     ciudad: ciudadDeCatalogo(l.inmueble.ciudad, ciudades),
     uso: usoTexto.trim() ? (esComercio(usoTexto) ? 'COMERCIO' : 'VIVIENDA') : '',
@@ -110,7 +129,7 @@ export function datosDeLectura(l: LecturaContratoResponse, ciudades: readonly st
     tipoCuenta: c.tipoCuenta ?? '',
     banco: c.banco ?? '',
     matricula: l.inmueble.matriculaInmobiliaria ?? '',
-    tipoInmueble: l.inmueble.tipoInmueble ?? '',
+    tipoInmueble: tipoUtil(l.inmueble.tipoInmueble),
   };
 }
 
@@ -125,7 +144,7 @@ export function datosDeEstudio(p: PrellenadoContrato, ciudades: readonly string[
     uso: usoTexto.trim() ? (esComercio(usoTexto) ? 'COMERCIO' : 'VIVIENDA') : '',
     canon: numero(p.inmueble?.canon),
     administracion: numero(p.inmueble?.administracion),
-    tipoInmueble: p.inmueble?.tipoInmueble ?? '',
+    tipoInmueble: tipoUtil(p.inmueble?.tipoInmueble),
   };
 }
 
@@ -138,7 +157,7 @@ export function datosDeCotizacion(c: CotizacionParaRadicar, ciudades: readonly s
     administracion: numero(c.administracion),
     fechaInicio: /^\d{4}-\d{2}-\d{2}/.test(c.fechaInicioVigencia) ? c.fechaInicioVigencia.slice(0, 10) : '',
     duracionMeses: numero(c.mesesVigencia),
-    tipoInmueble: c.tipoInmueble ?? '',
+    tipoInmueble: tipoUtil(c.tipoInmueble),
   };
 }
 

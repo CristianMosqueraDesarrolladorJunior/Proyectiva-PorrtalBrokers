@@ -623,8 +623,8 @@
           [total]="{ label: 'Documentos', valor: cargadosObligatorios() + ' / ' + totalObligatorios() }"
         >
           <div acciones class="rad-acciones-card">
-            <app-boton variante="accent" icono="send" [disabled]="!envioHabilitado() || enviando()" (clicked)="enviar()">
-              {{ enviando() ? 'Enviando, puede tardar unos segundos…' : 'Enviar radicación' }}
+            <app-boton variante="accent" icono="fact_check" [disabled]="!envioHabilitado() || enviando()" (clicked)="revisarEnvio()">
+              {{ enviando() ? 'Enviando, puede tardar unos segundos…' : 'Revisar y enviar' }}
             </app-boton>
             <app-boton variante="ghost" (clicked)="cancelar()">Cancelar radicación</app-boton>
           </div>
@@ -800,7 +800,7 @@
     <dl class="rad-ctr-resumen">
       @for (c of ['propietarioNombres', 'propietarioApellidos', 'inquilinoNombres', 'inquilinoApellidos', 'direccion', 'ciudad', 'canon', 'fechaInicio', 'duracionMeses', 'diaPago']; track c) {
         @if (!camposModalContrato().includes($any(c)) && $any(datosContrato())[c]) {
-          <div><dt>{{ $any(etiquetasDatosContrato)[c] }}</dt><dd>{{ c === 'canon' ? formatearCop(+datosContrato().canon) : $any(datosContrato())[c] }}</dd></div>
+          <div><dt>{{ $any(etiquetasDatosContrato)[c] }}</dt><dd>{{ valorDatoContrato($any(c)) }}</dd></div>
         }
       }
     </dl>
@@ -810,5 +810,21 @@
       <app-boton variante="ghost" icono="edit" (clicked)="editarTodoContrato.set(true)">Corregir otros datos</app-boton>
     }
     <app-boton variante="accent" icono="check" (clicked)="confirmarDatosContrato()">Confirmar datos del contrato</app-boton>
+  </div>
+</app-modal-dialog>
+
+<!-- Resumen y confirmación: toda la información con la que se radica la póliza, antes de enviarla. -->
+<app-modal-dialog
+  [abierto]="resumenAbierto()"
+  titulo="Revisa la solicitud antes de enviarla"
+  subtitulo="Esta es toda la información con la que radicamos la póliza. Si algo no está bien, vuelve y corrígelo."
+  eyebrow="Solicitar póliza"
+  tamano="xl"
+  (cerrar)="resumenAbierto.set(false)"
+>
+  <app-ficha [secciones]="resumenRadicacion()" />
+  <div acciones>
+    <app-boton variante="outline" icono="edit" (clicked)="resumenAbierto.set(false)">Volver y corregir</app-boton>
+    <app-boton variante="accent" icono="send" [disabled]="enviando()" (clicked)="confirmarEnvio()">Confirmar y enviar</app-boton>
   </div>
 </app-modal-dialog>
